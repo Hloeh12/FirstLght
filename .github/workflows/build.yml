@@ -1,4 +1,4 @@
-# name: Build FirstLight IPA
+name: Build FirstLight IPA
 
 on:
   workflow_dispatch:
@@ -9,43 +9,69 @@ jobs:
   build:
     runs-on: macos-14
     steps:
-      - name: 检出源码
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 配置 Swift 与 Xcode 环境
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-
-      - name: 编译 iOS 原生 Mach-O 二进制文件
+      - name: Select Xcode
         run: |
-          mkdir -p build/Payload/FirstLight.app/www
-          
-          # 复制前端离线静态资源
-          cp -r index.html build/Payload/FirstLight.app/www/ 2>/dev/null || true
-          
-          # 编译 Swift 源码为 ARM64 Mach-O 可执行文件
-          xcrun -sdk iphoneos swiftc \
-            -target arm64-apple-ios15.0 \
-            -O \
-            -import-objc-header /dev/null \
-            FirstLight-iOS/AppDelegate.swift \
-            -o build/Payload/FirstLight.app/FirstLight \
-            -framework UIKit \
-            -framework WebKit \
-            -framework Foundation
+          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || true
+          xcodebuild -version
 
-          # 写入 Info.plist
-          cp FirstLight-iOS/Info.plist build/Payload/FirstLight.app/Info.plist
-
-      - name: 伪签名与封装标准 IPA
+      - name: Create iOS project
+        shell: bash
         run: |
+          set -euo pipefail
+          mkdir -p build/FirstLight.xcodeproj build/FirstLight www
+          cp index.html build/FirstLight/www/index.html
+          cp -R assets build/FirstLight/www/ 2>/dev/null || true
+          cp -R vendor build/FirstLight/www/ 2>/dev/null || true
+          cp -R src build/FirstLight/www/ 2>/dev/null || true
+          cp FirstLight-iOS/AppDelegate.swift build/FirstLight/AppDelegate.swift
+          cp FirstLight-iOS/Info.plist build/FirstLight/Info.plist
+          cat > build/FirstLight.xcodeproj/project.pbxproj <<'PBX'
+          // !$*UTF8*$!
+          {
+            archiveVersion = 1;
+            objectVersion = 56;
+            objects = {
+              000000000000000000000001 = {isa = PBXBuildFile; fileRef = 000000000000000000000002; };
+              000000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+              000000000000000000000003 = {isa = PBXGroup; children = (000000000000000000000002); path = FirstLight; sourceTree = "<group>"; };
+              000000000000000000000004 = {isa = PBXGroup; children = (000000000000000000000003); sourceTree = "<group>"; };
+              000000000000000000000005 = {isa = PBXNativeTarget; buildConfigurationList = 000000000000000000000008; buildPhases = (000000000000000000000006); name = FirstLight; productName = FirstLight; productReference = 000000000000000000000009; productType = "com.apple.product-type.application"; };
+              000000000000000000000006 = {isa = PBXSourcesBuildPhase; files = (000000000000000000000001); };
+              000000000000000000000007 = {isa = PBXProject; buildConfigurationList = 00000000000000000000000A; compatibilityVersion = "Xcode 14.0"; mainGroup = 000000000000000000000004; targets = (000000000000000000000005); };
+              000000000000000000000008 = {isa = XCConfigurationList; buildConfigurations = (00000000000000000000000B); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+              000000000000000000000009 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = FirstLight.app; sourceTree = BUILT_PRODUCTS_DIR; };
+              00000000000000000000000A = {isa = XCConfigurationList; buildConfigurations = (00000000000000000000000C); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+              00000000000000000000000B = {isa = XCBuildConfiguration; name = Release; buildSettings = { PRODUCT_BUNDLE_IDENTIFIER = com.firstlight.app; INFOPLIST_FILE = FirstLight/Info.plist; SWIFT_VERSION = 5.0; IPHONEOS_DEPLOYMENT_TARGET = 15.0; TARGETED_DEVICE_FAMILY = "1,2"; SDKROOT = iphoneos; CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; }; };
+              00000000000000000000000C = {isa = XCBuildConfiguration; name = Release; buildSettings = { PRODUCT_BUNDLE_IDENTIFIER = com.firstlight.app; SWIFT_VERSION = 5.0; IPHONEOS_DEPLOYMENT_TARGET = 15.0; SDKROOT = iphoneos; CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; }; };
+            };
+            rootObject = 000000000000000000000007;
+          }
+          PBX
+
+      - name: Build unsigned app
+        run: |
+          set -euo pipefail
+          xcodebuild -project build/FirstLight.xcodeproj -target FirstLight -sdk iphoneos -configuration Release -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+
+      - name: Assemble IPA
+        run: |
+          set -euo pipefail
+          APP=$(find build/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name 'FirstLight.app' -print -quit)
+          test -n "$APP"
+          mkdir -p build/Payload
+          cp -R "$APP" build/Payload/FirstLight.app
+          cp -R build/FirstLight/www build/Payload/FirstLight.app/www
+          file build/Payload/FirstLight.app/FirstLight
+          test -f build/Payload/FirstLight.app/Info.plist
           cd build
-          codesign -s - --force --deep Payload/FirstLight.app
-          zip -r FirstLight.ipa Payload
-          mv FirstLight.ipa ../
+          zip -qry FirstLight.ipa Payload
 
-      - name: 上传构建产物 (IPA)
+      - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: FirstLight-IPA
-          path: FirstLight.ipa
+          name: FirstLight-IPA-unsigned
+          path: build/FirstLight.ipa
           retention-days: 7

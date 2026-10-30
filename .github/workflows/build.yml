@@ -1,20 +1,72 @@
-name: Build Firstlight IPA
+name: Build FirstLight IPA
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: macos-15
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: 检出源码
+        uses: actions/checkout@v5
 
-      - name: Create iOS project & Build
+      - name: 环境自检
         run: |
-          # 这里保留你原本的创建与编译命令
-          # 例如: xcodebuild ...
-          echo "Start building..."
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: 编译 iOS 原生 Mach-O 二进制文件
+        run: |
+          set -euo pipefail
+          APP="build/Payload/FirstLight.app"
+
+          mkdir -p "$APP/www"
+
+          if [ ! -f index.html ]; then
+            echo "::error::仓库根目录缺少 index.html"
+            exit 1
+          fi
+          cp index.html "$APP/www/"
+          for d in assets src css js vendor images static; do
+            if [ -d "$d" ]; then cp -R "$d" "$APP/www/"; fi
+          done
+
+          xcrun ibtool --compile "$APP/LaunchScreen.storyboardc" \
+            FirstLight-iOS/LaunchScreen.storyboard
+
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun -sdk iphoneos swiftc \
+            -sdk "$SDK" \
+            -target arm64-apple-ios15.0 \
+            -swift-version 5 \
+            -O \
+            -F "$SDK/System/Library/Frameworks" \
+            FirstLight-iOS/AppDelegate.swift \
+            -o "$APP/FirstLight" \
+            -framework UIKit \
+            -framework WebKit \
+            -framework Foundation
+
+          chmod +x "$APP/FirstLight"
+          cp FirstLight-iOS/Info.plist "$APP/Info.plist"
+
+          file "$APP/FirstLight"
+          lipo -info "$APP/FirstLight"
+
+      - name: 伪签名与封装标准 IPA
+        run: |
+          set -euo pipefail
+          cd build
+          codesign -s - --force --deep --timestamp=none Payload/FirstLight.app
+          zip -qr FirstLight.ipa Payload -x '*.DS_Store'
+          mv FirstLight.ipa ../
+
+      - name: 上传构建产物 (IPA)
+        uses: actions/upload-artifact@v4
+        with:
+          name: FirstLight-IPA
+          path: FirstLight.ipa
+          retention-days: 7

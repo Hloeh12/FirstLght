@@ -1,0 +1,51 @@
+# name: Build FirstLight IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 配置 Swift 与 Xcode 环境
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+      - name: 编译 iOS 原生 Mach-O 二进制文件
+        run: |
+          mkdir -p build/Payload/FirstLight.app/www
+          
+          # 复制前端离线静态资源
+          cp -r index.html build/Payload/FirstLight.app/www/ 2>/dev/null || true
+          
+          # 编译 Swift 源码为 ARM64 Mach-O 可执行文件
+          xcrun -sdk iphoneos swiftc \
+            -target arm64-apple-ios15.0 \
+            -O \
+            -import-objc-header /dev/null \
+            FirstLight-iOS/AppDelegate.swift \
+            -o build/Payload/FirstLight.app/FirstLight \
+            -framework UIKit \
+            -framework WebKit \
+            -framework Foundation
+
+          # 写入 Info.plist
+          cp FirstLight-iOS/Info.plist build/Payload/FirstLight.app/Info.plist
+
+      - name: 伪签名与封装标准 IPA
+        run: |
+          cd build
+          codesign -s - --force --deep Payload/FirstLight.app
+          zip -r FirstLight.ipa Payload
+          mv FirstLight.ipa ../
+
+      - name: 上传构建产物 (IPA)
+        uses: actions/upload-artifact@v4
+        with:
+          name: FirstLight-IPA
+          path: FirstLight.ipa
+          retention-days: 7

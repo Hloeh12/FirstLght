@@ -1,7 +1,6 @@
 (()=>{
 const el=id=>document.getElementById(id);let active='west',lineOn=false,flowOn=false,square=false;let originalWest=null;
-const footer=document.createElement('footer');footer.className='breathing-footer';footer.textContent='缘分不过天时地利 承诺不过逝水轻浅';document.body.append(footer);
-const button=document.createElement('button');button.id='contextBtn';button.type='button';button.textContent='•••';button.setAttribute('aria-label','当前盘面功能');button.setAttribute('aria-expanded','false');document.body.append(button);
+const button=el('btnContextAction');
 const shade=document.createElement('div');shade.id='contextShade';shade.hidden=true;const menu=document.createElement('div');menu.id='contextMenu';menu.hidden=true;menu.className='shell-glass';menu.setAttribute('role','dialog');menu.setAttribute('aria-label','盘面功能');document.body.append(shade,menu);
 const options={bazi:['大运流年速查','五行强弱分布','地支十神藏干'],west:['本命圆盘/方盘切换','相位容许度调节','四元素占比'],ziwei:['三方四正高亮连线','流年四化飞星显隐','格局断语'],synastry:['双人比较盘','时空组合盘','契合度评分']};
 function close(){menu.hidden=true;shade.hidden=true;button.setAttribute('aria-expanded','false')};document.addEventListener('closeContext',close);shade.onclick=close;document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});

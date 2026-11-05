@@ -1,23 +1,24 @@
 
 const $=s=>document.querySelector(s);
-let chart=null;
+let chart=null;let chartRequest=0;
 $('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;[...$('#tabs').children].forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===b.dataset.t));};
 $('#demo').onclick=()=>{$('#date').value='2000-08-16';$('#time').value='12:00';$('#lat').value='31.2304';$('#lon').value='121.4737';$('#tz').value='8';};
 function inp(){const [Y,M,D]=$('#date').value.split('-').map(Number);const [h,mi]=$('#time').value.split(':').map(Number);
  const lunar=$('#cal').value==='lunar';return {Y,M,D,h,mi,gender:$('#gender').value,calendar:lunar?'lunar':'solar',leapMonth:$('#leap').checked,dateStr:$('#date').value,timeStr:$('#time').value,useSolarTime:$('#solar').checked,timeUnknown:$('#tunknown').checked,city:{label:lastPlaceLabel||'手动位置',lat:+$('#lat').value,lon:+$('#lon').value,tz:+$('#tz').value,...($('#tzname').value.trim()?{tzName:$('#tzname').value.trim()}:{})},houseSystem:$('#hs').value};}
 const post=(p,b)=>fetch(p,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
 const esc=s=>String(s??'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
-$('#f').onsubmit=async e=>{e.preventDefault();const t0=performance.now();const btn=e.submitter||$('#f button');btn.disabled=true;btn.textContent='计算中…';
+$('#f').onsubmit=async e=>{e.preventDefault();const request=++chartRequest;const t0=performance.now();const btn=e.submitter||$('#f button');btn.disabled=true;btn.textContent='计算中…';
  try{
-  const req=inp();
-  const r=await post('/api/chart',{...req,skipZiwei:true});chart=r.raw;$('#rawBox').textContent=JSON.stringify(r,null,1).slice(0,20000);
+  const req=inp();if(window.state)window.state.pendingInput=req;
+  const r=await post('/api/chart',{...req,skipZiwei:true});if(request!==chartRequest)return;if(r.error||!r.raw)throw new Error(r.error||'排盘返回不完整');chart=r.raw;$('#rawBox').textContent=JSON.stringify(r,null,1).slice(0,20000);
   renderWest(chart.western,chart.analysis);renderBazi(chart.bazi);if(chart.meta.input.reliability?.timeUnknown)$('#westBox').insertAdjacentHTML('afterbegin','<p class="note" style="margin:0 0 10px">⚠️ 出生时间未知，已按正午 12:00 排盘：上升、中天、宫位与紫微命宫仅供参考，不宜据此判断具体事件。</p>');renderVedic(chart.vedic);
-  const ziweiP=post('/api/ziwei',{...req,timeIndex:chart.meta.input.ziweiTimeIndex}).then(z=>{chart.ziwei=z;renderZiwei(z);}).catch(()=>{renderZiwei({error:'紫微排盘失败'});});
-  const [rep,en,tl]=await Promise.all([post('/api/local-report',inp()),post('/api/energy',inp()),post('/api/timeline',{...inp(),months:24})]);
+  const ziweiP=post('/api/ziwei',{...req,timeIndex:chart.meta.input.ziweiTimeIndex}).then(z=>{if(request!==chartRequest)return;chart.ziwei=z;renderZiwei(z);}).catch(()=>{if(request===chartRequest)renderZiwei({error:'紫微排盘失败'});});
+  const [rep,en,tl]=await Promise.all([post('/api/local-report',req),post('/api/energy',req),post('/api/timeline',{...req,months:24})]);
   await ziweiP;
-  renderReport(rep);renderEnergy(en);renderTimeline(tl);document.querySelector('#tabs').scrollIntoView({behavior:'smooth',block:'start'});
+  if(request!==chartRequest)return;
+  renderReport(rep);renderEnergy(en);renderTimeline(tl);document.querySelector('#readingSummary').scrollIntoView({behavior:'smooth',block:'start'});
 $('#timing').textContent='本次计算 '+(performance.now()-t0).toFixed(0)+' ms · 结果已缓存，切页签或重复生成会更快';
- }catch(err){alert('计算失败：'+err.message);}finally{btn.disabled=false;btn.textContent='生成三盘';}
+ }catch(err){if(request===chartRequest)alert('计算失败：'+err.message);}finally{if(request===chartRequest){btn.disabled=false;btn.textContent='生成三盘';}}
 };
 
 (async()=>{

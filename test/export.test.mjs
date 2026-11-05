@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { chart } from '../src/chart.mjs';
+import { toMarkdown, toHtml } from '../src/export.mjs';
+import { saveRecord, listRecords, getRecord, cacheKey, memoize } from '../src/store.mjs';
+const a={Y:2000,M:8,D:16,h:12,mi:0,gender:'女',city:{label:'上海',lat:31.2304,lon:121.4737,tz:8}};
+test('markdown has all five parts',()=>{const md=toMarkdown(chart(a));for(const t of ['西方本命盘','印度恒星盘','紫微斗数','模板解读','能量场'])assert.ok(md.includes(t),t);});
+test('html escapes and has tables',()=>{const html=toHtml(chart(a));assert.ok(html.includes('<table>'));assert.ok(!/<script/i.test(html));});
+test('store roundtrip',()=>{const id=saveRecord({kind:'test',label:'x',payload:{v:1}});const one=getRecord(id);assert.equal(one.payload.v,1);assert.ok(listRecords(5).some(r=>r.id===id));});
+test('store rejects bad id',()=>{assert.throws(()=>getRecord('../etc/passwd'));});
+test('memoize caches',()=>{let n=0;const k=cacheKey({a:1});memoize(k,()=>++n);memoize(k,()=>++n);assert.equal(n,1);});

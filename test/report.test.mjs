@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { localTemplateReport } from '../src/report-template.mjs';
+import { energy } from '../src/energy.mjs';
+import { ziweiChart } from '../src/ziwei.mjs';
+import { chart } from '../src/chart.mjs';
+const a={Y:2000,M:8,D:16,h:12,mi:0,gender:'女',city:{label:'上海',lat:31.2304,lon:121.4737,tz:8}};
+test('local template has 9 sections',()=>{const r=localTemplateReport(chart(a));assert.equal(Object.keys(r.sections).length,9);assert.equal(r.kind,'local-template');});
+test('energy has 7 chakras within bounds',()=>{const e=energy(chart(a).western,'x');assert.equal(e.chakras.length,7);for(const c of e.chakras)assert.ok(c.score>=22&&c.score<=96);});
+test('ziwei chart 12 palaces & soul',()=>{const z=ziweiChart({dateStr:'2000-08-16',timeIndex:6,gender:'女'});assert.equal(z.palaces.length,12);assert.ok(z.soul);});
+test('ziwei rejects bad date',()=>{assert.throws(()=>ziweiChart({dateStr:'bad',timeIndex:1,gender:'女'}));});

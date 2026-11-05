@@ -1,0 +1,14 @@
+{
+  "name": "xingyu-local-replica",
+  "version": "0.15.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+  },
+  "dependencies": {
+    "astronomy-engine": "2.1.19",
+    "iztro": "2.6.3"
+  }
+}

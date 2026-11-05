@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { chart } from '../src/chart.mjs';
+import { analyze } from '../src/analysis.mjs';
+import { localToUtc, offsetMinutes, validZone, offsetLabel } from '../src/tz.mjs';
+const base={Y:2000,M:8,D:16,h:12,mi:0,gender:'女',city:{label:'上海',lat:31.2304,lon:121.4737,tz:8}};
+test('tzdb DST 1988 Shanghai +09',()=>{assert.equal(offsetMinutes(Date.UTC(1988,6,1,6),'Asia/Shanghai'),540);});
+test('tzdb winter +08',()=>{assert.equal(offsetMinutes(Date.UTC(1988,0,15,6),'Asia/Shanghai'),480);});
+test('localToUtc resolves wall clock',()=>{const r=localToUtc({Y:1988,M:7,D:1,h:14,mi:30},'Asia/Shanghai');assert.equal(r.utc.toISOString(),'1988-07-01T05:30:00.000Z');});
+test('invalid zone rejected',()=>{assert.equal(validZone('Mars/Olympus'),false);assert.throws(()=>localToUtc({Y:2000,M:1,D:1},'Mars/Olympus'));});
+test('chart accepts tzName',()=>{const c=chart({...base,city:{label:'上海',lat:31.23,lon:121.47,tzName:'Asia/Shanghai'}});assert.equal(c.meta.input.corrections.tzdb,true);assert.equal(c.meta.utc,'2000-08-16T04:00:00.000Z');});
+test('house systems differ',()=>{const p=chart(base).western,wh=chart({...base,houseSystem:'whole'}).western;assert.equal(p.houseSystem,'placidus');assert.equal(wh.houseSystem,'whole');assert.notEqual(p.cusps[0],wh.cusps[0]);});
+test('analysis ruler and dignity',()=>{const a=chart(base).analysis;assert.equal(a.chartRuler.planet,'火星');assert.equal(a.planets.length,10);assert.ok(a.dignitiesSummary.入庙>=1);});
+test('analysis patterns unique',()=>{const a=analyze(chart(base).western);const keys=a.patterns.map(p=>p.type+':'+p.planets.slice().sort().join(','));assert.equal(new Set(keys).size,keys.length);});
+test('offset label format',()=>{assert.match(offsetLabel(Date.UTC(1988,6,1),'Asia/Shanghai'),/^UTC\+09:00$/);});

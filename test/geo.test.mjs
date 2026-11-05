@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { provinces, cities, counties, resolvePlace, searchPlaces } from '../src/geo.mjs';
+test('34 province-level regions',()=>{assert.equal(provinces().length,34);});
+test('cities under Zhejiang',()=>{const c=cities(330000);assert.ok(c.length>=10);assert.ok(c.some(x=>x.name==='杭州市'));});
+test('municipality counties under province code',()=>{assert.ok(counties(310000).length>0);assert.equal(cities(310000).length,0);});
+test('resolve county precision',()=>{const r=resolvePlace({p:330000,c:330100,d:330106});assert.equal(r.county,'西湖区');assert.ok(Math.abs(r.lat-30.27)<0.1);});
+test('resolve unknown returns null',()=>{assert.equal(resolvePlace({p:999999}),null);});
+test('search by keyword',()=>{const r=searchPlaces('杭州');assert.ok(r.length>0);assert.equal(r[0].name,'杭州市');});
+test('municipality searchable as province',()=>{const r=searchPlaces('上海');assert.ok(r.some(x=>x.level==='province'&&x.name==='上海市'));});
+test('county search carries parent codes',()=>{const r=searchPlaces('朝阳区');const c=r.find(x=>x.provinceCode===220000);assert.ok(c);assert.ok(c.cityCode);});

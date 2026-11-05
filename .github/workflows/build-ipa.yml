@@ -1,0 +1,82 @@
+name: Build FirstLight IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -d /Applications/Xcode*.app/Contents/Developer
+          selected="$(xcode-select -p)"
+          if [[ ! -d "$selected/Platforms/iPhoneOS.platform" ]]; then
+            selected="$(find /Applications -maxdepth 3 -path '/Applications/Xcode*.app/Contents/Developer' -type d | sort | tail -n 1)"
+          fi
+          test -d "$selected/Platforms/iPhoneOS.platform"
+          echo "DEVELOPER_DIR=$selected" >> "$GITHUB_ENV"
+          DEVELOPER_DIR="$selected" xcodebuild -version
+      - name: Generate project with XcodeGen
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v xcodegen >/dev/null || brew install xcodegen
+          test -f ios-src/AppDelegate.swift
+          test -f ios-src/Info.plist
+          mkdir -p www
+          cp index.html www/
+          for dir in src assets vendor; do
+            test -d "$dir"
+            cp -R "$dir" www/
+          done
+          xcodegen generate --spec project.yml
+          xcodebuild -list -project FirstLight.xcodeproj
+      - name: Build unsigned app
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          xcodebuild -project FirstLight.xcodeproj -scheme FirstLight -sdk iphoneos -configuration Release -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee build/xcodebuild.log
+      - name: Validate and package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=build/DerivedData/Build/Products/Release-iphoneos/FirstLight.app
+          test -f "$APP/FirstLight"
+          test -f "$APP/www/index.html"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist" | grep -qx FirstLight
+          python3 - "$APP" <<'PY'
+          import pathlib, plistlib, sys
+          app = pathlib.Path(sys.argv[1])
+          info = plistlib.loads((app / 'Info.plist').read_bytes())
+          expected = dict(CFBundleDisplayName='星谕', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString='0.15.0', CFBundleVersion='1', LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
+          for key, value in expected.items():
+              assert info.get(key) == value, (key, info.get(key), value)
+          for name in ['index.html', 'src', 'assets', 'vendor']:
+              assert (app / 'www' / name).exists(), name
+          PY
+          mkdir -p build/Payload
+          ditto "$APP" build/Payload/FirstLight.app
+          (cd build && zip -qry FirstLight.ipa Payload)
+          unzip -l build/FirstLight.ipa | grep 'Payload/FirstLight.app/www/index.html'
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: FirstLight-IPA-unsigned
+          path: build/FirstLight.ipa
+          if-no-files-found: error
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FirstLight-build-diagnostics
+          path: |
+            build/xcodebuild.log
+            FirstLight.xcodeproj/project.pbxproj
+          if-no-files-found: ignore

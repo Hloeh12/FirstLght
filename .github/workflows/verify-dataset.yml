@@ -1,0 +1,31 @@
+name: Verify Ziwei Full Dataset
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official full dataset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dataset
+          gh release download v4.0-13d --repo Renhuai123/ziwei-doushu --pattern 'ziwei-interp-v4-all.tar' --pattern 'MANIFEST.json' --pattern 'SHA256SUMS*.txt' --dir dataset
+      - name: Verify full archive and all 77 years
+        working-directory: dataset
+        run: |
+          sha256sum -c SHA256SUMS-all.txt
+          tar -xf ziwei-interp-v4-all.tar
+          sha256sum -c SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ziwei-v4-full-verified
+          path: |
+            dataset/ziwei-interp-v4-all.tar
+            dataset/MANIFEST.json
+            dataset/SHA256SUMS*.txt
+          compression-level: 0
+          retention-days: 7

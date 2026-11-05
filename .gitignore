@@ -4,3 +4,7 @@ www/
 build/
 *.xcodeproj/
 .env
+
+__pycache__/
+*.sqlite
+

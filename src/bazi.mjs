@@ -109,6 +109,39 @@ export function flowYears(localYear,count=3,startYear=null){
   });
 }
 
+const stemPairs=['甲己','乙庚','丙辛','丁壬','戊癸'];
+const branchRules=[
+ ['三合',['申子辰','亥卯未','寅午戌','巳酉丑']],
+ ['六合',['子丑','寅亥','卯戌','辰酉','巳申','午未']],
+ ['六冲',['子午','丑未','寅申','卯酉','辰戌','巳亥']],
+ ['六害',['子未','丑午','寅巳','卯辰','申亥','酉戌']],
+ ['三刑',['寅巳申','丑戌未']],
+ ['相刑',['子卯']],
+ ['自刑',['辰辰','午午','酉酉','亥亥']]
+];
+function pillarStructure(pillars,hidden,dayIndex){
+ const matching=(type,patterns,key)=>patterns.flatMap(pattern=>{
+  const missing=[...pattern],matches=[];
+  for(const p of pillars){
+   const i=missing.indexOf(p[key]);
+   if(i>=0){matches.push(p.name);missing.splice(i,1);}
+  }
+  return missing.length?[]:[{type,pattern,pillars:matches}];
+ });
+ const relationships=[
+  ...matching('天干五合',stemPairs,'stem'),
+  ...branchRules.flatMap(([type,patterns])=>matching(type,patterns,'branch'))
+ ];
+ const element=STEM_ELEM[pillars[2].stemIdx];
+ const roots=pillars.flatMap(p=>hidden[p.name].filter(s=>s.element===element)
+  .map(s=>({pillar:p.name,branch:p.branch,stem:s.stem,rank:s.rank})));
+ const revealed=pillars.filter(p=>p.name!=='日柱').flatMap(p=>pillars
+  .filter(q=>hidden[q.name].some(s=>s.stem===p.stem))
+  .map(q=>({stem:p.stem,visibleAt:p.name,rootAt:q.name})));
+ const start=Math.floor(dayIndex/10)*10;
+ return {relationships,roots,revealed,voidBranches:[BRANCHES[(start+10)%12],BRANCHES[(start+11)%12]]};
+}
+
 export function bazi({utc,local,gender='男',dayBoundaryAt2300=false}){
   const yp=yearPillar(utc,local.y);
   const yIdx=STEMS.indexOf(yp.stem);
@@ -135,7 +168,7 @@ export function bazi({utc,local,gender='男',dayBoundaryAt2300=false}){
   const de=STEM_ELEM[dIdx],resource=Object.keys(GENERATE).find(k=>GENERATE[k]===de);
   const support=(weighted[de]+weighted[resource])/8;
   const strength={seasonSupported:[de,resource].includes(BRANCH_ELEM[pillars[1].branchIdx]),rooted:pillars.some(p=>hidden[p.name].some(x=>x.element===de)),assisted:pillars.filter(p=>p.name!=='日柱').some(p=>[de,resource].includes(STEM_ELEM[p.stemIdx])),supportRatio:support,reference:support>0.6?'身旺':support<0.4?'身弱':'中和',method:'天干等权、藏干按本中余气加权；旺衰为简化参考，非格局用神定论'};
-  return {elementPercentages:percentages,elementWeights:weighted,strength,pillars,dayMaster:{stem:dp.stem,element:STEM_ELEM[dIdx],yin:STEM_YIN[dIdx]},hiddenStems:hidden,elements,luck,flowYears:years,meta:{yearPillarYear:yp.year,lichun:yp.lichun.toISOString(),monthStart:mp.start.toISOString(),dayBoundary:dayBoundaryAt2300?'23:00':'00:00',gender,note:'节气时刻按太阳视黄经计算；日柱以本地日期换日，可选 23:00 换日'}};
+  return {structure:pillarStructure(pillars,hidden,dp.idx),elementPercentages:percentages,elementWeights:weighted,strength,pillars,dayMaster:{stem:dp.stem,element:STEM_ELEM[dIdx],yin:STEM_YIN[dIdx]},hiddenStems:hidden,elements,luck,flowYears:years,meta:{yearPillarYear:yp.year,lichun:yp.lichun.toISOString(),monthStart:mp.start.toISOString(),dayBoundary:dayBoundaryAt2300?'23:00':'00:00',gender,note:'节气时刻按太阳视黄经计算；日柱以本地日期换日，可选 23:00 换日'}};
 }
 
 export function dynamicBazi(out,{luckIndex,flowYear}={}){

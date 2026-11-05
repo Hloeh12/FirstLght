@@ -15,7 +15,7 @@ $('#cal').onchange=syncCalendar;
 syncCalendar();
 function inp(){const [Y,M,D]=$('#date').value.split('-').map(Number);const [h,mi]=$('#time').value.split(':').map(Number);
  const lunar=$('#cal').value==='lunar';return {Y,M,D,h,mi,gender:$('#gender').value,calendar:lunar?'lunar':'solar',leapMonth:lunar&&$('#leap').checked,dateStr:$('#date').value,timeStr:$('#time').value,useSolarTime:$('#solar').checked,timeUnknown:$('#tunknown').checked,city:{label:lastPlaceLabel||'手动位置',lat:+$('#lat').value,lon:+$('#lon').value,tz:+$('#tz').value,...($('#tzname').value.trim()?{tzName:$('#tzname').value.trim()}:{})},houseSystem:$('#hs').value};}
-const post=(p,b)=>fetch(p,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
+const post=(p,b)=>readingRequest(p,b);
 const esc=s=>String(s??'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 async function calculateReading(req,request,onReady,onDetails){
  const t0=performance.now();
@@ -58,7 +58,7 @@ async function calculateReading(req,request,onReady,onDetails){
 (async()=>{
  const P=await fetch('/api/geo/provinces').then(r=>r.json());
  $('#prov').innerHTML='<option value="">选择省份</option>'+P.items.map(p=>`<option value="${p.code}">${p.name}</option>`).join('');
-})();
+})().catch(()=>{});
 async function loadCities(p){
  const c=await fetch('/api/geo/cities?p='+p).then(r=>r.json());
  const isMuni=c.items.length===0;
@@ -348,40 +348,43 @@ function renderVedic(v){
  <table><thead><tr><th>星体</th><th>恒星星座</th><th>星宿·Pada</th><th>宫</th></tr></thead><tbody>${rows}</tbody></table>
  <h3 style="margin-top:14px">Vimshottari 大运</h3><table><tbody>${ds}</tbody></table>`;}
 
-function drawZiweiGrid(z){
+function drawZiweiGrid(z,flow){
+ const positions=[[3,2],[3,1],[3,0],[2,0],[1,0],[0,0],[0,1],[0,2],[0,3],[1,3],[2,3],[3,3]];
  const birth=chart?.birthRequest||{}, bazi=chart?.bazi;
- const map={巳:[0,0],午:[0,1],未:[0,2],申:[0,3],辰:[1,0],酉:[1,3],卯:[2,0],戌:[2,3],寅:[3,0],丑:[3,1],子:[3,2],亥:[3,3]};
- const stars=(p)=>{
-  const s=[...p.majorStars.map(x=>`<b>${esc(x.name)} <small>${esc(x.brightness||'')}</small>${x.mutagen?` <i class="zw-m">${esc(x.mutagen)}</i>`:''}</b>`),
-           ...p.minorStars.slice(0,3).map(x=>`<span>${esc(x.name)}</span>`)];
-  return s.length?s.join(''):'<span class="zw-empty">空宫</span>';
- };
- return `<div class="zwgrid">${z.palaces.map(p=>{
-  const [r,c]=map[p.earthlyBranch]||[0,0];
-  const cls=['zwcell',(p.name==='命宫')?'soul':'',p.isBodyPalace?'body':''].join(' ');
-  const dec=p.decadal&&p.decadal.range?`${p.decadal.range[0]}–${p.decadal.range[1]}`:'';
-  return `<div class="${cls}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="false" data-branch="${p.branch}" style="grid-row:${r+1};grid-column:${c+1}">
+ const flowLabels={命宫:'流命',官禄:'流官',财帛:'流财'};
+ const mark=(text,type,kind)=>`<i class="zw-marker ${kind}" data-mutagen="${type}">${text}</i>`;
+ return `<div class="zwgrid liquid-glass">${z.palaces.map(p=>{
+  const [r,c]=positions[p.branch];
+  const name=flowLabels[flow?.palaceNames[p.branch]];
+  const active=flow?.mutagens.filter(m=>m.branch===p.branch)||[];
+  const visibleStars=[...p.majorStars,...p.minorStars.filter(s=>s.mutagen||active.some(m=>m.star===s.name))];
+  const stars=visibleStars.map(s=>{
+   const tags=active.filter(m=>m.star===s.name).map(m=>mark('流'+m.type,m.type,'flow-badge'));
+   return `<div class="zw-star ${p.majorStars.includes(s)?'primary-star':''}"><b>${esc(s.name)}</b>${s.brightness?` <small>${esc(s.brightness)}</small>`:''}${s.mutagen?mark('生年'+s.mutagen,s.mutagen,'natal-badge'):''}${tags.join('')}</div>`;
+  }).join('');
+  const borrowed=p.majorStars.length?'':`<div class="zw-borrow">借对宫 <b>${p.borrowedStars.map(s=>esc(s.name)+(s.brightness?'·'+esc(s.brightness):'')).join('、')||'无主星'}</b></div>`;
+  const dec=p.decadal?.range?.join('–');
+  return `<div class="zwcell ${p.name==='命宫'?'soul':''}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="false" data-branch="${p.branch}" style="grid-row:${r+1};grid-column:${c+1}">
    <div class="zw-h"><span>${esc(p.name)}${p.isBodyPalace?' · 身':''}</span><small>${esc(p.heavenlyStem+p.earthlyBranch)}</small></div>
-   <div class="zw-s">${stars(p)}</div>
-   ${dec?`<div class="zw-d">${dec} 岁</div>`:''}</div>`;
+   <div class="zw-s">${stars}${borrowed}</div>
+   <div class="zw-foot">${dec?`<span>${dec} 岁</span>`:''}${name?`<b>${name}</b>`:''}</div>
+  </div>`;
  }).join('')}
  <div class="zwcenter">
-  <strong>${esc(birth.name||'当前命主')} · ${({heaven:'天盘',earth:'地盘',human:'人盘'})[z.astroType]||'天盘'}</strong>
-  <span>${birth.calendar==='lunar'?(birth.leapMonth?'农历闰月 ':'农历 '):''}${esc(birth.dateStr)} ${birth.timeUnknown?'时辰未知':esc(birth.timeStr)}</span>
-  <b>${bazi?.pillars.map(p=>esc(p.stem+p.branch)).join('　')||''}</b>
-  <span>${esc(z.fiveElementsClass)} · ${esc(z.palaces.find(p=>p.name==='命宫')?.decadal?.range?.[0]??'—')} 岁起限</span>
+  <span class="zw-kicker">FIRST LIGHT · 紫微斗数</span>
+  <strong>${esc(birth.name||'当前命主')}</strong>
+  <span>${({heaven:'天盘',earth:'地盘',human:'人盘'})[z.astroType]} · ${esc(z.fiveElementsClass)} · ${esc(z.decades[0]?.ageRange[0]??'—')} 岁起限</span>
+  <b class="zw-pillars">${bazi?.pillars.map(p=>esc(p.stem+p.branch)).join('　')||''}</b>
   <span>命主星 ${esc(z.soul)} · 身主星 ${esc(z.body)}</span>
-  <span id="zwFlowCaption" aria-live="polite"></span>
+  <span id="zwFlowCaption" aria-live="polite">${flow?esc(flow.label+' · '+flow.ganZhi):''}</span>
  </div></div>`;
 }
 function renderZiwei(z){
  window.currentZiwei=z;
- if(!z||z.error){$('#ziweiBox').innerHTML='<h3>紫微斗数</h3><p class="note">排盘不可用：'+esc(z&&z.error)+'</p>';return;}
- const rows=z.palaces.map(p=>{const stars=[...p.majorStars.map(s=>s.name+(s.mutagen?`<span class="pill">${s.mutagen}</span>`:'')),...p.minorStars.map(s=>s.name)].join(' ')||'空宫';
-  const dec=p.decadal&&p.decadal.range?`${p.decadal.range[0]}-${p.decadal.range[1]} 岁`:'';return `<tr><td>${esc(p.name)}${p.isBodyPalace?' <span class="tag">身</span>':''}</td><td>${esc(p.heavenlyStem+p.earthlyBranch)}</td><td>${stars}</td><td>${dec}</td></tr>`;}).join('');
- $('#ziweiBox').innerHTML=`${drawZiweiGrid(z)}<div id="zwDetail" class="card" aria-live="polite">点击宫位查看三方四正</div><div>${(z.patterns||[]).map(p=>'<span class="tag">'+esc(p.name)+'</span>').join('')}</div>
- <details><summary>十二宫完整星曜</summary><table><thead><tr><th>宫位</th><th>干支</th><th>主辅星</th><th>大限</th></tr></thead><tbody>${rows}</tbody></table></details>`;}
-
+ const box=$('#ziweiBox');
+ if(!z?.palaces){box.textContent=z?.error||'紫微排盘不可用';return;}
+ mountZiweiWorkbench(z);
+}
 function bInp(){const [Y,M,D]=$('#bdate').value.split('-').map(Number);const [h,mi]=$('#btime').value.split(':').map(Number);
  return {Y,M,D,h,mi,gender:$('#bgender').value,dateStr:$('#bdate').value,timeStr:$('#btime').value,city:{label:'第二人',lat:+$('#blat').value,lon:+$('#blon').value,tz:+$('#btz').value}};}
 $('#btnSyn').onclick=async()=>{const b=$('#btnSyn');b.disabled=true;b.textContent='计算中…';
@@ -457,7 +460,7 @@ function renderTimeline(t){
 $('#bPlaceControls').innerHTML='<input id="bSearch" placeholder="搜索第二人城市或区县"><div id="bSuggestions"></div><select id="bProv"><option value="">省份</option></select><select id="bCity"><option value="">城市</option></select><select id="bCounty"><option value="">区县</option></select><button type="button" id="locateB">📍 定位当前</button><small id="bPlaceStatus"></small>';
 const geo=async path=>{const r=await fetch('/api/geo/'+path);if(!r.ok)throw new Error('地点查询失败');return r.json();};
 function opts(items){return '<option value="">请选择</option>'+items.map(i=>'<option value="'+i.code+'">'+esc(i.name)+'</option>').join('');}
-geo('provinces').then(r=>$('#bProv').innerHTML=opts(r.items));
+geo('provinces').then(r=>$('#bProv').innerHTML=opts(r.items)).catch(()=>{});
 let applyingLocation=false;let locationGeneration={a:0,b:0};function invalidate(who){if(!applyingLocation)locationGeneration[who]++;}
 async function resolveB(){invalidate('b');const q=new URLSearchParams({p:$('#bProv').value,c:$('#bCity').value,d:$('#bCounty').value});try{const p=await geo('resolve?'+q);$('#blat').value=p.lat;$('#blon').value=p.lon;$('#bPlaceStatus').textContent=p.label||p.city||'手动选择';}catch(e){$('#bPlaceStatus').textContent=e.message;}}
 $('#bProv').onchange=async()=>{invalidate('b');const p=$('#bProv').value;$('#bCounty').innerHTML=opts([]);$('#bCity').innerHTML=opts((await geo('cities?p='+p)).items);if(!$('#bCity').options[1])$('#bCounty').innerHTML=opts((await geo('counties?c='+p)).items);await resolveB();};$('#bCity').onchange=async()=>{$('#bCounty').innerHTML=opts((await geo('counties?c='+$('#bCity').value)).items);await resolveB();};$('#bCounty').onchange=resolveB;

@@ -8,5 +8,6 @@ assert p.path in ('', '/') and not p.query and not p.fragment, 'Use the HTTPS ro
 file = Path('ios-src/Info.plist')
 info = plistlib.loads(file.read_bytes())
 info['FirstLightServerURL'] = url.rstrip('/') + '/'
+info['WKAppBoundDomains'] = [p.hostname]
 file.write_bytes(plistlib.dumps(info, sort_keys=False))
 print('Configured FirstLightServerURL:', info['FirstLightServerURL'])

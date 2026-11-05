@@ -90,3 +90,69 @@ body.input-open{overflow:hidden}
   #westBox,#baziBox{padding:5px}
 }
 @media(prefers-reduced-motion:reduce){#inputSheet[open]{animation:none}}
+
+/* Reading workbench */
+#readingSummary{
+  position:sticky;top:calc(44px + env(safe-area-inset-top,0px));z-index:8;
+  height:38px;min-height:38px;line-height:38px;margin:0 auto 4px;
+  max-width:max-content;padding:0 14px;border:1px solid #fff;border-radius:20px;
+  background:linear-gradient(145deg,#fffc,#ffe8f1e8);
+  backdrop-filter:blur(32px) saturate(165%);-webkit-backdrop-filter:blur(32px) saturate(165%);
+  box-shadow:0 4px 18px #a13a6920,inset 0 1px 2px #fff,inset 0 -1px 2px #ff4f8b21;
+}
+#inputSheet{
+  background:linear-gradient(160deg,#fffb,#fff1f7ef);
+  backdrop-filter:blur(32px) saturate(170%);-webkit-backdrop-filter:blur(32px) saturate(170%);
+  box-shadow:0 -12px 48px #41233725,inset 0 1px 2px #fff,inset 0 -1px 2px #ff4f8b26;
+}
+#inputSheet.onboarding{background:#fff8fc}
+#ziweiBox{border:0;background:none;padding:0;box-shadow:none;backdrop-filter:none}
+.zwgrid{height:clamp(350px,59vh,520px);height:clamp(350px,59svh,520px);border-radius:14px;overflow:hidden}
+.zwcell{display:flex;flex-direction:column;gap:2px;background:#fffcfd;border-color:#f1dce8;scrollbar-width:thin}
+.zw-h span{color:#742342}
+.zw-h small{font-weight:500;white-space:nowrap}
+.zw-s{display:grid;gap:1px;margin:0;line-height:1.22}
+.zw-star b{font-weight:600}
+.zw-star.primary-star b{color:#a82f52;font-weight:800}
+.zw-star.primary-star:nth-child(2n) b{color:#99601d}
+.zw-star small{font-size:.85em;color:#715169}
+.zw-borrow{font-size:.88em;color:#674461}
+.zw-borrow b{display:block}
+.zw-marker{display:inline-block;margin-inline-start:2px;padding:1px 2px;border-radius:3px;color:#fff;font-weight:700;font-size:.78em;font-style:normal;white-space:nowrap}
+.zw-marker[data-mutagen=禄]{background:#137b67}
+.zw-marker[data-mutagen=权]{background:#975319}
+.zw-marker[data-mutagen=科]{background:#5152aa}
+.zw-marker[data-mutagen=忌]{background:#ae2857}
+.zw-foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px;color:#6f4e65;font-size:.84em}
+.zw-foot b{background:#f2e4ff;color:#553174;border-radius:4px;padding:0 3px}
+.zw-kicker{font-size:10px;letter-spacing:.1em;font-weight:750;color:#9b3c66}
+.zwcenter{gap:5px;background:radial-gradient(ellipse at 50% 45%,#fff9fd,#ffe9f4)}
+.zwcenter strong{font-size:clamp(16px,4vw,26px);line-height:1.15}
+.zwcenter.triad-glow{box-shadow:inset 0 0 25px #ff5c9d44}
+.zw-pillars{color:#793556;font-size:1.03em}
+.zw-overlay{opacity:1;z-index:3}
+.triad-polygon{fill:#ff4f8b14;stroke:#df367b;stroke-dasharray:none;stroke-opacity:.64}
+.opposition{stroke-opacity:.74;stroke-dasharray:5 4}
+.zwcell.flying-target{border-color:#b27bb8;background:#fdf2fb}
+.flying-arc{fill:none;stroke-width:1.7;opacity:.9;animation:fly-in .25s ease-out}
+.flying-pill text{font-size:9px;font-weight:700}
+.flying-pill rect{stroke-width:.65}
+@keyframes fly-in{from{opacity:0}to{opacity:.9}}
+.zw-mode{display:flex;gap:3px;margin:8px auto;padding:3px;width:max-content;max-width:100%;border-radius:26px}
+.zw-mode button{min-height:36px;border:0;background:none;padding:5px 11px;font-size:12px;white-space:nowrap}
+.zw-mode button[aria-pressed=true],.zw-rail button[aria-pressed=true]{background:#ffe0ed;color:#822249;font-weight:750}
+.zw-timeline{padding:8px;border-radius:14px}
+.zw-rail{display:grid;grid-template-columns:2.75em minmax(0,1fr);align-items:center;gap:5px;font-size:12px}
+.zw-rail-label{color:#714159}
+.zw-rail-scroll{position:relative;display:flex;gap:5px;align-items:center;overflow-x:auto;min-height:40px;padding:3px;scrollbar-width:thin;scroll-snap-type:x proximity}
+.zw-rail-scroll button{flex:none;min-height:34px;padding:4px 9px;border-radius:11px;font-size:12px;white-space:nowrap;scroll-snap-align:start}
+#ziweiControlsStatus{margin:0;color:#8e2550}
+.zw-period{margin:9px 0;padding:12px;border-radius:15px}
+.zw-period h3{margin:3px 0 5px}
+#zwDetail.zw-period p{line-height:1.6;margin:4px 0}
+.bazi-structure{margin-top:12px;display:grid;gap:5px}
+.bazi-structure p{margin:0;font-size:13px;line-height:1.6}
+.bazi-relations{display:flex;flex-wrap:wrap;gap:4px}
+.pillar-cards .pillar-void{color:#96254c;background:#ffe0ed;border-radius:5px;padding:1px 4px}
+#crossInsights p{line-height:1.65}
+@media(prefers-reduced-motion:reduce){.flying-arc{animation:none}}

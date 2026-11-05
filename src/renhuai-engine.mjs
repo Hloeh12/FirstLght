@@ -1690,5 +1690,6 @@ export {
   detectPatterns,
   generateChart,
   resolveZiweiDayOffset,
+  schoolStarBrightness,
   shiftGregorianDate
 };

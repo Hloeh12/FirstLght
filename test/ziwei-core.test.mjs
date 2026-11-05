@@ -24,3 +24,33 @@ test('earth and human recalculate Ziwei from natal body and fortune palaces',()=
  }
  assert.throws(()=>ziweiChart({...birth,astroType:'other'}),/盘式/);
 });
+
+test('flying transformations target actual stars and empty palaces use local brightness',()=>{
+ const z=ziweiChart({...input,timeIndex:2});
+ for(const palace of z.palaces){
+  assert.deepEqual(palace.flying.map(s=>s.type),['禄','权','科','忌']);
+  for(const move of palace.flying)assert(z.palaces.find(p=>p.branch===move.branch).stars.some(s=>s.name===move.star));
+ }
+ const empty=z.palaces.filter(p=>!p.majorStars.length);
+ assert(empty.length>0);
+ for(const p of empty){
+  const opposite=z.palaces.find(q=>q.branch===(p.branch+6)%12);
+  assert.deepEqual(p.borrowedStars.map(s=>s.name),opposite.majorStars.map(s=>s.name));
+  assert(p.borrowedStars.every(s=>s.brightness));
+ }
+});
+test('four period scopes rotate all twelve palace names and use true lunar month lengths',()=>{
+ const options={...input,flowYear:2025};
+ const result=['decadal','yearly','monthly','daily'].map(scope=>ziweiFlow({...options,scope,month:-6,day:17}));
+ for(const period of result){
+  assert.equal(new Set(Object.values(period.palaceNames)).size,12);
+  assert.equal(period.mutagens.length,4);
+  assert(period.mutagens.every(m=>Number.isInteger(m.branch)));
+  assert.equal(period.months.length,13);
+ }
+ assert.equal(result[2].days.length,29);
+ assert.equal(result[3].ganZhi,result[3].days[16].ganZhi);
+ assert.equal(result[3].date,'2025-08-10');
+ assert.throws(()=>ziweiFlow({...options,scope:'daily',month:-6,day:30}),/农历日期/);
+ assert.throws(()=>ziweiFlow({...options,scope:'monthly',month:-7}),/农历日期/);
+});

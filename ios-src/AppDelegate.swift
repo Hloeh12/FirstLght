@@ -17,10 +17,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
     private var exportedFile: URL?
     private var webView: WKWebView!
     private var statusView: UIView?
+    private var serverURL: URL? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "FirstLightServerURL") as? String,
+              let url = URL(string: value), url.scheme == "https", url.host != nil else { return nil }
+        return url
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -33,6 +38,8 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     private func setupWebView() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
+        config.limitsNavigationsToAppBoundDomains = true
+        config.userContentController.add(self, name: "shareChart")
         config.preferences.javaScriptEnabled = true
         config.defaultWebpagePreferences.allowsContentJavaScript = true
 
@@ -49,8 +56,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     }
 
     private func loadContent() {
-        guard let value = Bundle.main.object(forInfoDictionaryKey: "FirstLightServerURL") as? String,
-              let url = URL(string: value), url.scheme == "https", url.host != nil else {
+        guard let url = serverURL else {
             showRetryOverlay(error: "服务地址尚未配置")
             return
         }
@@ -112,9 +118,40 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     func downloadDidFinish(_ download: WKDownload) {
         guard let file = exportedFile else { return }
+        exportedFile = nil
+        presentShare(file)
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        let origin = message.frameInfo.securityOrigin
+        guard message.name == "shareChart", message.frameInfo.isMainFrame,
+              let url = serverURL, origin.protocol == "https", origin.host == url.host,
+              (origin.port == 0 ? 443 : origin.port) == (url.port ?? 443),
+              presentedViewController == nil,
+              let payload = message.body as? String, payload.count <= 12_000_000,
+              payload.hasPrefix("data:image/png;base64,"),
+              let bytes = Data(base64Encoded: String(payload.dropFirst("data:image/png;base64,".count))),
+              bytes.starts(with: [137, 80, 78, 71, 13, 10, 26, 10]) else { return }
+        do {
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let file = folder.appendingPathComponent("FirstLight-chart.png")
+            try bytes.write(to: file, options: .atomic)
+            presentShare(file)
+        } catch {
+            let alert = UIAlertController(title: "分享失败", message: "暂时无法写入长图。", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "好", style: .default))
+            present(alert, animated: true)
+        }
+    }
+
+    private func presentShare(_ file: URL) {
         let share = UIActivityViewController(activityItems: [file], applicationActivities: nil)
         share.popoverPresentationController?.sourceView = view
         share.popoverPresentationController?.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
+        share.completionWithItemsHandler = { _, _, _, _ in
+            try? FileManager.default.removeItem(at: file.deletingLastPathComponent())
+        }
         present(share, animated: true)
     }
 

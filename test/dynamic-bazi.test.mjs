@@ -2,3 +2,11 @@ import test from 'node:test';import assert from 'node:assert/strict';import {baz
 const a={Y:2000,M:8,D:16,h:12,mi:0,gender:'女',city:{lat:31.23,lon:121.47,tz:8}};
 test('fortune and annual model changes weighted energy without altering natal pillars',()=>{const b=baziFromInput(a),c=baziFromInput({...a,luckIndex:0,flowYear:2026});assert.deepEqual(c.pillars,b.pillars);assert.equal(c.dynamic.selected.length,2);assert(Math.abs(Object.values(c.dynamic.percentages).reduce((a,b)=>a+b)-100)<.04);assert.notDeepEqual(c.dynamic.weights,b.dynamic.weights);assert.equal(Object.values(c.dynamic.weights).reduce((a,b)=>a+b),12);assert(c.dynamic.method.includes('参考'));});
 test('nayin and twelve stages are present; unimplemented shensha is explicit',()=>{const b=baziFromInput(a);for(const p of b.pillars){assert(p.nayin);assert(p.changsheng);assert.equal(p.shensha.implemented,false);}assert.throws(()=>baziFromInput({...a,luckIndex:99}));});
+
+test('pillar matrix annotates real root, hidden-stem reveal, relations and void branches',()=>{
+ const b=baziFromInput({Y:2000,M:8,D:16,h:12,mi:0,gender:'女',city:{lat:31.23,lon:121.47,tz:8}});
+ assert.deepEqual(b.structure.voidBranches,['寅','卯']);
+ assert(b.structure.roots.some(r=>r.stem==='丙'||r.stem==='丁'));
+ assert(b.structure.relationships.some(r=>r.type==='自刑'&&r.pattern==='午午'));
+ assert(b.structure.revealed.every(r=>b.hiddenStems[r.rootAt].some(s=>s.stem===r.stem)));
+});

@@ -4,7 +4,7 @@ const el=id=>document.getElementById(id), safe=esc, CASE_KEY='xy:cases:v2',SETTI
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
 let customGroups=read('xy:case-groups',[]);const groups=()=>['我的','亲人','朋友','特别关注',...customGroups];
 let cases=read(CASE_KEY,[]),settings=read(SETTINGS,{}),activeId=null,filter='全部',recent=[],currentTab='chart';
-const state={activeProfile:read('xy_active_profile',null)};state.uiMode='input';state.isComputing=false;state.system='west';window.state=state;window.xyState=state;activeId=state.activeProfile?.id||null;
+const state={activeProfile:read('xy_active_profile',null)};state.uiMode='input';state.isComputing=false;state.system='ziwei';window.state=state;window.xyState=state;activeId=state.activeProfile?.id||null;
 function updateActivePill(){const pill=el('activeProfilePill');pill.hidden=!state.activeProfile||currentTab!=='insights';pill.textContent=state.activeProfile?'🌸 正在查看：'+state.activeProfile.name+' · '+(state.activeProfile.pillarSummary||''):'';}
 const inputSheet=el('inputSheet');
 const nativeModal=typeof inputSheet.showModal==='function';
@@ -37,7 +37,7 @@ function setReadingMode(mode){
   const yearDay=b?[b.pillars[0],b.pillars[2]].map((x,i)=>x.stem+x.branch+(i?'日':'年')).join(' '):'';
   el('readingSummary').textContent=['🌸 '+(p?.name||'当前命主'),yearDay,p?.fields.city?.label||'手动坐标'].filter(Boolean).join(' · ')+' ▾';
  }
- el('overviewBtn').textContent=({west:'西方星盘',bazi:'东方八字',ziwei:'天纪紫微',synastry:'双人合盘',energy:'能量脉轮',timeline:'时间轨迹',report:'模板报告',vedic:'印度盘',raw:'原始数据'}[state.system]||'盘面')+' ▾';
+ el('overviewBtn').textContent=({west:'西方星盘',bazi:'东方八字',ziwei:'天纪紫微',synastry:'双人合盘',energy:'能量脉轮',timeline:'时间轨迹',vedic:'印度盘',raw:'原始数据'}[state.system]||'盘面')+' ▾';
 }
 function restoreProfile(p){
  invalidate('a');
@@ -87,8 +87,7 @@ handle.addEventListener('touchstart',e=>{sheetStart=e.touches[0].clientY},{passi
 handle.addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-sheetStart>60)closeInput()},{passive:true});
 el('sheetCases').onclick=()=>rootTab('cases');
 function syncReadingAnalysis(){
- el('readingAnalysis').innerHTML='<h3>洞见报告</h3>'+el('insightSummary').innerHTML+el('reportBox').innerHTML;
- el('readingAnalysis').classList.add('card');
+ renderCrossInsights();
 }
 function enableCast(){el('castBtn').disabled=false;el('castBtn').textContent='生成命盘';}
 function setChartStatus(message='',retry=false){
@@ -116,6 +115,7 @@ function loadCase(c){
  localStorage.setItem('xy_active_profile',JSON.stringify(c));
  activeId=c.id;
  chart=null;
+ el('readingAnalysis').hidden=true;
  restoreProfile(c);
  invalidate('a');
  recent=[c.id,...recent.filter(x=>x!==c.id)].slice(0,8);

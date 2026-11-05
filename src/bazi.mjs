@@ -22,6 +22,7 @@ function termNear(year, lon){
   const nowLon=sunLon(new Date(Date.UTC(year,2,20,12)));
   const delta=((target-nowLon+540)%360)-180;
   guess=new Date(Date.UTC(year,2,20,12)+delta/0.98565*86400000);
+  if(guess.getUTCFullYear()<year)guess.setUTCFullYear(year);
   let lo=+guess-3*86400000, hi=+guess+3*86400000;
   const f=t=>{const d=((sunLon(new Date(t))-target+540)%360)-180;return d;};
   for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(f(mid)<0)lo=mid;else hi=mid;}
@@ -122,8 +123,14 @@ export function bazi({utc,local,gender='男',dayBoundaryAt2300=false}){
   ];
   const luck=luckCycles(utc,local.y,mp,yIdx,gender);
   const years=flowYears(local.y,3);
-  const hidden=Object.fromEntries(pillars.map(p=>[p.name,HIDDEN[p.branch].map(s=>({stem:s,tenGod:tenGod(dIdx,STEMS.indexOf(s))}))]));
+  const hidden=Object.fromEntries(pillars.map(p=>[p.name,HIDDEN[p.branch].map(s=>({stem:s,tenGod:tenGod(dIdx,STEMS.indexOf(s)),element:STEM_ELEM[STEMS.indexOf(s)],rank:['本气','中气','余气'][HIDDEN[p.branch].indexOf(s)]}))]));
   const elements={木:0,火:0,土:0,金:0,水:0};
   for(const p of pillars){elements[STEM_ELEM[p.stemIdx]]++;elements[BRANCH_ELEM[p.branchIdx]]++;}
-  return {pillars,dayMaster:{stem:dp.stem,element:STEM_ELEM[dIdx],yin:STEM_YIN[dIdx]},hiddenStems:hidden,elements,luck,flowYears:years,meta:{yearPillarYear:yp.year,lichun:yp.lichun.toISOString(),monthStart:mp.start.toISOString(),dayBoundary:dayBoundaryAt2300?'23:00':'00:00',gender,note:'节气时刻按太阳视黄经计算；日柱以本地日期换日，可选 23:00 换日'}};
+  const weighted={木:0,火:0,土:0,金:0,水:0};
+  for(const p of pillars){weighted[STEM_ELEM[p.stemIdx]]+=1;const hs=hidden[p.name];const weights=hs.length===1?[1]:hs.length===2?[0.7,0.3]:[0.6,0.25,0.15];hs.forEach((x,i)=>weighted[x.element]+=weights[i]);}
+  const percentages=Object.fromEntries(Object.entries(weighted).map(([k,v])=>[k,Math.round(v/8*10000)/100]));
+  const de=STEM_ELEM[dIdx],resource=Object.keys(GENERATE).find(k=>GENERATE[k]===de);
+  const support=(weighted[de]+weighted[resource])/8;
+  const strength={seasonSupported:[de,resource].includes(BRANCH_ELEM[pillars[1].branchIdx]),rooted:pillars.some(p=>hidden[p.name].some(x=>x.element===de)),assisted:pillars.filter(p=>p.name!=='日柱').some(p=>[de,resource].includes(STEM_ELEM[p.stemIdx])),supportRatio:support,reference:support>0.6?'身旺':support<0.4?'身弱':'中和',method:'天干等权、藏干按本中余气加权；旺衰为简化参考，非格局用神定论'};
+  return {elementPercentages:percentages,elementWeights:weighted,strength,pillars,dayMaster:{stem:dp.stem,element:STEM_ELEM[dIdx],yin:STEM_YIN[dIdx]},hiddenStems:hidden,elements,luck,flowYears:years,meta:{yearPillarYear:yp.year,lichun:yp.lichun.toISOString(),monthStart:mp.start.toISOString(),dayBoundary:dayBoundaryAt2300?'23:00':'00:00',gender,note:'节气时刻按太阳视黄经计算；日柱以本地日期换日，可选 23:00 换日'}};
 }

@@ -154,7 +154,7 @@ $('#f').onsubmit=async e=>{e.preventDefault();const t0=performance.now();const b
  try{
   const req=inp();
   const r=await post('/api/chart',{...req,skipZiwei:true});chart=r.raw;$('#rawBox').textContent=JSON.stringify(r,null,1).slice(0,20000);
-  renderWest(chart.western,chart.analysis);if(chart.meta.input.reliability?.timeUnknown)$('#westBox').insertAdjacentHTML('afterbegin','<p class="note" style="margin:0 0 10px">⚠️ 出生时间未知，已按正午 12:00 排盘：上升、中天、宫位与紫微命宫仅供参考，不宜据此判断具体事件。</p>');renderVedic(chart.vedic);
+  renderWest(chart.western,chart.analysis);renderBazi(chart.bazi);if(chart.meta.input.reliability?.timeUnknown)$('#westBox').insertAdjacentHTML('afterbegin','<p class="note" style="margin:0 0 10px">⚠️ 出生时间未知，已按正午 12:00 排盘：上升、中天、宫位与紫微命宫仅供参考，不宜据此判断具体事件。</p>');renderVedic(chart.vedic);
   const ziweiP=post('/api/ziwei',{dateStr:req.dateStr,timeIndex:chart.meta.input.ziweiTimeIndex,gender:req.gender,calendar:req.calendar,leapMonth:req.leapMonth,Y:req.Y,M:req.M,D:req.D}).then(z=>{chart.ziwei=z;renderZiwei(z);}).catch(()=>{renderZiwei({error:'紫微排盘失败'});});
   const [rep,en,tl]=await Promise.all([post('/api/local-report',inp()),post('/api/energy',inp()),post('/api/timeline',{...inp(),months:24})]);
   await ziweiP;
@@ -390,12 +390,17 @@ function drawWheel(w){
  const legend=`<div class="legend"><span><i style="background:#ff9ec4"></i>合相</span><span><i style="background:#9ad0b0"></i>六分</span><span><i style="background:#8fc7ff"></i>三分</span><span><i style="background:#ff8fa3"></i>四分</span><span><i style="background:#ffb27a"></i>对分</span></div>`;
  return `<svg viewBox="0 0 ${S} ${S}" style="width:100%;max-width:360px;height:auto;display:block;margin:0 auto 4px">${g}</svg>`+legend;
 }
+function renderBazi(b){
+ if(!b)return;let box=document.getElementById('baziBox');if(!box){box=document.createElement('section');box.id='baziBox';box.className='card';$('#westBox').after(box);}
+ box.innerHTML='<h3>八字命盘</h3><table><thead><tr><th>四柱</th>'+b.pillars.map(p=>'<th>'+esc(p.name)+'</th>').join('')+'</tr></thead><tbody>'+['stem','branch','tenGod'].map((k,i)=>'<tr><th>'+['天干','地支','十神'][i]+'</th>'+b.pillars.map(p=>'<td>'+esc(p[k])+'</td>').join('')+'</tr>').join('')+'<tr><th>藏干</th>'+b.pillars.map(p=>'<td>'+b.hiddenStems[p.name].map(h=>esc(h.stem+' '+h.rank+' '+h.tenGod)).join('<br>')+'</td>').join('')+'</tr></tbody></table><h4>五行能量（加权参考）</h4>'+Object.entries(b.elementPercentages).map(([k,v])=>'<div>'+k+' '+v+'% <meter min="0" max="100" value="'+v+'"></meter></div>').join('')+'<p>日主 '+esc(b.dayMaster.stem)+' · '+esc(b.strength.reference)+'；得令 '+(b.strength.seasonSupported?'是':'否')+' / 得地 '+(b.strength.rooted?'是':'否')+' / 得助 '+(b.strength.assisted?'是':'否')+'</p><h4>大运 · '+b.luck.startAge+' 岁起运 · '+(b.luck.forward?'顺行':'逆行')+'</h4>'+b.luck.cycles.map(c=>'<span class="tag">'+c.startYear+' '+c.stem+c.branch+'（'+c.age+'岁）</span>').join(' ')+'<h4>流年速查（公历年，年柱以立春为界）</h4>'+Array.from({length:12},(_,i)=>{const y=new Date().getFullYear()+i,n=((y-1984)%60+60)%60;return '<span class="tag">'+y+' '+['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'][n%10]+['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][n%12]+'</span>';}).join(' ')+'<p>'+esc(b.strength.method)+'</p>';
+}
+function balanceBars(d){return Object.entries(d.percentages).map(([k,v])=>'<div>'+esc(k)+' '+Math.round(v)+'% <meter min="0" max="100" value="'+v+'"></meter></div>').join('')+'<p>主导：'+d.dominant.map(esc).join('、')+'；缺失：'+(d.missing.map(esc).join('、')||'无')+'</p>';}
 function renderWest(w,an){
- const rows=w.planets.map(p=>`<tr><td>${esc(p.name)}${p.retro?' <span class="tag">逆</span>':''}</td><td>${esc(p.sign)} ${p.degree.degrees}°${String(p.degree.minutes).padStart(2,'0')}′</td><td>${p.house} 宫</td></tr>`).join('');
+ const rows=w.planets.map(p=>`<tr><td>${esc(p.name)} <span class="tag">${esc(an?.planets.find(x=>x.name===p.name)?.dignity||'')}</span>${p.retro?' <span class="tag">逆</span>':''}</td><td>${esc(p.sign)} ${p.degree.degrees}°${String(p.degree.minutes).padStart(2,'0')}′</td><td>${p.house} 宫</td></tr>`).join('');
  $('#westBox').innerHTML=`<h3>西方本命盘 <span class="tag">${w.houseSystem}</span></h3>
  <div class="row"><span>上升 ASC</span><b class="k">${esc(w.asc.sign)} ${w.asc.degree.degrees}°${String(w.asc.degree.minutes).padStart(2,'0')}′</b></div>
  <div class="row"><span>中天 MC</span><b class="k">${esc(w.mc.sign)} ${w.mc.degree.degrees}°${String(w.mc.degree.minutes).padStart(2,'0')}′</b></div>
- ${drawWheel(w)}
+ ${drawWheel(w)}${an?balanceBars(an.elements)+balanceBars(an.modalities):''}
  <table><thead><tr><th>星体</th><th>星座度数</th><th>宫位</th></tr></thead><tbody>${rows}</tbody></table>
  <h3 style="margin-top:14px">主要相位 <span class="tag">${w.aspects.length}</span></h3>
  <table><tbody>${w.aspects.slice(0,14).map(a=>`<tr><td>${esc(a.a)} × ${esc(a.b)}</td><td>${esc(a.type)}</td><td>${a.orb.toFixed(1)}°</td></tr>`).join('')}</tbody></table>
@@ -403,8 +408,8 @@ function renderWest(w,an){
  <h3 style="margin-top:14px">结构分析</h3>
  <div class="row"><span>命主星</span><b class="k">${an?esc(an.chartRuler.planet)+'（'+esc(an.chartRuler.sign)+'）'+(an.chartRuler.house?' 第'+an.chartRuler.house+'宫':'')+(an.chartRuler.retro?' 逆':'')+'':'-'}</b></div>
  <div class="row"><span>入庙 / 旺相 / 入弱 / 落陷</span><b class="k">${an?`${an.dignitiesSummary.入庙} / ${an.dignitiesSummary.旺相} / ${an.dignitiesSummary.入弱} / ${an.dignitiesSummary.落陷}`:'-'}</b></div>
- <div class="row"><span>元素分布</span><b class="k">${an?Object.entries(an.counts.element).map(([k,v])=>k+v).join(' · '):'-'}</b></div>
- <div class="row"><span>模式分布</span><b class="k">${an?Object.entries(an.counts.mode).map(([k,v])=>k+v).join(' · '):'-'}</b></div>
+ <div class="row"><span>元素分布</span><b class="k">${an?Object.entries(an.counts.element).map(([k,v])=>k+Math.round(v/w.planets.length*100)+'%').join(' · '):'-'}</b></div>
+ <div class="row"><span>模式分布</span><b class="k">${an?Object.entries(an.counts.mode).map(([k,v])=>k+Math.round(v/w.planets.length*100)+'%').join(' · '):'-'}</b></div>
  <div class="row"><span>格局</span><b class="k">${an&&an.patterns.length?an.patterns.map(p=>esc(p.type)+'('+p.planets.join('、')+')').join('；'):'无'}</b></div>
  <p class="note">UTC ${esc(w.utc)} · 允许度 8/5/6/6/8</p>`;}
 async function dl(fmt){

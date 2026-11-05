@@ -16,7 +16,7 @@ export function analyze(w){
   if(DETRIMENT[p.name]?.includes(s))return '入弱';
   if(FALL[p.name]===s)return '落陷';
   return '中性';};
- const planets=w.planets.map(p=>({name:p.name,sign:p.sign,house:p.house,retro:p.retro,dignity:dignity(p)}));
+ const planets=w.planets.map(p=>({name:p.name,sign:p.sign,house:p.house,retro:p.retro,dignity:dignity(p),dignitySystem:["天王星","海王星","冥王星"].includes(p.name)?"modern-domicile-only":"classical"}));
  const counts={element:{火:0,土:0,风:0,水:0},mode:{基本:0,固定:0,变动:0}};
  for(const p of w.planets){const i=signIdx(p);counts.element[ELEMENT[i]]++;counts.mode[MODE[i]]++;}
  const ruler=RULER[SIGN.indexOf(w.asc.sign)];
@@ -39,5 +39,8 @@ export function analyze(w){
  const bySign={};for(const p of w.planets)(bySign[p.sign]=bySign[p.sign]||[]).push(p.name);
  for(const [s,list] of Object.entries(bySign))if(list.length>=3)patterns.push({type:'星群',planets:list,sign:s});
  const seen=new Set(),uniq=patterns.filter(p=>{const k=p.type+'|'+p.planets.slice().sort().join(',');if(seen.has(k))return false;seen.add(k);return true;});
- return {planets,dignitiesSummary:{入庙:planets.filter(p=>p.dignity==='入庙').length,旺相:planets.filter(p=>p.dignity==='旺相').length,入弱:planets.filter(p=>p.dignity==='入弱').length,落陷:planets.filter(p=>p.dignity==='落陷').length},chartRuler:{planet:ruler,sign:w.asc.sign,house:rulerPlanet?rulerPlanet.house:null,retro:rulerPlanet?rulerPlanet.retro:null},counts,patterns:uniq,notice:'庙旺落陷与格局为古典占星常见定义的结构化标注，不构成预测。'};
+ const distribution=c=>{const total=Object.values(c).reduce((a,b)=>a+b,0);return {percentages:Object.fromEntries(Object.entries(c).map(([k,v])=>[k,100*v/total])),dominant:Object.keys(c).filter(k=>c[k]===Math.max(...Object.values(c))),missing:Object.keys(c).filter(k=>!c[k])};};
+ return {elements:distribution(counts.element),modalities:distribution(counts.mode),planets,dignitiesSummary:{入庙:planets.filter(p=>p.dignity==='入庙').length,旺相:planets.filter(p=>p.dignity==='旺相').length,入弱:planets.filter(p=>p.dignity==='入弱').length,落陷:planets.filter(p=>p.dignity==='落陷').length},chartRuler:{planet:ruler,ascendantSign:w.asc.sign,sign:rulerPlanet?.sign,dignity:rulerPlanet?dignity(rulerPlanet):null,house:rulerPlanet?rulerPlanet.house:null,retro:rulerPlanet?rulerPlanet.retro:null},counts,patterns:uniq,notice:'庙旺落陷与格局为古典占星常见定义的结构化标注，不构成预测。'};
 }
+
+

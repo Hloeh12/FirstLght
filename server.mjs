@@ -52,6 +52,7 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/api/geo/search')return send(req,res,200,{items:searchPlaces(q.get('q'))});
   return send(req,res,404,{error:'not found'});
  }
+ if(req.method==='POST'&&url.pathname==='/api/bazi'){let raw='';for await(const c of req)raw+=c;try{return send(req,res,200,baziFromInput(JSON.parse(raw||'{}')));}catch(e){return send(req,res,400,{error:e.message});}}
  if(req.method==='POST'&&url.pathname==='/api/cache/clear'){clearMemo();return send(req,res,200,{ok:true});}
  if(req.method==='GET'&&url.pathname==='/api/validate')return send(req,res,200,validate());
  if(req.method==='GET'&&url.pathname==='/openapi.json'){return send(req,res,200,openapi());}

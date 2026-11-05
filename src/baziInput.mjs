@@ -31,8 +31,9 @@ export function baziFromInput(input){
     local={y:Y,m:M,d:D,h,mi};
   }
   const out=bazi({utc,local,gender:input.gender==='女'?'女':'男',dayBoundaryAt2300:!!input.dayBoundaryAt2300});
-  out.meta.input={...input,city:{label:input.city?.label,lat:lon,lon,tz}};
+  out.meta.input={...input,city:{label:input.city?.label,lat:input.city?.lat,lon,tz}};
   out.meta.solarClock=solarClock;out.meta.eotMin=Math.round(eot*10)/10;
   out.meta.utc=utc.toISOString();out.meta.local=local;
   return out;
 }
+

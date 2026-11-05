@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-const DIR=path.join(path.dirname(new URL(import.meta.url).pathname),'..','data');
+import { fileURLToPath } from 'node:url';
+const DIR=process.env.DATA_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)),'..','data');
 fs.mkdirSync(DIR,{recursive:true});
 const memo=new Map();
 const MAX=60;

@@ -27,6 +27,18 @@ const server=http.createServer(async(req,res)=>{
  req._t0=performance.now();
  if(req.method==='OPTIONS'){res.writeHead(204);return res.end();}
  const url=new URL(req.url,'http://localhost');
+ if(req.method==='GET' && /^\/(src|assets|vendor)\//.test(url.pathname)){
+  try{
+   const relative=decodeURIComponent(url.pathname).slice(1);
+   const target=path.resolve(root,relative);
+   const allowed=['src','assets','vendor'].some(dir=>target.startsWith(path.join(root,dir)+path.sep));
+   if(!allowed)return send(req,res,403,{error:'forbidden'});
+   const types={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.woff2':'font/woff2'};
+   const body=await readFile(target);
+   res.writeHead(200,{'content-type':types[path.extname(target)]||'application/octet-stream','x-content-type-options':'nosniff'});
+   return res.end(body);
+  }catch{return send(req,res,404,{error:'not found'});}
+ }
  if(req.method==='GET'&&url.pathname==='/'){res.writeHead(200,{'content-type':'text/html; charset=utf-8'});return res.end(await readFile(path.join(root,'index.html')));}
  if(req.method==='GET'&&url.pathname==='/api')return send(req,res,200,{name:'xingyu-local-replica',version:'0.15.0',endpoints:{chart:'POST /api/chart',synastry:'POST /api/synastry/chart',daily:'POST /api/daily',energy:'POST /api/energy',localReport:'POST /api/local-report',timeline:'POST /api/timeline',ziweiFlow:'POST /api/ziwei-flow'},notImplemented:['/api/report','/api/synastry/report']});
  if(req.method==='GET'&&url.pathname==='/api/history'){try{return send(req,res,200,{items:listRecords(Number(url.searchParams.get('limit'))||20)});}catch(e){return send(req,res,500,{error:e.message});}}

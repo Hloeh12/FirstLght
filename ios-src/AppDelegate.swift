@@ -47,18 +47,14 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     }
 
     private func loadContent() {
-        // 优先加载本地打包的 HTML 资源
-        if let htmlPath = Bundle.main.path(forResource: "index", ofType: "html", inDirectory: "www") {
-            let fileURL = URL(fileURLWithPath: htmlPath)
-            let readAccessURL = fileURL.deletingLastPathComponent()
-            webView.loadFileURL(fileURL, allowingReadAccessTo: readAccessURL)
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "FirstLightServerURL") as? String,
+              let url = URL(string: value), url.scheme == "https", url.host != nil else {
+            showRetryOverlay(error: "服务地址尚未配置")
             return
         }
-
-        // 备用：尝试连接本地启动的 iSH Node 服务端口
-        if let localServerURL = URL(string: "http://127.0.0.1:8765/?v=ipa") {
-            webView.load(URLRequest(url: localServerURL))
-        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 180
+        webView.load(request)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -72,7 +68,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         sv.backgroundColor = UIColor(red: 247/255, green: 247/255, blue: 251/255, alpha: 1.0)
 
         let label = UILabel()
-        label.text = "星谕排盘\n\n离线资源未就绪或本地端口未连接\n(\(error))\n\n请确认本地 server 已启动，或将 www 静态资源放入 Bundle"
+        label.text = "星谕排盘\n\n暂时无法连接服务\n(\(error))\n\n请检查网络后重试，首次唤醒服务可能需要等待。"
         label.numberOfLines = 0
         label.textAlignment = .center
         label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
@@ -99,3 +95,4 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         loadContent()
     }
 }
+

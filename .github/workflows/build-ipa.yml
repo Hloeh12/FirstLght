@@ -7,9 +7,21 @@ permissions:
   contents: read
 jobs:
   build:
+    if: vars.FIRSTLIGHT_SERVER_URL != ''
     runs-on: macos-latest
+    env:
+      FIRSTLIGHT_SERVER_URL: ${{ vars.FIRSTLIGHT_SERVER_URL }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate deployed service and configure iOS
+        run: |
+          python3 scripts/configure-ios.py
+          npm ci
+          node scripts/smoke.mjs
       - name: Detect Xcode
         shell: bash
         run: |
@@ -80,3 +92,5 @@ jobs:
             build/xcodebuild.log
             FirstLight.xcodeproj/project.pbxproj
           if-no-files-found: ignore
+
+

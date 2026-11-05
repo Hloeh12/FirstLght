@@ -14,7 +14,7 @@
   <string>0.15.0</string>
   <key>CFBundleVersion</key>
   <string>1</string>
-  <key>LSRequiresIPhoneOS</key>
+  <key>FirstLightServerURL</key><string>$(FIRSTLIGHT_SERVER_URL)</string><key>LSRequiresIPhoneOS</key>
   <true/>
   <key>UILaunchScreen</key>
   <dict/>
@@ -26,4 +26,5 @@
   <false/>
 </dict>
 </plist>
+
 

@@ -22,7 +22,7 @@
   <array>
     <string>UIInterfaceOrientationPortrait</string>
   </array>
-  <key>UIViewControllerBasedStatusBarAppearance</key>
+  <key>UIUserInterfaceStyle</key><string>Light</string><key>UIStatusBarStyle</key><string>UIStatusBarStyleDefault</string><key>UIViewControllerBasedStatusBarAppearance</key>
   <false/>
 </dict>
 </plist>

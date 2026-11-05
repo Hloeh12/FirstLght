@@ -79,9 +79,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#fbfbfd;border:1px sol
 media-query{}
 .footer{text-align:center;font-size:11.5px;color:#a5a5b2;margin-top:26px;line-height:1.7}
 @media(max-width:560px){main{padding:12px 14px 60px}h1{font-size:27px}form{padding:16px}}
-</style><style>
-:root{color-scheme:dark}body{color:#f4e9ff;background:radial-gradient(ellipse at 15% 5%,#50254788,transparent 55%),radial-gradient(ellipse at 90% 60%,#26276088,transparent 60%),#100e20;background-attachment:fixed}header{text-align:center}header p{opacity:.68;letter-spacing:2px}.card,form,nav,button,input,select,.zwcell,.zwcenter{background:rgba(38,29,56,.58)!important;color:#f8edff!important;border:1px solid #e4a6ec44!important;backdrop-filter:blur(18px);box-shadow:0 6px 28px #08051233}button{position:relative;overflow:hidden}button:active{box-shadow:0 0 22px #f3b0df88;transform:scale(.98)}.note,label{color:#d1bbd9!important}.zwgrid{min-width:0}.zwcell{cursor:pointer;overflow:auto;min-height:125px}.zwcell.related{outline:2px solid #ff9ed7;background:#803e7066!important}.zw-m{color:#ff8eae!important}.zwcell small{font-size:10px}#menuBtn{position:fixed;left:16px;top:16px;z-index:20}#drawer{position:fixed;left:0;top:0;bottom:0;width:min(300px,85vw);z-index:40;background:#20172ce8;backdrop-filter:blur(18px);padding:28px;box-sizing:border-box}#drawer button{display:block;width:100%;margin:12px 0;padding:14px}#drawerShade{position:fixed;inset:0;background:#0008;z-index:35}#bazi{min-height:70vh}.zwcenter{overflow:auto}@media(max-width:500px){.zwcell{padding:5px!important;font-size:10px}.zw-s{font-size:11px!important}.zwgrid{gap:3px!important}}
-</style><style>body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background-image:radial-gradient(circle,#ffdaef77 1px,transparent 1.8px);background-size:79px 97px;opacity:.25}button:after{content:"";position:absolute;inset:0;background:radial-gradient(circle,#ffcdf977,transparent 65%);opacity:0;transform:scale(.1);transition:transform .5s,opacity .5s;pointer-events:none}button:active:after{opacity:1;transform:scale(2)}@media(prefers-reduced-motion:reduce){*{transition:none!important}}</style></head>
+</style><link rel="stylesheet" href="/assets/app-shell.css"></head>
 <body>
 <header><h1>星谕</h1><p>缘分不过天时地利 承诺不过逝水轻浅</p></header>
 <main>
@@ -97,9 +95,9 @@ media-query{}
 <label>出生日期<input id="date" type="date" value="2000-08-16"></label>
 <label>出生时间<input id="time" type="time" value="12:00"></label>
 <label class="wide" style="flex-direction:row;align-items:center;gap:8px;font-size:12.5px"><input id="tunknown" type="checkbox" style="width:auto"> 不确定出生时间（按正午 12:00 排盘，上升／宫位仅供参考）</label>
-<button type="button" id="locateA">📍 定位当前</button><label>纬度<input id="lat" type="number" step="0.0001" value="31.2304"></label>
-<label>经度<input id="lon" type="number" step="0.0001" value="121.4737"></label>
-<label>时区<input id="tz" type="number" step="0.5" value="8"></label>
+<button type="button" id="locateA">📍 定位当前</button><label>纬度<input id="lat" type="number" step="any" value="31.2304"></label>
+<label>经度<input id="lon" type="number" step="any" value="121.4737"></label>
+<label>时区<input id="tz" type="number" step="any" value="8"></label>
 <label>性别<select id="gender"><option>女</option><option>男</option></select></label>
 <details><summary>高级选项 · 时区库 / 宫制 / 闰月 / 真太阳时</summary><div class="adv">
 <label>时区名称<input id="tzname" placeholder="Asia/Shanghai"></label>
@@ -124,9 +122,9 @@ media-query{}
 <div class="duo">
 <label>出生日期<input id="bdate" type="date" value="1999-03-02"></label>
 <label>出生时间<input id="btime" type="time" value="08:15"></label>
-<div id="bPlaceControls" style="grid-column:1/-1"></div><label>纬度<input id="blat" type="number" step="0.0001" value="39.9042"></label>
-<label>经度<input id="blon" type="number" step="0.0001" value="116.4074"></label>
-<label>时区<input id="btz" type="number" step="0.5" value="8"></label>
+<div id="bPlaceControls" style="grid-column:1/-1"></div><label>纬度<input id="blat" type="number" step="any" value="39.9042"></label>
+<label>经度<input id="blon" type="number" step="any" value="116.4074"></label>
+<label>时区<input id="btz" type="number" step="any" value="8"></label>
 <label>性别<select id="bgender"><option>男</option><option>女</option></select></label>
 <label style="grid-column:1/-1">合盘类型<select id="mode">
 <option value="synastry">双圈互合 Synastry</option>
@@ -157,7 +155,7 @@ $('#f').onsubmit=async e=>{e.preventDefault();const t0=performance.now();const b
   const req=inp();
   const r=await post('/api/chart',{...req,skipZiwei:true});chart=r.raw;$('#rawBox').textContent=JSON.stringify(r,null,1).slice(0,20000);
   renderWest(chart.western,chart.analysis);renderBazi(chart.bazi);if(chart.meta.input.reliability?.timeUnknown)$('#westBox').insertAdjacentHTML('afterbegin','<p class="note" style="margin:0 0 10px">⚠️ 出生时间未知，已按正午 12:00 排盘：上升、中天、宫位与紫微命宫仅供参考，不宜据此判断具体事件。</p>');renderVedic(chart.vedic);
-  const ziweiP=post('/api/ziwei',{dateStr:req.dateStr,timeIndex:chart.meta.input.ziweiTimeIndex,gender:req.gender,calendar:req.calendar,leapMonth:req.leapMonth,Y:req.Y,M:req.M,D:req.D}).then(z=>{chart.ziwei=z;renderZiwei(z);}).catch(()=>{renderZiwei({error:'紫微排盘失败'});});
+  const ziweiP=post('/api/ziwei',{...req,timeIndex:chart.meta.input.ziweiTimeIndex}).then(z=>{chart.ziwei=z;renderZiwei(z);}).catch(()=>{renderZiwei({error:'紫微排盘失败'});});
   const [rep,en,tl]=await Promise.all([post('/api/local-report',inp()),post('/api/energy',inp()),post('/api/timeline',{...inp(),months:24})]);
   await ziweiP;
   renderReport(rep);renderEnergy(en);renderTimeline(tl);document.querySelector('#tabs').scrollIntoView({behavior:'smooth',block:'start'});
@@ -526,7 +524,7 @@ function drawTimelineSvg(t){
  for(const e of t.wEvents){const xx=x(e.ts);g+=`<circle cx="${xx}" cy="${rows.west-4}" r="5" fill="#9fd0ff"/><title>${esc(e.label)} ${new Date(e.ts).toISOString().slice(0,10)}</title>`;}
  for(const r of t.resonances){const a=x(r.startTs),b=Math.max(x(r.endTs),a+3);g+=`<rect x="${a}" y="30" width="${b-a}" height="192" fill="#fff6e2" stroke="#f2d49b"/><title>${esc(r.label)}</title>`;}
  const now=x(t.nowTs);g+=`<line x1="${now}" y1="30" x2="${now}" y2="222" stroke="#ff5c8a" stroke-dasharray="3 3"/>`;
- return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;background:#150710;border-radius:12px">
+ return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;background:#fff5f9;border-radius:12px">
   <text x="8" y="${rows.zy+4}" fill="#ff77aa" font-size="12">紫微</text>
   <text x="8" y="${rows.ved+4}" fill="#ff9ec4" font-size="12">印占</text>
   <text x="8" y="${rows.west+4}" fill="#9fd0ff" font-size="12">过运</text>
@@ -575,10 +573,10 @@ $('#bPlaceControls').innerHTML='<input id="bSearch" placeholder="搜索第二人
 const geo=async path=>{const r=await fetch('/api/geo/'+path);if(!r.ok)throw new Error('地点查询失败');return r.json();};
 function opts(items){return '<option value="">请选择</option>'+items.map(i=>'<option value="'+i.code+'">'+esc(i.name)+'</option>').join('');}
 geo('provinces').then(r=>$('#bProv').innerHTML=opts(r.items));
-let locationGeneration={a:0,b:0};function invalidate(who){locationGeneration[who]++;}
+let applyingLocation=false;let locationGeneration={a:0,b:0};function invalidate(who){if(!applyingLocation)locationGeneration[who]++;}
 async function resolveB(){invalidate('b');const q=new URLSearchParams({p:$('#bProv').value,c:$('#bCity').value,d:$('#bCounty').value});try{const p=await geo('resolve?'+q);$('#blat').value=p.lat;$('#blon').value=p.lon;$('#bPlaceStatus').textContent=p.label||p.city||'手动选择';}catch(e){$('#bPlaceStatus').textContent=e.message;}}
 $('#bProv').onchange=async()=>{invalidate('b');const p=$('#bProv').value;$('#bCounty').innerHTML=opts([]);$('#bCity').innerHTML=opts((await geo('cities?p='+p)).items);if(!$('#bCity').options[1])$('#bCounty').innerHTML=opts((await geo('counties?c='+p)).items);await resolveB();};$('#bCity').onchange=async()=>{$('#bCounty').innerHTML=opts((await geo('counties?c='+$('#bCity').value)).items);await resolveB();};$('#bCounty').onchange=resolveB;
 let searchSeq=0;$('#bSearch').oninput=async()=>{invalidate('b');const seq=++searchSeq,q=$('#bSearch').value.trim();if(!q){$('#bSuggestions').replaceChildren();return;}const r=await geo('search?q='+encodeURIComponent(q));if(seq!==searchSeq)return;$('#bSuggestions').replaceChildren();for(const item of r.items.slice(0,8)){const b=document.createElement('button');b.type='button';b.textContent=item.name;b.onclick=async()=>{invalidate('b');const p=await geo('resolve?'+new URLSearchParams({p:item.provinceCode||item.code,c:item.cityCode||(item.level==='city'?item.code:''),d:item.level==='county'?item.code:''}));$('#blat').value=p.lat;$('#blon').value=p.lon;$('#bPlaceStatus').textContent=item.name;$('#bSuggestions').replaceChildren();};$('#bSuggestions').append(b);}};
-function locate(who){const token=++locationGeneration[who],prefix=who==='b'?'b':'',btn=$('#locate'+who.toUpperCase());if(!navigator.geolocation){alert('设备不支持定位');return;}btn.textContent='定位中…';navigator.geolocation.getCurrentPosition(pos=>{if(token!==locationGeneration[who]){btn.textContent='📍 定位当前';return;}$('#'+prefix+'lat').value=pos.coords.latitude.toFixed(5);$('#'+prefix+'lon').value=pos.coords.longitude.toFixed(5);btn.textContent='📍 已定位';geo('reverse?'+new URLSearchParams({lat:pos.coords.latitude,lon:pos.coords.longitude})).then(p=>{if(token!==locationGeneration[who])return;if(who==='b')$('#bPlaceStatus').textContent=p.label+'（近似）';else{$('#placeHint').textContent=p.label+'（近似）';lastPlaceLabel=p.label;}}).catch(()=>{});},e=>{btn.textContent='📍 定位当前';alert('定位失败：'+e.message);},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});}
+function locate(who){const token=++locationGeneration[who],prefix=who==='b'?'b':'',btn=$('#locate'+who.toUpperCase());if(!navigator.geolocation){alert('设备不支持定位');return;}btn.textContent='定位中…';navigator.geolocation.getCurrentPosition(pos=>{if(token!==locationGeneration[who]){btn.textContent='📍 定位当前';return;}applyingLocation=true;for(const [id,v] of [[prefix+'lat',pos.coords.latitude],[prefix+'lon',pos.coords.longitude]]){const el=$('#'+id);el.step='any';el.value=v.toFixed(6);el.setCustomValidity('');el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}if(who==='a'){$('#q').value='当前定位位置';lastPlaceLabel='当前定位位置';$('#placeHint').textContent='当前定位位置';}else{$('#bSearch').value='当前定位位置';$('#bPlaceStatus').textContent='当前定位位置';}applyingLocation=false;btn.textContent='📍 已定位';geo('reverse?'+new URLSearchParams({lat:pos.coords.latitude,lon:pos.coords.longitude})).then(p=>{if(token!==locationGeneration[who])return;if(who==='b')$('#bPlaceStatus').textContent=p.label+'（近似）';else{$('#placeHint').textContent=p.label+'（近似）';lastPlaceLabel=p.label;}}).catch(()=>{});},e=>{btn.textContent='📍 定位当前';alert('定位失败：'+e.message);},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});}
 $('#locateA').onclick=()=>locate('a');$('#locateB').onclick=()=>locate('b');for(const [who,ids] of [['a',['q','prov','citySel','countySel','lat','lon','tz']],['b',['bProv','bCity','bCounty','blat','blon','btz']]])for(const id of ids)$('#'+id).addEventListener('input',()=>{invalidate(who);$('#locate'+who.toUpperCase()).textContent='📍 定位当前';});
-</script></body></html>
+</script><script src="/assets/app-shell.js"></script></body></html>

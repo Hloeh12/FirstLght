@@ -602,6 +602,15 @@ function generateChart(birthInfo, opts) {
       false,
       "zh-CN"
     );
+  } else if (opts?.astroType && opts.astroType !== "heaven") {
+    astrolabe = astro.withOptions({
+      dateStr: `${year}-${month}-${day}`,
+      timeIndex: hour,
+      gender: iztroGender,
+      fixLeap: true,
+      language: "zh-CN",
+      astroType: opts.astroType
+    });
   } else {
     astrolabe = astro.bySolar(`${year}-${month}-${day}`, hour, iztroGender, true, "zh-CN");
   }

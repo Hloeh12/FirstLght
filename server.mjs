@@ -70,7 +70,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/api/report')return send(req,res,501,{error:'Report generation not replicated: original server model, prompts and tier routing are not public. This endpoint intentionally does not fabricate AI output.'});
  if(req.method==='POST'&&url.pathname==='/api/ziwei'){let raw='';for await(const x of req)raw+=x;try{const d=JSON.parse(raw||'{}');let dateStr=d.dateStr;if(d.calendar==='lunar'){const {lunarToSolar}=await import('./src/lunar.mjs');dateStr=lunarToSolar(Number(d.Y),Number(d.M),Number(d.D),!!d.leapMonth);if(!dateStr)throw new Error('农历日期无效');}
  return send(req,res,200,ziweiChart({...d,dateStr,timeIndex:d.timeIndex,gender:d.gender}));}catch(e){return send(req,res,400,{error:e.message});}}
- if(req.method==='POST'&&url.pathname==='/api/ziwei-flow'){let raw='';for await(const x of req)raw+=x;try{const d=JSON.parse(raw||'{}');return send(req,res,200,ziweiFlow({dateStr:d.dateStr,timeIndex:d.ziweiTimeIndex??d.timeIndex??0,gender:d.gender,flowYear:d.flowYear||new Date().getFullYear()}));}catch(e){return send(req,res,400,{error:e.message});}}
+ if(req.method==='POST'&&url.pathname==='/api/ziwei-flow'){let raw='';for await(const x of req)raw+=x;try{const d=JSON.parse(raw||'{}');return send(req,res,200,ziweiFlow({dateStr:d.dateStr,timeIndex:d.ziweiTimeIndex??d.timeIndex??0,gender:d.gender,flowYear:d.flowYear,astroType:d.astroType}));}catch(e){return send(req,res,400,{error:e.message});}}
  
  send(req,res,404,{error:'not found'});
 });
@@ -84,7 +84,7 @@ function openapi(){
   '/api/energy':{post:op('能量场',birthSchema,{type:'object'})},
   '/api/local-report':{post:op('模板报告',birthSchema,{type:'object'})},
   '/api/timeline':{post:op('三体系时间轴',{allOf:[birthSchema],type:'object',properties:{months:{type:'integer',default:24}}},{type:'object'})},
-  '/api/ziwei-flow':{post:op('紫微流年',{type:'object',properties:{dateStr:{type:'string'},ziweiTimeIndex:{type:'integer'},gender:{type:'string'},flowYear:{type:'integer'}}},{type:'object'})},
+  '/api/ziwei-flow':{post:op('紫微流年',{type:'object',properties:{dateStr:{type:'string'},ziweiTimeIndex:{type:'integer'},gender:{type:'string'},flowYear:{type:'integer'},astroType:{type:'string',enum:['heaven','earth','human']}}},{type:'object'})},
   '/api/export':{post:op('导出 Markdown/HTML',{allOf:[birthSchema],type:'object',properties:{format:{type:'string',enum:['md','html']},save:{type:'boolean'}}},{type:'object'})},
   '/api/history':{get:{summary:'列出历史记录',responses:{200:{description:'OK'}}},post:{summary:'保存记录',responses:{200:{description:'OK'}}}},
   '/api/report':{post:{summary:'未实现：原站 AI 报告',responses:{501:{description:'Not Implemented'}}}},

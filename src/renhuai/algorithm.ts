@@ -452,7 +452,7 @@ function applySchoolFuxun(palaces: Palace[]): void {
 
 export function generateChart(
   birthInfo: BirthInfo,
-  opts?: { leapMonth?: LunarMonthPolicy },
+  opts?: { leapMonth?: LunarMonthPolicy; astroType?: 'heaven' | 'earth' | 'human' },
 ): ZiweiChart {
   const { year, month, day, hour, gender } = birthInfo;
   if (!Number.isInteger(hour) || hour < 0 || hour > 11) {
@@ -494,6 +494,15 @@ export function generateChart(
         false,
         'zh-CN',
       );
+  } else if (opts?.astroType && opts.astroType !== 'heaven') {
+    astrolabe = astro.withOptions({
+      dateStr: `${year}-${month}-${day}`,
+      timeIndex: hour,
+      gender: iztroGender,
+      fixLeap: true,
+      language: 'zh-CN',
+      astroType: opts.astroType,
+    });
   } else {
     // 非闰月或 split 模式：直接 bySolar，保持 iztro 的既有行为
     astrolabe = astro.bySolar(`${year}-${month}-${day}`, hour, iztroGender, true, 'zh-CN');

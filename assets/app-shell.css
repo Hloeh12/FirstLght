@@ -3,3 +3,90 @@
 .liquid-glass{background:linear-gradient(135deg,rgba(255,255,255,.85) 0%,rgba(255,240,245,.7) 100%);backdrop-filter:blur(32px) saturate(200%);-webkit-backdrop-filter:blur(32px) saturate(200%);border:1px solid rgba(255,255,255,.9);box-shadow:0 16px 40px rgba(255,79,139,.16),inset 0 1.5px 2px rgba(255,255,255,.95),inset 0 -1.5px 2px rgba(255,79,139,.15)}button{position:relative;overflow:hidden;transition:transform .2s cubic-bezier(.2,1.6,.4,1)}button:active{transform:scale(.93)}button:active:after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent,#fff9,transparent);animation:liquidGleam .5s}#tabBar button[aria-selected=true] svg{animation:tabCuteBounce .4s}.is-active{outline:2px solid #ff4f8b}.term{cursor:pointer;border-bottom:1px dotted #e279a0}#meaningSheet{position:fixed;bottom:0;left:0;right:0;max-height:60dvh;overflow:auto;z-index:2101;border-radius:28px 28px 0 0;padding:24px 22px calc(24px + env(safe-area-inset-bottom))}#meaningBackdrop{position:fixed;inset:0;background:#0005;backdrop-filter:blur(4px);z-index:2100}.dynamic-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}#dynamicPower{white-space:pre-wrap;font-size:13px;line-height:1.8}@keyframes liquidGleam{from{translate:-100% 0}to{translate:100% 0}}@keyframes tabCuteBounce{50%{transform:translateY(-4px) scale(1.12)}100%{transform:none}}
 
 #readingSummary{width:100%;height:36px;min-height:36px;line-height:36px;padding:0 12px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 8px;font-size:12px;border-radius:20px}#readingToolbar{display:flex;justify-content:flex-end;margin:0 0 10px}#readingStatus:empty{display:none}#inputHost{animation:expandBirth .22s ease-out}#readingAnalysis{line-height:1.8;margin-top:0}#readingAnalysis h3{margin-top:10px}.input-actions{margin-bottom:0}#activeProfilePill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@keyframes expandBirth{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
+/* The chart stays in place beneath the native modal. */
+body{padding-top:calc(44px + env(safe-area-inset-top, 0px))}
+.app-topbar{padding-top:env(safe-area-inset-top, 0px)}
+body.input-open{overflow:hidden}
+#inputBackdrop{position:fixed;inset:0;background:#28192477;z-index:2200}
+#inputSheet:not([open]){display:none}
+#overviewBtn{background:transparent;border:0;font-size:14px;font-weight:700}
+#readingSummary{
+  display:block;width:100%;height:36px;min-height:36px;line-height:36px;margin:0;
+  padding:0 4px;border:0;border-radius:0;background:transparent;box-shadow:none;
+  backdrop-filter:none;color:#693a52;text-align:center;font-size:12px;
+}
+#readingStatus{min-height:44px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px}
+#inputSheet{
+  position:fixed;inset:auto 0 0;z-index:2201;width:min(100%,640px);max-width:none;
+  max-height:92vh;max-height:92dvh;margin:0 auto;padding:0;overflow:auto;
+  border:0;border-radius:24px 24px 0 0;background:#fff9fc;color:#29202b;
+  box-shadow:0 -12px 48px #41233725;overscroll-behavior:contain;
+}
+#inputSheet[open]{animation:birth-sheet-in .24s ease-out}
+#inputSheet::backdrop{background:#28192477}
+#inputSheet.onboarding{
+  inset:0;width:100%;height:100%;max-height:none;border-radius:0;
+  padding-top:env(safe-area-inset-top,0px);
+}
+@keyframes birth-sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.input-sheet-frame{max-width:640px;margin:auto;padding:12px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.input-sheet-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.input-sheet-header h2{margin:0}
+.input-sheet-header p{margin:4px 0 14px}
+#closeInputSheet{min-width:44px;padding:0;border-radius:50%}
+#inputSheet.onboarding .sheet-handle{visibility:hidden}
+#inputHost{animation:none}
+#inputHost form{margin:0;padding:12px;gap:10px;box-shadow:none}
+#inputHost form > *{min-width:0}
+#editActions{margin:12px 0 0}
+#inputError{font-size:13px;color:#9a2253;margin:8px 0}
+#sheetCases{width:100%;font-size:13px}
+#sugg{position:absolute;top:100%;width:100%;z-index:2;box-shadow:0 8px 22px #41233728}
+#pageChart{max-width:680px}
+#westBox,#baziBox,#ziweiBox{padding:8px;margin:0 0 8px;border-radius:14px;box-shadow:none}
+#westBox svg{display:block;margin:0 auto}
+.chart-details,#ziweiBox details{font-size:13px;padding:8px 4px}
+.chart-details summary,#ziweiBox summary{cursor:pointer;color:#75435d}
+.pillar-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.pillar-cards div{
+  display:grid;gap:8px;place-items:center;padding:14px 1px;border-radius:12px;
+  background:#fff0f6;color:#70264a;font-size:12px
+}
+.pillar-cards strong{font-size:clamp(22px,7vw,42px);line-height:1.15}
+.zwgrid{
+  grid-template-rows:repeat(4,minmax(0,1fr));gap:2px;
+  height:clamp(340px,63vh,540px);height:clamp(340px,63svh,540px);
+  isolation:isolate;
+}
+.zwcell{position:relative;padding:4px;font-size:clamp(9px,2.65vw,12px);border-radius:7px;cursor:pointer}
+.zw-h{font-weight:700;gap:2px}
+.zw-h small,.zw-s small{font-size:inherit;color:#704d62}
+.zw-s{line-height:1.32;margin-top:2px}
+.zw-s span{display:inline;margin-inline-end:3px;color:#6d5b68}
+.zw-m{font-style:normal}
+.zw-d{color:#704d62;font-size:.85em}
+.zwcell.soul{background:#fff2f7}
+.zwcell.selected{border:1.5px solid #ff4f8b;box-shadow:inset 0 0 12px #ff4f8b44;background:#ffeaf2}
+.zwcell.related{border:1.5px dashed #ff4f8b;background:rgba(255,79,139,.06);outline:none}
+.zwcenter{display:grid;align-content:center;justify-items:center;gap:6px;text-align:center;border-radius:9px;padding:5px;font-size:clamp(10px,2.85vw,14px);overflow-wrap:anywhere}
+.context-lines{z-index:1;opacity:.43}
+.palace-link{fill:none;stroke:#ff4f8b;stroke-width:1.25;stroke-dasharray:4 4;vector-effect:non-scaling-stroke}
+#zwDetail{margin:8px 0;padding:10px;font-size:13px}
+#zwDetail p{margin:5px 0}
+.flow-badges{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
+.flow-badge{padding:0 3px;border-radius:4px;background:#ffe0ed;color:#892351;font-weight:700}
+#contextMenu.ziwei-menu{width:min(420px,calc(100vw - 24px));max-height:75vh;overflow:auto;background:#fff9fc}
+.ziwei-modes,.ziwei-time-row{display:flex;gap:5px}
+.ziwei-time-row{position:relative;overflow-x:auto;scroll-snap-type:x proximity;margin:6px 0;padding:2px 0}
+#contextMenu .ziwei-modes button,#contextMenu .ziwei-time-row button{width:auto;flex:none;text-align:center;white-space:nowrap;border:1px solid #f0dae6;font-size:12px;scroll-snap-align:start}
+#contextMenu .ziwei-modes button{flex:1}
+#contextMenu button[aria-pressed=true]{background:#ffe0ed;color:#8e2550;font-weight:700}
+#ziweiControlsStatus{margin:4px}
+#readingAnalysis .card{box-shadow:none}
+@media(max-width:480px){
+  body{padding-inline:8px}
+  #ziweiBox{padding:2px}
+  #westBox,#baziBox{padding:5px}
+}
+@media(prefers-reduced-motion:reduce){#inputSheet[open]{animation:none}}

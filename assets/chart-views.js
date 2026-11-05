@@ -3,23 +3,57 @@ const $=s=>document.querySelector(s);
 let chart=null;let chartRequest=0;
 $('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;[...$('#tabs').children].forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===b.dataset.t));};
 $('#demo').onclick=()=>{$('#date').value='2000-08-16';$('#time').value='12:00';$('#lat').value='31.2304';$('#lon').value='121.4737';$('#tz').value='8';};
+function syncCalendar(){
+ const date=$('#date'),lunar=$('#cal').value==='lunar';
+ date.type=lunar?'text':'date';
+ date.placeholder=lunar?'YYYY-MM-DD':'';
+ date.pattern='[0-9]{4}-[0-9]{2}-[0-9]{2}';
+ $('#lunarDateHint').hidden=!lunar;
+ $('#leap').disabled=!lunar;
+}
+$('#cal').onchange=syncCalendar;
+syncCalendar();
 function inp(){const [Y,M,D]=$('#date').value.split('-').map(Number);const [h,mi]=$('#time').value.split(':').map(Number);
- const lunar=$('#cal').value==='lunar';return {Y,M,D,h,mi,gender:$('#gender').value,calendar:lunar?'lunar':'solar',leapMonth:$('#leap').checked,dateStr:$('#date').value,timeStr:$('#time').value,useSolarTime:$('#solar').checked,timeUnknown:$('#tunknown').checked,city:{label:lastPlaceLabel||'手动位置',lat:+$('#lat').value,lon:+$('#lon').value,tz:+$('#tz').value,...($('#tzname').value.trim()?{tzName:$('#tzname').value.trim()}:{})},houseSystem:$('#hs').value};}
+ const lunar=$('#cal').value==='lunar';return {Y,M,D,h,mi,gender:$('#gender').value,calendar:lunar?'lunar':'solar',leapMonth:lunar&&$('#leap').checked,dateStr:$('#date').value,timeStr:$('#time').value,useSolarTime:$('#solar').checked,timeUnknown:$('#tunknown').checked,city:{label:lastPlaceLabel||'手动位置',lat:+$('#lat').value,lon:+$('#lon').value,tz:+$('#tz').value,...($('#tzname').value.trim()?{tzName:$('#tzname').value.trim()}:{})},houseSystem:$('#hs').value};}
 const post=(p,b)=>fetch(p,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
 const esc=s=>String(s??'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
-$('#f').onsubmit=async e=>{e.preventDefault();const request=++chartRequest;const t0=performance.now();const btn=e.submitter||$('#f button');btn.disabled=true;btn.textContent='计算中…';
- try{
-  const req=inp();if(window.state)window.state.pendingInput=req;
-  const r=await post('/api/chart',{...req,skipZiwei:true});if(request!==chartRequest)return;if(r.error||!r.raw)throw new Error(r.error||'排盘返回不完整');chart=r.raw;$('#rawBox').textContent=JSON.stringify(r,null,1).slice(0,20000);
-  renderWest(chart.western,chart.analysis);renderBazi(chart.bazi);if(chart.meta.input.reliability?.timeUnknown)$('#westBox').insertAdjacentHTML('afterbegin','<p class="note" style="margin:0 0 10px">⚠️ 出生时间未知，已按正午 12:00 排盘：上升、中天、宫位与紫微命宫仅供参考，不宜据此判断具体事件。</p>');renderVedic(chart.vedic);
-  const ziweiP=post('/api/ziwei',{...req,timeIndex:chart.meta.input.ziweiTimeIndex}).then(z=>{if(request!==chartRequest)return;chart.ziwei=z;renderZiwei(z);}).catch(()=>{if(request===chartRequest)renderZiwei({error:'紫微排盘失败'});});
-  const [rep,en,tl]=await Promise.all([post('/api/local-report',req),post('/api/energy',req),post('/api/timeline',{...req,months:24})]);
-  await ziweiP;
-  if(request!==chartRequest)return;
-  renderReport(rep);renderEnergy(en);renderTimeline(tl);document.querySelector('#readingSummary').scrollIntoView({behavior:'smooth',block:'start'});
-$('#timing').textContent='本次计算 '+(performance.now()-t0).toFixed(0)+' ms · 结果已缓存，切页签或重复生成会更快';
- }catch(err){if(request===chartRequest)alert('计算失败：'+err.message);}finally{if(request===chartRequest){btn.disabled=false;btn.textContent='生成三盘';}}
-};
+async function calculateReading(req,request,onReady,onDetails){
+ const t0=performance.now();
+ const r=await post('/api/chart',{...req,skipZiwei:true});
+ if(request!==chartRequest)return;
+ if(r.error||!r.raw)throw new Error(r.error||'排盘返回不完整');
+ chart=r.raw;
+ chart.birthRequest=req;
+ $('#rawBox').textContent=JSON.stringify(r,null,1).slice(0,20000);
+ $('#reportBox').replaceChildren();
+ $('#energyBox').replaceChildren();
+ $('#timelineBox').replaceChildren();
+ $('#ziweiBox').innerHTML='<p class="note">正在生成紫微命盘…</p>';
+ renderWest(chart.western,chart.analysis);
+ renderBazi(chart.bazi);
+ renderVedic(chart.vedic);
+ onReady();
+ const ziweiRequest={...req,h:req.timeUnknown?12:req.h,mi:req.timeUnknown?0:req.mi,timeIndex:chart.meta.input.ziweiTimeIndex};
+ const detailRequests=[
+  ['/api/ziwei',ziweiRequest,z=>{if(z.error)throw new Error(z.error);chart.ziwei=z;renderZiwei(z);onDetails();},'#ziweiBox'],
+  ['/api/local-report',req,rep=>{renderReport(rep);onDetails();},'#reportBox'],
+  ['/api/energy',req,renderEnergy,'#energyBox'],
+  ['/api/timeline',{...req,months:24},renderTimeline,'#timelineBox']
+ ];
+ await Promise.all(detailRequests.map(async ([url,body,render,selector])=>{
+  try{
+   const result=await post(url,body);
+   if(request!==chartRequest)return;
+   if(result.error)throw new Error(result.error);
+   render(result);
+  }catch(error){
+   if(request!==chartRequest)return;
+   $(selector).textContent='暂时无法载入：'+error.message;
+   if(selector==='#reportBox')onDetails();
+  }
+ }));
+ if(request===chartRequest)$('#timing').textContent='本次计算 '+(performance.now()-t0).toFixed(0)+' ms';
+}
 
 (async()=>{
  const P=await fetch('/api/geo/provinces').then(r=>r.json());
@@ -76,11 +110,13 @@ function renderSynProfiles(){
 }
 function applyProfile(p){
  const f=p.fields;
+ $('#cal').value=f.calendar||'solar';
+ syncCalendar();
  $('#date').value=f.dateStr||`${f.Y}-${String(f.M).padStart(2,'0')}-${String(f.D).padStart(2,'0')}`;
  $('#time').value=f.timeStr||'12:00';
  $('#lat').value=f.city.lat;$('#lon').value=f.city.lon;$('#tz').value=f.city.tz;
  $('#gender').value=f.gender||'女';
- $('#cal').value=f.calendar||'solar';$('#leap').checked=!!f.leapMonth;
+ $('#leap').checked=!!f.leapMonth;
  $('#hs').value=f.houseSystem||'placidus';
  $('#tunknown').checked=!!f.timeUnknown;if(f.timeUnknown){$('#time').value='12:00';$('#time').disabled=true;}
  if(f.city.tzName){$('#tzname').value=f.city.tzName;}else{$('#tzname').value='';}
@@ -250,15 +286,14 @@ function drawWheel(w){
 }
 function renderBazi(b){
  if(!b)return;let box=document.getElementById('baziBox');if(!box){box=document.createElement('section');box.id='baziBox';box.className='card';$('#bazi').append(box);}
- box.innerHTML='<h3>八字命盘</h3><table><thead><tr><th>四柱</th>'+b.pillars.map(p=>'<th>'+esc(p.name)+'</th>').join('')+'</tr></thead><tbody>'+['stem','branch','tenGod'].map((k,i)=>'<tr><th>'+['天干','地支','十神'][i]+'</th>'+b.pillars.map(p=>'<td>'+esc(p[k])+'</td>').join('')+'</tr>').join('')+'<tr><th>藏干</th>'+b.pillars.map(p=>'<td>'+b.hiddenStems[p.name].map(h=>esc(h.stem+' '+h.rank+' '+h.tenGod)).join('<br>')+'</td>').join('')+'</tr></tbody></table><h4>五行能量（加权参考）</h4>'+Object.entries(b.elementPercentages).map(([k,v])=>'<div>'+k+' '+v+'% <meter min="0" max="100" value="'+v+'"></meter></div>').join('')+'<p>日主 '+esc(b.dayMaster.stem)+' · '+esc(b.strength.reference)+'；得令 '+(b.strength.seasonSupported?'是':'否')+' / 得地 '+(b.strength.rooted?'是':'否')+' / 得助 '+(b.strength.assisted?'是':'否')+'</p><h4>大运 · '+b.luck.startAge+' 岁起运 · '+(b.luck.forward?'顺行':'逆行')+'</h4>'+b.luck.cycles.map(c=>'<span class="tag">'+c.startYear+' '+c.stem+c.branch+'（'+c.age+'岁）</span>').join(' ')+'<h4>流年速查（公历年，年柱以立春为界）</h4>'+Array.from({length:12},(_,i)=>{const y=new Date().getFullYear()+i,n=((y-1984)%60+60)%60;return '<span class="tag">'+y+' '+['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'][n%10]+['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][n%12]+'</span>';}).join(' ')+'<p>'+esc(b.strength.method)+'</p>';
+ box.innerHTML='<div class="pillar-cards" aria-label="八字四柱">'+b.pillars.map(p=>'<div><span>'+esc(p.name)+'</span><strong>'+esc(p.stem+p.branch)+'</strong><small>'+esc(p.tenGod)+'</small></div>').join('')+'</div><details class="chart-details"><summary>藏干、五行与大运</summary><table><thead><tr><th>四柱</th>'+b.pillars.map(p=>'<th>'+esc(p.name)+'</th>').join('')+'</tr></thead><tbody>'+['stem','branch','tenGod'].map((k,i)=>'<tr><th>'+['天干','地支','十神'][i]+'</th>'+b.pillars.map(p=>'<td>'+esc(p[k])+'</td>').join('')+'</tr>').join('')+'<tr><th>藏干</th>'+b.pillars.map(p=>'<td>'+b.hiddenStems[p.name].map(h=>esc(h.stem+' '+h.rank+' '+h.tenGod)).join('<br>')+'</td>').join('')+'</tr></tbody></table><h4>五行能量（加权参考）</h4>'+Object.entries(b.elementPercentages).map(([k,v])=>'<div>'+k+' '+v+'% <meter min="0" max="100" value="'+v+'"></meter></div>').join('')+'<p>日主 '+esc(b.dayMaster.stem)+' · '+esc(b.strength.reference)+'；得令 '+(b.strength.seasonSupported?'是':'否')+' / 得地 '+(b.strength.rooted?'是':'否')+' / 得助 '+(b.strength.assisted?'是':'否')+'</p><h4>大运 · '+b.luck.startAge+' 岁起运 · '+(b.luck.forward?'顺行':'逆行')+'</h4>'+b.luck.cycles.map(c=>'<span class="tag">'+c.startYear+' '+c.stem+c.branch+'（'+c.age+'岁）</span>').join(' ')+'<h4>流年速查（公历年，年柱以立春为界）</h4>'+Array.from({length:12},(_,i)=>{const y=new Date().getFullYear()+i,n=((y-1984)%60+60)%60;return '<span class="tag">'+y+' '+['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'][n%10]+['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][n%12]+'</span>';}).join(' ')+'<p>'+esc(b.strength.method)+'</p></details>';
 }
 function balanceBars(d){return Object.entries(d.percentages).map(([k,v])=>'<div>'+esc(k)+' '+Math.round(v)+'% <meter min="0" max="100" value="'+v+'"></meter></div>').join('')+'<p>主导：'+d.dominant.map(esc).join('、')+'；缺失：'+(d.missing.map(esc).join('、')||'无')+'</p>';}
 function renderWest(w,an){
  const rows=w.planets.map(p=>`<tr><td>${esc(p.name)} <span class="tag">${esc(an?.planets.find(x=>x.name===p.name)?.dignity||'')}</span>${p.retro?' <span class="tag">逆</span>':''}</td><td>${esc(p.sign)} ${p.degree.degrees}°${String(p.degree.minutes).padStart(2,'0')}′</td><td>${p.house} 宫</td></tr>`).join('');
- $('#westBox').innerHTML=`<h3>西方本命盘 <span class="tag">${w.houseSystem}</span></h3>
- <div class="row"><span>上升 ASC</span><b class="k">${esc(w.asc.sign)} ${w.asc.degree.degrees}°${String(w.asc.degree.minutes).padStart(2,'0')}′</b></div>
+ $('#westBox').innerHTML=`${drawWheel(w)}${chart?.meta.input.reliability?.timeUnknown?'<p class="note">出生时间未知，按正午排盘。上升、中天和宫位仅供参考。</p>':''}<details class="chart-details"><summary>星体、宫位与相位</summary><div class="row"><span>上升 ASC</span><b class="k">${esc(w.asc.sign)} ${w.asc.degree.degrees}°${String(w.asc.degree.minutes).padStart(2,'0')}′</b></div>
  <div class="row"><span>中天 MC</span><b class="k">${esc(w.mc.sign)} ${w.mc.degree.degrees}°${String(w.mc.degree.minutes).padStart(2,'0')}′</b></div>
- ${drawWheel(w)}${an?balanceBars(an.elements)+balanceBars(an.modalities):''}
+ ${an?balanceBars(an.elements)+balanceBars(an.modalities):''}
  <table><thead><tr><th>星体</th><th>星座度数</th><th>宫位</th></tr></thead><tbody>${rows}</tbody></table>
  <h3 style="margin-top:14px">主要相位 <span class="tag">${w.aspects.length}</span></h3>
  <table><tbody>${w.aspects.slice(0,14).map(a=>`<tr><td>${esc(a.a)} × ${esc(a.b)}</td><td>${esc(a.type)}</td><td>${a.orb.toFixed(1)}°</td></tr>`).join('')}</tbody></table>
@@ -269,9 +304,9 @@ function renderWest(w,an){
  <div class="row"><span>元素分布</span><b class="k">${an?Object.entries(an.counts.element).map(([k,v])=>k+Math.round(v/w.planets.length*100)+'%').join(' · '):'-'}</b></div>
  <div class="row"><span>模式分布</span><b class="k">${an?Object.entries(an.counts.mode).map(([k,v])=>k+Math.round(v/w.planets.length*100)+'%').join(' · '):'-'}</b></div>
  <div class="row"><span>格局</span><b class="k">${an&&an.patterns.length?an.patterns.map(p=>esc(p.type)+'('+p.planets.join('、')+')').join('；'):'无'}</b></div>
- <p class="note">UTC ${esc(w.utc)} · 允许度 8/5/6/6/8</p>`;}
+ <p class="note">UTC ${esc(w.utc)} · 允许度 8/5/6/6/8</p></details>`;}
 async function dl(fmt){
- const r=await fetch('/api/export',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...inp(),format:fmt})});
+ const r=await fetch('/api/export',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...(chart?.birthRequest||inp()),format:fmt})});
  if(!r.ok){alert('导出失败');return;}
  const text=await r.text();
  const blob=new Blob([text],{type:fmt==='html'?'text/html':'text/markdown'});
@@ -314,28 +349,29 @@ function renderVedic(v){
  <h3 style="margin-top:14px">Vimshottari 大运</h3><table><tbody>${ds}</tbody></table>`;}
 
 function drawZiweiGrid(z){
- const cell=(b)=>b;
+ const birth=chart?.birthRequest||{}, bazi=chart?.bazi;
  const map={巳:[0,0],午:[0,1],未:[0,2],申:[0,3],辰:[1,0],酉:[1,3],卯:[2,0],戌:[2,3],寅:[3,0],丑:[3,1],子:[3,2],亥:[3,3]};
  const stars=(p)=>{
-  const s=[...p.majorStars.map(x=>`<b>${esc(x.name)} <small>${esc(x.brightness||'')}</small></b>${x.mutagen?`<i class="zw-m">${x.mutagen}</i>`:''}`),
-           ...p.minorStars.map(x=>`<span>${esc(x.name)}</span>`)];
+  const s=[...p.majorStars.map(x=>`<b>${esc(x.name)} <small>${esc(x.brightness||'')}</small>${x.mutagen?` <i class="zw-m">${esc(x.mutagen)}</i>`:''}</b>`),
+           ...p.minorStars.slice(0,3).map(x=>`<span>${esc(x.name)}</span>`)];
   return s.length?s.join(''):'<span class="zw-empty">空宫</span>';
  };
  return `<div class="zwgrid">${z.palaces.map(p=>{
   const [r,c]=map[p.earthlyBranch]||[0,0];
-  const cls=['zwcell',p.name==='命宫'?'soul':'',p.isBodyPalace?'body':''].join(' ');
+  const cls=['zwcell',(p.name==='命宫')?'soul':'',p.isBodyPalace?'body':''].join(' ');
   const dec=p.decadal&&p.decadal.range?`${p.decadal.range[0]}–${p.decadal.range[1]}`:'';
-  return `<div class="${cls}" tabindex="0" role="button" aria-label="${esc(p.name)}" data-branch="${p.branch}" style="grid-row:${r+1};grid-column:${c+1}">
-   <div class="zw-h"><span>${esc(p.name)}</span><small>${esc(p.heavenlyStem+p.earthlyBranch)}</small></div>
+  return `<div class="${cls}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="false" data-branch="${p.branch}" style="grid-row:${r+1};grid-column:${c+1}">
+   <div class="zw-h"><span>${esc(p.name)}${p.isBodyPalace?' · 身':''}</span><small>${esc(p.heavenlyStem+p.earthlyBranch)}</small></div>
    <div class="zw-s">${stars(p)}</div>
    ${dec?`<div class="zw-d">${dec} 岁</div>`:''}</div>`;
  }).join('')}
  <div class="zwcenter">
-  <div class="zwc-t">紫微斗数</div>
-  <div class="zwc-row"><span>命主</span><b>${esc(z.soul)}</b></div>
-  <div class="zwc-row"><span>身主</span><b>${esc(z.body)}</b></div>
-  <div class="zwc-row"><span>五行局</span><b>${esc(z.fiveElementsClass)}</b></div>
-  <div class="zwc-row"><span>农历</span><b style="font-size:11px">${esc(z.lunarDate)}</b></div>
+  <strong>${esc(birth.name||'当前命主')} · ${({heaven:'天盘',earth:'地盘',human:'人盘'})[z.astroType]||'天盘'}</strong>
+  <span>${birth.calendar==='lunar'?(birth.leapMonth?'农历闰月 ':'农历 '):''}${esc(birth.dateStr)} ${birth.timeUnknown?'时辰未知':esc(birth.timeStr)}</span>
+  <b>${bazi?.pillars.map(p=>esc(p.stem+p.branch)).join('　')||''}</b>
+  <span>${esc(z.fiveElementsClass)} · ${esc(z.palaces.find(p=>p.name==='命宫')?.decadal?.range?.[0]??'—')} 岁起限</span>
+  <span>命主星 ${esc(z.soul)} · 身主星 ${esc(z.body)}</span>
+  <span id="zwFlowCaption" aria-live="polite"></span>
  </div></div>`;
 }
 function renderZiwei(z){
@@ -343,14 +379,13 @@ function renderZiwei(z){
  if(!z||z.error){$('#ziweiBox').innerHTML='<h3>紫微斗数</h3><p class="note">排盘不可用：'+esc(z&&z.error)+'</p>';return;}
  const rows=z.palaces.map(p=>{const stars=[...p.majorStars.map(s=>s.name+(s.mutagen?`<span class="pill">${s.mutagen}</span>`:'')),...p.minorStars.map(s=>s.name)].join(' ')||'空宫';
   const dec=p.decadal&&p.decadal.range?`${p.decadal.range[0]}-${p.decadal.range[1]} 岁`:'';return `<tr><td>${esc(p.name)}${p.isBodyPalace?' <span class="tag">身</span>':''}</td><td>${esc(p.heavenlyStem+p.earthlyBranch)}</td><td>${stars}</td><td>${dec}</td></tr>`;}).join('');
- $('#ziweiBox').innerHTML=`<h3>紫微斗数 <span class="tag">天纪算法 · Renhuai / iztro</span></h3>
- ${drawZiweiGrid(z)}<div id="zwDetail" class="card" aria-live="polite">点击宫位查看三方四正</div><div>${(z.patterns||[]).map(p=>'<span class="tag">'+esc(p.name)+'</span>').join('')}</div>
- <table><thead><tr><th>宫位</th><th>干支</th><th>主辅星</th><th>大限</th></tr></thead><tbody>${rows}</tbody></table>`;}
+ $('#ziweiBox').innerHTML=`${drawZiweiGrid(z)}<div id="zwDetail" class="card" aria-live="polite">点击宫位查看三方四正</div><div>${(z.patterns||[]).map(p=>'<span class="tag">'+esc(p.name)+'</span>').join('')}</div>
+ <details><summary>十二宫完整星曜</summary><table><thead><tr><th>宫位</th><th>干支</th><th>主辅星</th><th>大限</th></tr></thead><tbody>${rows}</tbody></table></details>`;}
 
 function bInp(){const [Y,M,D]=$('#bdate').value.split('-').map(Number);const [h,mi]=$('#btime').value.split(':').map(Number);
  return {Y,M,D,h,mi,gender:$('#bgender').value,dateStr:$('#bdate').value,timeStr:$('#btime').value,city:{label:'第二人',lat:+$('#blat').value,lon:+$('#blon').value,tz:+$('#btz').value}};}
 $('#btnSyn').onclick=async()=>{const b=$('#btnSyn');b.disabled=true;b.textContent='计算中…';
- try{const r=await post('/api/synastry/chart',{a:inp(),b:bInp(),mode:$('#mode').value});if(r.error)throw new Error(r.error);renderSynastry(r);}
+ try{const r=await post('/api/synastry/chart',{a:chart?.birthRequest||inp(),b:bInp(),mode:$('#mode').value});if(r.error)throw new Error(r.error);renderSynastry(r);}
  catch(e){alert('合盘失败：'+e.message);}finally{b.disabled=false;b.textContent='生成合盘';}};
 function renderSynastry(r){
  const kd=r.vedic&&r.vedic.koota;

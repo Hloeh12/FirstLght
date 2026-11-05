@@ -37,3 +37,11 @@ export function searchPlaces(q){
  }
  return out.slice(0,30);
 }
+export function nearestPlace(lat,lon){
+ if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)throw new Error('无效坐标');
+ let best=null,distance=Infinity;
+ for(const c of G.county){if(!Number.isFinite(c.lat)||!Number.isFinite(c.lon))continue;const d=(c.lat-lat)**2+((c.lon-lon)*Math.cos(lat*Math.PI/180))**2;if(d<distance){distance=d;best=c;}}
+ if(!best||distance>4)return {label:'当前坐标（本地区划库覆盖范围外）',approximate:true};
+ const city=G.city.find(c=>c.code===best.c),prov=G.prov.find(p=>p.code===(city?.p||best.c));
+ return {label:[prov?.n,city?.n,best.n].filter(Boolean).join(' '),provinceCode:prov?.code,cityCode:city?.code,countyCode:best.code,approximate:true,note:'按本地区划中心点近似匹配，不是精确地址反查'};
+}

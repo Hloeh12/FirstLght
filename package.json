@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+    "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "build:ziwei": "esbuild src/renhuai/entry.ts --bundle --platform=node --format=esm --packages=external --outfile=src/renhuai-engine.mjs"
   },
   "dependencies": {
     "astronomy-engine": "2.1.19",
-    "iztro": "2.6.3"
+    "iztro": "2.6.3",
+    "lunar-javascript": "^1.7.7"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "jsdom": "^31.0.0"
   }
 }

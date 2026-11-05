@@ -12,7 +12,7 @@ import { toMarkdown, toHtml } from './src/export.mjs';
 import { memoize, memoTTL, cacheKey, saveRecord, listRecords, getRecord, clearMemo } from './src/store.mjs';
 import zlib from 'node:zlib';
 import { validate } from './src/validate.mjs';
-import { provinces, cities, counties, resolvePlace, searchPlaces } from './src/geo.mjs';
+import { provinces, cities, counties, resolvePlace, searchPlaces, nearestPlace } from './src/geo.mjs';
 import { baziFromInput } from './src/baziInput.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const send=(req,res,status,obj)=>{
@@ -45,6 +45,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='GET'&&/^\/api\/history\/[0-9]{14}-[0-9a-f]{6}$/.test(url.pathname)){try{return send(req,res,200,getRecord(url.pathname.split('/').pop()));}catch(e){return send(req,res,404,{error:e.message});}}
  if(req.method==='GET'&&url.pathname.startsWith('/api/geo')){
   const q=url.searchParams;
+  if(url.pathname==='/api/geo/reverse'){try{return send(req,res,200,nearestPlace(Number(q.get('lat')),Number(q.get('lon'))));}catch(e){return send(req,res,400,{error:e.message});}}
   if(url.pathname==='/api/geo/provinces')return send(req,res,200,{items:provinces()});
   if(url.pathname==='/api/geo/cities')return send(req,res,200,{items:cities(q.get('p'))});
   if(url.pathname==='/api/geo/counties')return send(req,res,200,{items:counties(q.get('c'))});
@@ -68,7 +69,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/api/synastry/report')return send(req,res,501,{error:'Synastry AI report not replicated: original server model/prompts are not public.'});
  if(req.method==='POST'&&url.pathname==='/api/report')return send(req,res,501,{error:'Report generation not replicated: original server model, prompts and tier routing are not public. This endpoint intentionally does not fabricate AI output.'});
  if(req.method==='POST'&&url.pathname==='/api/ziwei'){let raw='';for await(const x of req)raw+=x;try{const d=JSON.parse(raw||'{}');let dateStr=d.dateStr;if(d.calendar==='lunar'){const {lunarToSolar}=await import('./src/lunar.mjs');dateStr=lunarToSolar(Number(d.Y),Number(d.M),Number(d.D),!!d.leapMonth);if(!dateStr)throw new Error('农历日期无效');}
- return send(req,res,200,ziweiChart({dateStr,timeIndex:d.timeIndex,gender:d.gender}));}catch(e){return send(req,res,400,{error:e.message});}}
+ return send(req,res,200,ziweiChart({...d,dateStr,timeIndex:d.timeIndex,gender:d.gender}));}catch(e){return send(req,res,400,{error:e.message});}}
  if(req.method==='POST'&&url.pathname==='/api/ziwei-flow'){let raw='';for await(const x of req)raw+=x;try{const d=JSON.parse(raw||'{}');return send(req,res,200,ziweiFlow({dateStr:d.dateStr,timeIndex:d.ziweiTimeIndex??d.timeIndex??0,gender:d.gender,flowYear:d.flowYear||new Date().getFullYear()}));}catch(e){return send(req,res,400,{error:e.message});}}
  
  send(req,res,404,{error:'not found'});

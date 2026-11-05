@@ -1,3 +1,4 @@
+import {Solar,LunarUtil} from 'lunar-javascript';
 import * as Astronomy from 'astronomy-engine';
 
 const STEMS=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
@@ -121,6 +122,8 @@ export function bazi({utc,local,gender='男',dayBoundaryAt2300=false}){
     {name:'日柱',stem:dp.stem,branch:dp.branch,stemIdx:dIdx,branchIdx:BRANCHES.indexOf(dp.branch),tenGod:'日主'},
     {name:'时柱',stem:hp.stem,branch:hp.branch,stemIdx:STEMS.indexOf(hp.stem),branchIdx:BRANCHES.indexOf(hp.branch),tenGod:tenGod(dIdx,STEMS.indexOf(hp.stem))}
   ];
+  const eight=Solar.fromYmdHms(local.y,local.m,local.d,local.h,local.mi||0,0).getLunar().getEightChar();eight.setSect(dayBoundaryAt2300?1:2);
+  for(const [i,p] of pillars.entries()){p.nayin=LunarUtil.NAYIN[p.stem+p.branch]||null;p.changsheng=eight[['getYearDiShi','getMonthDiShi','getDayDiShi','getTimeDiShi'][i]]();p.shensha={implemented:false,items:[],notice:'神煞尚未推算，不补造结果'};}
   const luck=luckCycles(utc,local.y,mp,yIdx,gender);
   const years=flowYears(local.y,3);
   const hidden=Object.fromEntries(pillars.map(p=>[p.name,HIDDEN[p.branch].map(s=>({stem:s,tenGod:tenGod(dIdx,STEMS.indexOf(s)),element:STEM_ELEM[STEMS.indexOf(s)],rank:['本气','中气','余气'][HIDDEN[p.branch].indexOf(s)]}))]));
@@ -133,4 +136,14 @@ export function bazi({utc,local,gender='男',dayBoundaryAt2300=false}){
   const support=(weighted[de]+weighted[resource])/8;
   const strength={seasonSupported:[de,resource].includes(BRANCH_ELEM[pillars[1].branchIdx]),rooted:pillars.some(p=>hidden[p.name].some(x=>x.element===de)),assisted:pillars.filter(p=>p.name!=='日柱').some(p=>[de,resource].includes(STEM_ELEM[p.stemIdx])),supportRatio:support,reference:support>0.6?'身旺':support<0.4?'身弱':'中和',method:'天干等权、藏干按本中余气加权；旺衰为简化参考，非格局用神定论'};
   return {elementPercentages:percentages,elementWeights:weighted,strength,pillars,dayMaster:{stem:dp.stem,element:STEM_ELEM[dIdx],yin:STEM_YIN[dIdx]},hiddenStems:hidden,elements,luck,flowYears:years,meta:{yearPillarYear:yp.year,lichun:yp.lichun.toISOString(),monthStart:mp.start.toISOString(),dayBoundary:dayBoundaryAt2300?'23:00':'00:00',gender,note:'节气时刻按太阳视黄经计算；日柱以本地日期换日，可选 23:00 换日'}};
+}
+
+export function dynamicBazi(out,{luckIndex,flowYear}={}){
+ const weights={...out.elementWeights},extra=[];
+ if(luckIndex!==undefined&&luckIndex!==null&&luckIndex!==''){const i=Number(luckIndex);if(!Number.isInteger(i)||i<0||i>=out.luck.cycles.length)throw new Error('无效大运');extra.push({...out.luck.cycles[i],kind:'大运'});}
+ if(flowYear!==undefined&&flowYear!==null&&flowYear!==''){const y=Number(flowYear);if(!Number.isInteger(y)||y<1800||y>2200)throw new Error('流年范围1800–2200');extra.push({...flowYears(y,1)[0],kind:'流年'});}
+ for(const p of extra){weights[STEM_ELEM[STEMS.indexOf(p.stem)]]+=1;const h=HIDDEN[p.branch],ratios=h.length===1?[1]:h.length===2?[.7,.3]:[.6,.25,.15];h.forEach((s,i)=>weights[STEM_ELEM[STEMS.indexOf(s)]]+=ratios[i]);}
+ const total=Object.values(weights).reduce((a,b)=>a+b,0),de=out.dayMaster.element,resource=Object.keys(GENERATE).find(e=>GENERATE[e]===de),support=(weights[de]+weights[resource])/total;
+ const reference=support>.6?'身旺':support<.4?'身弱':'中和';
+ return {selected:extra,weights,percentages:Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,Math.round(v/total*10000)/100])),supportRatio:support,reference,favorableReference:reference==='身弱'?[resource,de]:reference==='身旺'?[GENERATE[de],CONTROL[de]]:[],method:'本命8单位，大运与流年各加2单位，藏干按本中余气加权；扶抑喜用仅为模型参考，未包含调候、合化、从格等完整用神判断'};
 }

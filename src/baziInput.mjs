@@ -1,7 +1,7 @@
 import { birthCorrections } from './birth.mjs';
 import { localToUtc } from './tz.mjs';
 import { lunarToSolar } from './lunar.mjs';
-import { bazi } from './bazi.mjs';
+import { bazi, dynamicBazi } from './bazi.mjs';
 
 /** 把前端口径的出生输入转换为八字所需：绝对时刻 UTC + 本地钟面时间 */
 export function baziFromInput(input){
@@ -34,6 +34,7 @@ export function baziFromInput(input){
   out.meta.input={...input,city:{label:input.city?.label,lat:input.city?.lat,lon,tz}};
   out.meta.solarClock=solarClock;out.meta.eotMin=Math.round(eot*10)/10;
   out.meta.utc=utc.toISOString();out.meta.local=local;
+  out.dynamic=dynamicBazi(out,input);
   return out;
 }
 

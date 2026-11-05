@@ -8,7 +8,7 @@ permissions:
 jobs:
   build:
     if: vars.FIRSTLIGHT_SERVER_URL != ''
-    runs-on: macos-latest
+    runs-on: macos-15
     env:
       FIRSTLIGHT_SERVER_URL: ${{ vars.FIRSTLIGHT_SERVER_URL }}
     steps:

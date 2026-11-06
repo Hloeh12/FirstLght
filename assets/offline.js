@@ -1,5 +1,5 @@
 'use strict';
-const name = 'firstlight-console-shell-v3';
+const name = 'firstlight-console-shell-v4';
 const files = ['/', '/js/console.js', '/assets/console/design.css', '/assets/console/credits.html'];
 self.addEventListener('install', event => event.waitUntil((async () => {
  const cache = await caches.open(name);

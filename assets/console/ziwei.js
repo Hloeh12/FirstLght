@@ -259,13 +259,17 @@ async function setPeriod(ctx,p,type){
 }
 export function ziweiTools(ctx,host){
  const s=current(ctx);
- host.innerHTML=`<h3>天地人盘</h3><div class="rail">${Object.entries(names).map(([id,title])=>btn(title,`data-type="${id}" aria-pressed="${s.chart.astroType===id}"`)).join('')}</div>
- <div class="tool-grid">${btn('格局神煞','data-patterns')}${btn('四化飞星明细','data-flight')}</div>`;
+ host.innerHTML=`<h3>天地人盘</h3><div class="tool-grid">${Object.entries(names).map(([id,title])=>btn(title,`data-type="${id}" aria-pressed="${s.chart.astroType===id}"`)).join('')}</div>
+ <div class="tool-grid">${btn('飞星轨迹开关',`data-flight aria-pressed="${s.mode==='flying'}"`)}${btn('三方四正连线',`data-triad aria-pressed="${s.mode==='triad'}"`)}</div>`;
  for(const b of host.querySelectorAll('[data-type]'))b.onclick=()=>{ctx.close($('#toolSheet'));setPeriod(ctx,s.flow,b.dataset.type);};
- $('[data-patterns]',host).onclick=()=>{
-  const p=s.chart.patterns,stars=s.chart.palaces.flatMap(x=>x.minorStars.filter(k=>['lucky','sha'].includes(k.type)).map(k=>[x.name,k.name]));
-  ctx.sheet('toolSheet','格局神煞',`<div class="chips">${p.map(x=>term(x.name,x.description)).join('')||'暂无已识别格局'}</div><div class="stack">${stars.map(([name,star])=>'<p>'+esc(name)+' · '+term(star,starInfo({name:star}))+'</p>').join('')}</div>`);
-  $('#toolSheet').onclick=e=>{const n=e.target.closest('[data-term]');if(n)ctx.explain(n.dataset.term,n.dataset.explain);};
- };
- $('[data-flight]',host).onclick=()=>{ctx.close($('#toolSheet'));s.mode='flying';ziweiView(ctx);};
+ const mode=id=>{ctx.close($('#toolSheet'));s.badge=null;s.mode=id;if(id==='transform')s.filter='natal';ziweiView(ctx,id==='flying');};
+ $('[data-flight]',host).onclick=()=>mode(s.mode==='flying'?'transform':'flying');
+ $('[data-triad]',host).onclick=()=>mode(s.mode==='triad'?'transform':'triad');
+}
+
+export function ziweiPatterns(ctx){
+ const chart=current(ctx).chart;
+ const stars=chart.palaces.flatMap(x=>x.minorStars.filter(k=>['lucky','sha'].includes(k.type)).map(k=>[x.name,k.name]));
+ const d=ctx.sheet('toolSheet','格局神煞',`<div class="chips">${chart.patterns.map(x=>term(x.name,x.description)).join('')||'暂无已识别格局'}</div><div class="stack">${stars.map(([name,star])=>'<p>'+esc(name)+' · '+term(star,starInfo({name:star}))+'</p>').join('')}</div>`);
+ for(const b of d.querySelectorAll('[data-term]'))b.onclick=()=>ctx.explain(b.dataset.term,b.dataset.explain);
 }

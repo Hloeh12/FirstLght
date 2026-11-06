@@ -132,11 +132,12 @@ async function update(ctx,pick,combine){
   if(!s.error)refresh(ctx,s);
  }
 }
-const panels=['基础信息','五行关系','干支关系','天罡称骨','流年全排','快捷八字'];
+const panels=['基础信息','五行关系','干支刑冲合会','天罡称骨','流年全排','快捷八字'];
 export function baziTools(ctx,host){
- host.innerHTML='<div class="tool-grid">'+panels.map((p,i)=>btn(p,`data-bazi-tool="${i}"`)).join('')+'</div>';
+ host.innerHTML='<div class="tool-grid">'+panels.slice(0,5).map((p,i)=>btn(p,`data-bazi-tool="${i}"`)).join('')+'</div>';
  for(const b of host.querySelectorAll('[data-bazi-tool]'))b.onclick=()=>showTool(ctx,+b.dataset.baziTool);
 }
+export const baziQuick=ctx=>showTool(ctx,5);
 async function showTool(ctx,i){
  const d=setUp(ctx).data,b=d.info;
  const titles=panels[i];

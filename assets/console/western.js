@@ -203,8 +203,21 @@ async function update(ctx,mode,at){
  if(token===s.token&&ctx.state.chartState.west===s&&ctx.state.system==='west'&&ctx.state.tab==='chart')westernView(ctx);
 }
 function options(data,value){return Object.entries(data).map(([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${esc(label)}</option>`).join('');}
+export const astroHouse=()=>cfg().house;
+export const houseOptions=value=>options(houses,value);
+export function setAstroHouse(ctx,value){
+ if(!Object.hasOwn(houses,value)||value===astroHouse())return;
+ save(key,{...cfg(),house:value});
+ if(ctx.birth&&ctx.state.chartState.west){
+  const s=ctx.state.chartState.west;
+  update(ctx,s.mode,s.at);
+ }
+}
 export function westernTools(ctx,host){
- host.innerHTML=btn('高级排盘配置','data-astro-config');
+ const s=stateOf(ctx);
+ host.innerHTML='<h3>推运盘类</h3><div class="tool-grid">'+Object.entries(modes).filter(([id])=>['transit','secondary','tertiary','solar','lunar'].includes(id)).map(([id,label])=>btn(label,`data-west-tool="${id}" aria-pressed="${s.mode===id}"`)).join('')+'</div>'+
+  btn('分宫制与小行星配置','data-astro-config class="tool-full"');
+ for(const b of host.querySelectorAll('[data-west-tool]'))b.onclick=()=>{ctx.close($('#toolSheet'));update(ctx,b.dataset.westTool,s.at);};
  $('[data-astro-config]',host).onclick=()=>configSheet(ctx);
 }
 function configSheet(ctx){

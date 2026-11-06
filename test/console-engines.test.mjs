@@ -125,6 +125,21 @@ test('case backup preserves both directions, reminders, groups and active case a
  assert.equal(repeated.newReminders.length,0);
  const score=localRequest('/api/console/relationship',{a:birth,b:b.fields});
  const synastry=localRequest('/api/synastry/chart',{a:birth,b:b.fields});
- assert.equal(score.total,synastry.vedic.koota.total);
+ assert.deepEqual(score,synastry.fit);
+ assert.equal(score.percent,localRequest('/api/console/relationship',{a:b.fields,b:birth}).percent);
+ assert(synastry.crossRelations.every(r=>r.ids.some(i=>i<4)&&r.ids.some(i=>i>=4)));
  assert.equal(score.max,36);
+});
+
+test('local sky derives real new/full moon and daily draws use the Shanghai double-hour',()=>{
+ const sky=at=>localRequest('/api/console/today-sky',{at});
+ assert.equal(sky('2024-04-08T18:21:00Z').phase,'新月');
+ assert(sky('2024-04-08T18:21:00Z').litPercent<1);
+ assert.equal(sky('2024-04-23T23:49:00Z').phase,'满月');
+ assert(sky('2024-04-23T23:49:00Z').litPercent>99);
+ const guide=at=>localRequest('/api/console/daily-guidance',{at});
+ assert.deepEqual(guide('2026-11-06T15:03:00Z'),guide('2026-11-06T15:55:00Z'));
+ assert.equal(guide('2026-11-06T15:03:00Z').branch,'子');
+ assert.equal(guide('2026-11-06T16:03:00Z').day,'2026-11-07');
+ assert.equal(guide('2026-11-06T17:03:00Z').branch,'丑');
 });

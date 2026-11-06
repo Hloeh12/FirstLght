@@ -12,9 +12,10 @@
  <div id="app">
   <header class="chrome liquid-glass">
    <button type="button" class="icon" id="caseDrawerButton" aria-label="快捷案例">☰</button>
-   <button type="button" class="profile-pill" id="activeProfile" aria-haspopup="dialog">🌸 开始排盘 ▾</button>
+   <button type="button" class="profile-pill" id="activeProfile" aria-haspopup="dialog"><span data-profile-name>🌸 开始排盘</span><span data-profile-edit>＋ 起盘</span></button>
    <button type="button" class="icon" id="toolsButton" aria-label="当前页面功能" aria-haspopup="dialog">•••</button>
   </header>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
   <main id="screen" tabindex="-1"></main>
   <nav id="tabBar" class="tabbar liquid-glass" aria-label="主导航"></nav>
  </div>
@@ -22,7 +23,6 @@
  <dialog id="caseDrawer" class="drawer liquid-glass" aria-labelledby="drawerTitle"></dialog>
  <dialog id="toolSheet" class="sheet liquid-glass" aria-labelledby="toolTitle"></dialog>
  <dialog id="termSheet" class="sheet liquid-glass" aria-labelledby="termTitle"></dialog>
- <div id="notice" role="status" aria-live="polite" hidden></div>
  <script defer src="/js/console.js"></script>
 </body>
 </html>

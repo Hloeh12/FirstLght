@@ -60,20 +60,27 @@ function calendar(ctx){
  };
  if(!r&&!s.pending&&!s.error)load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days??1});
 }
+function calculatePair(ctx,s,other){
+ s.other=other.id;s.result=null;s.error='';
+ load(ctx,'synastry',s,'/api/synastry/chart',{a:ctx.birth,b:ctx.normalized(other),mode:'synastry'});
+}
 function synastry(ctx){
  const id='synastry',s=stateFor(ctx,id,{}),r=s.result;
  const cases=ctx.state.cases.filter(c=>c.id!==ctx.state.profile.id);
  const other=cases.find(c=>c.id===s.other);
  ctx.root.innerHTML=`<section><div class="spread"><h1>双人合盘</h1>${btn(other?'更换第二人':'选择第二人','data-select-other')}</div>
  <p>${esc(ctx.state.profile.name)} × ${esc(other?.name||'待选择')}</p><p data-extra-status role="status">${esc(s.error)}</p>
- ${r?`<article class="card"><h2>跨盘相位</h2>${table(['当前案例','第二人','相位','容许度'],r.western.interAspects.map(x=>[x.a,x.b,x.type,x.orb.toFixed(2)+'°']))}</article>
- ${r.vedic.koota?`<article class="card"><h2>印度八项合婚 · ${r.vedic.koota.total}/${r.vedic.koota.max}</h2>${table(['项目','得分'],r.vedic.koota.items.map(x=>[x.zh,x.score+'/'+x.max]))}</article>`:''}`:''}</section>`;
+ ${r?`<article class="card"><h2>契合度 ${r.fit.percent}%</h2>${r.fit.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')}<small>印度八项合盘双向平均 · 传统参考</small></article>
+ <article class="card"><h2>八字跨盘干支</h2>${table(['关系','干支','双方柱位'],r.crossRelations.map(x=>[x.type,x.pattern,x.pillars.join('／')]))}</article>
+ <article class="card"><h2>跨盘相位</h2>${table(['当前案例','第二人','相位','容许度'],r.western.interAspects.map(x=>[x.a,x.b,x.type,x.orb.toFixed(2)+'°']))}</article>
+ ${r.vedic.koota?`<article class="card"><h2>印度八项合婚（当前方向） · ${r.vedic.koota.total}/${r.vedic.koota.max}</h2>${table(['项目','得分'],r.vedic.koota.items.map(x=>[x.zh,x.score+'/'+x.max]))}</article>`:''}`:''}</section>`;
  $('[data-select-other]',ctx.root).onclick=()=>{
   const d=ctx.sheet('toolSheet','选择第二个案例',`<div class="stack">${cases.map(c=>btn(c.name,`data-other="${esc(c.id)}"`)).join('')||'<p>请先在案例页添加第二个人。</p>'}</div>`);
   for(const b of d.querySelectorAll('[data-other]'))b.onclick=()=>{
    const p=cases.find(c=>c.id===b.dataset.other);
-   s.other=p.id;ctx.close(d);load(ctx,id,s,'/api/synastry/chart',{a:ctx.birth,b:ctx.normalized(p),mode:'synastry'});
+   ctx.close(d);calculatePair(ctx,s,p);
   };
  };
+ if(other&&!r&&!s.pending&&!s.error)calculatePair(ctx,s,other);
 }
 export function extraView(ctx){({qizheng:qi,yijing:yi,calendar,synastry})[ctx.state.system]?.(ctx);}

@@ -1,8 +1,9 @@
+import {soulWidgets,wireSoul} from './soul-home.js';
 import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
-import {ziweiView,ziweiTools} from './ziwei.js';
-import {baziView,baziTools} from './bazi.js';
-import {westernView,westernTools} from './western.js';
+import {ziweiView,ziweiTools,ziweiPatterns} from './ziwei.js';
+import {baziView,baziTools,baziQuick} from './bazi.js';
+import {westernView,westernTools,astroHouse,houseOptions,setAstroHouse} from './western.js';
 import {extraView} from './extras.js';
 import {shareChart} from './share.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
@@ -70,6 +71,7 @@ function normalized(profile){
  const clock=f.timeStr??[f.h??12,f.mi??0].map(n=>String(n).padStart(2,'0')).join(':');
  const [h,mi]=clock.split(':').map(Number);
  return {...f,...splitDate(date),name:profile.name,dateStr:date,timeStr:clock,h,mi,gender:f.gender||'女',
+  useSolarTime:f.useSolarTime??state.settings.useSolarTime??false,
   lateZishi:f.lateZishi||state.settings.lateZishi||'next-day',
   city:{...f.city,lat:Number(f.city?.lat),lon:Number(f.city?.lon),tz:Number(f.city?.tz??8)}};
 }
@@ -185,10 +187,26 @@ function fillGalaxy(dialog,profile){
   const draw=page=>{
    host.innerHTML=galaxy(profile,items,page);
    for(const b of host.querySelectorAll('[data-galaxy-page]'))b.onclick=()=>draw(+b.dataset.galaxyPage);
-   for(const b of host.querySelectorAll('[data-galaxy-case]'))b.onclick=()=>caseDetail(state.cases.find(c=>c.id===b.dataset.galaxyCase));
+   for(const node of host.querySelectorAll('[data-galaxy-case]')){
+    const show=()=>showRelation(profile,items.find(item=>item.other.id===node.dataset.galaxyCase));
+    node.onclick=show;
+    if(node.tagName.toLowerCase()==='g')node.onkeydown=e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();show();}};
+   }
   };
   draw(0);
  });
+}
+function showRelation(profile,item){
+ const {other,score,type}=item;
+ const d=sheet('termSheet',other.name+' · 关系名片',`<article class="card liquid-glass galaxy-profile">
+ <p class="kicker">${esc(type)}</p><p class="relation-score">${score?'契合度 '+score.percent+'%':'合盘暂不可用'}</p>
+ ${score?score.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')+'<small>合盘是传统观察线索。</small>':''}</article>
+ ${btn('查看深度双人合盘','class="primary" data-deep-pair')}`);
+ $('[data-deep-pair]',d).onclick=()=>{
+  if(state.profile?.id!==profile.id){tell('请重新打开当前命主的关系星系');return;}
+  state.chartState.synastry={other:other.id,token:0,result:null,error:''};
+  switchTab('chart','synastry');
+ };
 }
 function caseDetail(c){
  const data=caseSpace();
@@ -196,39 +214,36 @@ function caseDetail(c){
  const candidates=state.cases.filter(x=>x.id!==c.id);
  const reminders=data.reminders[c.id]||[];
  const d=sheet('toolSheet',c.name+' · 案例空间',`
- <details><summary>查看关系星系</summary><div data-galaxy></div></details>
+ ${state.profile?.id===c.id?'<details><summary>查看关系星系</summary><div data-galaxy></div></details>':''}
  <div class="stack">${linked.map((l,i)=>`<div class="spread"><span>${esc(l.other.name)} · ${esc(l.type)}</span>${btn('解除',`data-unlink="${i}"`)}</div>`).join('')}</div>
  ${candidates.length?`<form id="addRelation" class="form-grid"><label>关联案例<select name="other">${candidates.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label>
  <label>关系类型<select name="kind">${relationships.map(x=>`<option>${x}</option>`).join('')}<option value="custom">＋自定义</option></select></label>
  <label class="wide" data-custom-kind hidden>自定义关系<input name="custom" maxlength="24"></label>
- <label class="wide">亲密自评 <output data-closeness>50</output><input name="closeness" type="range" min="0" max="100" value="50"></label>
  <button class="wide">保存双向关系</button></form>`:''}
  <form id="caseNote"><label>个人札记<textarea name="note" maxlength="8000" rows="4">${esc(data.notes[c.id])}</textarea></label><button>保存札记</button></form>
  <form id="caseReminder" class="form-grid"><label>提醒时间<input name="when" type="datetime-local" required></label><label>提醒内容<input name="message" maxlength="80" required></label><button class="wide">添加提醒</button></form>
  <div class="stack">${reminders.map(r=>`<div class="spread"><span>${esc(r.when.replace('T',' '))} · ${esc(r.message)}</span>${btn('取消',`data-cancel-reminder="${esc(r.id)}"`)}</div>`).join('')}</div>`);
  const store=()=>save(relationStorageKey,data);
  const disclosure=$('details',d);
- disclosure.ontoggle=()=>{if(disclosure.open&&!$('[data-galaxy]',d).hasChildNodes())fillGalaxy(d,c);};
+ if(disclosure)disclosure.ontoggle=()=>{if(disclosure.open&&!$('[data-galaxy]',d).hasChildNodes())fillGalaxy(d,c);};
  const rel=$('#addRelation',d);
  if(rel){
-  const {other,kind,custom,closeness}=rel.elements;
+  const {other,kind,custom}=rel.elements;
   const reveal=()=>$('[data-custom-kind]',rel).hidden=kind.value!=='custom';
-  const renderCloseness=()=> $('[data-closeness]',rel).value=closeness.value;
   const sync=()=>{
    const l=linked.find(x=>x.other.id===other.value);
    kind.value=l?(relationships.includes(l.type)?l.type:'custom'):relationships[0];
    custom.value=kind.value==='custom'?l.type:'';
-   closeness.value=l?.closeness??50;
-   reveal();renderCloseness();
+   reveal();
   };
-  other.onchange=sync;kind.onchange=reveal;closeness.oninput=renderCloseness;sync();
+  other.onchange=sync;kind.onchange=reveal;sync();
   rel.onsubmit=e=>{
    e.preventDefault();
    const type=kind.value==='custom'?custom.value.trim():kind.value;
    if(!type){tell('请输入自定义关系');return;}
    const ids=[c.id,other.value].sort(),key=pairKey(ids);
    data.links=data.links.filter(l=>pairKey(l.ids)!==key);
-   data.links.push({ids,type,closeness:Number(closeness.value)});
+   data.links.push({ids,type});
    store();caseDetail(c);
   };
  }
@@ -272,7 +287,7 @@ function birthSheet(profile,seed={}){
   <label>经度<input name="lon" type="number" step="any" value="${Number.isFinite(city.lon)?city.lon:''}" placeholder="−180 到 180"></label>
   <label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(city.tz)}"></label>
   ${btn('使用当前位置','data-locate')}
-  <div class="checks wide"><label><input name="unknown" type="checkbox" ${f.timeUnknown?'checked':''}>时辰未知</label><label><input name="solar" type="checkbox" ${f.useSolarTime?'checked':''}>真太阳时</label><label data-leap><input name="leap" type="checkbox" ${f.leapMonth?'checked':''}>闰月</label></div>
+  <div class="checks wide"><label><input name="unknown" type="checkbox" ${f.timeUnknown?'checked':''}>时辰未知</label><label><input name="solar" type="checkbox" ${(f.useSolarTime??setting.useSolarTime)?'checked':''}>真太阳时</label><label data-leap><input name="leap" type="checkbox" ${f.leapMonth?'checked':''}>闰月</label></div>
   <p class="wide muted" id="birthStatus" role="status"></p><button type="submit" class="wide primary">生成命盘</button>
  </form>
  <div class="rail" aria-label="历史案例">${state.cases.slice(0,5).map(c=>btn(c.name,`data-use-case="${esc(c.id)}"`)).join('')}${profile?btn('＋ 起新盘','data-new'):''}</div>`);
@@ -340,18 +355,53 @@ function birthSheet(profile,seed={}){
   finally{if(token===generation){state.pending=false;submit.disabled=false;}}
  };
 }
+function settingsForm(){
+ const s=state.settings;
+ return `<form id="prefs" class="form-grid">
+ <label class="checks wide"><input name="solar" type="checkbox" ${s.useSolarTime?'checked':''}>新案例默认使用真太阳时</label>
+ ${state.profile?`<label class="checks wide"><input name="activeSolar" type="checkbox" ${normalized(state.profile).useSolarTime?'checked':''}>当前案例使用真太阳时</label>`: ''}
+ <label>晚子时（23:00–24:00）<select name="late"><option value="next-day">归次日</option><option value="current-day" ${s.lateZishi==='current-day'?'selected':''}>归当日</option></select></label>
+ <label>西洋分宫制<select name="house">${houseOptions(astroHouse())}</select></label>
+ <label>默认地点<input name="place" value="${esc(s.place)}"></label><label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(s.tz??8)}"></label>
+ <label>纬度<input name="lat" type="number" step="any" value="${esc(s.lat)}"></label><label>经度<input name="lon" type="number" step="any" value="${esc(s.lon)}"></label>
+ <button class="wide primary">保存设置</button></form>`;
+}
+function savePreferences(e){
+ e.preventDefault();
+ const f=new FormData(e.currentTarget),[lat,lon,tz]=['lat','lon','tz'].map(k=>f.get(k)===''?undefined:Number(f.get(k)));
+ if([lat,lon,tz].some(v=>v!==undefined&&!Number.isFinite(v))||Math.abs(lat)>90||Math.abs(lon)>180||tz< -12||tz>14){tell('默认坐标或时区无效');return;}
+ state.settings={lateZishi:f.get('late'),useSolarTime:f.has('solar'),place:f.get('place'),lat,lon,tz:tz??8};
+ save(SETTINGS,state.settings);
+ setAstroHouse(ctx,f.get('house'));
+ if(state.profile){
+  const birth=normalized(state.profile),lateZishi=state.settings.lateZishi,useSolarTime=f.has('activeSolar');
+  if(birth.lateZishi!==lateZishi||birth.useSolarTime!==useSolarTime)activate({...state.profile,fields:{...state.profile.fields,lateZishi,useSolarTime}},false);
+ }
+ const status=$('[data-pref-status]',e.currentTarget.parentElement);
+ if(status)status.textContent='已保存至本机。';
+}
 function caseDrawer(){
  const p=state.profile;
  const entries=[...state.recent.map(id=>state.cases.find(c=>c.id===id)).filter(Boolean),...state.cases.filter(c=>!state.recent.includes(c.id))].slice(0,5);
  const d=sheet('caseDrawer','快捷案例',`<div class="card"><span class="kicker">当前案例</span><h3>${esc(p?.name||'尚未选择案例')}</h3><p>${esc(p?.summary?.pillars||'')}</p><small>${esc(p?.fields?.dateStr||'')} ${esc(p?.fields?.timeStr||'')} ${esc(p?.fields?.city?.label||'')}</small></div>
- <div class="stack">${entries.map(c=>btn(c.name+' · '+(c.summary?.pillars||c.fields?.dateStr||''),`class="drawer-case" data-recent="${esc(c.id)}"`)).join('')}</div>
- <div class="drawer-accordion">${[
+ <div class="drawer-accordion">
+ <details><summary>📁 快捷档案库</summary><div class="stack archive-list">${entries.map(c=>`<button type="button" class="drawer-case" data-recent="${esc(c.id)}">
+ <span class="archive-avatar" aria-hidden="true">${esc(Array.from(c.name)[0]||'星')}</span><span><b>${esc(c.name)}</b><small>${esc(c.summary?.pillars||c.fields?.dateStr||'')}</small></span></button>`).join('')||'<p class="muted">还没有可切换的档案。</p>'}</div></details>
+ ${[
   ['天机排盘工坊',[['东方盘',['ziwei','bazi','qizheng']],['西洋盘',['west']]]],
   ['推运时空',[['西洋推运',['transit','secondary','tertiary','solar','lunar','firdaria']],['每日时空',['calendar']]]],
   ['易经古籍',[['卦象与经典',['yijing']]]],
   ['关系星系',[['双向案例',['galaxy','synastry']]]],
- ].map(([title,sections])=>`<details><summary>${title}</summary><div>${sections.map(([name,items])=>`<details><summary>${name}</summary><div class="tool-grid">${items.map(id=>btn(labels[id]||{transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',galaxy:'关系图谱'}[id],`data-destination="${id}"`)).join('')}</div></details>`).join('')}</div></details>`).join('')}</div>
- <div class="rail">${btn('＋ 新建案例','class="primary" data-fresh')}${p?btn('编辑当前资料','data-edit'):''}</div>`);
+ ].map(([title,sections])=>`<details><summary>${title}</summary><div>${sections.map(([name,items])=>`<details><summary>${name}</summary><div class="tool-grid">${items.map(id=>btn(labels[id]||{transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',galaxy:'关系图谱'}[id],`data-destination="${id}"`)).join('')}</div></details>`).join('')}</div></details>`).join('')}
+ ${state.reading?`<details><summary>盘面工具</summary><div class="tool-grid">${btn('快捷八字','data-quick-bazi')}${state.system==='ziwei'&&state.tab==='chart'?btn('格局神煞','data-ziwei-patterns'):''}${state.tab==='chart'?btn('分享长图','data-share-chart'):''}</div></details>`:''}
+ <details><summary>⚙️ 命理口径与算法配置</summary><div>${settingsForm()}<p class="thin" role="status" data-pref-status></p></div></details></div>
+ <div class="tool-grid">${btn('＋ 新建案例','class="primary" data-fresh')}</div>`);
+ $('#prefs',d).onsubmit=savePreferences;
+ const quick=$('[data-quick-bazi]',d),share=$('[data-share-chart]',d);
+ if(quick)quick.onclick=()=>{close(d);baziQuick(ctx);};
+ const patterns=$('[data-ziwei-patterns]',d);
+ if(patterns)patterns.onclick=()=>{close(d);ziweiPatterns(ctx);};
+ if(share)share.onclick=()=>{close(d);shareChart(root,$('[data-profile-name]').textContent).catch(e=>tell(e.message));};
  for(const b of d.querySelectorAll('[data-recent]'))b.onclick=()=>activate(state.cases.find(c=>c.id===b.dataset.recent));
  for(const b of d.querySelectorAll('[data-destination]'))b.onclick=()=>{
   const id=b.dataset.destination;
@@ -361,14 +411,17 @@ function caseDrawer(){
   switchTab('chart','west');
  };
  $('[data-fresh]',d).onclick=()=>{close(d);birthSheet(null);};
- if(p)$('[data-edit]',d).onclick=()=>{close(d);birthSheet(p);};
 }
 
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
  const late=(info?.correction.corrected?info.correction.hour:Number(p?.fields?.h??p?.fields?.timeStr?.split(':')[0]))===23;
  const badge=late?' · 晚子时'+((info?.lateZishi||p.fields.lateZishi)==='current-day'?'归当日':'归次日'):'';
- $('#activeProfile').textContent=p?'🌸 '+[p.name,p.summary?.yearDay,p.fields?.city?.label].filter(Boolean).join(' · ')+badge+' ▾':'🌸 开始排盘 ▾';
+ const label=p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge:'🌸 开始排盘';
+ $('[data-profile-name]').textContent=label;
+ $('[data-profile-edit]').textContent=p?'✏️ 编辑':'＋ 起盘';
+ $('#activeProfile').setAttribute('aria-label',p?label+'，编辑出生资料':label);
+
 }
 function insights(){
  const r=state.reading;
@@ -385,23 +438,12 @@ function reportTitle(key){
  return {'w-persona':'性格与天赋','w-career':'事业方向','w-wealth':'资源与财富','w-love':'情感关系','w-health':'生活节奏','z-palaces':'紫微十二宫','z-mutagen':'生年四化','w-risks':'长期课题','v-dasha':'印度大运'}[key]||'综合观察';
 }
 function preferences(){
- const s=state.settings;
- root.innerHTML=`<section><h1>我</h1>${soulCard(state.reading,state.profile?.name)}<article class="card"><h2>排盘口径</h2><form id="prefs" class="form-grid">
- <label class="wide">晚子时（23:00–24:00）<select name="late"><option value="next-day">归次日</option><option value="current-day" ${s.lateZishi==='current-day'?'selected':''}>归当日</option></select></label>
- <label>默认地点<input name="place" value="${esc(s.place)}"></label><label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(s.tz??8)}"></label>
- <label>纬度<input name="lat" type="number" step="any" value="${esc(s.lat)}"></label><label>经度<input name="lon" type="number" step="any" value="${esc(s.lon)}"></label>
- <button class="wide primary">保存设置</button></form></article>
+ root.innerHTML=`<section class="soul-home"><header><p class="kicker">FIRST LIGHT · 个人灵性空间</p><h1>我</h1></header>
+ ${soulWidgets()}${soulCard(state.reading,state.profile?.name)}
  <article class="card"><h2>交互反馈</h2><label class="feedback-setting"><span>交互音效与震动</span><input type="checkbox" role="switch" data-feedback ${feedbackEnabled()?'checked':''}></label></article>
- <article class="card"><h2>本机案例</h2>${btn('导出备份','data-export')}${btn('导入备份','data-import')}<input type="file" accept="application/json" id="importBackup" hidden></article>
- <article class="card"><h2>计算说明</h2><p>紫微使用 Renhuai / iztro。专业西洋盘使用 Astronomy Engine 与 NASA JPL 小行星轨道资料。各模块使用独立规则，术数解读仅供传统文化参考。</p><p>八字、紫微、推运、古籍及案例在本机计算。iOS 版自带资源，网页首次载入后可离线打开。</p><a href="/assets/console/credits.html">来源与许可</a></article></section>`;
- $('#prefs').onsubmit=e=>{
-  e.preventDefault();const f=new FormData(e.currentTarget);
-  const vals=['lat','lon','tz'].map(k=>f.get(k)===''?undefined:Number(f.get(k)));
-  if(vals.some(v=>v!==undefined&&!Number.isFinite(v))||Math.abs(vals[0])>90||Math.abs(vals[1])>180||vals[2]<-12||vals[2]>14){tell('默认坐标或时区无效');return;}
-  state.settings={lateZishi:f.get('late'),place:f.get('place'),lat:vals[0],lon:vals[1],tz:vals[2]??8};save(SETTINGS,state.settings);
-  if(state.profile&&state.profile.fields.lateZishi!==state.settings.lateZishi)activate({...state.profile,fields:{...state.profile.fields,lateZishi:state.settings.lateZishi}},false);
-  tell('设置已保存');
- };
+ <article class="card"><h2>数据中枢</h2><div class="tool-grid">${btn('导出全量 JSON','data-export')}${btn('导入 JSON','data-import')}</div><input type="file" accept="application/json" id="importBackup" hidden></article>
+ <footer class="soul-footer"><p>缘分不过天时地利 承诺不过逝水轻浅</p><a href="/assets/console/credits.html">来源与许可</a></footer></section>`;
+ wireSoul(ctx);
  $('[data-feedback]',root).onchange=e=>setFeedback(e.currentTarget.checked);
  $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:3,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace()},null,2),'FirstLight-cases.json','application/json');
  $('[data-import]',root).onclick=()=>$('#importBackup').click();
@@ -433,18 +475,12 @@ function download(text,name,type){
  const url=URL.createObjectURL(new Blob([text],{type}));
  const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
+const chartTools={ziwei:ziweiTools,bazi:baziTools,west:westernTools};
 function toolPanel(){
- const d=sheet('toolSheet',state.tab==='chart'?labels[state.system]+' · 功能':'切换排盘体系',
-  '<div id="viewTools"></div>'+(state.tab==='chart'&&state.reading?btn('分享长图','data-share-chart'):'')+'<h3>排盘体系</h3><div class="tool-grid system-picker">'+Object.entries(labels).map(([id,label])=>btn(label,`data-system="${id}" aria-pressed="${state.system===id}"`)).join('')+'</div>');
- for(const b of d.querySelectorAll('[data-system]'))b.onclick=()=>switchTab('chart',b.dataset.system);
- const share=$('[data-share-chart]',d);
- if(share)share.onclick=()=>{close(d);shareChart(root,$('#activeProfile').textContent).catch(e=>tell(e.message));};
- const host=$('#viewTools',d);
- if(state.tab==='chart'&&state.reading){
-  if(state.system==='ziwei')ziweiTools(ctx,host);
-  if(state.system==='bazi')baziTools(ctx,host);
-  if(state.system==='west')westernTools(ctx,host);
- }
+ const tool=chartTools[state.system];
+ if(state.tab!=='chart'||!state.reading||!tool)return;
+ const d=sheet('toolSheet',labels[state.system]+' · 功能','<div id="viewTools"></div>');
+ tool(ctx,$('#viewTools',d));
 }
 const definitions={
  日主:'出生日的天干，是十神关系和扶助比例的参照。',正官:'克日主且阴阳相异，常用来观察规则、责任和约束。',七杀:'克日主且阴阳相同，常用来观察压力、竞争和行动。',正印:'生日主且阴阳相异，常用来观察正规支持和学习。',偏印:'生日主且阴阳相同，常用来观察非标准的学习和支持。',比肩:'与日主同五行同阴阳，常用来观察同辈和自主性。',劫财:'与日主同五行异阴阳，常用来观察共享与竞争。',食神:'日主所生且阴阳相同，常用来观察输出与创造。',伤官:'日主所生且阴阳相异，常用来观察表达与打破常规。',正财:'日主所克且阴阳相异，常用来观察稳定资源。',偏财:'日主所克且阴阳相同，常用来观察流动资源与机会。',空亡:'以干支十位一旬计，两支未配天干，即为该旬空亡。',天乙贵人:'按年干或日干查出的地支标记，传统用来描述支持与援助。',驿马:'按三合局取对冲的生地，常用来观察移动、变换和外部往来。',咸池桃花:'按年支或日支查表，传统用来观察社交与吸引力。',华盖:'按三合局墓支取，常用来观察独处、专注和技艺。',羊刃:'阳日干的特定旺支，传统用来观察力量集中和张力。',劫煞:'按年支或日支所属三合局查表，传统用来观察竞争或突变。',天医:'以月支前一支取，属于传统辅助标记。',文昌:'按年干或日干查表，传统用来观察学习、书写和表达。',太极贵人:'按年干或日干查表，传统用来观察学习和钻研。'
@@ -455,6 +491,7 @@ const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,swit
 };
 function render(){
  profileTitle();
+ $('#toolsButton').hidden=!(state.tab==='chart'&&state.reading&&chartTools[state.system]);
  for(const b of $('#tabBar').children){if(b.dataset.tab===state.tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
  if(state.tab==='cases'){renderCases();return;}
  if(state.tab==='insights'){insights();return;}
@@ -491,5 +528,5 @@ function pendingReminders(){
  if(dirty)save('xy_case_space',data);
 }
 pendingReminders();setInterval(pendingReminders,30000);
-if('serviceWorker' in navigator)navigator.serviceWorker.register('/offline.js').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/offline.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 if(state.profile)activate(state.profile,false);else{render();birthSheet(null);}

@@ -10,6 +10,7 @@ export const pairKey=ids=>JSON.stringify([...ids].sort());
 export const relationStorageKey=relationKey;
 const number=n=>typeof n==='number'&&Number.isFinite(n);
 const scoreCache=new Map();
+export const clearRelationshipCache=()=>scoreCache.clear();
 
 export async function linkedCases(profile,cases,links,request,normalize){
  const neighbors=new Map(cases.map(c=>[c.id,c]));

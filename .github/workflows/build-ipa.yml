@@ -38,6 +38,7 @@ jobs:
           command -v xcodegen >/dev/null || brew install xcodegen
           test -f ios-src/AppDelegate.swift
           test -f ios-src/Info.plist
+          test -f ios-src/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
           mkdir -p www/js www/assets/console
           cp index.html www/
           cp js/console.js www/js/
@@ -62,16 +63,23 @@ jobs:
           import pathlib, plistlib, sys
           app = pathlib.Path(sys.argv[1])
           info = plistlib.loads((app / 'Info.plist').read_bytes())
-          expected = dict(CFBundleDisplayName='星谕', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString='0.15.0', CFBundleVersion='1', LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
+          expected = dict(CFBundleDisplayName='FirstLght', CFBundleName='FirstLght', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString='0.15.0', CFBundleVersion='1', LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
           for key, value in expected.items():
               assert info.get(key) == value, (key, info.get(key), value)
+          catalog = app / 'Assets.car'
+          assert catalog.is_file() and catalog.stat().st_size > 0, 'actool did not emit Assets.car'
+          icon = info['CFBundleIcons']['CFBundlePrimaryIcon']
+          assert icon.get('CFBundleIconName') == 'AppIcon', icon
+          assert icon.get('CFBundleIconFiles'), icon
           for name in ['index.html', 'js/console.js', 'assets/console/design.css', 'assets/console/credits.html']:
               assert (app / 'www' / name).exists(), name
           PY
           mkdir -p build/Payload
           ditto "$APP" build/Payload/FirstLight.app
           (cd build && zip -qry FirstLight.ipa Payload)
-          unzip -l build/FirstLight.ipa | grep 'Payload/FirstLight.app/www/index.html'
+          unzip -tq build/FirstLight.ipa
+          unzip -p build/FirstLight.ipa Payload/FirstLight.app/Assets.car > build/PackagedAssets.car
+          cmp "$APP/Assets.car" build/PackagedAssets.car
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:

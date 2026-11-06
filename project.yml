@@ -16,12 +16,17 @@ targets:
     platform: iOS
     sources:
       - path: ios-src/AppDelegate.swift
+      - path: ios-src/Assets.xcassets
+        buildPhase: resources
       - path: www
         type: folder
         buildPhase: resources
     settings:
       base:
         PRODUCT_NAME: FirstLight
+        INFOPLIST_KEY_CFBundleDisplayName: FirstLght
+        INFOPLIST_KEY_CFBundleName: FirstLght
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_FILE: ios-src/Info.plist
         GENERATE_INFOPLIST_FILE: NO
 schemes:

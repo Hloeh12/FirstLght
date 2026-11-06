@@ -1,3 +1,4 @@
+import {diagnosticsPanel,installDiagnostics} from './diagnostics.js';
 import {soulWidgets,wireSoul} from './soul-home.js';
 import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
@@ -7,6 +8,8 @@ import {westernView,westernTools,astroHouse,houseOptions,setAstroHouse} from './
 import {extraView} from './extras.js';
 import {shareChart} from './share.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
+
+installDiagnostics();
 
 const CASES='xy:cases:v2',ACTIVE='xy_active_profile',SETTINGS='xy:settings:v2';
 const standardGroups=['我的','亲人','朋友','特别关注'];
@@ -442,8 +445,10 @@ function preferences(){
  ${soulWidgets()}${soulCard(state.reading,state.profile?.name)}
  <article class="card"><h2>交互反馈</h2><label class="feedback-setting"><span>交互音效与震动</span><input type="checkbox" role="switch" data-feedback ${feedbackEnabled()?'checked':''}></label></article>
  <article class="card"><h2>数据中枢</h2><div class="tool-grid">${btn('导出全量 JSON','data-export')}${btn('导入 JSON','data-import')}</div><input type="file" accept="application/json" id="importBackup" hidden></article>
+ <article class="card"><h2>运行维护</h2>${btn('🛠️ 运行诊断与日志','data-diagnostics class="tool-full"')}</article>
  <footer class="soul-footer"><p>缘分不过天时地利 承诺不过逝水轻浅</p><a href="/assets/console/credits.html">来源与许可</a></footer></section>`;
  wireSoul(ctx);
+ $('[data-diagnostics]',root).onclick=()=>diagnosticsPanel(ctx);
  $('[data-feedback]',root).onchange=e=>setFeedback(e.currentTarget.checked);
  $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:3,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace()},null,2),'FirstLight-cases.json','application/json');
  $('[data-import]',root).onclick=()=>$('#importBackup').click();

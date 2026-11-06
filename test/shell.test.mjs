@@ -7,12 +7,12 @@ import {readFileSync} from 'node:fs';
 test('bundled console creates fresh charts and progresses them without any network',async t=>{
  const base='https://offline.test';
  const js=(await buildConsole(false)).outputFiles[0].text;
- const attempted=[],haptics=[],pitches=[];
+ const attempted=[],haptics=[],pitches=[],clipboard=[];
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
  const dom=new JSDOM(readFileSync('index.html','utf8'),{url:base,runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
   w.fetch=url=>{attempted.push(url);throw Error('network disabled');};w.scrollTo=()=>{};
   Object.defineProperty(w.navigator,'onLine',{value:false});
-  w.webkit={messageHandlers:{interactionHaptic:{postMessage:kind=>haptics.push(kind)}}};
+  w.webkit={messageHandlers:{interactionHaptic:{postMessage:kind=>haptics.push(kind)},copyDiagnostics:{postMessage:log=>clipboard.push(log)}}};
   w.AudioContext=class {
    state='running';
    currentTime=1;
@@ -171,6 +171,26 @@ test('bundled console creates fresh charts and progresses them without any netwo
  await until(()=>$('#screen').textContent.includes('八字跨盘干支'),'deep pair calculation');
  assert($('#screen').textContent.includes(fit));
  click('[data-tab=me]');
+ click('[data-diagnostics]');
+ const diag=$('#toolSheet');
+ for(let i=0;i<101;i++)w.dispatchEvent(new w.ErrorEvent('error',{message:'synthetic-event-'+i}));
+ const rejected=new w.Event('unhandledrejection');
+ Object.defineProperty(rejected,'reason',{value:new Error('synthetic-rejection https://example.invalid/?private=1')});
+ w.dispatchEvent(rejected);
+ assert.equal(diag.querySelector('[data-log-count]').textContent,'100');
+ assert(!diag.querySelector('[data-logs]').value.includes('synthetic-event-0'));
+ assert(diag.querySelector('[data-logs]').value.includes('synthetic-rejection [资源地址]'));
+ click('[data-check-device]');
+ await until(()=>diag.querySelector('[data-diagnostic-status]').textContent.includes('5/5 项通过'),'offline diagnostics');
+ click('[data-copy-logs]');
+ await until(()=>clipboard.length===1,'diagnostics copy');
+ assert(clipboard[0].includes('5/5 项通过'));
+ const activeBefore=w.localStorage.getItem('xy_active_profile');
+ click('[data-reset-cache]');
+ await until(()=>diag.querySelector('[data-diagnostic-status]').textContent.includes('排盘缓存已清理'),'scoped cache reset');
+ assert.equal(w.localStorage.getItem('xy_active_profile'),activeBefore);
+ assert.equal(diag.querySelector('[data-log-count]').textContent,'100');
+ click('#toolSheet [data-close]');
  const toggle=$('[data-feedback]');assert(toggle.checked);
  toggle.click();
  assert.equal(JSON.parse(w.localStorage.getItem('xy_interaction_feedback')),false);

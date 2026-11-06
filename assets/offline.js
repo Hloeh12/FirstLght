@@ -1,9 +1,16 @@
 'use strict';
-const name = 'firstlight-console-shell-v4';
+const name = 'firstlight-console-shell-v5';
 const files = ['/', '/js/console.js', '/assets/console/design.css', '/assets/console/credits.html'];
-self.addEventListener('install', event => event.waitUntil((async () => {
+async function refreshShell(){
  const cache = await caches.open(name);
  await cache.addAll(files.map(path => new Request(path, {cache:'reload'})));
+}
+self.addEventListener('message', event => {
+ if(event.data?.type!=='firstlight-refresh-cache'||!event.ports[0])return;
+ event.waitUntil(refreshShell().then(()=>event.ports[0].postMessage({ok:true}),()=>event.ports[0].postMessage({ok:false})));
+});
+self.addEventListener('install', event => event.waitUntil((async () => {
+ await refreshShell();
  await self.skipWaiting();
 })()));
 self.addEventListener('activate', event => event.waitUntil((async () => {

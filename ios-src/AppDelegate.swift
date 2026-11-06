@@ -46,6 +46,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         config.userContentController.add(self, name: "findLocation")
         config.userContentController.add(self, name: "caseBackup")
         config.userContentController.add(self, name: "interactionHaptic")
+        config.userContentController.add(self, name: "copyDiagnostics")
         config.preferences.javaScriptEnabled = true
         config.defaultWebpagePreferences.allowsContentJavaScript = true
 
@@ -163,6 +164,10 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let url = message.frameInfo.request.url,
               url.scheme == appURL.scheme, url.host == appURL.host else { return }
+        if message.name == "copyDiagnostics", let log = message.body as? String, log.utf8.count <= 128_000 {
+            UIPasteboard.general.setItems([["public.utf8-plain-text": log]], options: [.localOnly: true])
+            return
+        }
         if message.name == "interactionHaptic" {
             switch message.body as? String {
             case "tap": UIImpactFeedbackGenerator(style: .soft).impactOccurred()

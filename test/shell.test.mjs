@@ -7,11 +7,18 @@ import {readFileSync} from 'node:fs';
 test('bundled console creates fresh charts and progresses them without any network',async t=>{
  const base='https://offline.test';
  const js=(await buildConsole(false)).outputFiles[0].text;
- const attempted=[];
+ const attempted=[],haptics=[],pitches=[];
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
- const dom=new JSDOM(readFileSync('index.html','utf8'),{url:base,runScripts:'dangerously',virtualConsole:vc,beforeParse(w){
+ const dom=new JSDOM(readFileSync('index.html','utf8'),{url:base,runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
   w.fetch=url=>{attempted.push(url);throw Error('network disabled');};w.scrollTo=()=>{};
   Object.defineProperty(w.navigator,'onLine',{value:false});
+  w.webkit={messageHandlers:{interactionHaptic:{postMessage:kind=>haptics.push(kind)}}};
+  w.AudioContext=class {
+   state='running';
+   currentTime=1;
+   createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}};}
+   createOscillator(){return {frequency:{setValueAtTime:x=>pitches.push(x),exponentialRampToValueAtTime:x=>pitches.push(x)},connect(){},start(){},stop(){}};}
+  };
  }});
  t.after(()=>dom.window.close());
  const w=dom.window,doc=w.document;
@@ -30,14 +37,21 @@ test('bundled console creates fresh charts and progresses them without any netwo
  click('#birthForm [type=submit]');
  await until(()=>Boolean($('.zi-board')),'first chart');
  assert(!$('#birthSheet').open);
+ assert.deepEqual(pitches.slice(0,4),[1100,700,1318,1975]);
+ assert.deepEqual(haptics.slice(0,2),['tap','success']);
+ assert.equal(many('.touch-burst i').length,7);
  assert.equal(many('[data-palace]').length,12);
  assert($('#activeProfile').textContent.includes('测试案例'));
  assert.equal(JSON.parse(w.localStorage.getItem('xy_active_profile')).name,'测试案例');
  assert.equal(many('.zi-triad').length,1);
+ assert.equal(many('.zi-laser').length,3);
  assert.equal(many('.zi-annual .term').length,24);
  click('[data-mode=flying]');
  assert.equal(many('.flying-arc[marker-end][pathLength="1"]').length,4);
  assert.equal(many('.flight-ripple').length,4);
+ assert.equal(many('.comet-head animateMotion').length,12);
+ assert.equal(many('.flight-target-pulse').length,4);
+ await until(()=>haptics.filter(x=>x==='success').length===2,'comet arrival haptic');
  click('[data-mode=transform]');
  assert(many('.zi-cell.transform').length>0);
  click('[data-rail=大限]');
@@ -63,8 +77,17 @@ test('bundled console creates fresh charts and progresses them without any netwo
  click('#toolsButton');click('[data-system=bazi]');
  assert.equal(many('.pillar').length,4);
  assert(many('.pillar .term').length>14);
+ const natalMatrix=$('.matrix');
+ click('[data-pillar="0"] .pillar-select');click('[data-pillar="1"] .pillar-select');
+ assert($('.bazi-link.merge'));
+ click('[data-pillar="0"] .pillar-select');click('[data-pillar="1"] .pillar-select');
  click('[data-combine]');
  await until(()=> $('[data-combine]')?.getAttribute('aria-pressed')==='true','bazi combine');
+ assert.equal($('.matrix'),natalMatrix);
+ assert($('.bazi-link.clash'));
+ click('[data-rail=大运]:nth-child(2)');
+ await until(()=>$('#screen').textContent.includes('当前运程'),'Bazi period data');
+ assert.equal($('.matrix'),natalMatrix);
  click('#toolsButton');
  assert.equal(many('[data-bazi-tool]').length,6);
  click('[data-bazi-tool="3"]');
@@ -73,6 +96,27 @@ test('bundled console creates fresh charts and progresses them without any netwo
  await until(()=>Boolean($('.wheel')),'western wheel');
  click('[data-mode=transit]');
  await until(()=>$('.wheel')?.getAttribute('aria-label').includes('双圈'),'transit wheel');
+ const wheel=$('#westernChart'),ring=$('.wheel-ring');
+ const aspect=$('[data-aspect-from]');
+ const key=aspect.dataset.aspectFrom;
+ $('[data-wheel-focus="'+key+'"]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+ assert.equal(aspect.dataset.highlight,'true');
+ assert.equal($('[data-wheel-focus="'+key+'"]').getAttribute('aria-pressed'),'true');
+ assert(!$('[data-wheel-card]').hidden);
+ assert($('[data-wheel-card]').textContent.includes('宫'));
+ assert($('[data-highlight=false]'));
+ wheel.getBoundingClientRect=()=>({left:0,top:0,width:400,height:400});
+ const touch=(type,x,y)=>{
+  const e=new w.Event(type,{bubbles:true,cancelable:true});
+  Object.defineProperties(e,{touches:{value:type==='touchend'?[]:[{clientX:x,clientY:y}]},changedTouches:{value:[{clientX:x,clientY:y}]}});
+  wheel.dispatchEvent(e);
+ };
+ touch('touchstart',380,200);touch('touchmove',200,380);
+ assert.equal(ring.getAttribute('transform'),'rotate(90 220 220)');
+ touch('touchend',200,380);
+ await until(()=>ring.getAttribute('transform')!=='rotate(90 220 220)','wheel momentum');
+ click('[data-asc-reset]');
+ await until(()=>ring.getAttribute('transform')==='rotate(0 220 220)','ASC reset');
  click('#toolsButton');click('[data-astro-config]');
  assert(many('[data-wheel-body=outer][data-radius="151"]').length>0);
  assert.equal(many('[name=house] option').length,7);
@@ -93,7 +137,12 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert(many('.firdaria-period').every(node=>node.querySelectorAll('li').length===7));
  click('#caseDrawerButton');assert.equal(many('.drawer-accordion>details').length,4);
  click('[data-tab=me]');assert($('.soul-card blockquote'));
+ const toggle=$('[data-feedback]');assert(toggle.checked);
+ toggle.click();
+ assert.equal(JSON.parse(w.localStorage.getItem('xy_interaction_feedback')),false);
+ const sounds=haptics.length;
  click('[data-tab=insights]');
+ assert.equal(haptics.length,sounds);
  assert($('#screen').textContent.includes('全生命周期'));
  assert(!$('.zi-board'));
  assert.deepEqual(attempted,[]);

@@ -11,6 +11,16 @@ function wrap(ctx,value,width){
 async function drawSvg(ctx,svg,x,y,w,h){
  const copy=svg.cloneNode(true);
  copy.setAttribute('width',w);copy.setAttribute('height',h);
+ copy.querySelectorAll('.comet-head,.flight-current').forEach(p=>p.remove());
+ const styles=['fill','stroke','stroke-width','opacity','stroke-dasharray','transform','transform-origin'];
+ const originals=svg.querySelectorAll('.wheel-aspect,.wheel-body-glyph,.wheel-star-visual,.wheel-star-halo,.wheel-star-hit,.zi-laser,.zi-laser-node');
+ const duplicates=copy.querySelectorAll('.wheel-aspect,.wheel-body-glyph,.wheel-star-visual,.wheel-star-halo,.wheel-star-hit,.zi-laser,.zi-laser-node');
+ originals.forEach((element,i)=>{
+  const computed=getComputedStyle(element),target=duplicates[i];
+  for(const key of styles)target.style.setProperty(key,computed.getPropertyValue(key));
+  if(element.matches('.zi-laser'))target.style.setProperty('stroke-dasharray',element.matches('.zi-opposition')?'4 3':'none');
+  if(element.matches('.wheel-body-glyph'))target.style.removeProperty('fill');
+ });
  copy.querySelectorAll('.zi-path').forEach(p=>{p.setAttribute('fill','none');p.setAttribute('stroke-width','1.65');});
  const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml'}));
  try{
@@ -30,7 +40,7 @@ export async function shareChart(root,title){
  const lines=info.flatMap(x=>wrap(g,x,body));
  const height=142+visual+lines.length*23;
  canvas.width=w*2;canvas.height=height*2;g.scale(2,2);
- const bg=g.createLinearGradient(0,0,w,height);bg.addColorStop(0,'#fff6fb');bg.addColorStop(1,'#f3e7f6');
+ const bg=g.createLinearGradient(0,0,w,height);bg.addColorStop(0,'#fff6fb');bg.addColorStop(1,'#ffe7f3');
  g.fillStyle=bg;g.fillRect(0,0,w,height);
  const text=(value,x,y,size,color='#472c40',max=w-pad*2)=>{
   g.fillStyle=color;g.font='600 '+size+'px -apple-system,sans-serif';g.fillText(value,x,y,max);
@@ -51,8 +61,8 @@ export async function shareChart(root,title){
    const stars=[...p.querySelectorAll('.zi-star')].slice(0,5);
    stars.forEach((n,i)=>text(n.innerText.trim().replace(/\s+/g,' '),x+5,t+18+i*16,11,'#903651',cw-10));
    const borrowed=p.querySelector('.zi-sub');
-   if(borrowed)text(borrowed.innerText.trim(),x+5,t+104,10,'#63526b',cw-10);
-   text(p.querySelector('footer').innerText.trim().replace(/\s+/g,' '),x+5,t+ch-9,12,'#58415d',cw-10);
+   if(borrowed)text(borrowed.innerText.trim(),x+5,t+104,10,'#87496e',cw-10);
+   text(p.querySelector('footer').innerText.trim().replace(/\s+/g,' '),x+5,t+ch-9,12,'#843359',cw-10);
   }
   await drawSvg(g,board.querySelector('.zi-overlay'),pad,y,body,visual);
   y+=visual+20;

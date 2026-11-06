@@ -1,3 +1,4 @@
+import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
 import {ziweiView,ziweiTools} from './ziwei.js';
 import {baziView,baziTools} from './bazi.js';
@@ -18,8 +19,8 @@ let generation=0,flight,noticeTimer,locationToken=0,locationReply;
 window.firstlightLocation=(token,lat,lon)=>{if(token===locationToken)locationReply?.(lat,lon);};
 const icons=[
  '<path d="M6 4h13v17H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" fill="#ffe1ef"/><path d="M7 4v17m3-12h6m-6 4h4m4-10 3 3" fill="none" stroke="#935779" stroke-width="1.5"/>',
- '<path d="m4 20 12-12" stroke="#9464b2" stroke-width="4" stroke-linecap="round"/><path d="m17 2 2 4 4 2-4 2-2 4-2-4-4-2 4-2Z" fill="#ffc4de" stroke="#a26eaa"/>',
- '<circle cx="12" cy="10" r="8" fill="#e9d7fc" stroke="#9b76b1"/><path d="m12 4 1 4 4 1-4 1-1 4-1-4-4-1 4-1Z" fill="#fff"/><path d="M8 17h8l3 4H5Z" fill="#edb9d6"/>',
+ '<path d="m4 20 12-12" stroke="#be70b0" stroke-width="4" stroke-linecap="round"/><path d="m17 2 2 4 4 2-4 2-2 4-2-4-4-2 4-2Z" fill="#ffc4de" stroke="#a26eaa"/>',
+ '<circle cx="12" cy="10" r="8" fill="#f8ddf2" stroke="#b874ae"/><path d="m12 4 1 4 4 1-4 1-1 4-1-4-4-1 4-1Z" fill="#fff"/><path d="M8 17h8l3 4H5Z" fill="#edb9d6"/>',
  '<circle cx="5" cy="7" r="3.5" fill="#f2bbd2"/><circle cx="19" cy="7" r="3.5" fill="#f2bbd2"/><path d="M3 14a9 8 0 0 1 18 0c0 8-18 8-18 0Z" fill="#ffe1ee" stroke="#ae7392"/><path d="M8 13h.1m7.9 0h.1m-5 3 1 1 1-1" stroke="#6a4560" stroke-width="1.6" stroke-linecap="round"/>'
 ];
 const tabs={cases:'案例',chart:'排盘',insights:'洞见',me:'我'};
@@ -334,7 +335,7 @@ function birthSheet(profile,seed={}){
   try{
    const reading=await request('/api/console/reading',{birth:normalized(next)},flight.signal);
    if(token!==generation||!d.open||!form.isConnected)return;
-   state.pending=false;installReading(next,reading);switchTab('chart');
+   state.pending=false;installReading(next,reading);switchTab('chart');playSuccessSound();
   }catch(error){if(token===generation)feedback.textContent=error.message;}
   finally{if(token===generation){state.pending=false;submit.disabled=false;}}
  };
@@ -390,6 +391,7 @@ function preferences(){
  <label>默认地点<input name="place" value="${esc(s.place)}"></label><label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(s.tz??8)}"></label>
  <label>纬度<input name="lat" type="number" step="any" value="${esc(s.lat)}"></label><label>经度<input name="lon" type="number" step="any" value="${esc(s.lon)}"></label>
  <button class="wide primary">保存设置</button></form></article>
+ <article class="card"><h2>交互反馈</h2><label class="feedback-setting"><span>交互音效与震动</span><input type="checkbox" role="switch" data-feedback ${feedbackEnabled()?'checked':''}></label></article>
  <article class="card"><h2>本机案例</h2>${btn('导出备份','data-export')}${btn('导入备份','data-import')}<input type="file" accept="application/json" id="importBackup" hidden></article>
  <article class="card"><h2>计算说明</h2><p>紫微使用 Renhuai / iztro。专业西洋盘使用 Astronomy Engine 与 NASA JPL 小行星轨道资料。各模块使用独立规则，术数解读仅供传统文化参考。</p><p>八字、紫微、推运、古籍及案例在本机计算。iOS 版自带资源，网页首次载入后可离线打开。</p><a href="/assets/console/credits.html">来源与许可</a></article></section>`;
  $('#prefs').onsubmit=e=>{
@@ -400,6 +402,7 @@ function preferences(){
   if(state.profile&&state.profile.fields.lateZishi!==state.settings.lateZishi)activate({...state.profile,fields:{...state.profile.fields,lateZishi:state.settings.lateZishi}},false);
   tell('设置已保存');
  };
+ $('[data-feedback]',root).onchange=e=>setFeedback(e.currentTarget.checked);
  $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:3,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace()},null,2),'FirstLight-cases.json','application/json');
  $('[data-import]',root).onclick=()=>$('#importBackup').click();
  $('#importBackup').onchange=async e=>{
@@ -466,6 +469,7 @@ function render(){
  else if(state.system==='west')westernView(ctx);
  else extraView(ctx);
 }
+installFeedback();
 root.addEventListener('click',e=>{
  const b=e.target.closest('[data-term]');
  if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain);}

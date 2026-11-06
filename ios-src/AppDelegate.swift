@@ -45,6 +45,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         config.userContentController.add(self, name: "caseReminder")
         config.userContentController.add(self, name: "findLocation")
         config.userContentController.add(self, name: "caseBackup")
+        config.userContentController.add(self, name: "interactionHaptic")
         config.preferences.javaScriptEnabled = true
         config.defaultWebpagePreferences.allowsContentJavaScript = true
 
@@ -162,6 +163,14 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let url = message.frameInfo.request.url,
               url.scheme == appURL.scheme, url.host == appURL.host else { return }
+        if message.name == "interactionHaptic" {
+            switch message.body as? String {
+            case "tap": UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
+            default: break
+            }
+            return
+        }
         if message.name == "caseReminder" {
             scheduleReminder(message.body)
             return

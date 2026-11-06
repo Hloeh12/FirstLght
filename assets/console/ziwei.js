@@ -1,3 +1,4 @@
+import {playSuccessSound,reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,selectedRails,table} from './ui.js';
 
 const branches='子丑寅卯辰巳午未申酉戌亥',stems='甲乙丙丁戊己庚辛壬癸';
@@ -6,7 +7,7 @@ const months=['正','二','三','四','五','六','七','八','九','十','冬',
 const monthName=n=>(n<0?'闰':'')+months[Math.abs(n)-1]+'月';
 const names={heaven:'天盘',earth:'地盘',human:'人盘'};
 const marks={命宫:'流命',官禄:'流官',财帛:'流财'};
-const colors={禄:'#1a7f64',权:'#87528e',科:'#4160a6',忌:'#b13a5b'};
+const colors={禄:'#c68744',权:'#a666ad',科:'#c065a1',忌:'#c43b72'};
 const themes={命宫:'处事节奏',父母:'长辈与支持关系',福德:'休息与内在需求',田宅:'居住与家中资源',官禄:'工作与职责',仆役:'人际与协作',迁移:'外部环境与出行',疾厄:'身心节奏',财帛:'收支与资源',子女:'照顾与创作',夫妻:'亲密关系',兄弟:'手足与同辈'};
 const starThemes={紫微:'组织与统筹',天机:'思考和变通',太阳:'表达与公开行动',武曲:'执行和资源管理',天同:'协作与舒适',廉贞:'原则与边界',天府:'积累和稳健',太阴:'照料与细节',贪狼:'探索和往来',巨门:'沟通与辨析',天相:'协调和支持',天梁:'照护与经验',七杀:'决断和开拓',破军:'重组与调整'};
 const cues={禄:'适合关注可用资源与合作机会',权:'适合明确责任后主动推进',科:'适合梳理信息和公开沟通',忌:'宜核对条件，预留反复与延误的余量'};
@@ -52,7 +53,7 @@ function board(ctx,s){
   const [r,c]=positions[p.branch],main=p.majorStars;
   const trans=flow?.mutagens.filter(m=>m.branch===p.branch)||[];
   const annual=p.annualStars??[];
-  const star=(x,primary=false,borrowed=false)=>`<div class="zi-star${primary?' primary-star':''}${borrowed?' zi-borrowed':''}">
+  const star=(x,primary=false,borrowed=false)=>`<div data-zi-star="${esc(x.name)}" ${borrowed?'data-borrowed':''} class="zi-star${primary?' primary-star':''}${borrowed?' zi-borrowed':''}">
    ${term(x.name,starInfo(x))}${x.brightness&&primary?`<small>${esc(x.brightness)}</small>`:''}
    ${x.mutagen?badge('生年'+x.mutagen,x.mutagen,p.branch,'natal'):''}
    ${trans.filter(m=>!borrowed&&m.star===x.name).map(m=>badge(mutagenName(flow,m.type),m.type,p.branch,'period')).join('')}</div>`;
@@ -71,7 +72,7 @@ function board(ctx,s){
    <div class="zi-age"><span>${esc(p.heavenlyStem+p.earthlyBranch)} ${p.isBodyPalace?'身':''}</span><small>${esc(p.decadal?.range?.join('–')||'')}岁</small></div></footer></article>`;
  }).join('')}${center(ctx,s)}<svg class="zi-overlay" aria-hidden="true" preserveAspectRatio="none"></svg></div>`;
 }
-function overlay(root,s){
+function overlay(root,s,arrival=false){
  const host=$('.zi-board',root),canvas=$('.zi-overlay',host),r=canvas.getBoundingClientRect();
  const unit=!(r.width&&r.height),w=unit?400:r.width,h=unit?400:r.height;
  const size=w+'×'+h;
@@ -89,8 +90,12 @@ function overlay(root,s){
  const start=s.mode==='triad'?point(s.selected):source;
  if(s.mode==='triad'){
   const [a,b,c]=p.relatedBranches.slice(1).map(point);
-  canvas.append(svg('polygon',{class:'zi-triad',points:[start,a,b].map(x=>x.join(',')).join(' '),fill:'#d469a021',stroke:'#cb6799','stroke-opacity':'.65'}));
-  canvas.append(svg('path',{class:'zi-opposition',d:'M'+start.join(' ')+' L'+c.join(' '),fill:'none',stroke:'#b96093','stroke-dasharray':'5 4'}));
+  canvas.append(svg('polygon',{class:'zi-triad',points:[start,a,b].map(x=>x.join(',')).join(' '),fill:'#ff77aa20'}));
+  for(const [i,target] of [a,b,c].entries()){
+   canvas.append(svg('path',{class:'zi-laser'+(i===2?' zi-opposition':''),pathLength:1,d:'M'+start.join(' ')+' L'+target.join(' ')}));
+   canvas.append(svg('circle',{class:'zi-laser-node',cx:target[0],cy:target[1],r:4}));
+  }
+  canvas.append(svg('circle',{class:'zi-laser-node',cx:start[0],cy:start[1],r:5}));
  }
  if(s.mode==='triad'||s.mode==='transform'&&s.filter==='natal'&&!s.badge)return;
  const badgeMoves=s.badge?.kind==='natal'?s.chart.sihua.map(m=>({...m,branch:s.chart.palaces.find(x=>x.name===m.palace)?.branch})):s.flow?.mutagens;
@@ -99,26 +104,47 @@ function overlay(root,s){
  const defs=svg('defs',{}),capsules=[],ripples=[];
  canvas.append(defs);
  for(const [i,move] of moves.entries()){
-  if(move.branch===null)continue;
+  if(!Number.isInteger(move.branch))continue;
   const c=colors[move.type],id='tip-'+move.type;
   const marker=svg('marker',{id,viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:6,markerHeight:6,orient:'auto'});
   marker.append(svg('path',{class:'flight-tip',d:'M0 0 L10 5 L0 10 Z',fill:c}));defs.append(marker);
-  const end=point(move.branch),[x,y]=start,dx=end[0]-x,dy=end[1]-y,d=Math.hypot(dx,dy);
+  const cell=$('[data-palace="'+move.branch+'"]',host);
+  const target=[...cell.querySelectorAll('[data-zi-star]:not([data-borrowed])')].find(el=>el.dataset.ziStar===move.star);
+  const existing=target?.querySelector('.badge[data-t="'+move.type+'"]');
+  const tag=existing||target?.querySelector('.flight-target-dot')||document.createElement('span');
+  if(target&&!tag.isConnected){
+   tag.className='badge flight-target-dot';tag.dataset.t=move.type;tag.textContent='化'+move.type;
+   tag.setAttribute('aria-label','飞入化'+move.type);target.append(tag);
+  }
+  tag.classList.remove('flight-target-pulse');
+  tag.classList.add('flight-target-pulse');
+  const box=tag.getBoundingClientRect(),clip=(target?.closest('.zi-assist')||cell).getBoundingClientRect();
+  const visible=!unit&&box.width&&box.height&&box.top>=clip.top&&box.bottom<=clip.bottom;
+  const end=visible?[box.left-r.left+box.width/2,box.top-r.top+box.height/2]:point(move.branch);
+  const [x,y]=start,dx=end[0]-x,dy=end[1]-y,d=Math.hypot(dx,dy);
   const px=d?-dy/d:0,py=d?dx/d:0,spread=(i-1.5)*Math.min(w,h)*.11;
   const ix=x<w/2?1:-1,iy=y<h/2?1:-1;
   const a=d?[x+dx/d*9,y+dy/d*9]:[x+ix*7,y];
-  const b=d?[end[0]-dx/d*13,end[1]-dy/d*13]:[x,y+iy*8];
+  const b=d?[end[0]-dx/d*(visible?2:9),end[1]-dy/d*(visible?2:9)]:[x,y+iy*8];
   const c1=d?[x+dx*.32+px*spread,y+dy*.32+py*spread]:[x+ix*(38+i*7),y-iy*14];
   const c2=d?[x+dx*.68+px*spread,y+dy*.68+py*spread]:[x-ix*14,y+iy*(39+i*7)];
   const gradient=svg('linearGradient',{id:'flight-'+i,gradientUnits:'userSpaceOnUse',x1:a[0],y1:a[1],x2:b[0],y2:b[1]});
   const warm=move.type==='禄'||move.type==='权';
-  gradient.append(svg('stop',{offset:0,'stop-color':warm?'#f2ac59':'#ef8ab9','stop-opacity':'.52'}),
-   svg('stop',{offset:'.55','stop-color':warm?'#d4852c':'#b650a0','stop-opacity':'.86'}),
+  gradient.append(svg('stop',{offset:0,'stop-color':warm?'#ffd69f':'#ffb4d1','stop-opacity':'.52'}),
+   svg('stop',{offset:'.55','stop-color':warm?'#df9a57':'#ff77aa','stop-opacity':'.86'}),
    svg('stop',{offset:1,'stop-color':c,'stop-opacity':'.93'}));
   defs.append(gradient);
   const path=`M${a.join(' ')} C${c1.join(' ')} ${c2.join(' ')} ${b.join(' ')}`;
   canvas.append(svg('path',{class:'zi-path flying-arc',pathLength:1,stroke:`url(#flight-${i})`,d:path,'marker-end':`url(#${id})`}));
-  canvas.append(svg('path',{class:'zi-path flight-current',pathLength:1,stroke:warm?'#ffe3ab':'#ffcaee',d:path}));
+  canvas.append(svg('path',{class:'zi-path flight-current',pathLength:1,stroke:warm?'#fff1d6':'#fff6fb',d:path}));
+  if(!reducedMotion()){
+   for(let j=0;j<3;j++){
+    const particle=svg('circle',{class:'comet-head',r:[3,1.8,1][j],fill:'#fff9fd'});
+    particle.style.setProperty('--trail-delay',j*18+'ms');
+    particle.append(svg('animateMotion',{path,dur:'.35s',begin:j*18+'ms',fill:'remove',calcMode:'spline',keyTimes:'0;1',keySplines:'.18 .67 .36 1'}));
+    canvas.append(particle);
+   }
+  }
   ripples.push(svg('circle',{class:'flight-ripple',cx:end[0],cy:end[1],r:12,stroke:c,fill:'none'}));
   const mid=[0,1].map(k=>(a[k]+3*c1[k]+3*c2[k]+b[k])/8);
   const cx=Math.min(w-45,Math.max(45,mid[0])),cy=Math.min(h-9,Math.max(9,mid[1]));
@@ -129,6 +155,7 @@ function overlay(root,s){
   g.append(label);capsules.push(g);
  }
  canvas.append(...ripples,...capsules);
+ if(arrival&&ripples.length)setTimeout(()=>{if(canvas.isConnected)playSuccessSound();},reducedMotion()?0:350);
 }
 function railData(s){
  const birthYear=s.chart.decades[0].yearRange[0]-s.chart.decades[0].ageRange[0]+1;
@@ -168,7 +195,7 @@ function detail(s){
  return `<article class="card liquid-glass zi-detail" aria-live="polite"><h2>${esc(heading)}</h2>${description.filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')}${flying?'<h3>四化飞星明细</h3>'+grid:''}<small>${esc(weight)} · 传统术数观察 · 借星按借入宫重查亮度，并以 0.6 系数计入参考。</small></article>`;
 }
 let observer;
-export function ziweiView(ctx){
+export function ziweiView(ctx,arrival=false){
  const s=current(ctx),z=s.chart,flow=s.flow,{decades,d,years}=railData(s);
  const panel=ctx.root;
  observer?.disconnect();
@@ -181,15 +208,15 @@ export function ziweiView(ctx){
  ${row('流月',flow&&flow.scope!=='decadal'?flow.months.map(m=>[m.month,monthName(m.month)]):[],flow?.month)}
  ${row('流日',flow?.days.map(x=>[x.day,x.day+'日 '+x.ganZhi])||[],flow?.day)}</div>
  <p id="ziStatus" role="status" class="muted">${esc(s.error)}</p>${detail(s)}</section>`;
- overlay(panel,s);
+ overlay(panel,s,arrival);
  if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>{if($('.zi-board',panel))overlay(panel,s);});observer.observe($('.zi-board',panel));}
  selectedRails(panel);
  for(const b of panel.querySelectorAll('[data-mode]'))b.onclick=()=>{
-  s.badge=null;s.mode=b.dataset.mode;if(s.mode==='transform'&&s.filter==='all')s.filter='natal';ziweiView(ctx);
+  s.badge=null;s.mode=b.dataset.mode;if(s.mode==='transform'&&s.filter==='all')s.filter='natal';ziweiView(ctx,s.mode==='flying');
  };
- for(const b of panel.querySelectorAll('[data-filter]'))b.onclick=()=>{s.badge=null;s.filter=b.dataset.filter;ziweiView(ctx);};
+ for(const b of panel.querySelectorAll('[data-filter]'))b.onclick=()=>{s.badge=null;s.filter=b.dataset.filter;ziweiView(ctx,true);};
  for(const cell of panel.querySelectorAll('[data-palace]')){
-  const choose=()=>{s.badge=null;s.selected=+cell.dataset.palace;ziweiView(ctx);};
+  const choose=()=>{s.badge=null;s.selected=+cell.dataset.palace;ziweiView(ctx,true);};
   cell.onclick=e=>{if(!e.target.closest('[data-term],[data-badge]')){const name=e.target.closest('[data-palace-name]');choose();if(name)ctx.explain(name.textContent,'该宫常用来观察'+(themes[name.textContent]||'对应生活主题')+'。');}};
   cell.onkeydown=e=>{if(e.target===cell&&['Enter',' '].includes(e.key)){e.preventDefault();choose();}};
  }
@@ -197,7 +224,7 @@ export function ziweiView(ctx){
   s.selected=+b.dataset.branchTarget;
   if(s.mode==='triad'){s.mode='transform';s.filter='natal';}
   s.badge={kind:b.dataset.badge,type:b.dataset.t};
-  ziweiView(ctx);
+  ziweiView(ctx,true);
   ctx.explain(b.textContent,cues[b.dataset.t]+'。四化属于当前所选命盘层。');
 
  };

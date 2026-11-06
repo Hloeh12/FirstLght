@@ -1,6 +1,7 @@
 import { birthCorrections } from './birth.mjs';
 import { localToUtc } from './tz.mjs';
 import { lunarToSolar } from './lunar.mjs';
+import { calculateTrueSolarTime } from './renhuai-engine.mjs';
 import { bazi, dynamicBazi } from './bazi.mjs';
 
 /** 把前端口径的出生输入转换为八字所需：绝对时刻 UTC + 本地钟面时间 */
@@ -18,15 +19,12 @@ export function baziFromInput(input){
     utc=bc.utcDate;shift=(+new Date(Date.UTC(Y,M-1,D,h,mi))-+utc)/3600000;
   }
   if(input.useSolarTime){
-    const doy=Math.floor((Date.UTC(Y,M-1,D)-Date.UTC(Y,0,1))/86400000)+1;
-    const B=2*Math.PI*(doy-81)/364;
-    eot=9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);
-    const lonMin=(lon-shift*15)*4;
-    let mins=h*60+mi+lonMin+eot;
-    mins=((mins%1440)+1440)%1440;
-    const hh=Math.floor(mins/60),mm=Math.round(mins%60);
-    local={y:Y,m:M,d:D,h:hh,mi:mm};
-    solarClock=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    const c=calculateTrueSolarTime({year:Y,month:M,day:D,clockHour:h,clockMinute:mi,longitude:lon,utcOffsetMinutes:shift*60});
+    if(!c.dateValid)throw Error('无效出生日期');
+    const corrected=new Date(Date.UTC(Y,M-1,D+c.dayOffset));
+    local={y:corrected.getUTCFullYear(),m:corrected.getUTCMonth()+1,d:corrected.getUTCDate(),h:c.hour,mi:c.minute};
+    solarClock=`${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')}`;
+    eot=c.equationOfTimeMinutes;
   }else{
     local={y:Y,m:M,d:D,h,mi};
   }

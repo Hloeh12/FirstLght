@@ -1,5 +1,6 @@
 import UIKit
 import WebKit
+import UserNotifications
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -12,12 +13,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         window = UIWindow(frame: UIScreen.main.bounds)
         let vc = WebViewController()
         window?.rootViewController = vc
+        UNUserNotificationCenter.current().delegate = vc
         window?.makeKeyAndVisible()
         return true
     }
 }
 
-class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
+class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler, UNUserNotificationCenterDelegate {
     private var exportedFile: URL?
     private var webView: WKWebView!
     private var statusView: UIView?
@@ -40,6 +42,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         config.allowsInlineMediaPlayback = true
         config.limitsNavigationsToAppBoundDomains = true
         config.userContentController.add(self, name: "shareChart")
+        config.userContentController.add(self, name: "caseReminder")
         config.preferences.javaScriptEnabled = true
         config.defaultWebpagePreferences.allowsContentJavaScript = true
 
@@ -99,6 +102,12 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if navigationAction.navigationType == .linkActivated,
+           let url = navigationAction.request.url, url.scheme == "https", url.host != serverURL?.host {
+            UIApplication.shared.open(url)
+            decisionHandler(.cancel)
+            return
+        }
         decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
     }
 
@@ -124,10 +133,14 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         let origin = message.frameInfo.securityOrigin
-        guard message.name == "shareChart", message.frameInfo.isMainFrame,
-              let url = serverURL, origin.protocol == "https", origin.host == url.host,
-              (origin.port == 0 ? 443 : origin.port) == (url.port ?? 443),
-              presentedViewController == nil,
+        guard message.frameInfo.isMainFrame, let url = serverURL,
+              origin.protocol == "https", origin.host == url.host,
+              (origin.port == 0 ? 443 : origin.port) == (url.port ?? 443) else { return }
+        if message.name == "caseReminder" {
+            scheduleReminder(message.body)
+            return
+        }
+        guard message.name == "shareChart", presentedViewController == nil,
               let payload = message.body as? String, payload.count <= 12_000_000,
               payload.hasPrefix("data:image/png;base64,"),
               let bytes = Data(base64Encoded: String(payload.dropFirst("data:image/png;base64,".count))),
@@ -143,6 +156,46 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             alert.addAction(UIAlertAction(title: "好", style: .default))
             present(alert, animated: true)
         }
+    }
+
+    private func scheduleReminder(_ body: Any) {
+        guard let request = body as? [String: Any], let id = request["id"] as? String,
+              !id.isEmpty, id.count <= 64,
+              id.range(of: #"^[A-Za-z0-9-]+$"#, options: .regularExpression) != nil else { return }
+        let center = UNUserNotificationCenter.current()
+        if request["cancel"] as? Bool == true {
+            center.removePendingNotificationRequests(withIdentifiers: [id])
+            return
+        }
+        guard let seconds = request["seconds"] as? Double, seconds.isFinite, seconds > 0,
+              let text = request["message"] as? String, !text.isEmpty, text.count <= 80 else { return }
+        center.requestAuthorization(options: [.alert, .sound]) { [weak self] allowed, _ in
+            guard allowed else {
+                self?.reportReminder("未获得通知权限，提醒仅保存在案例里。")
+                return
+            }
+            let content = UNMutableNotificationContent()
+            content.title = "星谕 · 案例提醒"
+            content.body = text
+            content.sound = .default
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, seconds), repeats: false)
+            center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger)) { error in
+                self?.reportReminder(error == nil ? "系统提醒已安排。" : "系统提醒未能安排。")
+            }
+        }
+    }
+
+    private func reportReminder(_ text: String) {
+        guard let data = try? JSONEncoder().encode(text),
+              let encoded = String(data: data, encoding: .utf8) else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.webView.evaluateJavaScript("window.firstlightReminderStatus?.(" + encoded + ")")
+        }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
     }
 
     private func presentShare(_ file: URL) {

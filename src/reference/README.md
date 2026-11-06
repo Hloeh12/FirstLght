@@ -1,0 +1,6 @@
+# 星谕计算资料
+
+- `minor-orbits.json` contains NASA/JPL Horizons heliocentric ecliptic J2000 osculating elements for MPC 2060, 1, 2, 3, 4. The sample interval is five years, from 1800-01-01 to 2400-01-01. Each row stores JDTDB, eccentricity, inclination, ascending node, argument of perihelion, mean motion in degrees/day, mean anomaly and semi-major axis in AU. The application propagates the closest osculating orbit and labels the result approximate. Source: https://ssd.jpl.nasa.gov/api/horizons.api
+- `mansions.json` lists the equatorial J2000 coordinates in degrees of the adopted 28 lunar mansion anchor stars. The implementation precesses the anchor coordinates to the selected date. Different historical anchor choices and coordinate conventions yield different mansion degrees.
+- `chenggu.json` contains traditional bone-weight tables and verses transcribed by the MIT-licensed lunarcalendar project at d28f30994afff0a47f524c06569e676c21af12e4. See LICENSE-chenggu.txt and https://github.com/hankwu61/lunarcalendar.
+- `zhouyi.json` contains the 64 transmitted hexagram statements and line texts from the public-domain Zhouyi. The transcription was checked against https://github.com/muyen/decoding-iching/tree/main/data/zhouyi-64gua and https://github.com/bollwarm/ZHOUYI.

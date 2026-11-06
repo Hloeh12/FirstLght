@@ -1,67 +1,28 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>星谕</title><meta name="firstlight-workbench" content="four-period"><link rel="stylesheet" href="/assets/app-shell.css"></head><body><header class="app-topbar">
-  <button id="btnDrawer" class="topbar-btn" aria-label="侧边栏">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-  </button>
-  <div class="topbar-title"><span id="brandTitle">星谕</span><button type="button" id="overviewBtn" aria-label="切换盘面" hidden>天纪紫微 ▾</button></div>
-  <button id="btnContextAction" class="topbar-btn" aria-label="分享长图与盘面功能" aria-haspopup="dialog" aria-expanded="false" hidden>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-  </button>
-</header><div id="activeProfilePill" hidden=""></div><main id="pageCases" class="shell-page" tabindex="-1"><h2 class="shell-title">案例档案</h2><p class="note">保存在这台设备，可随时导出备份</p><input id="caseSearch" placeholder="搜索姓名、生日或命理标签"><div id="caseFilters" class="group-scroll-bar"><button type="button" data-filter="全部" class="active">全部</button><button type="button" data-filter="我的" class="">我的</button><button type="button" data-filter="亲人" class="">亲人</button><button type="button" data-filter="朋友" class="">朋友</button><button type="button" data-filter="特别关注" class="">特别关注</button><button type="button" data-filter="+ 新建自定义分组" class="">+ 新建自定义分组</button></div><div id="caseList"><div class="empty-state">这里还没有案例<br>去排盘页生成第一张命盘</div></div></main><main id="pageChart" class="shell-page active" tabindex="-1"><button type="button" id="readingSummary" class="liquid-glass" hidden="" aria-expanded="false" aria-haspopup="dialog" aria-controls="inputSheet"></button><div id="readingStatus" role="status" hidden><span id="readingMessage"></span><button type="button" id="retryChart" hidden>重试</button></div><div id="resultsHost" hidden><section id="west"><div id="westBox" class="card"><h3>西方本命盘</h3><p class="note">输入信息后生成。</p></div></section><section id="bazi"><div id="baziBox" class="card"><h3>东方八字</h3><p>输入出生信息后生成。</p></div></section><section id="vedic"><div id="vedicBox" class="card"><h3>印度恒星盘</h3><p class="note">等待生成。</p></div></section><section id="ziwei" class="on"><div id="ziweiBox" class="card"><h3>紫微斗数</h3><p class="note">等待生成。</p></div></section><section id="synastry">
-<div class="card"><h3>第二个人</h3>
-<div class="duo">
-<label>出生日期<input id="bdate" type="date" value="1999-03-02"></label>
-<label>出生时间<input id="btime" type="time" value="08:15"></label>
-<div id="bPlaceControls" style="grid-column:1/-1"><input id="bSearch" placeholder="搜索第二人城市或区县"><div id="bSuggestions"></div><select id="bProv"><option value="">省份</option></select><select id="bCity"><option value="">城市</option></select><select id="bCounty"><option value="">区县</option></select><button type="button" id="locateB">📍 定位当前</button><small id="bPlaceStatus"></small></div><label>纬度<input id="blat" type="number" step="any" value="39.9042" min="-90" max="90"></label>
-<label>经度<input id="blon" type="number" step="any" value="116.4074" min="-180" max="180"></label>
-<label>时区<input id="btz" type="number" step="any" value="8"></label>
-<label>性别<select id="bgender"><option>男</option><option>女</option></select></label>
-<label style="grid-column:1/-1">合盘类型<select id="mode">
-<option value="synastry">双圈互合 Synastry</option>
-<option value="composite">组合盘 Composite</option>
-<option value="davison">戴维森盘 Davison</option>
-<option value="midpoint">中点盘 Midpoint（降级预览）</option></select></label>
-</div>
-<button type="button" id="btnSyn" style="margin-top:12px;width:100%">生成合盘</button>
-</div>
-<div class="card" style="margin-top:0"><h3>用已存档案填入第二人</h3><div id="synProfiles" class="recent"><span class="note">暂无档案</span></div></div>
-<div id="synBox"></div>
-</section><section id="energy"><div id="energyBox" class="card"><h3>七脉轮</h3><p class="note">等待生成。</p></div></section><section id="timeline"><div id="timelineBox" class="card"><h3>三体系时间轴</h3><p class="note">等待生成。</p></div></section><section id="raw"><div class="card"><h3>历史记录 <span class="tag" id="histCount"></span></h3><div id="histList"><p class="note">点击下方按钮刷新。记录保存在本地 data/ 目录。</p></div><button type="button" id="btnHist" style="margin-top:10px">刷新历史</button><button type="button" class="ghost" id="btnVal" style="margin-top:10px">运行算法自检</button><div id="valBox" style="margin-top:10px"></div></div><div class="card"><h3>原始响应</h3><pre id="rawBox">—</pre></div></section></div></main><main id="pageInsights" class="shell-page" tabindex="-1"><h2 class="shell-title">洞见</h2><div id="insightSummary" class="card">生成命盘后，在这里查看跨体系分析。</div><div id="readingAnalysis" hidden><div id="crossInsights"></div><div id="reportBox"></div></div><div class="card"><h3>深度追问</h3><p class="note">针对当前命盘整理问题。AI 咨询尚未接入，提交时会显示服务真实状态。</p><div class="question-chips"><button type="button" data-question="流年运势">流年运势</button><button type="button" data-question="事业财运">事业财运</button><button type="button" data-question="感情契合">感情契合</button></div><textarea id="questionText" rows="3" placeholder="想进一步了解什么？"></textarea><button type="button" id="askQuestion" class="primary">提交追问</button><p id="questionStatus" class="status-text" role="status"></p></div></main><main id="pageMe" class="shell-page" tabindex="-1"><h2 class="shell-title">我</h2><div class="card"><div class="brand-avatar">谕</div><h3>偏好设置</h3><div class="settings-row"><label>默认出生地名称<input id="defaultPlace" placeholder="如：上海"></label></div><div class="settings-row"><label>默认纬度<input id="defaultLat" type="number" step="any" min="-90" max="90"></label><label>默认经度<input id="defaultLon" type="number" step="any" min="-180" max="180"></label><label>默认时区<input id="defaultTz" type="number" step="any" min="-12" max="14"></label></div><label>晚子时偏好<select id="lateZiPreference"><option value="next-day">23:00 起按次日</option><option value="current-day">晚子时保留当日</option></select></label><button type="button" id="saveSettings">保存偏好</button><p id="settingsStatus" role="status"></p></div><div class="card"><h3>数据与备份</h3><button type="button" id="exportCases">导出案例 JSON</button><button type="button" id="importCases">导入案例 JSON</button><input id="importFile" type="file" accept="application/json,.json" hidden=""><p class="note">案例与备份保存在本机。导入会校验格式并合并，不覆盖已有同 ID 案例。</p></div><div class="card"><h3>关于星谕</h3><p>客户端 0.15.0 · Liquid Glass 交互升级</p><p class="note">Renhuai 紫微核心 / iztro / astronomy-engine。旺衰为简化参考，喜用神尚未推断；AI 报告暂未实现。</p></div></main><nav id="tabs"><button data-t="bazi">东方八字</button>
-<button data-t="west" class="on">西方盘</button><button data-t="vedic">印度盘</button><button data-t="ziwei">紫微</button>
-<button data-t="report">模板报告</button><button data-t="energy">能量场</button><button data-t="synastry">合盘</button><button data-t="timeline">时间轴</button><button data-t="raw">原始JSON</button>
-</nav><nav id="tabBar" class="shell-glass" aria-label="主导航"><button type="button" data-root="cases" aria-selected="false"><span aria-hidden="true">◫</span>案例</button><button type="button" data-root="chart" aria-selected="true"><span aria-hidden="true">✦</span>排盘</button><button type="button" data-root="insights" aria-selected="false"><span aria-hidden="true">◌</span>洞见</button><button type="button" data-root="me" aria-selected="false"><span aria-hidden="true">♙</span>我</button></nav><div id="sheetShade" hidden=""></div><div id="halfSheet" class="shell-glass" hidden="" role="dialog" aria-modal="true" aria-label="功能总览"><div class="sheet-handle"></div><div style="display:flex;justify-content:space-between"><h3>功能总览</h3><button type="button" id="closeSheet" aria-label="关闭">×</button></div><p class="note">选择一个系统查看当前命盘</p><div class="sheet-grid"><button type="button" data-system="west">西方星盘</button><button type="button" data-system="bazi">东方八字</button><button type="button" data-system="ziwei">天纪紫微</button><button type="button" data-system="synastry">双人合盘</button><button type="button" data-system="energy">能量脉轮</button><button type="button" data-system="timeline">时间轨迹</button></div></div><div id="drawerBackdrop" class="drawer-backdrop"></div><aside id="appDrawer" class="app-drawer" aria-label="快捷案例"></aside><div id="inputBackdrop" hidden></div><dialog id="inputSheet" aria-modal="true" aria-labelledby="inputTitle">
-<div class="input-sheet-frame">
-<div class="sheet-handle" aria-hidden="true"></div>
-<header class="input-sheet-header">
-<div><h2 id="inputTitle" tabindex="-1" autofocus>开启你的第一张命盘</h2><p id="inputIntro" class="note">填写出生日期、时间和地点。</p></div>
-<button type="button" id="closeInputSheet" aria-label="关闭起盘表单">×</button>
-</header>
-<div id="inputHost"><form id="f"><label class="wide">命主姓名<input id="profileName" placeholder="给这张命盘一个名字" maxlength="40"></label>
-<div class="profbar" style="grid-column:1/-1"><div id="profChips" class="recent"><span class="note">还没有档案，填好后点右侧保存</span></div><button type="button" class="mini" id="btnSaveProf">＋ 存为档案</button></div>
-<label class="wide" style="position:relative">快速搜索城市（输入「杭州」「朝阳」直接选）<input id="q" autocomplete="off" placeholder="城市 / 区县名称"><div id="sugg" class="sugg" hidden=""></div></label>
-<div id="recent" class="recent" style="grid-column:1/-1"></div>
-<label>省份<select id="prov"><option value="">选择省份</option></select></label>
-<label>城市<select id="citySel"><option value="">选择城市</option></select></label>
-<label class="wide">区县（可选，更精确）<select id="countySel"><option value="">不选</option></select></label>
-<label class="wide">历法<select id="cal"><option value="solar">公历</option><option value="lunar">农历</option></select></label>
-<p id="placeHint" class="note" style="grid-column:1/-1;margin:0"></p>
-<label>出生日期<input id="date" type="date" required aria-describedby="lunarDateHint" value="2000-08-16"><small id="lunarDateHint" hidden>农历日期用数字填写，例如 2000-02-30</small></label>
-<label>出生时间<input id="time" type="time" required value="12:00"></label>
-<label class="wide" style="flex-direction:row;align-items:center;gap:8px;font-size:12.5px"><input id="tunknown" type="checkbox" style="width:auto"> 不确定出生时间（按正午 12:00 排盘，上升／宫位仅供参考）</label>
-<button type="button" id="locateA">📍 定位当前</button><label>纬度<input id="lat" type="number" step="any" value="31.2304" min="-90" max="90"></label>
-<label>经度<input id="lon" type="number" step="any" value="121.4737" min="-180" max="180"></label>
-<label>时区<input id="tz" type="number" step="any" value="8"></label>
-<label>性别<select id="gender"><option>女</option><option>男</option></select></label>
-<details><summary>高级选项 · 时区库 / 宫制 / 闰月 / 真太阳时</summary><div class="adv">
-<label>时区名称<input id="tzname" placeholder="Asia/Shanghai"></label>
-<label>宫制<select id="hs"><option value="placidus">Placidus</option><option value="whole">整宫 Whole Sign</option><option value="equal">等宫 Equal</option><option value="porphyry">Porphyry</option></select></label>
-<label style="flex-direction:row;align-items:center;gap:6px"><input id="leap" type="checkbox" style="width:auto"> 农历闰月</label>
-<label style="flex-direction:row;align-items:center;gap:6px"><input id="solar" type="checkbox" style="width:auto"> 真太阳时</label>
-</div></details>
-<p id="timing" class="note" style="grid-column:1/-1;margin:0"></p>
-<div class="actions"><button type="button" class="ghost" id="demo">填入示例</button></div>
-</form><div class="input-actions" id="editActions"><button type="submit" class="primary" id="castBtn" form="f">生成命盘</button></div></div>
-<p id="inputError" role="status"></p>
-<button type="button" id="sheetCases">从案例库换人</button>
-</div>
-</dialog><script src="/assets/offline-client.js"></script><script src="/assets/chart-views.js"></script><script src="/assets/app-shell.js"></script><script src="/assets/ziwei-workbench.js"></script><script src="/assets/chart-share.js"></script><script src="/assets/context-menu.js"></script><script src="/assets/interactive-reading.js"></script></body></html>
+<html lang="zh-CN">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#fcf8fa">
+ <meta name="firstlight-console" content="professional">
+ <title>星谕 First Light</title>
+ <link rel="stylesheet" href="/assets/console/design.css">
+</head>
+<body>
+ <div id="app">
+  <header class="chrome liquid-glass">
+   <button type="button" class="icon" id="caseDrawerButton" aria-label="快捷案例">☰</button>
+   <button type="button" class="profile-pill" id="activeProfile" aria-haspopup="dialog">🌸 开始排盘 ▾</button>
+   <button type="button" class="icon" id="toolsButton" aria-label="当前页面功能" aria-haspopup="dialog">•••</button>
+  </header>
+  <main id="screen" tabindex="-1"></main>
+  <nav id="tabBar" class="tabbar liquid-glass" aria-label="主导航"></nav>
+ </div>
+ <dialog id="birthSheet" class="sheet liquid-glass" aria-labelledby="birthTitle"></dialog>
+ <dialog id="caseDrawer" class="drawer liquid-glass" aria-labelledby="drawerTitle"></dialog>
+ <dialog id="toolSheet" class="sheet liquid-glass" aria-labelledby="toolTitle"></dialog>
+ <dialog id="termSheet" class="sheet liquid-glass" aria-labelledby="termTitle"></dialog>
+ <div id="notice" role="status" aria-live="polite" hidden></div>
+ <script type="module" src="/assets/console/app.js"></script>
+</body>
+</html>

@@ -34,6 +34,10 @@ export function ziweiChart(input){
   p.borrowedStars=p.majorStars.length?[]:opposite.majorStars.map(s=>({
    name:s.name,brightness:schoolStarBrightness(s.name,p.branch,'QS')||''
   }));
+  const basis=p.majorStars.length?p.majorStars:p.borrowedStars;
+  const brightnessWeights={};
+  for(const [i,grade] of [...'庙旺得利平不陷'].entries())brightnessWeights[grade]=(7-i)/7;
+  p.starWeight=Number(basis.reduce((sum,star)=>sum+(brightnessWeights[star.brightness]??0)*(p.majorStars.length?1:.6),0).toFixed(2));
   p.flying=transformations(util.getMutagensByHeavenlyStem(p.heavenlyStem),palaces);
  }
  const effectiveDate=[year,String(month).padStart(2,'0'),String(day).padStart(2,'0')].join('-');

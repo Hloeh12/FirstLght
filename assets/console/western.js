@@ -1,0 +1,191 @@
+import {$,esc,btn,stored,save,table,bars,symbols,zodiacNames,isoLocal,selectedRails} from './ui.js';
+
+const bodies={
+ sun:'太阳',moon:'月亮',mercury:'水星',venus:'金星',mars:'火星',jupiter:'木星',saturn:'土星',uranus:'天王星',neptune:'海王星',pluto:'冥王星',
+ asc:'上升 ASC',dsc:'下降 DSC',mc:'天顶 MC',ic:'天底 IC',north:'北交点',south:'南交点',fortune:'福点',vertex:'宿命点',
+ chiron:'凯龙星',lilith:'莉莉丝',juno:'婚神星',vesta:'灶神星',pallas:'智神星',ceres:'谷神星'
+};
+const groups=[['经典十大主星',Object.keys(bodies).slice(0,10)],['轴线与虚点',Object.keys(bodies).slice(10,18)],['半人马与小行星',Object.keys(bodies).slice(18)]];
+const houses={placidus:'Placidus 普拉西德',whole:'Whole Sign 整宫',koch:'Koch 柯赫',equal:'Equal 等宫',regiomontanus:'Regiomontanus 芮氏',campanus:'Campanus 坎帕努斯',porphyry:'Porphyry 波菲利'};
+const modes={natal:'本命',sky:'天象',transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',profection:'小限'};
+const presets={default:'默认标准',strict:'古典严格',custom:'自定义'};
+const orbLabels={0:'合相',30:'半六合',45:'半刑',60:'六合',90:'刑相',120:'三合',135:'补八分',150:'梅花相',180:'对冲'};
+const defaultOrbs={0:8,30:2,45:2,60:5,90:7,120:7,135:2,150:2,180:8};
+const key='xy_astro_config';
+const defaultCfg={house:'placidus',zodiac:'tropical',ayan:'lahiri',visible:Object.keys(bodies).slice(0,16),node:'true',preset:'default',orbs:defaultOrbs,phaseWeight:false,nominalAge:false};
+const cfg=()=>({...defaultCfg,...stored(key,{})});
+const norm=x=>((x%360)+360)%360;
+const pad=x=>String(x).padStart(2,'0');
+const dms=d=>d.degrees+'°'+pad(d.minutes)+'′'+pad(d.seconds)+'″';
+const dateTime=r=>r?.slice(0,16).replace('T',' ')+' UTC';
+const aspectColors={0:'#b389bf',30:'#9781aa',45:'#c77792',60:'#589fcb',90:'#da536a',120:'#3ca88a',135:'#c77792',150:'#8465b2',180:'#963b54'};
+const stateOf=ctx=>ctx.state.chartState.west??={mode:'natal',at:new Date(),result:null,token:0,pending:false,error:'',requested:false};
+function spaced(planets,min){
+ const list=planets.map(p=>({...p,plot:norm(p.lon)})).sort((a,b)=>a.plot-b.plot);
+ if(list.length<2)return list;
+ let cut=0,max=-1;
+ for(let i=0;i<list.length;i++){
+  const gap=norm(list[(i+1)%list.length].plot-list[i].plot);
+  if(gap>max){max=gap;cut=i+1;}
+ }
+ const rotated=[...list.slice(cut),...list.slice(0,cut)];
+ for(let i=1;i<rotated.length;i++){
+  while(rotated[i].plot<rotated[i-1].plot)rotated[i].plot+=360;
+  rotated[i].plot=Math.max(rotated[i].plot,rotated[i-1].plot+min);
+ }
+ const shift=rotated.reduce((sum,p)=>sum+norm(p.plot-p.lon),0)/rotated.length;
+ for(const p of rotated)p.plot-=shift;
+ return rotated;
+}
+function wheel(r){
+ const a=r.chart,b=r.outer,c=220;
+ const angle=lon=>(180-norm(lon-a.axes.asc))*Math.PI/180;
+ const xy=(lon,rad)=>[c+rad*Math.cos(angle(lon)),c-rad*Math.sin(angle(lon))];
+ const pos=(lon,rad)=>xy(lon,rad).join(',');
+ const line=(p,q,style)=>`<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" ${style}/>`;
+ const label=(lon,rad,text,style='')=>{
+  const [x,y]=xy(lon,rad);return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" ${style}>${esc(text)}</text>`;
+ };
+ const aspectLayer=(list,outer)=>{
+  const from=outer?b.planets:a.planets,to=a.planets;
+  return list.filter(x=>[0,60,90,120,180].includes(x.angle)).map(x=>{
+   const p=from.find(y=>y.key===x.aKey),q=to.find(y=>y.key===x.bKey);
+   return p&&q?line(xy(p.lon,outer?135:107),xy(q.lon,107),`stroke="${aspectColors[x.angle]}" stroke-opacity=".62" stroke-width=".9" ${x.angle===180?'stroke-dasharray="4 3"':''}`):'';
+  }).join('');
+ };
+ const ticks=Array.from({length:360},(_,i)=>line(xy(i,202),xy(i,i%30===0?177:i%10===0?194:i%5===0?197:200),`stroke="#b58ba7" stroke-width="${i%30===0?1:.42}"`)).join('');
+ const circles=[202,177,161,135,107].map((rad,i)=>`<circle cx="${c}" cy="${c}" r="${rad}" fill="${i%2?'#fffbfd':'#f8ebf3'}" stroke="#d6b3c9" stroke-width="1"/>`).join('');
+ const houses=a.cusps.map((lon,i)=>{
+  const mid=lon+norm(a.cusps[(i+1)%12]-lon)/2;
+  return line(xy(lon,162),xy(lon,0),'stroke="#e2c7d9" stroke-width=".65"')+label(mid,169,i+1,'font-size="11" fill="#7e5372"');
+ }).join('');
+ const axes=Object.entries(a.axes).filter(([k])=>a.planets.some(p=>p.key===k)).map(([key,lon])=>
+  line(xy(lon,161),xy(lon,104),'stroke="#a15781" stroke-width="1.4"')+label(lon,157,key.toUpperCase(),'font-size="9" font-weight="750" fill="#8b315e"')).join('');
+ const stars=(data,outer)=>{
+  const v=data.planets.filter(p=>!['asc','dsc','mc','ic'].includes(p.key));
+  return spaced(v,outer?6:8).map(p=>{
+   const node=pos(p.lon,outer?135:107).split(',');
+   return `<circle cx="${node[0]}" cy="${node[1]}" r="2" fill="${outer?'#93537e':'#554f95'}"/>`+
+    line(xy(p.lon,outer?135:107),xy(p.plot,outer?143:116),`stroke="${outer?'#bc8caa':'#9695b3'}" stroke-width=".7"`)+
+    label(p.plot,outer?151:124,p.symbol,`font-size="${outer?14:16}" font-weight="650" fill="${outer?'#8d3868':'#48467f'}"`);
+  }).join('');
+ };
+ return `<svg class="wheel" viewBox="0 0 440 440" role="img" aria-label="${b?'本命与行运双圈圆盘':'西洋占星圆盘'}">${circles}${ticks}
+ ${symbols.map((s,i)=>label(i*30+15,187,s,'font-size="18" fill="#8b557b"')).join('')}${houses}
+ ${aspectLayer(b?r.cross:a.aspects,!!b)}${axes}${stars(a,false)}${b?stars(b,true):''}
+ ${r.profection?`<path d="M220 220 L${pos(r.profection.wholeStart+(r.profection.house-1)*30,161)} A161 161 0 0 1 ${pos(r.profection.wholeStart+r.profection.house*30,161)} Z" fill="#d184b238"/>`:''}</svg>`;
+}
+function matrix(r){
+ const {chart,outer,cross}=r;
+ const p=chart.planets;
+ const q=outer?outer.planets:p;
+ const matching=outer?cross:chart.aspects;
+ const cell=(a,b)=>{
+  const x=matching.find(x=>x.aKey===a.key&&x.bKey===b.key||!outer&&x.aKey===b.key&&x.bKey===a.key);
+  if(!x)return '<td>·</td>';
+  const total=Math.round(x.orb*60),offset=Math.floor(total/60)+'°'+pad(total%60)+'′';
+  const phase=x.applying===true?'入':x.applying===false?'出':'';
+  const type=[90,180,45,135].includes(x.angle)?'hard':[60,120].includes(x.angle)?'soft':'neutral';
+  return `<td data-aspect="${type}" title="${esc(x.type+' '+offset+' '+phase)}">${esc(x.symbol)}<br>${phase==='入'?'−':phase==='出'?'+':''}${offset} ${phase}</td>`;
+ };
+ return `<div class="scroll"><table class="grid-table astro-grid"><thead><tr><th>星体</th>${p.map(x=>'<th>'+esc(x.symbol)+'</th>').join('')}</tr></thead><tbody>
+ ${q.map((a,i)=>'<tr><th>'+esc(a.symbol)+'</th>'+p.map((b,j)=>outer||j<i?cell(a,b):'<td></td>').join('')+'</tr>').join('')}</tbody></table></div>`;
+}
+function timeLabel(s){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',dateStyle:'short',timeStyle:'short'}).format(s.at);}
+function shift(date,unit,n){
+ const out=new Date(date);
+ if(unit==='day'){out.setUTCDate(out.getUTCDate()+n);return out;}
+ const day=out.getUTCDate();
+ out.setUTCDate(1);
+ if(unit==='year')out.setUTCFullYear(out.getUTCFullYear()+n);else out.setUTCMonth(out.getUTCMonth()+n);
+ const last=new Date(Date.UTC(out.getUTCFullYear(),out.getUTCMonth()+1,0)).getUTCDate();
+ out.setUTCDate(Math.min(day,last));return out;
+}
+function facts(r){
+ const p=r.chart.planets;
+ const dignities={入庙:'庙',旺相:'旺',入弱:'陷',落陷:'落',中性:'—'};
+ const planetRows=(data)=>data.map(x=>[x.name,x.sign+' '+dms(x.degree)+(x.approximate?' ≈':''),x.house,x.retro?'Rx':'—',dignities[x.dignity]||'—']);
+ const allPatterns=r.chart.analysis.patterns;
+ const sign=s=>zodiacNames[Math.floor(norm(s)/30)]+' '+Math.floor(norm(s)%30)+'°';
+ const rulers=['火星','金星','水星','月亮','太阳','水星','金星','火星','木星','土星','土星','木星'];
+ const cusp=r.chart.cusps.map((lon,i)=>{
+  const name=rulers[Math.floor(norm(lon)/30)];
+  return [i+1,sign(lon),name,p.find(s=>s.name===name)?.house||'—'];
+ });
+ return `<article class="card"><h2>星体与位置</h2>${table(['星体','星座度数','宫位','逆行','尊贵'],planetRows(p))}</article>
+ ${r.outer?`<article class="card"><h2>外圈星体</h2>${table(['星体','星座度数','宫位','逆行','尊贵'],planetRows(r.outer.planets))}</article>`:''}
+ <article class="card"><h2>${r.outer?'跨盘相位':'相位容许度矩阵'}</h2>${matrix(r)}<small>入相用 −，出相用 +。轴线或没有速度的虚点只显示距离。≈ 表示轨道传播近似。</small></article>
+ <article class="card"><h2>宫主星</h2>${table(['宫位','宫头','古典宫主','飞入宫'],cusp)}</article>
+ <article class="card"><h2>经典格局</h2>${allPatterns.length?allPatterns.map(x=>`<p><b>${esc(x.type)}</b> · ${esc(x.planets.join('、'))}</p>`).join(''):'<p class="muted">在当前容许度和显示星体下未识别格局。</p>'}</article>`;
+}
+export function westernView(ctx){
+ const s=stateOf(ctx),r=s.result;
+ const step=[['year',-1,'−1年'],['month',-1,'−1月'],['day',-1,'−1日'],['day',1,'＋1日'],['month',1,'＋1月'],['year',1,'＋1年']];
+ const effects=r?.firdaria?`<article class="card"><h2>${r.firdaria.diurnal?'日生':'夜生'}法达</h2><p>主星 ${esc(r.firdaria.active?.lord)} · 副星 ${esc(r.firdaria.sub?.lord||'交点运无七分副星')}</p>${table(['主运','年龄段','起止 UTC'],r.firdaria.periods.map(p=>[p.lord,p.start+'–'+p.end,p.from.slice(0,10)+' → '+p.to.slice(0,10)]))}${r.firdaria.active?.sub?.length?table(['当前主运的副星','年龄段'],r.firdaria.active.sub.map(p=>[p.lord,p.start.toFixed(2)+'–'+p.end.toFixed(2)])):''}</article>`:
+  r?.profection?`<article class="card"><h2>古典小限</h2><p>${r.profection.age} ${r.profection.nominal?'虚岁':'周岁'} · 第 ${r.profection.house} 整宫 ${esc(r.profection.sign)} · 年主星 ${esc(r.profection.ruler)} 落本命第 ${r.profection.lordHouse} 宫。</p></article>`:'';
+ const display=r?.chart;
+ ctx.root.innerHTML=`<section aria-label="西洋占星"><div class="spread"><h1>西洋占星</h1><small>${esc(display?houses[display.houseSystem]:'')}</small></div>
+ <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
+ <p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
+ ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
+ ${wheel(r)}<small>${esc(dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small></article>`:''}
+ ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 东八区</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
+ ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}
+ <p class="thin">${display.analysis.elements.missing.length?'未覆盖 '+display.analysis.elements.missing.join('、'):'四元素均有星体'} · 主导 ${display.analysis.elements.dominant.join('、')}</p>
+ ${bars(Object.fromEntries(Object.entries(display.analysis.modalities.percentages).map(([k,v])=>[k==='基本'?'本位':k,Number.isFinite(v)?v:0])))}</article>
+ ${effects}${facts(r)}`:''}</section>`;
+ selectedRails(ctx.root);
+ for(const b of ctx.root.querySelectorAll('[data-mode]'))b.onclick=()=>update(ctx,b.dataset.mode,s.at);
+ for(const b of ctx.root.querySelectorAll('[data-unit]'))b.onclick=()=>update(ctx,s.mode,shift(s.at,b.dataset.unit,+b.dataset.step));
+ const picker=$('[data-astro-date]',ctx.root);
+ if(picker)picker.onclick=()=>{
+  const d=ctx.sheet('toolSheet','选择推运时间',`<form class="form-grid"><label>日期<input type="date" name="date" value="${isoLocal(s.at)}" required></label><label>时间（东八区）<input type="time" name="clock" value="${timeLabel(s).slice(11,16)}" required></label><button class="wide primary">重新排盘</button></form>`);
+  $('form',d).onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget);const at=new Date(f.get('date')+'T'+f.get('clock')+'+08:00');ctx.close(d);update(ctx,s.mode,at);};
+ };
+ if(!s.requested){s.requested=true;update(ctx,s.mode,s.at);}
+}
+async function update(ctx,mode,at){
+ const s=stateOf(ctx),token=++s.token;
+ const status=$('#astroStatus',ctx.root);if(status)status.textContent='正在重算星历…';
+ s.mode=mode;s.at=at;
+ try{
+  const result=await ctx.request('/api/console/western',{birth:ctx.birth,config:cfg(),mode,at:at.toISOString()});
+  if(token!==s.token||ctx.state.chartState.west!==s)return;
+  s.result=result;s.error='';
+ }catch(error){if(token===s.token){s.error=error.message;s.result=null;}}
+ if(token===s.token&&ctx.state.chartState.west===s&&ctx.state.system==='west'&&ctx.state.tab==='chart')westernView(ctx);
+}
+function options(data,value){return Object.entries(data).map(([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${esc(label)}</option>`).join('');}
+export function westernTools(ctx,host){
+ host.innerHTML=btn('高级排盘配置','data-astro-config');
+ $('[data-astro-config]',host).onclick=()=>configSheet(ctx);
+}
+function configSheet(ctx){
+ const config=cfg(),s=stateOf(ctx);
+ const d=ctx.sheet('toolSheet','西洋占星 · 高级配置',`<form id="astroConfig" class="form-grid">
+ <label>分宫制<select name="house">${options(houses,config.house)}</select></label>
+ <label>黄道体系<select name="zodiac">${options({tropical:'回归黄道',sidereal:'恒星黄道'},config.zodiac)}</select></label>
+ <label data-ayan ${config.zodiac!=='sidereal'?'hidden':''}>岁差标准<select name="ayan">${options({lahiri:'Lahiri',fagan:'Fagan-Bradley',krishnamurti:'Krishnamurti'},config.ayan)}</select></label>
+ <label>月交点<select name="node">${options({true:'真交点',mean:'平交点'},config.node)}</select></label>
+ ${groups.map(([label,items])=>`<fieldset class="wide"><legend>${esc(label)}</legend><div class="checks">${items.map(k=>`<label><input name="body" type="checkbox" value="${k}" ${config.visible.includes(k)?'checked':''}>${esc(bodies[k])}</label>`).join('')}</div></fieldset>`).join('')}
+ <label>容许度预设<select name="preset">${options(presets,config.preset)}</select></label>
+ <label class="checks"><input type="checkbox" name="phase" ${config.phaseWeight?'checked':''}>出相容许度 × 0.8</label>
+ <div class="form-grid wide" data-orbs ${config.preset!=='custom'?'hidden':''}>${Object.entries(orbLabels).map(([k,label])=>`<label>${esc(label)} ${k}°<input name="orb-${k}" type="number" min="0" max="15" step="0.1" value="${esc(config.orbs[k]??defaultOrbs[k])}"></label>`).join('')}</div>
+ <label class="checks wide"><input type="checkbox" name="nominal" ${config.nominalAge?'checked':''}>小限使用虚岁显示</label>
+ <p class="wide muted" role="status" data-config-status>配置保存到此设备。修改后立即重排。</p>
+ ${btn('恢复默认设置','data-reset-astro class="wide"')}</form>`);
+ const f=$('form',d);
+ f.onsubmit=e=>e.preventDefault();
+ f.onchange=()=>{
+  if(!f.checkValidity()){$('[data-config-status]',d).textContent='容许度须在 0–15°';return;}
+  const data=new FormData(f);
+  const next={house:data.get('house'),zodiac:data.get('zodiac'),ayan:data.get('ayan'),node:data.get('node'),
+   visible:data.getAll('body'),preset:data.get('preset'),phaseWeight:data.has('phase'),nominalAge:data.has('nominal'),
+   orbs:Object.fromEntries(Object.keys(orbLabels).map(k=>[k,+data.get('orb-'+k)]))};
+  save(key,next);
+  $('[data-ayan]',d).hidden=next.zodiac!=='sidereal';$('[data-orbs]',d).hidden=next.preset!=='custom';
+  $('[data-config-status]',d).textContent='已保存，正在重排。';
+  update(ctx,s.mode,s.at);
+ };
+ $('[data-reset-astro]',d).onclick=()=>{save(key,defaultCfg);configSheet(ctx);update(ctx,s.mode,s.at);};
+}

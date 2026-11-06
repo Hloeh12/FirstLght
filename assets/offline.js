@@ -1,35 +1,20 @@
 'use strict';
-
-const shellCache='firstlight-shell-v2';
-const shellFiles=['/',
- '/assets/app-shell.css','/assets/offline-client.js','/assets/chart-views.js',
- '/assets/app-shell.js','/assets/ziwei-workbench.js','/assets/chart-share.js',
- '/assets/context-menu.js','/assets/interactive-reading.js'
-];
-
-self.addEventListener('install',event=>{
- event.waitUntil((async()=>{
-  const cache=await caches.open(shellCache);
-  await cache.addAll(shellFiles.map(path=>new Request(path,{cache:'reload'})));
-  await self.skipWaiting();
- })());
-});
-self.addEventListener('activate',event=>{
- event.waitUntil((async()=>{
-  const names=await caches.keys();
-  await Promise.all(names.filter(name=>name.startsWith('firstlight-shell-')&&name!==shellCache).map(name=>caches.delete(name)));
-  await self.clients.claim();
- })());
-});
-self.addEventListener('fetch',event=>{
- const url=new URL(event.request.url);
- if(event.request.method!=='GET'||url.origin!==self.location.origin||!shellFiles.includes(url.pathname))return;
- event.respondWith((async()=>{
-  try{
-   const response=await fetch(event.request);
-   if(response.ok)return response;
-  }catch{}
-  const stored=await caches.match(url.pathname,{cacheName:shellCache});
-  return stored||Response.error();
+const name='firstlight-console-shell-v1';
+const files=['/','/assets/console/design.css',...['app','ui','ziwei','bazi','western','extras','share'].map(x=>'/assets/console/'+x+'.js')];
+self.addEventListener('install',e=>e.waitUntil((async()=>{
+ const cache=await caches.open(name);
+ await cache.addAll(files.map(path=>new Request(path,{cache:'reload'})));
+ await self.skipWaiting();
+})()));
+self.addEventListener('activate',e=>e.waitUntil((async()=>{
+ for(const key of await caches.keys())if(key!==name&&(key.startsWith('firstlight-console-shell-')||key.startsWith('firstlight-shell-')))await caches.delete(key);
+ await self.clients.claim();
+})()));
+self.addEventListener('fetch',e=>{
+ const url=new URL(e.request.url);
+ if(e.request.method!=='GET'||url.origin!==self.location.origin||!files.includes(url.pathname))return;
+ e.respondWith((async()=>{
+  try{const response=await fetch(e.request);if(response.ok)return response;}catch{}
+  return await caches.match(url.pathname,{cacheName:name})??Response.error();
  })());
 });

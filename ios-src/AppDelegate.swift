@@ -1,6 +1,7 @@
 import UIKit
 import WebKit
 import UserNotifications
+import CoreLocation
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -19,15 +20,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler, UNUserNotificationCenterDelegate {
+class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler, UNUserNotificationCenterDelegate, CLLocationManagerDelegate {
     private var exportedFile: URL?
+    private var locationManager: CLLocationManager?
+    private var locationToken: Int?
+    private var requestingLocation = false
     private var webView: WKWebView!
     private var statusView: UIView?
-    private var serverURL: URL? {
-        guard let value = Bundle.main.object(forInfoDictionaryKey: "FirstLightServerURL") as? String,
-              let url = URL(string: value), url.scheme == "https", url.host != nil else { return nil }
-        return url
-    }
+    private let appURL = URL(string: "firstlight://bundle/")!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -40,9 +40,11 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     private func setupWebView() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
-        config.limitsNavigationsToAppBoundDomains = true
+        config.setURLSchemeHandler(LocalResources(), forURLScheme: "firstlight")
         config.userContentController.add(self, name: "shareChart")
         config.userContentController.add(self, name: "caseReminder")
+        config.userContentController.add(self, name: "findLocation")
+        config.userContentController.add(self, name: "caseBackup")
         config.preferences.javaScriptEnabled = true
         config.defaultWebpagePreferences.allowsContentJavaScript = true
 
@@ -59,13 +61,32 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     }
 
     private func loadContent() {
-        guard let url = serverURL else {
-            showRetryOverlay(error: "服务地址尚未配置")
-            return
+        webView.load(URLRequest(url: appURL))
+    }
+
+    private final class LocalResources: NSObject, WKURLSchemeHandler {
+        func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+            guard let url = task.request.url, url.host == "bundle",
+                  let root = Bundle.main.resourceURL?.appendingPathComponent("www", isDirectory: true) else {
+                task.didFailWithError(URLError(.unsupportedURL))
+                return
+            }
+            let relative = url.path.isEmpty || url.path == "/" ? "index.html" : String(url.path.dropFirst())
+            let file = root.appendingPathComponent(relative).standardizedFileURL.resolvingSymlinksInPath()
+            guard file.path.hasPrefix(root.resolvingSymlinksInPath().path + "/"),
+                  let data = try? Data(contentsOf: file) else {
+                task.didFailWithError(URLError(.fileDoesNotExist))
+                return
+            }
+            let types = ["html": "text/html", "js": "text/javascript", "css": "text/css"]
+            let response = URLResponse(url: url, mimeType: types[file.pathExtension],
+                                       expectedContentLength: data.count, textEncodingName: "utf-8")
+            task.didReceive(response)
+            task.didReceive(data)
+            task.didFinish()
         }
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 180
-        webView.load(request)
+
+        func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -79,7 +100,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         sv.backgroundColor = UIColor(red: 247/255, green: 247/255, blue: 251/255, alpha: 1.0)
 
         let label = UILabel()
-        label.text = "星谕排盘\n\n暂时无法连接服务\n(\(error))\n\n请检查网络后重试，首次唤醒服务可能需要等待。"
+        label.text = "星谕排盘\n\n暂时无法打开本机页面\n(\(error))\n\n请重试打开应用。"
         label.numberOfLines = 0
         label.textAlignment = .center
         label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
@@ -88,7 +109,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         sv.addSubview(label)
 
         let retryBtn = UIButton(type: .system)
-        retryBtn.setTitle("重试连接", for: .normal)
+        retryBtn.setTitle("重新打开", for: .normal)
         retryBtn.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .bold)
         retryBtn.setTitleColor(.white, for: .normal)
         retryBtn.backgroundColor = UIColor(red: 255/255, green: 79/255, blue: 139/255, alpha: 1.0)
@@ -102,13 +123,20 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        if navigationAction.navigationType == .linkActivated,
-           let url = navigationAction.request.url, url.scheme == "https", url.host != serverURL?.host {
-            UIApplication.shared.open(url)
+        guard let url = navigationAction.request.url else {
             decisionHandler(.cancel)
             return
         }
-        decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
+        if navigationAction.shouldPerformDownload, url.scheme == "blob" {
+            decisionHandler(.download)
+        } else if url.scheme == appURL.scheme, url.host == appURL.host {
+            decisionHandler(.allow)
+        } else {
+            if navigationAction.navigationType == .linkActivated, url.scheme == "https" {
+                UIApplication.shared.open(url)
+            }
+            decisionHandler(.cancel)
+        }
     }
 
     func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
@@ -132,12 +160,18 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        let origin = message.frameInfo.securityOrigin
-        guard message.frameInfo.isMainFrame, let url = serverURL,
-              origin.protocol == "https", origin.host == url.host,
-              (origin.port == 0 ? 443 : origin.port) == (url.port ?? 443) else { return }
+        guard message.frameInfo.isMainFrame, let url = message.frameInfo.request.url,
+              url.scheme == appURL.scheme, url.host == appURL.host else { return }
         if message.name == "caseReminder" {
             scheduleReminder(message.body)
+            return
+        }
+        if message.name == "findLocation", let token = message.body as? Int {
+            findLocation(token)
+            return
+        }
+        if message.name == "caseBackup", let json = message.body as? String {
+            exportCaseBackup(json)
             return
         }
         guard message.name == "shareChart", presentedViewController == nil,
@@ -156,6 +190,65 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             alert.addAction(UIAlertAction(title: "好", style: .default))
             present(alert, animated: true)
         }
+    }
+
+    private func exportCaseBackup(_ json: String) {
+        guard presentedViewController == nil, let data = json.data(using: .utf8), data.count <= 5_000_000 else { return }
+        do {
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let file = folder.appendingPathComponent("FirstLight-cases.json")
+            try data.write(to: file, options: .atomic)
+            presentShare(file)
+        } catch {
+            reportReminder("暂时无法写入案例备份。")
+        }
+    }
+
+    private func findLocation(_ token: Int) {
+        locationToken = token
+        if locationManager == nil {
+            let manager = CLLocationManager()
+            manager.desiredAccuracy = kCLLocationAccuracyKilometer
+            manager.delegate = self
+            locationManager = manager
+        }
+        guard let manager = locationManager else { return }
+        if manager.authorizationStatus == .notDetermined {
+            manager.requestWhenInUseAuthorization()
+        } else {
+            locationManagerDidChangeAuthorization(manager)
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard locationToken != nil else { return }
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            if !requestingLocation {
+                requestingLocation = true
+                manager.requestLocation()
+            }
+        case .denied, .restricted:
+            finishLocation(nil)
+        default: break
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        finishLocation(locations.last?.coordinate)
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        finishLocation(nil)
+    }
+
+    private func finishLocation(_ coordinates: CLLocationCoordinate2D?) {
+        requestingLocation = false
+        guard let token = locationToken else { return }
+        locationToken = nil
+        let pair = coordinates.map { "\($0.latitude),\($0.longitude)" } ?? "null,null"
+        webView.evaluateJavaScript("window.firstlightLocation?.(\(token),\(pair))")
     }
 
     private func scheduleReminder(_ body: Any) {

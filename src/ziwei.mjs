@@ -1,7 +1,7 @@
 import {generateChart,detectPatterns,calculateTrueSolarTime,resolveZiweiDayOffset,shiftGregorianDate,schoolStarBrightness} from './renhuai-engine.mjs';
 import { astro, util } from 'iztro';
 import { Lunar, LunarYear } from 'lunar-javascript';
-import { memoTTL, cacheKey } from './store.mjs';
+import { memoTTL, cacheKey } from './memo.mjs';
 /* 紫微盘：使用公开发布的 iztro 库（默认中州派配置）独立实现。
  * 未与原站服务端逐盘比对；原站版本/配置未知，结果不应视为与原站一致。 */
 const STEMS='甲乙丙丁戊己庚辛壬癸',BRANCHES='子丑寅卯辰巳午未申酉戌亥';
@@ -42,6 +42,10 @@ export function ziweiChart(input){
  }
  const effectiveDate=[year,String(month).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
  const a=cachedAstro(effectiveDate,hour,gender,astroType);
+ for(const p of palaces){
+  const ring=a.palaces.find(x=>x.earthlyBranch===p.earthlyBranch);
+  p.annualStars=[ring?.suiqian12,ring?.jiangqian12].filter(Boolean);
+ }
  const decades=a.decadalList().map(({palaceName,ageRange,yearRange})=>({palaceName,ageRange,yearRange}));
  return {astroType,decades,effectiveDate,effectiveTimeIndex:hour,soul:c.mingZhu,body:c.shenZhu,fiveElementsClass:c.wuxingJuName,lunarDate:JSON.stringify(c.lunarInfo),palaces,patterns,correction,sihua:palaces.flatMap(p=>p.stars.filter(s=>s.siHua).map(s=>({star:s.name,type:s.siHua,palace:p.name}))),source:'Renhuai123/ziwei-doushu a600484 · MIT · iztro',rules:{lateZishi:input.lateZishi||'next-day',brightness:'QS（斗数全书）上游默认表',dataset:false}};
 }

@@ -17,7 +17,7 @@ const cfg=()=>({...defaultCfg,...stored(key,{})});
 const norm=x=>((x%360)+360)%360;
 const pad=x=>String(x).padStart(2,'0');
 const dms=d=>d.degrees+'°'+pad(d.minutes)+'′'+pad(d.seconds)+'″';
-const dateTime=r=>r?.slice(0,16).replace('T',' ')+' UTC';
+const dateTime=r=>r?.slice(0,19).replace('T',' ')+' UT';
 const aspectColors={0:'#b389bf',30:'#9781aa',45:'#c77792',60:'#589fcb',90:'#da536a',120:'#3ca88a',135:'#c77792',150:'#8465b2',180:'#963b54'};
 const stateOf=ctx=>ctx.state.chartState.west??={mode:'natal',at:new Date(),result:null,token:0,pending:false,error:'',requested:false};
 function spaced(planets,min){
@@ -30,13 +30,37 @@ function spaced(planets,min){
  }
  const rotated=[...list.slice(cut),...list.slice(0,cut)];
  for(let i=1;i<rotated.length;i++){
-  while(rotated[i].plot<rotated[i-1].plot)rotated[i].plot+=360;
+  if(rotated[i].plot<rotated[0].plot)rotated[i].plot+=360;
   rotated[i].plot=Math.max(rotated[i].plot,rotated[i-1].plot+min);
  }
  const shift=rotated.reduce((sum,p)=>sum+norm(p.plot-p.lon),0)/rotated.length;
  for(const p of rotated)p.plot-=shift;
  return rotated;
 }
+function radialLayout(inner,outer,xy){
+ const placed=spaced(inner,10).map(p=>({...p,radius:117,outer:false}));
+ const near=(a,b)=>Math.abs(norm(a-b+180)-180);
+ const box=(lon,radius)=>{const [x,y]=xy(lon,radius);return [x,y+4];};
+ const overlaps=(p,lon,radius)=>{
+  const a=box(p.plot,p.radius),b=box(lon,radius);
+  return Math.abs(a[0]-b[0])<20&&Math.abs(a[1]-b[1])<21;
+ };
+ for(const p of spaced(outer,9)){
+  const conjunction=inner.some(n=>near(p.lon,n.lon)<6);
+  const radii=conjunction?[151,137]:[137,151];
+  let candidate;
+  for(const delta of [0,4,-4,8,-8,12,-12,16,-16,20,-20,24,-24]){
+   for(const radius of radii){
+    const lon=p.plot+delta;
+    if(!placed.some(q=>overlaps(q,lon,radius))){candidate={plot:lon,radius};break;}
+   }
+   if(candidate)break;
+  }
+  placed.push({...p,...(candidate??{radius:151}),outer:true});
+ }
+ return placed;
+}
+const wheelBodies=data=>data.planets.filter(p=>!['asc','dsc','mc','ic'].includes(p.key));
 function wheel(r){
  const a=r.chart,b=r.outer,c=220;
  const angle=lon=>(180-norm(lon-a.axes.asc))*Math.PI/180;
@@ -61,18 +85,20 @@ function wheel(r){
  }).join('');
  const axes=Object.entries(a.axes).filter(([k])=>a.planets.some(p=>p.key===k)).map(([key,lon])=>
   line(xy(lon,161),xy(lon,104),'stroke="#a15781" stroke-width="1.4"')+label(lon,157,key.toUpperCase(),'font-size="9" font-weight="750" fill="#8b315e"')).join('');
- const stars=(data,outer)=>{
-  const v=data.planets.filter(p=>!['asc','dsc','mc','ic'].includes(p.key));
-  return spaced(v,outer?6:8).map(p=>{
-   const node=pos(p.lon,outer?135:107).split(',');
-   return `<circle cx="${node[0]}" cy="${node[1]}" r="2" fill="${outer?'#93537e':'#554f95'}"/>`+
-    line(xy(p.lon,outer?135:107),xy(p.plot,outer?143:116),`stroke="${outer?'#bc8caa':'#9695b3'}" stroke-width=".7"`)+
-    label(p.plot,outer?151:124,p.symbol,`font-size="${outer?14:16}" font-weight="650" fill="${outer?'#8d3868':'#48467f'}"`);
-  }).join('');
- };
+ const placements=radialLayout(wheelBodies(a),b?wheelBodies(b):[],xy);
+ const stars=placements.map(p=>{
+  const anchor=p.outer?135:104,color=p.outer?'#8d3868':'#48467f';
+  const [x,y]=xy(p.lon,anchor),[lx,ly]=xy(p.plot,p.radius);
+  const degree=p.degree.degrees+'°'+pad(p.degree.minutes)+'′';
+  return `<g data-wheel-body="${p.outer?'outer':'inner'}" data-lon="${p.lon}" data-radius="${p.radius}">
+   <title>${esc(p.name+' '+p.sign+' '+dms(p.degree))}</title><circle cx="${x}" cy="${y}" r="1.7" fill="${color}"/>`+
+   line([x,y],[lx,ly],`stroke="${color}" stroke-opacity=".5" stroke-width=".65"`)+
+   `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${p.outer?13:15}" font-weight="650" fill="${color}">${esc(p.symbol)}</text>
+   <text x="${lx}" y="${ly+10}" text-anchor="middle" dominant-baseline="central" font-size="7.4" fill="${color}">${degree}</text></g>`;
+ }).join('');
  return `<svg class="wheel" viewBox="0 0 440 440" role="img" aria-label="${b?'本命与行运双圈圆盘':'西洋占星圆盘'}">${circles}${ticks}
  ${symbols.map((s,i)=>label(i*30+15,187,s,'font-size="18" fill="#8b557b"')).join('')}${houses}
- ${aspectLayer(b?r.cross:a.aspects,!!b)}${axes}${stars(a,false)}${b?stars(b,true):''}
+ ${aspectLayer(b?r.cross:a.aspects,!!b)}${axes}${stars}
  ${r.profection?`<path d="M220 220 L${pos(r.profection.wholeStart+(r.profection.house-1)*30,161)} A161 161 0 0 1 ${pos(r.profection.wholeStart+r.profection.house*30,161)} Z" fill="#d184b238"/>`:''}</svg>`;
 }
 function matrix(r){
@@ -118,17 +144,25 @@ function facts(r){
  <article class="card"><h2>宫主星</h2>${table(['宫位','宫头','古典宫主','飞入宫'],cusp)}</article>
  <article class="card"><h2>经典格局</h2>${allPatterns.length?allPatterns.map(x=>`<p><b>${esc(x.type)}</b> · ${esc(x.planets.join('、'))}</p>`).join(''):'<p class="muted">在当前容许度和显示星体下未识别格局。</p>'}</article>`;
 }
+function firdariaPanel(f){
+ const month=iso=>iso.slice(0,7);
+ return `<article class="card"><h2>${f.diurnal?'日生':'夜生'}法达</h2><p>主星 ${esc(f.active?.lord)} · 副星 ${esc(f.sub?.lord)}</p>
+ <div class="stack">${f.periods.map(p=>`<details class="firdaria-period" ${p===f.active?'open':''}>
+ <summary><b>${esc(p.lord)}</b> · ${month(p.from)} 至 ${month(p.to)}</summary>
+ <ol>${p.sub.map(q=>`<li ${q===f.sub?'aria-current="true"':''}>${esc(p.lord+'–'+q.lord)} <small title="${dateTime(q.from)} → ${dateTime(q.to)}">${month(q.from)} 至 ${month(q.to)}</small></li>`).join('')}</ol></details>`).join('')}</div>
+ <p class="thin">主运按出生周年划界，副运等分实际时长。交点运按本应用规则，以日／夜顺序分配七副星。</p></article>`;
+}
 export function westernView(ctx){
  const s=stateOf(ctx),r=s.result;
  const step=[['year',-1,'−1年'],['month',-1,'−1月'],['day',-1,'−1日'],['day',1,'＋1日'],['month',1,'＋1月'],['year',1,'＋1年']];
- const effects=r?.firdaria?`<article class="card"><h2>${r.firdaria.diurnal?'日生':'夜生'}法达</h2><p>主星 ${esc(r.firdaria.active?.lord)} · 副星 ${esc(r.firdaria.sub?.lord||'交点运无七分副星')}</p>${table(['主运','年龄段','起止 UTC'],r.firdaria.periods.map(p=>[p.lord,p.start+'–'+p.end,p.from.slice(0,10)+' → '+p.to.slice(0,10)]))}${r.firdaria.active?.sub?.length?table(['当前主运的副星','年龄段'],r.firdaria.active.sub.map(p=>[p.lord,p.start.toFixed(2)+'–'+p.end.toFixed(2)])):''}</article>`:
+ const effects=r?.firdaria?firdariaPanel(r.firdaria):
   r?.profection?`<article class="card"><h2>古典小限</h2><p>${r.profection.age} ${r.profection.nominal?'虚岁':'周岁'} · 第 ${r.profection.house} 整宫 ${esc(r.profection.sign)} · 年主星 ${esc(r.profection.ruler)} 落本命第 ${r.profection.lordHouse} 宫。</p></article>`:'';
  const display=r?.chart;
  ctx.root.innerHTML=`<section aria-label="西洋占星"><div class="spread"><h1>西洋占星</h1><small>${esc(display?houses[display.houseSystem]:'')}</small></div>
  <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
  <p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
  ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
- ${wheel(r)}<small>${esc(dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small></article>`:''}
+ ${wheel(r)}<small>${esc(dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
  ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 东八区</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
  ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}
  <p class="thin">${display.analysis.elements.missing.length?'未覆盖 '+display.analysis.elements.missing.join('、'):'四元素均有星体'} · 主导 ${display.analysis.elements.dominant.join('、')}</p>

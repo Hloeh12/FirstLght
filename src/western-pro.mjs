@@ -120,8 +120,9 @@ export function findReturn(birth,target,id,ayan,zone=0){
   const b=Math.min(a+DAY,hi),fb=diff(b);
   if(fa<=0&&fb>=0&&fb-fa<180){
    let l=a,r=b;
-   while(r-l>500){const m=Math.floor((l+r)/2);if(diff(m)<0)l=m;else r=m;}
-   matches.push((l+r)/2);
+   while(r-l>1){const m=Math.floor((l+r)/2);if(diff(m)<0)l=m;else r=m;}
+   const root=Math.abs(diff(l))<=Math.abs(diff(r))?l:r;
+   if(root<hi&&Math.abs(diff(root))<=0.0001)matches.push(root);
   }
   a=b;fa=fb;
  }
@@ -131,16 +132,35 @@ export function findReturn(birth,target,id,ayan,zone=0){
 const rulers=['太阳','金星','水星','月亮','土星','木星','火星','北交点','南交点'];
 const lengths=[10,8,13,9,11,12,7,3,2];
 function firdaria(birth,target,day){
- const order=day?[0,1,2,3,4,5,6,7,8]:[3,4,5,6,0,1,2,7,8];
- const age=Math.max(0,(target-birth)/YEAR),cycle=Math.floor(age/75);
+ const planets=day?[0,1,2,3,4,5,6]:[3,4,5,6,0,1,2];
+ const order=[...planets,7,8];
+ const anniversary=years=>{
+  const date=new Date(+birth);
+  const month=date.getUTCMonth(),day=date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCFullYear(date.getUTCFullYear()+years);
+  const last=new Date(Date.UTC(date.getUTCFullYear(),month+1,0)).getUTCDate();
+  date.setUTCDate(Math.min(day,last));
+  return +date;
+ };
+ let cycle=Math.floor((target.getUTCFullYear()-birth.getUTCFullYear())/75);
+ if(+target<anniversary(cycle*75))cycle--;
  let start=cycle*75;
  const periods=order.map(idx=>{
-  const from=start;start+=lengths[idx];
-  const sub=idx<7?Array.from({length:7},(_,i)=>({lord:rulers[(idx+i)%7],start:from+lengths[idx]*i/7,end:from+lengths[idx]*(i+1)/7})):[];
-  return {lord:rulers[idx],start:from,end:start,sub,from:new Date(+birth+from*YEAR).toISOString(),to:new Date(+birth+start*YEAR).toISOString()};
+  const from=start;
+  start+=lengths[idx];
+  const startAt=anniversary(from),endAt=anniversary(start);
+  const first=idx<7?planets.indexOf(idx):0;
+  const bound=i=>Math.round(startAt+(endAt-startAt)*i/7);
+  const sub=Array.from({length:7},(_,i)=>({
+   lord:rulers[planets[(first+i)%7]],start:from+lengths[idx]*i/7,end:from+lengths[idx]*(i+1)/7,
+   from:new Date(bound(i)).toISOString(),to:new Date(bound(i+1)).toISOString(),
+  }));
+  return {lord:rulers[idx],start:from,end:start,sub,from:new Date(startAt).toISOString(),to:new Date(endAt).toISOString()};
  });
- const active=periods.find(p=>p.start<=age&&age<p.end);
- return {diurnal:day,age,periods,active,sub:active?.sub.find(p=>p.start<=age&&age<p.end)||null};
+ const contains=p=>Date.parse(p.from)<=+target&&+target<Date.parse(p.to);
+ const active=periods.find(contains);
+ return {diurnal:day,age:(target-birth)/YEAR,periods,active,sub:active?.sub.find(contains)||null};
 }
 export function westernPro({birth,config,mode='natal',at}){
  if(!['natal','sky','transit','secondary','tertiary','solar','lunar','firdaria','profection'].includes(mode))throw Error('未知占星盘类');
@@ -168,7 +188,12 @@ export function westernPro({birth,config,mode='natal',at}){
  if(mode==='secondary'||mode==='tertiary')date=new Date(+born+(target-born)*DAY/(mode==='secondary'?YEAR:MONTH));
  if(mode==='solar'||mode==='lunar')date=findReturn(born,target,mode==='solar'?0:1,cfg.sidereal?cfg.ayan:null,Number(birth.city.tz)||0);
  const progressed=chartAt(date,birth.city,cfg);
- if(mode==='sky'||mode==='solar'||mode==='lunar')return {mode,chart:progressed};
+ if(mode==='solar'||mode==='lunar'){
+  const id=mode==='solar'?0:1,ayan=cfg.sidereal?cfg.ayan:null;
+  const natalLongitude=bodyAt(born,id,ayan).longitude,longitude=bodyAt(date,id,ayan).longitude;
+  return {mode,chart:progressed,returnEvent:{utc:date.toISOString(),natalLongitude,longitude,errorDegrees:Math.abs(signed(longitude-natalLongitude))}};
+ }
+ if(mode==='sky')return {mode,chart:progressed};
  return {mode,chart:natal,outer:progressed,cross:aspectPairs(progressed.planets,natal.planets,cfg,false)};
 }
 export function ephemerisBody(date,id){return bodyAt(date,id,null);}

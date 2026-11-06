@@ -1,7 +1,6 @@
 import * as A from 'astronomy-engine';
-import {readFileSync} from 'node:fs';
+import elements from './reference/minor-orbits.json' with {type:'json'};
 const bodies=[A.Body.Sun,A.Body.Moon,A.Body.Mercury,A.Body.Venus,A.Body.Mars,A.Body.Jupiter,A.Body.Saturn,A.Body.Uranus,A.Body.Neptune,A.Body.Pluto];
-const elements=JSON.parse(readFileSync(new URL('./reference/minor-orbits.json',import.meta.url),'utf8'));
 const DEG=Math.PI/180,DAY=86400000;
 export const norm=x=>((x%360)+360)%360;
 const signed=x=>norm(x+180)-180;

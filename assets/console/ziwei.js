@@ -45,29 +45,38 @@ function center(ctx,s){
   <p class="muted thin">${esc(s.flow?.date||'本次排盘 '+new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',dateStyle:'short',timeStyle:'short'}).format(new Date()))}</p>
   <div class="chips">${z.sihua.map(m=>badge(m.type,m.type,palace(z,z.palaces.find(p=>p.name===m.palace)?.branch)?.branch,'natal')).join('')}</div>${precision}</div>`;
 }
+const coreAssist=new Set(['左辅','右弼','文昌','文曲','天魁','天钺','擎羊','陀罗','火星','铃星','地空','地劫']);
 function board(ctx,s){
  const z=s.chart,flow=s.flow,source=palace(z,s.selected);
  return `<div class="zi-board" aria-label="紫微十二宫盘面">${z.palaces.map(p=>{
   const [r,c]=positions[p.branch],main=p.majorStars;
   const trans=flow?.mutagens.filter(m=>m.branch===p.branch)||[];
-  const others=p.minorStars.filter(x=>x.mutagen||trans.some(m=>m.star===x.name));
-  const secondary=p.minorStars.filter(x=>!others.includes(x));
-  const special=[...main,...others].map((x,i)=>`<div class="zi-star"><span class="${main.includes(x)?'primary-star':''} ${i%2?'gold':''}">${term(x.name,starInfo(x))}</span>
-   ${x.brightness?`<small>${esc(x.brightness)}</small>`:''}${x.mutagen?badge('生年'+x.mutagen,x.mutagen,p.branch,'natal'):''}
-   ${trans.filter(m=>m.star===x.name).map(m=>badge(mutagenName(flow,m.type),m.type,p.branch,'period')).join('')}</div>`).join('');
-  const borrowed=main.length?'':`<div class="zi-sub">借对宫 ${p.borrowedStars.map(x=>term(x.name+(x.brightness?'·'+x.brightness:''),starInfo(x))).join(' ')||'无主星'}</div>`;
+  const annual=p.annualStars??[];
+  const star=(x,primary=false,borrowed=false)=>`<div class="zi-star${primary?' primary-star':''}${borrowed?' zi-borrowed':''}">
+   ${term(x.name,starInfo(x))}${x.brightness&&primary?`<small>${esc(x.brightness)}</small>`:''}
+   ${x.mutagen?badge('生年'+x.mutagen,x.mutagen,p.branch,'natal'):''}
+   ${trans.filter(m=>!borrowed&&m.star===x.name).map(m=>badge(mutagenName(flow,m.type),m.type,p.branch,'period')).join('')}</div>`;
+  const auxiliary=p.minorStars.filter(x=>!annual.includes(x.name)||x.mutagen||trans.some(m=>m.star===x.name));
+  const priority=x=>x.mutagen||trans.some(m=>m.star===x.name)||coreAssist.has(x.name);
+  const assistants=[...auxiliary.filter(priority),...auxiliary.filter(x=>!priority(x))];
+  const major=main.length?main.map(x=>star(x,true)).join(''):
+   '<span class="zi-borrow-tag">借对宫</span>'+p.borrowedStars.map(x=>star(x,true,true)).join('');
   const active=flow&&marks[flow.palaceNames[p.branch]];
   const styles=['zi-cell',p.branch===s.selected?'selected':'',s.mode==='triad'&&source.relatedBranches.includes(p.branch)&&p.branch!==source.branch?'related':'',
-   s.mode==='transform'&&[...main,...others].some(x=>x.mutagen)?'transform':'',s.mode==='flying'&&source.flying.some(m=>m.branch===p.branch)?'flying':''].join(' ');
+   s.mode==='transform'&&p.stars.some(x=>x.siHua)?'transform':''].join(' ');
   return `<article class="${styles}" data-palace="${p.branch}" aria-label="${esc(p.name)}" tabindex="0" style="grid-row:${r};grid-column:${c}">
-   <div>${special}${borrowed}<div class="zi-sub">${secondary.map(x=>term(x.name,starInfo(x))).join(' ')}</div></div>
-   <footer class="zi-foot">${btn(p.name,'class="term" data-palace-name')}${active?`<b class="zi-flow">${active}</b>`:''}
-   <span>${esc(p.heavenlyStem+p.earthlyBranch)} ${p.isBodyPalace?'身':''}</span><small>${esc(p.decadal?.range?.join('–')||'')}岁</small></footer></article>`;
+   <div class="zi-columns"><div class="zi-major">${major}</div><div class="zi-assist" aria-label="辅星">${assistants.map(x=>star(x)).join('')}</div></div>
+   <footer class="zi-foot"><div class="zi-annual">${annual.map(name=>term(name,name+'是岁前或将前十二神之一，随盘局安列。')).join('')}</div>
+   <div class="zi-palace-line">${btn(p.name,'class="term" data-palace-name')}${active?`<b class="zi-flow">${active}</b>`:''}</div>
+   <div class="zi-age"><span>${esc(p.heavenlyStem+p.earthlyBranch)} ${p.isBodyPalace?'身':''}</span><small>${esc(p.decadal?.range?.join('–')||'')}岁</small></div></footer></article>`;
  }).join('')}${center(ctx,s)}<svg class="zi-overlay" aria-hidden="true" preserveAspectRatio="none"></svg></div>`;
 }
 function overlay(root,s){
  const host=$('.zi-board',root),canvas=$('.zi-overlay',host),r=canvas.getBoundingClientRect();
  const unit=!(r.width&&r.height),w=unit?400:r.width,h=unit?400:r.height;
+ const size=w+'×'+h;
+ if(canvas.dataset.size===size)return;
+ canvas.dataset.size=size;
  canvas.setAttribute('viewBox',`0 0 ${w} ${h}`);
  canvas.replaceChildren();
  const point=id=>{
@@ -87,13 +96,13 @@ function overlay(root,s){
  const badgeMoves=s.badge?.kind==='natal'?s.chart.sihua.map(m=>({...m,branch:s.chart.palaces.find(x=>x.name===m.palace)?.branch})):s.flow?.mutagens;
  const moves=s.badge?(badgeMoves||[]).filter(m=>m.type===s.badge.type&&m.branch===s.selected):
   s.mode==='transform'&&s.filter==='self'?p.flying.filter(m=>m.branch===p.branch):p.flying;
- const defs=svg('defs',{}),capsules=[];
+ const defs=svg('defs',{}),capsules=[],ripples=[];
  canvas.append(defs);
  for(const [i,move] of moves.entries()){
   if(move.branch===null)continue;
   const c=colors[move.type],id='tip-'+move.type;
   const marker=svg('marker',{id,viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:6,markerHeight:6,orient:'auto'});
-  marker.append(svg('path',{d:'M0 0 L10 5 L0 10 Z',fill:c}));defs.append(marker);
+  marker.append(svg('path',{class:'flight-tip',d:'M0 0 L10 5 L0 10 Z',fill:c}));defs.append(marker);
   const end=point(move.branch),[x,y]=start,dx=end[0]-x,dy=end[1]-y,d=Math.hypot(dx,dy);
   const px=d?-dy/d:0,py=d?dx/d:0,spread=(i-1.5)*Math.min(w,h)*.11;
   const ix=x<w/2?1:-1,iy=y<h/2?1:-1;
@@ -101,16 +110,25 @@ function overlay(root,s){
   const b=d?[end[0]-dx/d*13,end[1]-dy/d*13]:[x,y+iy*8];
   const c1=d?[x+dx*.32+px*spread,y+dy*.32+py*spread]:[x+ix*(38+i*7),y-iy*14];
   const c2=d?[x+dx*.68+px*spread,y+dy*.68+py*spread]:[x-ix*14,y+iy*(39+i*7)];
-  canvas.append(svg('path',{class:'zi-path flying-arc',stroke:c,d:`M${a.join(' ')} C${c1.join(' ')} ${c2.join(' ')} ${b.join(' ')}`,'marker-end':`url(#${id})`}));
+  const gradient=svg('linearGradient',{id:'flight-'+i,gradientUnits:'userSpaceOnUse',x1:a[0],y1:a[1],x2:b[0],y2:b[1]});
+  const warm=move.type==='禄'||move.type==='权';
+  gradient.append(svg('stop',{offset:0,'stop-color':warm?'#f2ac59':'#ef8ab9','stop-opacity':'.52'}),
+   svg('stop',{offset:'.55','stop-color':warm?'#d4852c':'#b650a0','stop-opacity':'.86'}),
+   svg('stop',{offset:1,'stop-color':c,'stop-opacity':'.93'}));
+  defs.append(gradient);
+  const path=`M${a.join(' ')} C${c1.join(' ')} ${c2.join(' ')} ${b.join(' ')}`;
+  canvas.append(svg('path',{class:'zi-path flying-arc',pathLength:1,stroke:`url(#flight-${i})`,d:path,'marker-end':`url(#${id})`}));
+  canvas.append(svg('path',{class:'zi-path flight-current',pathLength:1,stroke:warm?'#ffe3ab':'#ffcaee',d:path}));
+  ripples.push(svg('circle',{class:'flight-ripple',cx:end[0],cy:end[1],r:12,stroke:c,fill:'none'}));
   const mid=[0,1].map(k=>(a[k]+3*c1[k]+3*c2[k]+b[k])/8);
   const cx=Math.min(w-45,Math.max(45,mid[0])),cy=Math.min(h-9,Math.max(9,mid[1]));
-  const g=svg('g',{transform:`translate(${cx} ${cy})`});
+  const g=svg('g',{class:'flight-label',transform:`translate(${cx} ${cy})`});
   g.append(svg('rect',{x:-44,y:-8,width:88,height:16,rx:8,fill:'#fffafd',stroke:c,'stroke-width':.6}));
   const label=svg('text',{class:'zi-capsule','text-anchor':'middle','font-size':9,y:3,fill:c});
   label.textContent=(s.badge?.kind==='natal'?'生年':s.badge?.kind==='period'?s.flow.label:p.heavenlyStem+'干')+' → '+move.star+' 化'+move.type;
   g.append(label);capsules.push(g);
  }
- canvas.append(...capsules);
+ canvas.append(...ripples,...capsules);
 }
 function railData(s){
  const birthYear=s.chart.decades[0].yearRange[0]-s.chart.decades[0].ageRange[0]+1;

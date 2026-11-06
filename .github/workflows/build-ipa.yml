@@ -7,21 +7,18 @@ permissions:
   contents: read
 jobs:
   build:
-    if: vars.FIRSTLIGHT_SERVER_URL != ''
     runs-on: macos-15
-    env:
-      FIRSTLIGHT_SERVER_URL: ${{ vars.FIRSTLIGHT_SERVER_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - name: Validate deployed service and configure iOS
+      - name: Test and bundle the offline engine
         run: |
-          python3 scripts/configure-ios.py
           npm ci
-          node scripts/smoke.mjs
+          npm test
+          npm run build:console
       - name: Detect Xcode
         shell: bash
         run: |
@@ -41,12 +38,10 @@ jobs:
           command -v xcodegen >/dev/null || brew install xcodegen
           test -f ios-src/AppDelegate.swift
           test -f ios-src/Info.plist
-          mkdir -p www
+          mkdir -p www/js www/assets/console
           cp index.html www/
-          for dir in src assets vendor; do
-            test -d "$dir"
-            cp -R "$dir" www/
-          done
+          cp js/console.js www/js/
+          cp assets/console/{design.css,credits.html} www/assets/console/
           xcodegen generate --spec project.yml
           xcodebuild -list -project FirstLight.xcodeproj
       - name: Build unsigned app
@@ -70,7 +65,7 @@ jobs:
           expected = dict(CFBundleDisplayName='星谕', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString='0.15.0', CFBundleVersion='1', LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
           for key, value in expected.items():
               assert info.get(key) == value, (key, info.get(key), value)
-          for name in ['index.html', 'src', 'assets', 'vendor']:
+          for name in ['index.html', 'js/console.js', 'assets/console/design.css', 'assets/console/credits.html']:
               assert (app / 'www' / name).exists(), name
           PY
           mkdir -p build/Payload

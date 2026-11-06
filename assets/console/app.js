@@ -4,6 +4,7 @@ import {baziView,baziTools} from './bazi.js';
 import {westernView,westernTools} from './western.js';
 import {extraView} from './extras.js';
 import {shareChart} from './share.js';
+import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
 
 const CASES='xy:cases:v2',ACTIVE='xy_active_profile',SETTINGS='xy:settings:v2';
 const standardGroups=['我的','亲人','朋友','特别关注'];
@@ -13,7 +14,8 @@ const state={
  query:'',filter:'全部',chartState:{},pending:false,error:''
 };
 const root=$('#screen');
-let generation=0,flight,noticeTimer;
+let generation=0,flight,noticeTimer,locationToken=0,locationReply;
+window.firstlightLocation=(token,lat,lon)=>{if(token===locationToken)locationReply?.(lat,lon);};
 const icons=[
  '<path d="M6 4h13v17H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" fill="#ffe1ef"/><path d="M7 4v17m3-12h6m-6 4h4m4-10 3 3" fill="none" stroke="#935779" stroke-width="1.5"/>',
  '<path d="m4 20 12-12" stroke="#9464b2" stroke-width="4" stroke-linecap="round"/><path d="m17 2 2 4 4 2-4 2-2 4-2-4-4-2 4-2Z" fill="#ffc4de" stroke="#a26eaa"/>',
@@ -120,11 +122,12 @@ function caseCard(c){
  <div class="chips">${summaryItems.map(([k,v])=>`<span class="chip">${k} · ${esc(v)}</span>`).join('')}${btn('详情','data-action="detail"')}</div></article>`;
 }
 function renderCases(){
- if(!$('[data-case-list]',root))root.innerHTML=`<section aria-labelledby="casesTitle"><div class="spread"><h1 id="casesTitle">案例</h1>${btn('＋ 新建案例','class="primary" data-create')}</div>
+ if(!$('[data-case-list]',root))root.innerHTML=`<section aria-labelledby="casesTitle"><div class="spread"><h1 id="casesTitle">案例</h1>${btn('＋ 新建案例','class="primary" data-create')}</div>${btn('关系星系','data-galaxy-open')}
  <label><span class="muted">搜索姓名或命理标签</span><input id="caseSearch" class="liquid-glass" type="search" value="${esc(state.query)}"></label>
  <div class="rail case-groups" id="caseGroups" aria-label="案例分组"></div><div data-case-list></div></section>`;
  $('#caseSearch').oninput=e=>{state.query=e.target.value;renderCases();};
  $('[data-create]',root).onclick=()=>birthSheet(null);
+ $('[data-galaxy-open]',root).onclick=()=>showGalaxy();
  const groups=['全部',...standardGroups,...state.groups];
  const groupRail=$('#caseGroups');
  groupRail.innerHTML=groups.map(g=>btn(g,`data-group="${esc(g)}" aria-pressed="${state.filter===g}"`)).join('')+btn('+ 新建分组','data-add-group');
@@ -169,32 +172,69 @@ function confirmDelete(c){
   persist();close(d);render();
  };
 }
-function caseDetail(c){
- const data=stored('xy_case_space',{links:[],notes:{},reminders:{}});
- const linked=data.links.filter(l=>l.ids.includes(c.id)).map(l=>({other:state.cases.find(p=>p.id===l.ids.find(id=>id!==c.id)),type:l.type,ids:l.ids})).filter(x=>x.other);
- const candidates=state.cases.filter(x=>x.id!==c.id);
- const center=[150,90],shown=linked.slice(0,8);
- const points=shown.map((x,i)=>{
-  const angle=2*Math.PI*i/shown.length-Math.PI/2;
-  return {...x,x:150+90*Math.cos(angle),y:90+58*Math.sin(angle)};
+function showGalaxy(profile=state.profile){
+ if(!profile){tell('请先设定一个全局案例作为星系中心');return;}
+ const d=sheet('toolSheet','关系星系 · '+profile.name,'<div data-galaxy><p class="muted">正在计算关系轨道…</p></div>');
+ fillGalaxy(d,profile);
+}
+function fillGalaxy(dialog,profile){
+ const host=$('[data-galaxy]',dialog);
+ linkedCases(profile,state.cases,caseSpace().links,request,normalized).then(items=>{
+  if(!host.isConnected||!dialog.open)return;
+  const draw=page=>{
+   host.innerHTML=galaxy(profile,items,page);
+   for(const b of host.querySelectorAll('[data-galaxy-page]'))b.onclick=()=>draw(+b.dataset.galaxyPage);
+   for(const b of host.querySelectorAll('[data-galaxy-case]'))b.onclick=()=>caseDetail(state.cases.find(c=>c.id===b.dataset.galaxyCase));
+  };
+  draw(0);
  });
- const graph=points.length?`<svg viewBox="0 0 300 180" role="img" aria-label="双向案例关系网">${points.map(p=>`<line class="relation-link" x1="150" y1="90" x2="${p.x}" y2="${p.y}"/>`).join('')}
- <circle class="relation-node" cx="${center[0]}" cy="${center[1]}" r="24"/><text x="150" y="94" text-anchor="middle" font-size="11">${esc(c.name.slice(0,4))}</text>
- ${points.map(p=>`<circle class="relation-node" cx="${p.x}" cy="${p.y}" r="18"/><text x="${p.x}" y="${p.y+4}" text-anchor="middle" font-size="10">${esc(p.other.name.slice(0,4))}</text>`).join('')}</svg>`:'<p class="muted">添加关系后显示双向关系图。</p>';
+}
+function caseDetail(c){
+ const data=caseSpace();
+ const linked=data.links.filter(l=>l.ids.includes(c.id)).map(l=>({...l,other:state.cases.find(p=>p.id===l.ids.find(id=>id!==c.id))})).filter(x=>x.other);
+ const candidates=state.cases.filter(x=>x.id!==c.id);
  const reminders=data.reminders[c.id]||[];
- const d=sheet('toolSheet',c.name+' · 案例空间',`${graph}
+ const d=sheet('toolSheet',c.name+' · 案例空间',`
+ <details><summary>查看关系星系</summary><div data-galaxy></div></details>
  <div class="stack">${linked.map((l,i)=>`<div class="spread"><span>${esc(l.other.name)} · ${esc(l.type)}</span>${btn('解除',`data-unlink="${i}"`)}</div>`).join('')}</div>
- ${candidates.length?`<form id="addRelation" class="form-grid"><label>关联案例<select name="other">${candidates.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label><label>关系类型<select name="kind"><option>亲人</option><option>情侣</option><option>朋友</option><option>合伙人</option></select></label><button class="wide">保存双向关系</button></form>`:''}
+ ${candidates.length?`<form id="addRelation" class="form-grid"><label>关联案例<select name="other">${candidates.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label>
+ <label>关系类型<select name="kind">${relationships.map(x=>`<option>${x}</option>`).join('')}<option value="custom">＋自定义</option></select></label>
+ <label class="wide" data-custom-kind hidden>自定义关系<input name="custom" maxlength="24"></label>
+ <label class="wide">亲密自评 <output data-closeness>50</output><input name="closeness" type="range" min="0" max="100" value="50"></label>
+ <button class="wide">保存双向关系</button></form>`:''}
  <form id="caseNote"><label>个人札记<textarea name="note" maxlength="8000" rows="4">${esc(data.notes[c.id])}</textarea></label><button>保存札记</button></form>
  <form id="caseReminder" class="form-grid"><label>提醒时间<input name="when" type="datetime-local" required></label><label>提醒内容<input name="message" maxlength="80" required></label><button class="wide">添加提醒</button></form>
  <div class="stack">${reminders.map(r=>`<div class="spread"><span>${esc(r.when.replace('T',' '))} · ${esc(r.message)}</span>${btn('取消',`data-cancel-reminder="${esc(r.id)}"`)}</div>`).join('')}</div>`);
- const store=()=>save('xy_case_space',data);
+ const store=()=>save(relationStorageKey,data);
+ const disclosure=$('details',d);
+ disclosure.ontoggle=()=>{if(disclosure.open&&!$('[data-galaxy]',d).hasChildNodes())fillGalaxy(d,c);};
  const rel=$('#addRelation',d);
- if(rel)rel.onsubmit=e=>{
-  e.preventDefault();const form=new FormData(rel),ids=[c.id,form.get('other')].sort();
-  data.links=data.links.filter(l=>l.ids.join()!==ids.join());data.links.push({ids,type:form.get('kind')});store();caseDetail(c);
+ if(rel){
+  const {other,kind,custom,closeness}=rel.elements;
+  const reveal=()=>$('[data-custom-kind]',rel).hidden=kind.value!=='custom';
+  const renderCloseness=()=> $('[data-closeness]',rel).value=closeness.value;
+  const sync=()=>{
+   const l=linked.find(x=>x.other.id===other.value);
+   kind.value=l?(relationships.includes(l.type)?l.type:'custom'):relationships[0];
+   custom.value=kind.value==='custom'?l.type:'';
+   closeness.value=l?.closeness??50;
+   reveal();renderCloseness();
+  };
+  other.onchange=sync;kind.onchange=reveal;closeness.oninput=renderCloseness;sync();
+  rel.onsubmit=e=>{
+   e.preventDefault();
+   const type=kind.value==='custom'?custom.value.trim():kind.value;
+   if(!type){tell('请输入自定义关系');return;}
+   const ids=[c.id,other.value].sort(),key=pairKey(ids);
+   data.links=data.links.filter(l=>pairKey(l.ids)!==key);
+   data.links.push({ids,type,closeness:Number(closeness.value)});
+   store();caseDetail(c);
+  };
+ }
+ for(const b of d.querySelectorAll('[data-unlink]'))b.onclick=()=>{
+  const key=pairKey(linked[b.dataset.unlink].ids);
+  data.links=data.links.filter(l=>pairKey(l.ids)!==key);store();caseDetail(c);
  };
- for(const b of d.querySelectorAll('[data-unlink]'))b.onclick=()=>{data.links=data.links.filter(l=>l.ids.join()!==linked[b.dataset.unlink].ids.join());store();caseDetail(c);};
  $('#caseNote',d).onsubmit=e=>{e.preventDefault();data.notes[c.id]=new FormData(e.currentTarget).get('note');store();tell('札记已保存');};
  $('#caseReminder',d).onsubmit=e=>{
   e.preventDefault();const f=new FormData(e.currentTarget),when=f.get('when'),message=f.get('message').trim(),at=Date.parse(when);
@@ -265,13 +305,17 @@ function birthSheet(profile,seed={}){
  };
  for(const k of ['lat','lon','tz'])fields[k].oninput=()=>{query++;matches.replaceChildren();};
  $('[data-locate]',d).onclick=()=>{
-  if(!navigator.geolocation){feedback.textContent='当前设备不支持定位';return;}
   const token=++query;
-  navigator.geolocation.getCurrentPosition(p=>{
-   if(token!==query||!d.open)return;
-   fields.lat.value=p.coords.latitude.toFixed(6);fields.lon.value=p.coords.longitude.toFixed(6);
+  const reply=(lat,lon)=>{
+   if(token!==query||!d.open||!form.isConnected)return;
+   if(!Number.isFinite(lat)||!Number.isFinite(lon)){feedback.textContent='定位未完成，可手动填写';return;}
+   fields.lat.value=lat.toFixed(6);fields.lon.value=lon.toFixed(6);
    fields.city.value='当前位置';fields.tz.value=-new Date().getTimezoneOffset()/60;feedback.textContent='坐标已填写';
-  },()=>{feedback.textContent='定位未完成，可手动填写';});
+  };
+  const native=window.webkit?.messageHandlers?.findLocation;
+  if(native){locationReply=reply;native.postMessage(++locationToken);}
+  else if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>reply(p.coords.latitude,p.coords.longitude),()=>reply(null,null));
+  else reply(null,null);
  };
  for(const b of d.querySelectorAll('[data-use-case]'))b.onclick=()=>activate(state.cases.find(c=>c.id===b.dataset.useCase));
  const fresh=$('[data-new]',d);if(fresh)fresh.onclick=()=>birthSheet(null);
@@ -300,11 +344,25 @@ function caseDrawer(){
  const entries=[...state.recent.map(id=>state.cases.find(c=>c.id===id)).filter(Boolean),...state.cases.filter(c=>!state.recent.includes(c.id))].slice(0,5);
  const d=sheet('caseDrawer','快捷案例',`<div class="card"><span class="kicker">当前案例</span><h3>${esc(p?.name||'尚未选择案例')}</h3><p>${esc(p?.summary?.pillars||'')}</p><small>${esc(p?.fields?.dateStr||'')} ${esc(p?.fields?.timeStr||'')} ${esc(p?.fields?.city?.label||'')}</small></div>
  <div class="stack">${entries.map(c=>btn(c.name+' · '+(c.summary?.pillars||c.fields?.dateStr||''),`class="drawer-case" data-recent="${esc(c.id)}"`)).join('')}</div>
+ <div class="drawer-accordion">${[
+  ['天机排盘工坊',[['东方盘',['ziwei','bazi','qizheng']],['西洋盘',['west']]]],
+  ['推运时空',[['西洋推运',['transit','secondary','tertiary','solar','lunar','firdaria']],['每日时空',['calendar']]]],
+  ['易经古籍',[['卦象与经典',['yijing']]]],
+  ['关系星系',[['双向案例',['galaxy','synastry']]]],
+ ].map(([title,sections])=>`<details><summary>${title}</summary><div>${sections.map(([name,items])=>`<details><summary>${name}</summary><div class="tool-grid">${items.map(id=>btn(labels[id]||{transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',galaxy:'关系图谱'}[id],`data-destination="${id}"`)).join('')}</div></details>`).join('')}</div></details>`).join('')}</div>
  <div class="rail">${btn('＋ 新建案例','class="primary" data-fresh')}${p?btn('编辑当前资料','data-edit'):''}</div>`);
  for(const b of d.querySelectorAll('[data-recent]'))b.onclick=()=>activate(state.cases.find(c=>c.id===b.dataset.recent));
+ for(const b of d.querySelectorAll('[data-destination]'))b.onclick=()=>{
+  const id=b.dataset.destination;
+  if(id==='galaxy'){close(d);showGalaxy();return;}
+  if(labels[id]){switchTab('chart',id);return;}
+  state.chartState.west={mode:id,at:new Date(),result:null,token:0,pending:false,error:'',requested:false};
+  switchTab('chart','west');
+ };
  $('[data-fresh]',d).onclick=()=>{close(d);birthSheet(null);};
  if(p)$('[data-edit]',d).onclick=()=>{close(d);birthSheet(p);};
 }
+
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
  const late=(info?.correction.corrected?info.correction.hour:Number(p?.fields?.h??p?.fields?.timeStr?.split(':')[0]))===23;
@@ -327,13 +385,13 @@ function reportTitle(key){
 }
 function preferences(){
  const s=state.settings;
- root.innerHTML=`<section><h1>我</h1><article class="card"><h2>排盘口径</h2><form id="prefs" class="form-grid">
+ root.innerHTML=`<section><h1>我</h1>${soulCard(state.reading,state.profile?.name)}<article class="card"><h2>排盘口径</h2><form id="prefs" class="form-grid">
  <label class="wide">晚子时（23:00–24:00）<select name="late"><option value="next-day">归次日</option><option value="current-day" ${s.lateZishi==='current-day'?'selected':''}>归当日</option></select></label>
  <label>默认地点<input name="place" value="${esc(s.place)}"></label><label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(s.tz??8)}"></label>
  <label>纬度<input name="lat" type="number" step="any" value="${esc(s.lat)}"></label><label>经度<input name="lon" type="number" step="any" value="${esc(s.lon)}"></label>
  <button class="wide primary">保存设置</button></form></article>
  <article class="card"><h2>本机案例</h2>${btn('导出备份','data-export')}${btn('导入备份','data-import')}<input type="file" accept="application/json" id="importBackup" hidden></article>
- <article class="card"><h2>计算说明</h2><p>紫微使用 Renhuai / iztro。专业西洋盘使用 Astronomy Engine 与 NASA JPL 小行星轨道资料。各模块使用独立规则，术数解读仅供传统文化参考。</p><p>离线可回看已缓存的盘面；新增资料和未缓存时段需联网。</p><a href="/assets/console/credits.html">来源与许可</a></article></section>`;
+ <article class="card"><h2>计算说明</h2><p>紫微使用 Renhuai / iztro。专业西洋盘使用 Astronomy Engine 与 NASA JPL 小行星轨道资料。各模块使用独立规则，术数解读仅供传统文化参考。</p><p>八字、紫微、推运、古籍及案例在本机计算。iOS 版自带资源，网页首次载入后可离线打开。</p><a href="/assets/console/credits.html">来源与许可</a></article></section>`;
  $('#prefs').onsubmit=e=>{
   e.preventDefault();const f=new FormData(e.currentTarget);
   const vals=['lat','lon','tz'].map(k=>f.get(k)===''?undefined:Number(f.get(k)));
@@ -342,29 +400,33 @@ function preferences(){
   if(state.profile&&state.profile.fields.lateZishi!==state.settings.lateZishi)activate({...state.profile,fields:{...state.profile.fields,lateZishi:state.settings.lateZishi}},false);
   tell('设置已保存');
  };
- $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:2,cases:state.cases,space:stored('xy_case_space',{})},null,2),'FirstLight-cases.json','application/json');
+ $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:3,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace()},null,2),'FirstLight-cases.json','application/json');
  $('[data-import]',root).onclick=()=>$('#importBackup').click();
  $('#importBackup').onchange=async e=>{
   try{
    const file=e.target.files[0];if(!file||file.size>5000000)throw Error('备份文件过大或未选中');
    const data=JSON.parse(await file.text());
-   if(data.format!=='firstlight-cases'||data.version!==2||!Array.isArray(data.cases)||data.cases.length>1000)throw Error('备份格式无效');
-   const existing=new Set(state.cases.map(x=>x.id));
-   for(const c of data.cases){
-    if(typeof c.id!=='string'||typeof c.name!=='string'||!c.fields?.dateStr||!Number.isFinite(c.fields.city?.lat)||!Number.isFinite(c.fields.city?.lon))throw Error('存在无效案例');
+   const count=state.cases.length,previous=state.profile;
+   const restored=mergeBackup(data,state,caseSpace());
+   save(relationStorageKey,restored.space);
+   save('xy:case-groups',restored.groups);
+   Object.assign(state,{cases:restored.cases,profile:restored.profile,groups:restored.groups,recent:restored.recent});
+   persist();
+   for(const r of restored.newReminders){
+    const seconds=(Date.parse(r.when)-Date.now())/1000;
+    if(seconds>0&&!r.delivered)window.webkit?.messageHandlers?.caseReminder?.postMessage({id:r.id,seconds,message:r.message});
    }
-   for(const c of data.cases)if(!existing.has(c.id)){state.cases.push(c);existing.add(c.id);}
-   if(data.space&&Array.isArray(data.space.links)&&data.space.notes&&data.space.reminders){
-    const current=stored('xy_case_space',{links:[],notes:{},reminders:{}});
-    for(const link of data.space.links)if(Array.isArray(link.ids)&&link.ids.length===2&&link.ids.every(id=>existing.has(id))&&!current.links.some(x=>x.ids.join()===link.ids.join()))current.links.push(link);
-    current.notes={...Object.fromEntries(Object.entries(data.space.notes).filter(([id,note])=>existing.has(id)&&typeof note==='string')),...current.notes};
-    save('xy_case_space',current);
-   }
-   persist();tell('案例已导入');
+   if(!previous&&restored.profile)activate(restored.profile,false);
+   tell('已导入 '+(state.cases.length-count)+' 个案例及可合并的资料');
   }catch(error){tell(error.message);}finally{e.target.value='';}
  };
 }
 function download(text,name,type){
+ const native=window.webkit?.messageHandlers?.caseBackup;
+ if(native&&name==='FirstLight-cases.json'&&type==='application/json'){
+  if(new Blob([text]).size>5000000){tell('备份文件超过 5 MB');return;}
+  native.postMessage(text);return;
+ }
  const url=URL.createObjectURL(new Blob([text],{type}));
  const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
 }

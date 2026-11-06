@@ -5,6 +5,8 @@ import {bodyAt,housesAt} from '../src/ephemeris.mjs';
 import {baziPro,reverseBazi,convertBirth,relations} from '../src/bazi-pro.mjs';
 import {almanac,boneWeight,qizheng,yijing} from '../src/traditions.mjs';
 import {ziweiChart} from '../src/ziwei.mjs';
+import {localRequest} from '../src/console-engine.mjs';
+import {mergeBackup} from '../assets/console/case-space.js';
 
 const city={lat:30.361448,lon:109.492552,tz:8,label:'恩施'};
 const birth={Y:1998,M:11,D:21,h:0,mi:2,gender:'女',city,dateStr:'1998-11-21',timeStr:'00:02'};
@@ -45,12 +47,26 @@ test('all nine Western modes return their own date or time-lord data',()=>{
  assert(transit.cross.length>0);
  assert(Date.parse(secondary.outer.utc)<Date.parse(tertiary.outer.utc));
  for(const [mode,key] of [['solar','sun'],['lunar','moon']]){
-  const chart=get(mode).chart;
-  assert(delta(chart.planets.find(x=>x.key===key).lon,natal.planets.find(x=>x.key===key).lon)<.0002);
+  const {chart,returnEvent}=get(mode);
+  assert.equal(returnEvent.utc,chart.utc);
+  assert(returnEvent.errorDegrees<=.0001);
+  assert(delta(chart.planets.find(x=>x.key===key).lon,natal.planets.find(x=>x.key===key).lon)<=.0001);
   assert.equal(new Date(chart.utc).getUTCFullYear(),2026);
  }
  assert(get('firdaria').firdaria.active.lord);
- assert.equal(get('firdaria').firdaria.periods.length,9);
+ const f=get('firdaria').firdaria;
+ assert.equal(f.periods.length,9);
+ for(const p of f.periods){
+  assert.equal(p.sub.length,7);
+  assert.equal(p.sub[0].from,p.from);
+  assert.equal(p.sub.at(-1).to,p.to);
+  const elapsed=(Date.parse(p.to)-Date.parse(p.from))/7;
+  for(const [i,q] of p.sub.entries()){
+   if(i)assert.equal(q.from,p.sub[i-1].to);
+   assert(Math.abs(Date.parse(q.to)-Date.parse(q.from)-elapsed)<=1);
+  }
+ }
+ assert(f.sub&&Date.parse(f.sub.from)<=Date.parse(at)&&Date.parse(at)<Date.parse(f.sub.to));
  assert(get('profection').profection.ruler);
 });
 test('BaZi timeline, six tools, correction and reverse conversion use the same input',()=>{
@@ -91,4 +107,24 @@ test('natal transformations, eleven luminaries, hexagrams and almanac have compu
  assert.equal(a.dates.length,2);
  assert(a.dates.every(d=>d.hours.length===12&&d.yi.length>0));
  assert.throws(()=>almanac({date:'2026-02-30'}),/日期/);
+});
+
+test('case backup preserves both directions, reminders, groups and active case across repeat imports',()=>{
+ const a={id:'a',name:'甲',fields:birth},b={id:'b',name:'乙',fields:{...birth,h:1}};
+ const space={links:[{ids:['b','a'],type:'灵魂共振',closeness:75}],notes:{a:'札记'},reminders:{a:[{id:'r',when:'2030-01-01T09:00',message:'回顾'}]}};
+ const input={format:'firstlight-cases',version:3,cases:[a,b],activeId:'a',groups:['旧友'],recent:['b','a'],space};
+ const restored=mergeBackup(input,{cases:[],groups:[],recent:[],profile:null},{links:[],notes:{},reminders:{}});
+ assert.deepEqual(restored.space.links[0].ids,['a','b']);
+ assert.equal(restored.profile.id,'a');
+ assert.equal(restored.space.notes.a,'札记');
+ assert.equal(restored.newReminders.length,1);
+ assert.deepEqual(restored.groups,['旧友']);
+ const repeated=mergeBackup(input,restored,restored.space);
+ assert.equal(repeated.cases.length,2);
+ assert.equal(repeated.space.links.length,1);
+ assert.equal(repeated.newReminders.length,0);
+ const score=localRequest('/api/console/relationship',{a:birth,b:b.fields});
+ const synastry=localRequest('/api/synastry/chart',{a:birth,b:b.fields});
+ assert.equal(score.total,synastry.vedic.koota.total);
+ assert.equal(score.max,36);
 });

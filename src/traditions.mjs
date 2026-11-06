@@ -1,11 +1,11 @@
-import {readFileSync} from 'node:fs';
+import bones from './reference/chenggu.json' with {type:'json'};
+import hexagrams from './reference/zhouyi.json' with {type:'json'};
+import mansions from './reference/mansions.json' with {type:'json'};
 import {Solar,LunarYear} from 'lunar-javascript';
 import * as Astronomy from 'astronomy-engine';
 import {baziPro,branches,relations,civilSolar} from './bazi-pro.mjs';
 import {ephemerisBody,normalize,houseOf} from './western-pro.mjs';
 
-const read=name=>JSON.parse(readFileSync(new URL('./reference/'+name,import.meta.url),'utf8'));
-const bones=read('chenggu.json'),hexagrams=read('zhouyi.json');
 const trigrams=['乾','兑','离','震','巽','坎','艮','坤'];
 const traditional=['乾','兌','離','震','巽','坎','艮','坤'];
 const bits=['111','110','101','100','011','010','001','000'];
@@ -66,7 +66,6 @@ export function almanac({birth,date,days=1}){
   return {date:s.toYmd(),lunar:l.getMonthInChinese()+'月'+l.getDayInChinese(),gz,yi:l.getDayYi(),ji:l.getDayJi(),good:l.getDayJiShen(),bad:l.getDayXiongSha(),links,score:rank(links,good,bad),hours};
  }),method:'宜忌和日时值神来自农历黄历表。个人比较按日课、时课与本命的合会与冲刑破害计分，每项 +2 或 −2，时值神加减 1。'};
 }
-const mansions=read('mansions.json');
 const RAD=Math.PI/180;
 function raOfStar(ra,dec,date){
  const v=new Astronomy.Vector(Math.cos(ra*RAD)*Math.cos(dec*RAD),Math.sin(ra*RAD)*Math.cos(dec*RAD),Math.sin(dec*RAD),Astronomy.MakeTime(date));

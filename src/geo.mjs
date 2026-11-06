@@ -1,11 +1,5 @@
-import fs from 'node:fs';
-import vm from 'node:vm';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-const here=path.dirname(fileURLToPath(import.meta.url));
-const ctx={window:{}};
-vm.runInNewContext(fs.readFileSync(path.join(here,'../assets/geo.js'),'utf8'),ctx);
-const G=ctx.window.GEO_CN;
+import {legacyData} from './legacy-data.mjs';
+const G=legacyData('geo-data');
 export const provinces=()=>G.prov.map(p=>({name:p.n,code:p.code}));
 export const cities=(provCode)=>G.city.filter(c=>c.p===Number(provCode)).map(c=>({name:c.n,code:c.code,lat:c.lat,lon:c.lon}));
 export const counties=(cityCode)=>G.county.filter(c=>c.c===Number(cityCode)).map(c=>({name:c.n,code:c.code,lat:c.lat,lon:c.lon}));

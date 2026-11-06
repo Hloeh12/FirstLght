@@ -14,9 +14,7 @@ import zlib from 'node:zlib';
 import { validate } from './src/validate.mjs';
 import { provinces, cities, counties, resolvePlace, searchPlaces, nearestPlace } from './src/geo.mjs';
 import { baziFromInput } from './src/baziInput.mjs';
-import {westernPro} from './src/western-pro.mjs';
-import {baziPro,reverseBazi,convertBirth} from './src/bazi-pro.mjs';
-import {boneWeight,qizheng,yijing,almanac} from './src/traditions.mjs';
+import {consoleRoutes} from './src/console-engine.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const send=(req,res,status,obj)=>{
  const body=Buffer.from(JSON.stringify(obj));
@@ -26,23 +24,6 @@ const send=(req,res,status,obj)=>{
  headers['content-length']=body.length;res.writeHead(status,headers);res.end(body);
 };
 const chartCached=(input)=>memoTTL('chart|'+cacheKey(input),10*60*1000,()=>chart(input));
-function consoleReading({birth}){
- const bazi=baziPro({birth});
- const [Y,M,D]=bazi.info.solar.split('-').map(Number);
- const h=birth.timeUnknown?12:birth.h,mi=birth.timeUnknown?0:birth.mi;
- const standard={...birth,Y,M,D,h,mi,dateStr:bazi.info.solar,calendar:'solar',dayBoundaryAt2300:birth.lateZishi!=='current-day'};
- const utcOffset=(Date.UTC(Y,M-1,D,h,mi)-Date.parse(bazi.info.utc))/3600000;
- const ziwei=ziweiChart({...standard,city:{...birth.city,tz:utcOffset}});
- const full=chartCached({...standard,skipZiwei:true});
- return {bazi,ziwei,western:full.western,vedic:full.vedic,analysis:full.analysis,meta:full.meta,
-  report:localTemplateReport({...full,ziwei})};
-}
-const consoleRoutes={
- '/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,
- '/api/console/reverse-bazi':reverseBazi,'/api/console/convert':convertBirth,
- '/api/console/bones':({birth})=>boneWeight(birth),'/api/console/qizheng':({birth})=>qizheng(birth),
- '/api/console/yijing':yijing,'/api/console/calendar':almanac
-};
 const server=http.createServer(async(req,res)=>{
  req._t0=performance.now();
  if(req.method==='OPTIONS'){res.writeHead(204);return res.end();}
@@ -59,13 +40,13 @@ const server=http.createServer(async(req,res)=>{
    return send(req,res,200,consoleRoutes[url.pathname](data));
   }catch(error){return send(req,res,400,{error:error.message});}
  }
- if(req.method==='GET' && /^\/(src|assets|vendor)\//.test(url.pathname)){
+ if(req.method==='GET' && /^\/(src|assets|vendor|js)\//.test(url.pathname)){
   try{
    const relative=decodeURIComponent(url.pathname).slice(1);
    const target=path.resolve(root,relative);
-   const allowed=['src','assets','vendor'].some(dir=>target.startsWith(path.join(root,dir)+path.sep));
+   const allowed=['src','assets','vendor','js'].some(dir=>target.startsWith(path.join(root,dir)+path.sep));
    if(!allowed)return send(req,res,403,{error:'forbidden'});
-   const types={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.woff2':'font/woff2'};
+   const types={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.woff2':'font/woff2'};
    const body=await readFile(target);
    res.writeHead(200,{'content-type':types[path.extname(target)]||'application/octet-stream','x-content-type-options':'nosniff'});
    return res.end(body);

@@ -1,3 +1,5 @@
+import {localRequest} from '../../src/console-engine.mjs';
+
 export const $=(selector,root=document)=>root.querySelector(selector);
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const labels={ziwei:'紫微斗数',bazi:'四柱八字',west:'西洋占星',synastry:'双人合盘',qizheng:'七政四余',yijing:'易经推命',calendar:'万年历择日'};
@@ -22,36 +24,8 @@ export function selectedRails(root){
  }
 }
 export async function request(path,body,signal){
- const payload=body===undefined?null:JSON.stringify(body);
- const opts=payload?{method:'POST',headers:{'content-type':'application/json'},body:payload,signal}:{signal};
- let cache,key;
- if(payload&&globalThis.caches&&globalThis.crypto?.subtle&&!/reverse|bones|convert/.test(path)){
-  try{
-   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(path+'\n'+payload));
-   key='/offline-reading/'+Array.from(new Uint8Array(hash),v=>v.toString(16).padStart(2,'0')).join('');
-   cache=await caches.open('firstlight-console-data-v1');
-  }catch{}
- }
- let response;
- try{
-  response=await fetch(path,opts);
-  if(response.status>=500)throw Error('服务暂时不可用');
- }catch(error){
-  if(error.name==='AbortError')throw error;
-  const hit=await cache?.match(key).catch(()=>null);
-  if(hit)return hit.json();
-  throw Error(navigator.onLine===false?'此结果尚未缓存，请联网计算':error.message);
- }
- const result=await response.json();
- if(!response.ok||result.error)throw Error(result.error||'请求未完成');
- if(cache){
-  try{
-   await cache.put(key,new Response(JSON.stringify(result),{headers:{'content-type':'application/json'}}));
-   const keys=await cache.keys();
-   await Promise.all(keys.slice(0,Math.max(0,keys.length-64)).map(k=>cache.delete(k)));
-  }catch{}
- }
- return result;
+ signal?.throwIfAborted?.();
+ return localRequest(path,body);
 }
 export const isoLocal=(date=new Date())=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
 export const splitDate=date=>{const [Y,M,D]=date.split('-').map(Number);return {Y,M,D};};

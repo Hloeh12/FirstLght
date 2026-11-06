@@ -3,10 +3,14 @@
 Render Blueprint: render.yaml; Node service, npm ci, npm start, /health.
 PORT is supplied by Render. No application secret is required.
 
-After Render deploys, set GitHub repository Actions variable FIRSTLIGHT_SERVER_URL
-to the actual HTTPS root URL. Run Build FirstLight IPA manually. The workflow
-checks live HTTP endpoints and writes that URL into Info.plist before compiling.
-Until that variable is present the IPA job is skipped; no placeholder IPA is produced.
+The iOS workflow builds on a push to main or a manual dispatch. It runs the
+test suite, builds the browser engine, and bundles it with the shell in the
+unsigned IPA. The app opens its bundled resources through a local WebKit scheme.
+Render is used for the hosted browser version and the existing HTTP APIs.
+
+Case storage in the packaged app is scoped to the local app origin. For data
+from the earlier hosted-origin app or website, export a JSON backup there and
+import it in the packaged app.
 
 The free Render plan sleeps after inactivity. Its filesystem is ephemeral:
 history files are not durable across redeploys/restarts. For persistence choose

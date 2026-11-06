@@ -1,21 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM,VirtualConsole} from 'jsdom';
-import {buildSync} from 'esbuild';
-import {spawn} from 'node:child_process';
-import {mkdtempSync,readFileSync} from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
+import {buildConsole} from '../scripts/build-console.mjs';
+import {readFileSync} from 'node:fs';
 
-test('new routed console drives the shared case, chart tools and contextual sheets',async t=>{
- const server=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'18767',DATA_DIR:mkdtempSync(path.join(os.tmpdir(),'firstlight-console-'))},stdio:['ignore','pipe','pipe']});
- t.after(()=>server.kill());
- await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);server.once('exit',code=>reject(Error('server exited '+code)));});
- const base='http://127.0.0.1:18767';
- const js=buildSync({entryPoints:['assets/console/app.js'],bundle:true,write:false,format:'iife'}).outputFiles[0].text;
+test('bundled console creates fresh charts and progresses them without any network',async t=>{
+ const base='https://offline.test';
+ const js=(await buildConsole(false)).outputFiles[0].text;
+ const attempted=[];
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
  const dom=new JSDOM(readFileSync('index.html','utf8'),{url:base,runScripts:'dangerously',virtualConsole:vc,beforeParse(w){
-  w.fetch=(url,opts)=>fetch(new URL(url,base),{...opts,signal:undefined});w.scrollTo=()=>{};
+  w.fetch=url=>{attempted.push(url);throw Error('network disabled');};w.scrollTo=()=>{};
+  Object.defineProperty(w.navigator,'onLine',{value:false});
  }});
  t.after(()=>dom.window.close());
  const w=dom.window,doc=w.document;
@@ -38,8 +34,10 @@ test('new routed console drives the shared case, chart tools and contextual shee
  assert($('#activeProfile').textContent.includes('测试案例'));
  assert.equal(JSON.parse(w.localStorage.getItem('xy_active_profile')).name,'测试案例');
  assert.equal(many('.zi-triad').length,1);
+ assert.equal(many('.zi-annual .term').length,24);
  click('[data-mode=flying]');
- assert.equal(many('.flying-arc[marker-end]').length,4);
+ assert.equal(many('.flying-arc[marker-end][pathLength="1"]').length,4);
+ assert.equal(many('.flight-ripple').length,4);
  click('[data-mode=transform]');
  assert(many('.zi-cell.transform').length>0);
  click('[data-rail=大限]');
@@ -76,13 +74,28 @@ test('new routed console drives the shared case, chart tools and contextual shee
  click('[data-mode=transit]');
  await until(()=>$('.wheel')?.getAttribute('aria-label').includes('双圈'),'transit wheel');
  click('#toolsButton');click('[data-astro-config]');
+ assert(many('[data-wheel-body=outer][data-radius="151"]').length>0);
  assert.equal(many('[name=house] option').length,7);
  $('[name=house]').value='campanus';
  $('[name=house]').dispatchEvent(new w.Event('change',{bubbles:true}));
  await until(()=>$('#screen').textContent.includes('Campanus'),'house recompute');
  assert.equal(JSON.parse(w.localStorage.getItem('xy_astro_config')).house,'campanus');
- click('#toolSheet [data-close]');click('[data-tab=insights]');
+ click('#toolSheet [data-close]');
+ for(const mode of ['secondary','tertiary','solar','lunar','firdaria']){
+  click('[data-mode='+mode+']');
+  await until(()=>Boolean($('[data-mode='+mode+'][aria-pressed=true]')),mode);
+  if(mode==='lunar'&&$('#astroStatus').textContent.includes('没有月返')){
+   click('[data-unit=month][data-step="1"]');
+   await until(()=>$('#screen').textContent.includes('回归黄经'),mode+' fallback month');
+  }else if(['solar','lunar'].includes(mode))assert($('#screen').textContent.includes('回归黄经'));
+ }
+ assert.equal(many('.firdaria-period').length,9);
+ assert(many('.firdaria-period').every(node=>node.querySelectorAll('li').length===7));
+ click('#caseDrawerButton');assert.equal(many('.drawer-accordion>details').length,4);
+ click('[data-tab=me]');assert($('.soul-card blockquote'));
+ click('[data-tab=insights]');
  assert($('#screen').textContent.includes('全生命周期'));
  assert(!$('.zi-board'));
+ assert.deepEqual(attempted,[]);
  assert.deepEqual(errors,[]);
 });

@@ -1,11 +1,5 @@
-import fs from 'node:fs';
-import vm from 'node:vm';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-const here=path.dirname(fileURLToPath(import.meta.url));
-const ctx={window:{}};
-vm.runInNewContext(fs.readFileSync(path.join(here,'../assets/texts.js'),'utf8'),ctx);
-export const TEXTS=ctx.window.TEXTS;
+import {legacyData} from './legacy-data.mjs';
+export const TEXTS=legacyData('reading-texts');
 const ELEMENT=['火','土','风','水','火','土','风','水','火','土','风','水'];
 const NAK_EN=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishta','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
 function personaCombo(sunSign,moonSign){const e1=ELEMENT[sunSign],e2=ELEMENT[moonSign],YANG=['火','风'];if(e1===e2)return `太阳与月亮同属${e1}象：内外同频、表里如一，目标与感受方向统一，能量非常集中。`;const y1=YANG.includes(e1),y2=YANG.includes(e2);if(y1===y2)return `太阳属${e1}象、月亮属${e2}象，同属${y1?'阳':'阴'}性气质，外在表现与内在需求能互相配合，行事风格协调。`;return `太阳属${e1}象、月亮属${e2}象：外显与内需有反差——别人看到的是${y1?'行动果断的你':'温和亲切的你'}，而真实的你更需要${y2?'被理解的温度':'独处与空间'}。`;}

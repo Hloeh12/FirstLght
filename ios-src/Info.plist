@@ -14,7 +14,7 @@
   <string>0.15.0</string>
   <key>CFBundleVersion</key>
   <string>1</string>
-  <key>FirstLightServerURL</key><string>$(FIRSTLIGHT_SERVER_URL)</string><key>NSLocationWhenInUseUsageDescription</key><string>用于填写排盘出生地点坐标；也可手动选择地点。</string><key>LSRequiresIPhoneOS</key>
+  <key>NSLocationWhenInUseUsageDescription</key><string>用于填写排盘出生地点坐标；也可手动选择地点。</string><key>LSRequiresIPhoneOS</key>
   <true/>
   <key>UILaunchScreen</key>
   <dict/>

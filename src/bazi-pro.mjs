@@ -3,7 +3,7 @@ import {seasonalCommand} from './seasonal-command.mjs';
 import {periodGuidance} from './bazi-guidance.mjs';
 import {Solar,Lunar,LunarUtil} from 'lunar-javascript';
 import {baziFromInput} from './baziInput.mjs';
-import {flowYears,tenGod,yearPillar,monthPillar,solarTerms} from './bazi.mjs';
+import {flowYears,tenGod,yearPillar,monthPillar,dayPillar,solarTerms} from './bazi.mjs';
 import {calculateTrueSolarTime} from './renhuai-engine.mjs';
 
 export const stems='甲乙丙丁戊己庚辛壬癸',branches='子丑寅卯辰巳午未申酉戌亥';
@@ -133,7 +133,7 @@ export function baziPro({birth,selection={},combine=false}){
   selected.push(cycle);
  }
  const first=cycle?.startYear??Number(normal.Y),years=flowYears(first,10).map(p=>({...add({...p,name:'流年'}),age:p.year-normal.Y+1}));
- let months=[];
+ let months=[],days=[];
  if(selection.year!==undefined&&selection.year!==null){
   const y=Number(selection.year);
   if(!Number.isInteger(y)||y<1800||y>2330)throw Error('无效流年');
@@ -146,6 +146,18 @@ export function baziPro({birth,selection={},combine=false}){
   if(selection.month!==undefined&&selection.month!==null){
    if(!months[selection.month])throw Error('无效流月');
    selected.push(months[selection.month]);
+   const begin=terms[selection.month].date,next=terms[selection.month+1]?.date??solarTerms(y+1).find(t=>t.lon===315).date;
+   const offsetHours=Number(birth.city.tz??8),localDate=at=>new Date(+at+offsetHours*3600000).toISOString().slice(0,10);
+   const start=localDate(begin),end=localDate(next);
+   for(let date=start;date<end&&days.length<33;){
+    const [yr,mo,da]=date.split('-').map(Number),p=dayPillar({y:yr,m:mo,d:da,h:12});
+    days.push({...add({...p,name:'流日'}),index:days.length,date});
+    date=new Date(Date.parse(date+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+   }
+   if(selection.day!==undefined&&selection.day!==null){
+    if(!Number.isInteger(selection.day)||!days[selection.day])throw Error('无效流日');
+    selected.push(days[selection.day]);
+   }
   }
  }
  const matrix=[...pillars,...selected],links=relations(matrix);
@@ -159,7 +171,7 @@ export function baziPro({birth,selection={},combine=false}){
  const entry={directionLabel:b.luck.directionLabel,duration:b.luck.duration,intervalSeconds:b.luck.intervalSeconds,utc:cycles[0].startUtc,local:startLocal,offsetMinutes:entryOffset,
   term:prior.name,termUtc:prior.date.toISOString(),daysAfter:elapsedDays,year:entryYear.stem+entryYear.branch,
   method:'起运年龄按三天一年、一日四月、一时辰十天折算；交运UT按365.24219878日回归年累计。年龄年月日为传统360日年表示。'};
- const result={entry,pillars,cycles,years,months,selected,relationships:links,strength:strength(matrix,links,combine),
+ const result={entry,pillars,cycles,years,months,days,selected,relationships:links,strength:strength(matrix,links,combine),
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
   commander,info:{solarYear:b.meta.yearPillarYear,solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
    clock:birth.timeUnknown?'时辰未知':birth.timeStr??[h,mi].map(n=>String(n).padStart(2,'0')).join(':'),

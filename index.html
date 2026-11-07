@@ -19,9 +19,15 @@
   <main id="mainScrollView" aria-label="主内容">
   <div id="notice" role="status" aria-live="polite" hidden></div>
   <div id="screen" tabindex="-1"></div>
-  <div class="scroll-clearance" style="height:130px;width:100%;flex-shrink:0;pointer-events:none" aria-hidden="true"></div>
+  <div class="bottom-spacer" style="height:140px;width:100%;min-height:140px;flex-shrink:0;pointer-events:none" aria-hidden="true"></div>
   </main>
-  <nav id="bottomNav" class="tabbar liquid-glass" aria-label="主导航"></nav>
+  <nav id="bottomNav" class="liquid-bottom-nav" aria-label="主导航">
+   <div id="tabLiquidPill" class="tab-liquid-pill" aria-hidden="true"></div>
+   <button type="button" class="nav-tab-item" data-tab="cases"><span class="tab-icon" aria-hidden="true">🎀</span><span class="tab-label">案例</span></button>
+   <button type="button" class="nav-tab-item active" data-tab="chart"><span class="tab-icon" aria-hidden="true">🪄</span><span class="tab-label">排盘</span></button>
+   <button type="button" class="nav-tab-item" data-tab="insights"><span class="tab-icon" aria-hidden="true">🔮</span><span class="tab-label">洞见</span></button>
+   <button type="button" class="nav-tab-item" data-tab="me"><span class="tab-icon" aria-hidden="true">🧸</span><span class="tab-label">我</span></button>
+  </nav>
  </div>
  <dialog id="inputSheet" class="sheet liquid-glass" aria-labelledby="birthTitle"></dialog>
  <dialog id="caseDrawer" class="drawer liquid-glass" aria-labelledby="drawerTitle"></dialog>

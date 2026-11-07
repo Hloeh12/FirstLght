@@ -2,9 +2,10 @@ import {ProfileMachine} from './profile-machine.js';
 import {DIRECTIONS} from '../../src/housing.mjs';
 import {localNowParams} from './now.js';
 import {migrateStorage} from './schema.js';
-import {vedicView} from './vedic.js';
+import {vedicView,vedicTools} from './vedic.js';
 import {versionCard,releaseHistory} from './releases.js';
 import {ZIWEI_SCHOOLS} from '../../src/ziwei-rules.mjs';
+import {practicalZiwei} from '../../src/ziwei-practical.mjs';
 import {updateLiquidPill} from './bottom-nav.js';
 import {lockViewport,fitKeyboard} from './viewport.js';
 import {diagnosticsPanel,installDiagnostics,resetCaches} from './diagnostics.js';
@@ -34,14 +35,6 @@ const profileMachine=new ProfileMachine(birth=>request('/api/console/reading',{b
 const root=$('#screen');
 let generation=0,flight,noticeTimer,locationToken=0,locationReply;
 window.firstlightLocation=(token,lat,lon)=>{if(token===locationToken)locationReply?.(lat,lon);};
-const icons=[
- '<path d="M6 4h13v17H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" fill="#ffe1ef"/><path d="M7 4v17m3-12h6m-6 4h4m4-10 3 3" fill="none" stroke="#935779" stroke-width="1.5"/>',
- '<path d="m4 20 12-12" stroke="#be70b0" stroke-width="4" stroke-linecap="round"/><path d="m17 2 2 4 4 2-4 2-2 4-2-4-4-2 4-2Z" fill="#ffc4de" stroke="#a26eaa"/>',
- '<circle cx="12" cy="10" r="8" fill="#f8ddf2" stroke="#b874ae"/><path d="m12 4 1 4 4 1-4 1-1 4-1-4-4-1 4-1Z" fill="#fff"/><path d="M8 17h8l3 4H5Z" fill="#edb9d6"/>',
- '<circle cx="5" cy="7" r="3.5" fill="#f2bbd2"/><circle cx="19" cy="7" r="3.5" fill="#f2bbd2"/><path d="M3 14a9 8 0 0 1 18 0c0 8-18 8-18 0Z" fill="#ffe1ee" stroke="#ae7392"/><path d="M8 13h.1m7.9 0h.1m-5 3 1 1 1-1" stroke="#6a4560" stroke-width="1.6" stroke-linecap="round"/>'
-];
-const tabs={cases:'案例',chart:'排盘',insights:'洞见',me:'我'};
-$('#bottomNav').innerHTML='<div id="tabLiquidPill" class="tab-liquid-pill" aria-hidden="true"></div>'+Object.entries(tabs).map(([id,label],i)=>`<button type="button" data-tab="${id}"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="tabPink${i}" x2="1" y2="1"><stop stop-color="#fff0f7"/><stop offset=".55" stop-color="#ff77aa"/><stop offset="1" stop-color="#ff4f8b"/></linearGradient></defs><g style="--tab-pink:url(#tabPink${i})">${icons[i]}</g></svg>${label}</button>`).join('');
 function tell(message){
  const node=$('#notice');node.textContent=message;node.hidden=false;
  clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>{node.hidden=true;},3600);
@@ -77,6 +70,12 @@ function switchTab(tab,system=state.system){
  state.tab=tab;state.system=system;
  render();
  $('#mainScrollView').scrollTo?.(0,0);
+}
+function switchNavTab(tabName,index){
+ if(!['cases','chart','insights','me'].includes(tabName))return;
+ const tabs=[...document.querySelectorAll('#bottomNav .nav-tab-item')];
+ for(const [i,tab] of tabs.entries())tab.classList.toggle('active',i===index);
+ switchTab(tabName);
 }
 function persist(){
  save(CASES,state.cases);
@@ -508,14 +507,36 @@ function selectedPeriodCard(){
  if(z){
   const chart=state.chartState.ziwei.chart;
   const palace=chart?.palaces.find(p=>z.palaceNames[p.branch]==='命宫');
-  parts.push(`<h3>紫微 · ${esc(z.label+' '+z.ganZhi)}</h3><p>流命落 ${esc(palace?.name||'待定位')}；${esc(z.mutagens.map(m=>m.star+'化'+m.type+'入'+(chart?.palaces.find(p=>p.branch===m.branch)?.name||'待定位')).join('、'))}。结合流官与流财的位置核对本期职责和资源变化。</p>`);
+  const named=name=>chart?.palaces.find(p=>z.palaceNames[p.branch]===name)?.name||'待定位';
+  const risks=practicalZiwei(chart,z).filter(p=>['禄逢冲破','羊陀夹忌','忌冲本命忌'].includes(p.name));
+  const changes=z.mutagens.map(m=>m.star+'化'+m.type+'入'+(chart?.palaces.find(p=>p.branch===m.branch)?.name||'待定位'));
+  parts.push(`<h3>紫微 · ${esc(z.label+' '+z.ganZhi+' · '+z.date)}</h3><p>流命落 ${esc(palace?.name||'待定位')}，流官对应 ${esc(named('官禄'))}，流财对应 ${esc(named('财帛'))}。${esc(changes.join('、'))}。</p><p><b>职责与资源</b> 先核对流官宫的责任安排，以及流财宫的预算和兑现条件；化禄所在宫可观察资源，化忌所在宫宜预留反复余量。</p><p><b>当期格局</b> ${esc(risks.length?risks.map(p=>p.name+'落'+p.palace+'：'+p.text).join('；'):'未检出流忌冲禄或羊陀夹忌条件，不凭空添加凶断。')}</p>`);
  }
  return `<article class="card liquid-glass period-guidance" aria-live="polite"><h2>当前时空点 · 专属推演</h2>${parts.join('')}<small>根据所选时间滑轨的本地盘面重算结果生成；传统术数仅作观察参考。</small></article>`;
+}
+function onSelectTimeNode(system){
+ state.activeTimeSystem=system;
+ const box=$('#insightContent');
+ if(box)box.innerHTML=selectedPeriodCard();
+}
+function selectedTimeISO(){
+ if(state.activeTimeSystem==='ziwei'){
+  const value=state.chartState.ziwei?.flow?.date;
+  if(value&&/^\d{4}-\d{2}-\d{2}$/.test(value))return value+'T12:00:00Z';
+ }
+ if(state.activeTimeSystem==='bazi'){
+  const s=state.chartState.bazi;
+  if(s?.pick?.day!=null){const value=s.data.days?.[s.pick.day]?.date;if(value)return value+'T12:00:00Z';}
+  if(s?.pick?.month!=null){const value=s.data.months?.[s.pick.month]?.date;if(value&&!Number.isNaN(Date.parse(value)))return value;}
+  if(s?.pick?.year!=null)return s.pick.year+'-07-01T12:00:00Z';
+  if(s?.pick?.luck!=null){const year=s.data.cycles?.[s.pick.luck]?.startYear;if(year)return year+'-07-01T12:00:00Z';}
+ }
+ return new Date().toISOString();
 }
 function insights(){
  const r=state.reading;
  if(!r){root.innerHTML='<p class="empty">激活案例后查看八字、紫微与西洋占星的综合报告。</p>';return;}
- const resonanceAt=new Date().toISOString(),resonanceConfig=stored('xy_astro_config',{});
+ const resonanceAt=selectedTimeISO(),resonanceConfig=stored('xy_astro_config',{});
  const resonanceKey=state.profile.id+'|'+resonanceAt.slice(0,13)+'|'+JSON.stringify(resonanceConfig);
  if(state.resonanceProfile!==resonanceKey){
   state.resonanceProfile=resonanceKey;state.resonance=null;
@@ -527,13 +548,14 @@ function insights(){
  }
  const {bazi,ziwei,western}=r;
  const active=ziwei.decades.map(d=>[d.ageRange.join('–')+' 岁',d.yearRange.join('–'),d.palaceName]);
- root.innerHTML=`<section><h1>洞见</h1><p class="muted">${esc(state.profile.name)} · 四体系合参</p>
- ${selectedPeriodCard()}
+ const periodActive=Boolean(state.activeTimeSystem==='bazi'&&state.chartState.bazi?.data?.guidance||state.activeTimeSystem==='ziwei'&&state.chartState.ziwei?.flow);
+ root.innerHTML=`<section data-period-active="${periodActive}"><h1>洞见${periodActive?' · 当期推演':''}</h1><p class="muted">${esc(state.profile.name)} · 四体系合参</p>
+ <div id="insightContent" aria-live="polite">${selectedPeriodCard()}</div>
  ${resonanceCard()}<article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
  <article class="card liquid-glass"><h2>职责、资源与人际</h2><p>官禄与财帛可分别观察职责和资源，西方天顶 ${esc(western.mc.sign)} 可对照事业表达，印度上升 ${esc(r.vedic.lagna)} 采用恒星黄道。</p><p>${esc(bazi.relationships.map(l=>l.pattern+l.type).join('、')||'本命未触发当前规则表中的干支关系')}</p></article>
  <article class="card liquid-glass"><h2>印度占星 · 星宿与大运</h2><p>Lahiri上升 ${esc(r.vedic.lagna)}；月亮 ${esc(r.vedic.planets.find(p=>p.key==='moon').nakshatra)}，宿度 ${r.vedic.planets.find(p=>p.key==='moon').nakDegree.toFixed(4)}°。</p><p>当前 Vimshottari 大运：${esc(r.vedic.active?.lord||'未落在当前所列区间')}。可对照该星本命宫位与前三体系的阶段线索。</p></article>
  <article class="card liquid-glass"><h2>全生命周期 · 紫微大限</h2>${table(['虚岁','年份','大限宫'],active)}</article>
- ${Object.entries(r.report?.sections||{}).map(([name,lines])=>`<article class="card"><h2>${esc(reportTitle(name))}</h2>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}</article>`).join('')}</section>`;
+ <details class="card liquid-glass" data-natal-background><summary>展开本命背景报告（与当前流限分开阅读）</summary>${Object.entries(r.report?.sections||{}).map(([name,lines])=>`<section><h2>${esc(reportTitle(name))}</h2>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}</section>`).join('')}</details></section>`;
 }
 function reportTitle(key){
  return {'w-persona':'性格与天赋','w-career':'事业方向','w-wealth':'资源与财富','w-love':'情感关系','w-health':'生活节奏','z-palaces':'紫微十二宫','z-mutagen':'生年四化','w-risks':'长期课题','v-dasha':'印度大运'}[key]||'综合观察';
@@ -581,7 +603,7 @@ function download(text,name,type){
  const url=URL.createObjectURL(new Blob([text],{type}));
  const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
-const chartTools={ziwei:ziweiTools,bazi:baziTools,west:westernTools};
+const chartTools={ziwei:ziweiTools,bazi:baziTools,west:westernTools,vedic:vedicTools};
 function toolPanel(){
  const tool=chartTools[state.system];
  if(state.tab!=='chart'||(!state.reading&&!state.chartState.west?.birthOverride))return;
@@ -593,7 +615,7 @@ function toolPanel(){
 const definitions={
  日主:'出生日的天干，是十神关系和扶助比例的参照。',正官:'克日主且阴阳相异，常用来观察规则、责任和约束。',七杀:'克日主且阴阳相同，常用来观察压力、竞争和行动。',正印:'生日主且阴阳相异，常用来观察正规支持和学习。',偏印:'生日主且阴阳相同，常用来观察非标准的学习和支持。',比肩:'与日主同五行同阴阳，常用来观察同辈和自主性。',劫财:'与日主同五行异阴阳，常用来观察共享与竞争。',食神:'日主所生且阴阳相同，常用来观察输出与创造。',伤官:'日主所生且阴阳相异，常用来观察表达与打破常规。',正财:'日主所克且阴阳相异，常用来观察稳定资源。',偏财:'日主所克且阴阳相同，常用来观察流动资源与机会。',空亡:'以干支十位一旬计，两支未配天干，即为该旬空亡。',天乙贵人:'按年干或日干查出的地支标记，传统用来描述支持与援助。',驿马:'按三合局取对冲的生地，常用来观察移动、变换和外部往来。',咸池桃花:'按年支或日支查表，传统用来观察社交与吸引力。',华盖:'按三合局墓支取，常用来观察独处、专注和技艺。',羊刃:'阳日干的特定旺支，传统用来观察力量集中和张力。',劫煞:'按年支或日支所属三合局查表，传统用来观察竞争或突变。',天医:'以月支前一支取，属于传统辅助标记。',文昌:'按年干或日干查表，传统用来观察学习、书写和表达。',太极贵人:'按年干或日干查表，传统用来观察学习和钻研。'
 };
-const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,switchTab,download,
+const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,switchTab,onSelectTimeNode,download,
  get birth(){return state.profile?normalized(state.profile):null;},
  explain(word,text){sheet('termSheet',word,`<p>${esc(text||definitions[word]||'这是传统术数的辅助标记，需要结合所在宫位、干支及同盘条件理解。')}</p>`);}
 };
@@ -601,7 +623,7 @@ function render(){
  profileTitle();
  $('#toolsButton').hidden=!(state.tab==='chart'&&(state.reading||state.system==='west'&&state.chartState.west?.birthOverride));
  updateLiquidPill(state.tab);
- for(const b of $('#bottomNav').querySelectorAll('[data-tab]')){if(b.dataset.tab===state.tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
+ for(const b of $('#bottomNav').querySelectorAll('[data-tab]')){const active=b.dataset.tab===state.tab;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
  if(state.tab==='cases'){renderCases();return;}
  if(state.tab==='insights'){insights();return;}
  if(state.tab==='me'){preferences();return;}
@@ -626,7 +648,7 @@ $('#btnEditProfile').onclick=e=>{e.stopPropagation();state.instantSnapshot?birth
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
 $('#instantChartButton').onclick=instantChart;
-$('#bottomNav').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab);};
+$('#bottomNav').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)switchNavTab(b.dataset.tab,[...b.parentNode.querySelectorAll('[data-tab]')].indexOf(b));};
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length)close(dialogs.at(-1));}
 });

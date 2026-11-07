@@ -53,6 +53,17 @@ try{
   await page.locator('#inputSheet').getByLabel('出生时刻',{exact:true}).fill('00:02');
   await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('30.361448');
   await page.locator('#inputSheet').getByLabel('经度',{exact:true}).fill('109.492552');
+  if(width<=390){
+   const layout=await page.locator('#birthForm').evaluate(form=>{
+    const sheet=form.closest('dialog').getBoundingClientRect();
+    const fields=[...form.querySelectorAll(':scope > label')].map(n=>n.getBoundingClientRect());
+    return {sheet:{left:sheet.left,right:sheet.right},fields:fields.map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom}))};
+   });
+   for(const [i,r] of layout.fields.entries()){
+    assert(r.left>=layout.sheet.left-1&&r.right<=layout.sheet.right+1,'birth field outside sheet '+i);
+    if(i)assert(r.top>=layout.fields[i-1].bottom-1,'birth fields overlap '+(i-1)+'/'+i);
+   }
+  }
   await context.setOffline(true);
   await page.getByRole('button',{name:'生成命盘',exact:true}).click();
   await page.locator('.zi-board').waitFor();
@@ -97,6 +108,16 @@ try{
   await useSystem('bazi','东方盘');
   await page.locator('[data-rail="流年"]').first().click();
   await page.locator('.period-guidance').waitFor();
+  const firstPeriod=await page.locator('.period-guidance').textContent();
+  await page.locator('[data-tab=insights]').click();
+  assert((await page.locator('.period-guidance').textContent()).includes('八字'));
+  assert(await page.locator('[data-natal-background]').count()===1);
+  await page.locator('[data-tab=chart]').click();
+  await page.locator('[data-rail="流年"]').nth(1).click();
+  await page.waitForFunction(previous=>document.querySelector('.period-guidance')?.textContent!==previous,firstPeriod);
+  await page.locator('[data-tab=insights]').click();
+  assert((await page.locator('.period-guidance').textContent()).includes('八字'));
+  await page.locator('[data-tab=chart]').click();
   assert.equal(await page.locator('.bazi-ghost').count(),0);
   await page.locator('[data-bazi-data]').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));
   await page.screenshot({path:'build/mobile-'+engine+'-bazi-'+width+'.png'});
@@ -107,6 +128,10 @@ try{
   await shareSnapshot('bazi');
   await useSystem('vedic','印度盘');
   await page.locator('.vedic-chart').waitFor();assert.equal(await page.locator('[data-vedic-house]').count(),12);
+  await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
+  assert.equal(await page.locator('[data-vedic-action]').count(),5);
+  await page.locator('[data-vedic-action=states]').click();
+  assert(await page.locator('[data-vedic-states] .term').count()>0);
   await page.locator('[data-layout=south]').click();assert.equal(await page.locator('[data-vedic-house]').count(),12);await page.locator('[data-varga="60"]').click();assert((await page.locator('#vedic h2').first().textContent()).includes('D60'));assert.equal(await page.locator('.vedic-dasha').count(),4);await page.locator('[data-dasha]').last().click();
   assert((await page.locator('[data-dasha-detail]').textContent()).includes('大运'));
   await page.screenshot({path:'build/mobile-'+engine+'-vedic-'+width+'.png'});

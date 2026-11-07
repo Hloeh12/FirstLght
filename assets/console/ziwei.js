@@ -234,7 +234,7 @@ export function ziweiView(ctx,arrival=false){
  for(const b of panel.querySelectorAll('[data-rail]'))b.onclick=()=>{
   const v=b.dataset.pick;
   ctx.state.activeTimeSystem='ziwei';
-  if(v==='natal'){s.token++;s.flow=null;s.badge=null;s.error='';ziweiView(ctx);return;}
+  if(v==='natal'){s.token++;s.flow=null;s.badge=null;s.error='';ziweiView(ctx);ctx.onSelectTimeNode('ziwei');return;}
   const n=Number(v),key=b.dataset.rail;
   const p=key==='大限'?{scope:'decadal',year:n}:key==='流年'?{scope:'yearly',year:n}:
    key==='流月'?{scope:'monthly',year:flow.year,month:n}:{scope:'daily',year:flow.year,month:flow.month,day:n};
@@ -259,7 +259,7 @@ async function setPeriod(ctx,p,type){
   if(ctx.state.chartState.ziwei!==s||n!==s.token)return;
   s.chart=target;s.flow=flow;s.badge=null;s.error='';
  }catch(error){if(n===s.token)s.error=error.message;}
- if(ctx.state.chartState.ziwei===s&&n===s.token&&ctx.state.tab==='chart'&&ctx.state.system==='ziwei')ziweiView(ctx);
+ if(ctx.state.chartState.ziwei===s&&n===s.token&&ctx.state.tab==='chart'&&ctx.state.system==='ziwei'){ziweiView(ctx);if(!s.error)ctx.onSelectTimeNode('ziwei');}
 }
 export function ziweiTools(ctx,host){
  const s=current(ctx);

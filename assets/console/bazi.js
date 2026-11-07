@@ -41,7 +41,8 @@ function entryCard(d){
 function timeline(d,pick){
  const year=d.years.map(y=>[y.year,y.year+' '+y.stem+y.branch]);
  return row('大运',[['natal','本命'],...d.cycles.map(p=>[p.index,p.age+'岁 '+p.stem+p.branch+' '+p.changsheng])],pick.luck??'natal')+
-  row('流年',year,pick.year)+row('流月',d.months.map(m=>[m.index,m.label+' '+m.stem+m.branch]),pick.month);
+  row('流年',year,pick.year)+row('流月',d.months.map(m=>[m.index,m.label+' '+m.stem+m.branch]),pick.month)+
+  row('流日',d.days.map(x=>[x.index,x.date.slice(5)+' '+x.stem+x.branch]),pick.day);
 }
 function drawRelations(ctx,s,animate){
  const board=$('.bazi-board',ctx.root),overlay=$('.bazi-overlay',board),box=overlay.getBoundingClientRect();
@@ -90,7 +91,7 @@ export function baziView(ctx){
   if(!b)return;
   const {rail:id,pick:v}=b.dataset,n=Number(v),{pick}=s;
   ctx.state.activeTimeSystem='bazi';
-  update(ctx,id==='大运'?(v==='natal'?{}:{luck:n}):id==='流年'?{...pick,year:n,month:undefined}:{...pick,month:n},s.combine);
+  update(ctx,id==='大运'?(v==='natal'?{}:{luck:n}):id==='流年'?{...pick,year:n,month:undefined,day:undefined}:id==='流月'?{...pick,month:n,day:undefined}:{...pick,day:n},s.combine);
  };
  for(const cell of ctx.root.querySelectorAll('[data-pillar]'))cell.onclick=e=>{
   if(e.target.closest('.term'))return;
@@ -134,7 +135,7 @@ async function update(ctx,pick,combine){
  }catch(error){if(token===s.token)s.error=error.message;}
  if(s.token===token&&ctx.state.chartState.bazi===s&&ctx.state.tab==='chart'&&ctx.state.system==='bazi'){
   $('#baziStatus',ctx.root).textContent=s.error;
-  if(!s.error)refresh(ctx,s);
+  if(!s.error){refresh(ctx,s);ctx.onSelectTimeNode('bazi');}
  }
 }
 const panels=['基础信息','五行关系','干支刑冲合会','天罡称骨','流年全排','快捷八字'];

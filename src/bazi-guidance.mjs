@@ -3,7 +3,7 @@ const riskTypes=new Set(['六冲','相刑','相害','相破']);
 export function periodGuidance(data){
  const {pillars,selected,relationships,strength}=data;
  if(!selected.length)return null;
- const current=[...selected].reverse().find(p=>p.name==='流月')??selected.at(-1);
+ const current=[...selected].reverse().find(p=>['流日','流月','流年'].includes(p.name))??selected.at(-1);
  const index=pillars.length+selected.indexOf(current);
  const links=relationships.filter(r=>r.ids.includes(index)&&r.ids.some(i=>i<pillars.length));
  const risk=links.filter(r=>riskTypes.has(r.type)),harmonious=links.filter(r=>['天干五合','六合','三合局','三会方'].includes(r.type));

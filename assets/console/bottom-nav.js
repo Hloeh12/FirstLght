@@ -6,8 +6,8 @@ export function updateLiquidPill(tab){
  const place=()=>{
   const rect=nav.getBoundingClientRect(),target=tabs[index].getBoundingClientRect();
   if(target.width){
-   pill.style.width=Math.max(0,target.width-8)+'px';pill.style.left='0px';
-   pill.style.transform=`translateX(${target.left-rect.left-nav.clientLeft+4}px)`;
+   pill.style.width=Math.max(0,target.width-8)+'px';
+   pill.style.transform=`translateX(${target.left-rect.left-nav.clientLeft}px)`;
   }else pill.style.transform=`translateX(${index*100}%)`;
   pill.dataset.tabIndex=String(index);
  };

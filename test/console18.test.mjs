@@ -48,13 +48,20 @@ test('offline global cases, compact aspects, Vedic, composite and instant sky fo
  search('月');assert.equal($('[data-case]').dataset.case,'mine');search('跨组');click('[data-clear-search]');assert.equal($('[data-case]').dataset.case,'mine');assert.equal($('[data-group=我的]').getAttribute('aria-pressed'),'true');
  search('跨组');click('[data-action=delete]');assert($('#toolSheet').open);assert.equal(JSON.parse(w.localStorage.getItem('xy:cases:v2')).length,2);click('[data-cancel-delete]');assert.equal(all('[data-case]').length,1);
  click('[data-clear-search]');click('[data-tab=chart]');click('#caseDrawerButton');assert($('#caseDrawer').open);click('[data-destination=vedic]');assert.equal(all('[data-vedic-house]').length,12);assert($('#screen').textContent.includes('27 星宿'));click('[data-dasha]');assert($('[data-dasha-detail]').textContent.includes('大运'));
- click('[data-vedic-house="1"]');assert($('#termSheet').open);click('#termSheet [data-close]');
+ click('[data-layout=south]');assert.equal(all('[data-vedic-house]').length,12);click('[data-varga="9"]');assert($('#vedic').textContent.includes('D9'));assert.equal(all('.vedic-dasha').length,4);click('[data-vedic-house="1"]');assert($('#termSheet').open);click('#termSheet [data-close]');
  click('#caseDrawerButton');click('[data-destination=west]');await until(()=>$('#westernChart'),'western');assert(all('.aspect-detail').length<=12);
  click('[data-aspect-filter=all]');assert(all('.aspect-detail').length>12);click('[data-aspect-toggle]');assert(all('.aspect-detail').length<=12);
  click('[data-aspect-filter=applying]');assert(all('.aspect-detail').every(x=>x.dataset.applying==='true'));
  click('#caseDrawerButton');click('[data-destination=synastry]');click('[data-select-other]');click('[data-other=family]');await until(()=>$('.pair-mode-rail')&&$('#screen').textContent.includes('契合度'),'pair');
  click('[data-pair-mode=composite]');await until(()=>$('.pair-reading'),'composite');assert($('#westernChart'));assert($('#westernChart').textContent.includes('上升 ASC'));assert($('#westernChart').textContent.includes('天顶 MC'));assert(all('.aspect-detail').length<=12);
- const before=w.localStorage.getItem('xy_active_profile'),start=Date.now();click('#instantChartButton');await until(()=>$('#westernChart')&&$('[data-mode=sky][aria-pressed=true]'),'instant');assert.equal(w.localStorage.getItem('xy_active_profile'),before);assert(Date.parse($('[data-instant-caption]').textContent.match(/\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}/)[0].replace(' ','T')+'Z')>=start);
+ const before=w.localStorage.getItem('xy_active_profile');
+ for(const [system,selector] of [['bazi','.bazi-board'],['ziwei','.zi-board'],['vedic','#vedic'],['west','#westernChart']]){
+  click('#caseDrawerButton');click('[data-destination='+system+']');await until(()=>$(selector),'before instant '+system);
+  click('#instantChartButton');await until(()=>$(selector)&&$('#activeProfile').textContent.includes('即刻天象'),'instant '+system);
+  assert.equal(w.localStorage.getItem('xy_active_profile'),before);assert(!$('#caseDrawer').open);
+  if(system==='west')assert($('[data-mode=sky][aria-pressed=true]'));
+  click('#btnEditProfile');assert($('#inputSheet').open);assert.equal($('#inputSheet input[name=date]').value,new Date().toLocaleDateString('sv-SE'));click('#inputSheet [data-close]');
+ }
  click('[data-tab=me]');assert(!$('[data-maintenance]').open);click('[data-maintenance]>summary');assert($('[data-app-version]'));assert($('[data-maintenance] [data-diagnostics]'));assert($('[data-maintenance] [data-maintenance-cache]'));
  assert.deepEqual(attempted,[]);assert.deepEqual(errors,[]);
 });
@@ -65,8 +72,8 @@ test('instant sky works without a profile and never inserts an imaginary birth c
  const dom=new JSDOM(readFileSync('index.html','utf8'),{url:'https://offline.test',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){w.fetch=()=>{throw Error('offline');};}});t.after(()=>dom.window.close());
  const w=dom.window,doc=w.document,script=doc.createElement('script');script.textContent=js;doc.body.append(script);
  doc.querySelector('#inputSheet [data-close]').click();doc.querySelector('#instantChartButton').click();
- for(let i=0;i<100&&!doc.querySelector('#westernChart');i++)await new Promise(resolve=>setTimeout(resolve,30));
- assert(doc.querySelector('#westernChart'));assert(doc.querySelector('[data-instant-caption]').textContent.includes('默认上海'));
- assert.equal(doc.querySelectorAll('[data-mode]').length,1);assert.equal(w.localStorage.getItem('xy_active_profile'),null);assert.equal(w.localStorage.getItem('xy:cases:v2'),null);
+ for(let i=0;i<100&&!doc.querySelector('.zi-board');i++)await new Promise(resolve=>setTimeout(resolve,30));
+ assert(doc.querySelector('.zi-board'));assert(doc.querySelector('#activeProfile').textContent.includes('即刻天象')); 
+ assert.equal(doc.querySelectorAll('[data-west-tool]').length,0);assert.equal(w.localStorage.getItem('xy_active_profile'),null);assert.equal(w.localStorage.getItem('xy:cases:v2'),'[]');
  doc.querySelector('#toolsButton').click();assert.equal(doc.querySelectorAll('[data-west-tool]').length,0);assert(doc.querySelector('[data-share-current]'));assert.deepEqual(errors,[]);
 });

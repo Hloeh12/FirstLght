@@ -35,7 +35,7 @@ function details(d){
 }
 function entryCard(d){
  const e=d.entry,a=e.duration;
- return `<article class="card liquid-glass luck-entry"><h2>精确起运与交运</h2><p>起运：出生后 ${a.years}年${a.months}个月${a.days}天${a.hours}小时 · ${d.info.forward?'顺行':'逆行'}</p>
+ return `<article class="card liquid-glass luck-entry"><h2>精确起运与交运</h2><p>起运：出生后 ${a.years}年${a.months}个月${a.days}天${a.hours}小时 · ${esc(e.directionLabel)}</p>
  <p>首次交运：${esc(e.local)}（出生地历史UTC偏移 ${e.offsetMinutes/60}）</p><p>${esc(e.year)}年 ${esc(e.term)}后第 ${e.daysAfter} 天交运 · 每十回归年换运</p><small>${esc(e.method)}</small></article>`;
 }
 function timeline(d,pick){

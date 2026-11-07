@@ -56,3 +56,5 @@ export function fitKeyboard(){
  document.addEventListener('focusin',update);document.addEventListener('focusout',update);
  update();
 }
+
+document.addEventListener('pointerup',event=>{if(event.target.closest('#mainScrollView,.sheet-body')&&!event.target.closest('input,select,textarea,button,a,summary,[role=button],[data-palace]')){const active=document.activeElement;if(active?.matches('input,textarea,select'))active.blur();}});

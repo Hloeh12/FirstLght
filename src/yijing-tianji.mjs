@@ -1,3 +1,4 @@
+import {housingReading} from './housing.mjs';
 import hexagrams from './reference/zhouyi.json' with {type:'json'};
 import {baziPro,branches} from './bazi-pro.mjs';
 import {bodyAt} from './ephemeris.mjs';
@@ -107,6 +108,6 @@ export function yijing({birth,year=new Date().getUTCFullYear()}){
  const natal={...hexFromLines(numbers.lines,origin),origin};
  const changed=posterior(natal,origin,yangSeason);
  const flow=tianjiAnnual(natal,changed,bornYear,year);
- return {numbers,natal,changed,...flow,year,yangSeason,library:corpus.map(x=>hexFromLines(x.lines)),
+ return {housing:housingReading(birth.housing),numbers,natal,changed,...flow,year,yangSeason,library:corpus.map(x=>hexFromLines(x.lines)),
   method:'天纪《天机道》20100907教材：天干洛书、地支河图，奇合天数、偶合地数；按25/30消纳、五数寄宫、阴阳男女定上下卦。生时定元堂，变元堂再换上下卦，三至尊按专项图表。流年按元堂阳九阴六运限，依太岁阴阳与本应爻游变；并非年支简单取余六。'};
 }

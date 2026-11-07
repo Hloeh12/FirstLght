@@ -1,3 +1,4 @@
+import {moonVoc} from './moon-voc.mjs';
 import hexagrams from './reference/zhouyi.json' with {type:'json'};
 import {Solar,LunarUtil} from 'lunar-javascript';
 import {baziPro,stems,stemElements} from './bazi-pro.mjs';
@@ -18,7 +19,7 @@ export function todaySky({at}={}){
  const angle=norm(moon.longitude-sun.longitude),phase=Math.round(angle/45)%8;
  const wall=new Date(+date+8*3600000);
  return {at:date.toISOString(),day:wall.toISOString().slice(0,10),hour:wall.getUTCHours(),sun,moon,
-  phase:phases[phase],angle,litPercent:Math.round(50*(1-Math.cos(angle*Math.PI/180))),
+  phase:phases[phase],voc:moonVoc(date),angle,litPercent:Math.round(50*(1-Math.cos(angle*Math.PI/180))),
   hint:`月亮在${moon.sign}座 · ${moods[phase]}`};
 }
 

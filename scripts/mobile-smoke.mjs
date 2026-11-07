@@ -107,7 +107,7 @@ try{
   await shareSnapshot('bazi');
   await useSystem('vedic','印度盘');
   await page.locator('.vedic-chart').waitFor();assert.equal(await page.locator('[data-vedic-house]').count(),12);
-  await page.locator('[data-dasha]').last().click();
+  await page.locator('[data-layout=south]').click();assert.equal(await page.locator('[data-vedic-house]').count(),12);await page.locator('[data-varga="60"]').click();assert((await page.locator('#vedic h2').first().textContent()).includes('D60'));assert.equal(await page.locator('.vedic-dasha').count(),4);await page.locator('[data-dasha]').last().click();
   assert((await page.locator('[data-dasha-detail]').textContent()).includes('大运'));
   await page.screenshot({path:'build/mobile-'+engine+'-vedic-'+width+'.png'});
   await shareSnapshot('vedic');
@@ -223,10 +223,10 @@ try{
   await page.getByText(/契合度 \d+%/).first().waitFor();
   await page.locator('[data-pair-mode=composite]').click();await page.locator('.pair-reading').waitFor();assert.equal(await page.locator('#westernChart').count(),1);
   await page.screenshot({path:'build/mobile-'+engine+'-composite-'+width+'.png'});await shareSnapshot('composite');
-  const active=await page.evaluate(()=>localStorage.getItem('xy_active_profile'));await page.locator('#instantChartButton').click();
+  await useSystem('west','西洋盘');const active=await page.evaluate(()=>localStorage.getItem('xy_active_profile'));await page.locator('#instantChartButton').click();
   await page.locator('[data-mode=sky][aria-pressed=true]').waitFor();await page.locator('#westernChart').waitFor();
   assert.equal(await page.evaluate(()=>localStorage.getItem('xy_active_profile')),active);
-  assert((await page.locator('[data-instant-caption]').textContent()).includes('UT'));await shareSnapshot('instant');
+  assert((await page.locator('[data-instant-caption]').textContent()).includes('本地'));await shareSnapshot('instant');
   assert.deepEqual(api,[]);assert.deepEqual(errors,[]);
   await page.screenshot({path:'build/mobile-'+engine+'-'+width+'.png'});
   console.log('PASS',width+'px','offline charts, Chinese aspects, sheet limits and TabBar clearance');

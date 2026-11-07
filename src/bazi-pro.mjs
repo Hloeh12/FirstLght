@@ -156,7 +156,7 @@ export function baziPro({birth,selection={},combine=false}){
  const elapsedDays=Math.floor((start-prior.date)/86400000),entryYear=yearPillar(start,startYear);
  const entryOffset=birth.city.tzName?offsetMinutes(+start,birth.city.tzName):Number(birth.city.tz??8)*60;
  const startLocal=new Date(+start+entryOffset*60000).toISOString().slice(0,19).replace('T',' ');
- const entry={duration:b.luck.duration,intervalSeconds:b.luck.intervalSeconds,utc:cycles[0].startUtc,local:startLocal,offsetMinutes:entryOffset,
+ const entry={directionLabel:b.luck.directionLabel,duration:b.luck.duration,intervalSeconds:b.luck.intervalSeconds,utc:cycles[0].startUtc,local:startLocal,offsetMinutes:entryOffset,
   term:prior.name,termUtc:prior.date.toISOString(),daysAfter:elapsedDays,year:entryYear.stem+entryYear.branch,
   method:'起运年龄按三天一年、一日四月、一时辰十天折算；交运UT按365.24219878日回归年累计。年龄年月日为传统360日年表示。'};
  const result={entry,pillars,cycles,years,months,selected,relationships:links,strength:strength(matrix,links,combine),

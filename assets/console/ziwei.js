@@ -1,3 +1,4 @@
+import {practicalZiwei} from '../../src/ziwei-practical.mjs';
 import {playSuccessSound,reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,selectedRails,table} from './ui.js';
 
@@ -42,6 +43,7 @@ function center(ctx,s){
   <p>公历 ${esc(b.solar)} ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时-1h':''}</p><p>农历 ${esc(b.lunar)}</p>
   <p><b>${esc(p.summary.pillars)}</b></p>
   <p class="muted thin">闰月：${esc(z.leapLabel)}</p>
+  <div class="chips">${practicalZiwei(z,s.flow).map(x=>`<span class="chip" title="${esc(x.text)}">${esc(x.name+' · '+x.palace)}</span>`).join('')}</div>
   <p>命主 ${esc(z.soul)}　身主 ${esc(z.body)}</p>
   <p>${z.decades[0].ageRange[0]} 岁起限 · ${esc(s.flow?timeLabels[s.flow.scope]+' '+s.flow.ganZhi:'本命总览')}</p>
   <p class="muted thin">${esc(s.flow?.date||'本次排盘 '+new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',dateStyle:'short',timeStyle:'short'}).format(new Date()))}</p>
@@ -201,7 +203,7 @@ export function ziweiView(ctx,arrival=false){
  const panel=ctx.root;
  observer?.disconnect();
  const mode=[['flying','飞星模式'],['triad','三合模式'],['transform','四化模式']];
- panel.innerHTML=`<section aria-label="紫微斗数">${board(ctx,s)}
+ panel.innerHTML=`<section aria-label="紫微斗数">${board(ctx,s)}<article class="card" data-zi-practical>${practicalZiwei(s.chart,s.flow).map(x=>`<p><b>${esc(x.name+' · '+x.palace)}</b> ${esc(x.text)}</p>`).join('')||'<small>当前未触发双禄、禄冲或羊陀夹忌条件。</small>'}</article>
  <div class="segments liquid-glass" aria-label="紫微模式">${mode.map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${id===s.mode}"`)).join('')}</div>
  ${s.mode==='transform'?'<div class="rail" aria-label="四化分析">'+[['natal','生年四化'],['self','自化分析'],['track','飞星轨迹']].map(([id,label])=>btn(label,`data-filter="${id}" aria-pressed="${s.filter===id}"`)).join('')+'</div>':''}
  <div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),d.yearRange[0])}

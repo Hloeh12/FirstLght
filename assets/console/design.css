@@ -304,3 +304,6 @@ input,textarea{user-select:text;-webkit-user-select:text}
 #bottomNav button[aria-current=page] svg g[style] [fill]:not([fill=none]){fill:var(--tab-pink)}
 
 .aspect-browser{overflow:hidden}
+
+.vedic-house[data-dasha-lit="true"]{fill:rgba(255,119,170,.17);stroke:#ff4f8b;stroke-width:1.4}
+#vedic select{max-width:100%}#vedic .vedic-dasha{scroll-padding-inline:8px}#vedic .vedic-planet{font-size:10px}

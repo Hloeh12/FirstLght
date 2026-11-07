@@ -1,4 +1,5 @@
 import {aspectBrowser,bindAspectBrowser} from './aspects.js';
+import {todaySky} from '../../src/today-sky.mjs';
 import {bindWheel} from './wheel-gesture.js';
 import {$,esc,btn,stored,save,table,bars,symbols,zodiacNames,isoLocal,selectedRails} from './ui.js';
 
@@ -167,20 +168,21 @@ function firdariaPanel(f){
 }
 export function westernView(ctx){
  const s=stateOf(ctx),r=s.result;
+ const sky=r?todaySky({at:(r.outer||r.chart).utc||s.at}):null;
  const step=[['year',-1,'−1年'],['month',-1,'−1月'],['day',-1,'−1日'],['day',1,'＋1日'],['month',1,'＋1月'],['year',1,'＋1年']];
  const effects=r?.firdaria?firdariaPanel(r.firdaria):
   r?.profection?`<article class="card"><h2>古典小限</h2><p>${r.profection.age} ${r.profection.nominal?'虚岁':'周岁'} · 第 ${r.profection.house} 整宫 ${esc(r.profection.sign)} · 年主星 ${esc(r.profection.ruler)} 落本命第 ${r.profection.lordHouse} 宫。</p></article>`:'';
  const display=r?.chart;
  ctx.root.innerHTML=`<section aria-label="西洋占星"><div class="spread"><h1>西洋占星</h1><small>${esc(display?houses[display.houseSystem]:'')}</small></div>
  <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).filter(([id])=>!s.birthOverride||id==='sky').map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
- ${s.instant?`<p class="thin" data-instant-caption>即刻 ${esc(s.instant.at.slice(0,23).replace('T',' '))} UT · ${esc(s.instant.place)}（${esc(s.instant.source)}）</p>`:''}<p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
+ ${s.instant?`<p class="thin" data-instant-caption>即刻 ${esc(s.instant.local||s.instant.at.slice(0,23).replace('T',' '))} 本地 · ${esc(s.instant.place)}（${esc(s.instant.source)}）</p>`:''}<p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
  ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
  <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
  ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 东八区</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
  ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}
  <p class="thin">${display.analysis.elements.missing.length?'未覆盖 '+display.analysis.elements.missing.join('、'):'四元素均有星体'} · 主导 ${display.analysis.elements.dominant.join('、')}</p>
  ${bars(Object.fromEntries(Object.entries(display.analysis.modalities.percentages).map(([k,v])=>[k==='基本'?'本位':k,Number.isFinite(v)?v:0])))}</article>
- ${effects}${facts(r,s)}`:''}</section>`;
+ ${sky?`<article class="card"><h2>月相与空亡</h2><p>${esc(sky.phase)} · 照明 ${sky.litPercent}%</p><p>${sky.voc.active?'当前月亮空相中，宜休整沉淀':'当前月亮尚未进入空相区间'}</p><small>${esc(sky.voc.start)} 至 ${esc(sky.voc.end)} UT · ${esc(sky.voc.method)}</small></article>`:''}${effects}${facts(r,s)}`:''}</section>`;
  if(r){
   bindAspectBrowser(ctx.root,r,s.aspects);
   const stage=$('.wheel-stage',ctx.root),card=$('[data-wheel-card]',stage);

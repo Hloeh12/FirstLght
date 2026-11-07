@@ -1,3 +1,6 @@
+import {DIRECTIONS} from '../../src/housing.mjs';
+import {localNowParams} from './now.js';
+import {migrateStorage} from './schema.js';
 import {vedicView} from './vedic.js';
 import {versionCard,releaseHistory} from './releases.js';
 import {ZIWEI_SCHOOLS} from '../../src/ziwei-rules.mjs';
@@ -15,6 +18,7 @@ import {shareChart} from './share.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
 
 installDiagnostics();
+try{migrateStorage(localStorage);}catch(error){console.error(error.message);}
 lockViewport();
 fitKeyboard();
 
@@ -66,6 +70,7 @@ function sheet(id,title,body){
  return d;
 }
 function switchTab(tab,system=state.system){
+ if(tab!=='chart')restoreInstant();
  for(const d of document.querySelectorAll('dialog'))close(d);
  state.tab=tab;state.system=system;
  render();
@@ -97,6 +102,7 @@ function summary(result){
  return {
   yearDay:year.stem+year.branch+'年 '+day.stem+day.branch+'日',
   pillars:result.bazi.pillars.map(p=>p.stem+p.branch).join(' '),
+  soul:result.ziwei.soul,
   day:result.bazi.dayMaster.stem+result.bazi.dayMaster.element+' '+result.bazi.strength.kind,
   ziwei:(palace.majorStars.length?'':'借')+(stars.map(s=>s.name).join('、')||'空宫')+'在'+palace.earthlyBranch,
   signs:'太阳'+west.planets.find(p=>p.key==='sun').sign+' · 上升'+west.asc.sign,
@@ -104,6 +110,7 @@ function summary(result){
  };
 }
 function installReading(profile,result){
+ restoreInstant();
  profile.summary=summary(result);
  profile.tags=Object.values(profile.summary);
  state.reading=result;state.profile=profile;state.chartState={};state.resonanceProfile=null;state.error='';
@@ -112,6 +119,7 @@ function installReading(profile,result){
  persist();
 }
 async function activate(profile,go=true){
+ restoreInstant();
  const token=++generation;
  flight?.abort();flight=new AbortController();
  state.profile=profile;state.reading=null;state.chartState={};state.error='';state.pending=true;
@@ -135,12 +143,12 @@ function caseCard(c){
  return `<article class="case-card card liquid-glass ${state.profile?.id===c.id?'active':''}" data-case="${esc(c.id)}" tabindex="0" aria-label="${esc(c.name)}">
  <div><h3><span class="case-group-badge">${esc(c.category==='客户'?'特别关注':c.category||'我的')}</span> ${esc(c.name)} <small>${f.gender==='男'?'♂':'♀'}</small> ${state.profile?.id===c.id?'<span class="chip">当前案例</span>':''}</h3>
  <p>${esc(dates)} ${esc(f.timeUnknown?'时辰未知':f.timeStr||'')} · ${esc(f.city?.label||'手动坐标')}</p></div>
- <div class="case-actions">${btn('设为全局使用','class="primary" data-action="use"')}${btn('编辑','data-action="edit"')}${btn('删除','data-action="delete"')}</div>
+ <div class="case-actions">${btn('设为全局使用','class="primary" data-action="use"')}${btn(c.pinned?'取消置顶':'📌 置顶','data-action="pin"')}${btn('编辑','data-action="edit"')}${btn('删除','data-action="delete"')}</div>
  <div class="chips">${summaryItems.map(([k,v])=>`<span class="chip">${k} · ${esc(v)}</span>`).join('')}${btn('详情','data-action="detail"')}</div></article>`;
 }
 function renderCases(){
  if(!$('[data-case-list]',root))root.innerHTML=`<section aria-labelledby="casesTitle"><div class="spread"><h1 id="casesTitle">案例</h1>${btn('＋ 新建案例','class="primary" data-create')}</div>${btn('关系星系','data-galaxy-open')}
- <div class="case-search"><label><span class="muted">搜索姓名、生辰、城市或标签</span><input id="caseSearch" class="liquid-glass" type="search" value="${esc(state.query)}"></label>${btn('清除','data-clear-search aria-label="清除案例搜索"')}</div><p class="thin" data-search-scope role="status"></p>
+ <div class="case-search"><label><span class="muted">搜索姓名、生辰、城市或标签</span><input id="caseSearch" class="liquid-glass" type="search" value="${esc(state.query)}"></label>${btn('清除','data-clear-search aria-label="清除案例搜索"')}</div><div class="rail">${btn('同日元','data-cluster="day"')}${btn('同紫微命主','data-cluster="soul"')}${btn('全部特征','data-cluster=""')}</div><p class="thin" data-search-scope role="status"></p>
  <div class="rail case-groups" id="caseGroups" aria-label="案例分组"></div><div data-case-list></div></section>`;
  $('#caseSearch').oninput=e=>{state.query=e.target.value;renderCases();};
  $('[data-clear-search]',root).onclick=()=>{state.query='';$('#caseSearch').value='';renderCases();$('#caseSearch').focus();};
@@ -161,24 +169,33 @@ function renderCases(){
    };
   }else if(item?.dataset.group)setGroup(item.dataset.group);
  };
+ for(const b of root.querySelectorAll('[data-cluster]'))b.onclick=async()=>{
+  state.cluster=b.dataset.cluster;
+  const label=b.textContent;if(state.cluster){b.disabled=true;b.textContent='核对档案…';for(const c of state.cases){if(c.summary?.day&&c.summary?.soul)continue;try{c.summary=summary(await request('/api/console/reading',{birth:normalized(c)}));}catch{ /* Invalid legacy birth data remains available for editing. */ }}persist();b.disabled=false;b.textContent=label;}
+  if(state.tab==='cases')renderCases();
+ };
  const q=searchKey(state.query);
- const list=state.cases.filter(c=>(q||state.filter==='全部'||(c.category==='客户'?'特别关注':c.category||'我的')===state.filter)&&
+ const list=state.cases.filter(c=>!state.cluster||(state.cluster==='day'?c.summary?.day&&c.summary.day.split(' ')[0]===state.profile?.summary?.day?.split(' ')[0]:c.summary?.soul&&c.summary.soul===state.profile?.summary?.soul)).filter(c=>(q||state.filter==='全部'||(c.category==='客户'?'特别关注':c.category||'我的')===state.filter)&&
   [...(c.tags||[]),...Object.values(c.summary||{}),c.name,c.fields?.dateStr,c.fields?.timeStr,c.fields?.city?.label,[c.fields?.Y,c.fields?.M,c.fields?.D].filter(Boolean).join('-')].some(v=>searchKey(v).includes(q)));
  $('[data-search-scope]',root).textContent=q?'全案例跨组搜索 · '+list.length+' 个结果':'当前分组 · '+state.filter;
 
  const host=$('[data-case-list]',root);
+ list.sort((a,b)=>Number(!!b.pinned)-Number(!!a.pinned));
  host.innerHTML=list.map(caseCard).join('')||'<p class="empty">这里还没有匹配的案例。</p>';
  host.animate?.([{opacity:.7},{opacity:1}],{duration:180,easing:'ease-out'});
  host.onclick=e=>{
+  if(host.dataset.longPress==='true'){delete host.dataset.longPress;return;}
   const card=e.target.closest('[data-case]');
   if(!card)return;
   const c=state.cases.find(x=>x.id===card.dataset.case);
   const action=e.target.closest('[data-action]')?.dataset.action;
-  if(action==='edit')birthSheet(c);
+  if(action==='pin'){c.pinned=!c.pinned;persist();renderCases();}
+  else if(action==='edit')birthSheet(c);
   else if(action==='detail')caseDetail(c);
   else if(action==='delete')confirmDelete(c);
   else activate(c);
  };
+ let press;host.onpointerdown=e=>{const card=e.target.closest('[data-case]');delete host.dataset.longPress;if(card&&!e.target.closest('button'))press=setTimeout(()=>{const c=state.cases.find(c=>c.id===card.dataset.case);c.pinned=true;host.dataset.longPress='true';persist();renderCases();},650);};host.onpointerup=host.onpointercancel=()=>clearTimeout(press);host.onpointermove=()=>clearTimeout(press);
  host.onkeydown=e=>{if(e.target.matches('[data-case]')&&['Enter',' '].includes(e.key)){e.preventDefault();e.target.click();}};
 }
 function confirmDelete(c){
@@ -301,6 +318,7 @@ function birthSheet(profile,seed={}){
   <label>出生日期<input name="date" value="${esc(f.dateStr||'')}" placeholder="YYYY-MM-DD"></label>
   <label>出生时刻<input name="clock" type="time" value="${esc(f.timeStr||'12:00')}"></label>
   <label>案例分组<select name="category">${options}</select></label>
+  <label>阳宅居住方位（可选）<select name="homeDirection"><option value="">不设置</option>${Object.entries(DIRECTIONS).map(([k,v])=>`<option value="${k}" ${f.housing?.direction===k?'selected':''}>${k}(${v})</option>`).join('')}</select></label><label>家庭身份（可选）<select name="homeMember"><option value="">不设置</option>${Object.entries({乾:'父',坤:'母',震:'长子',巽:'长女',坎:'中子',离:'中女',艮:'少子',兑:'少女'}).map(([k,v])=>`<option value="${k}" ${f.housing?.member===k?'selected':''}>${v}</option>`).join('')}</select></label>
   <label class="wide">出生城市<input name="city" value="${esc(city.label)}" placeholder="搜索城市，也可直接填写坐标" autocomplete="off"></label>
   <div id="cityMatches" class="rail wide" aria-label="城市搜索结果"></div>
   <label>纬度<input name="lat" type="number" step="any" value="${Number.isFinite(city.lat)?city.lat:''}" placeholder="−90 到 90"></label>
@@ -363,7 +381,7 @@ function birthSheet(profile,seed={}){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)||!/^\d{2}:\d{2}$/.test(timeStr)){feedback.textContent='请填写有效出生日期和时间';return;}
   const [h,mi]=timeStr.split(':').map(Number),name=fields.name.value.trim()||'未命名案例';
   const next={...profile,id:profile?.id??(crypto.randomUUID?.()||Date.now().toString()),name,category:fields.category.value,updatedAt:new Date().toISOString(),
-   fields:{...splitDate(dateStr),dateStr,timeStr,h,mi,name,gender:fields.gender.value,calendar:fields.calendar.value,leapMonth:fields.calendar.value==='lunar'&&fields.leap.checked,
+   fields:{housing:fields.homeDirection.value&&fields.homeMember.value?{direction:fields.homeDirection.value,member:fields.homeMember.value}:null,...splitDate(dateStr),dateStr,timeStr,h,mi,name,gender:fields.gender.value,calendar:fields.calendar.value,leapMonth:fields.calendar.value==='lunar'&&fields.leap.checked,
     timeUnknown:fields.unknown.checked,useSolarTime:fields.solar.checked,lateZishi:setting.lateZishi||'next-day',city:{lat,lon,tz,label:fields.city.value.trim()||'手动坐标'}}};
   const submit=$('[type=submit]',form);submit.disabled=true;feedback.textContent='正在排盘…';
   const token=++generation;flight?.abort();flight=new AbortController();
@@ -390,6 +408,7 @@ function settingsForm(){
  <button class="wide primary">保存设置</button></form>`;
 }
 function savePreferences(e){
+ restoreInstant();
  e.preventDefault();
  const f=new FormData(e.currentTarget),[lat,lon,tz]=['lat','lon','tz'].map(k=>f.get(k)===''?undefined:Number(f.get(k)));
  if([lat,lon,tz].some(v=>v!==undefined&&!Number.isFinite(v))||Math.abs(lat)>90||Math.abs(lon)>180||tz< -12||tz>14){tell('默认坐标或时区无效');return;}
@@ -438,16 +457,18 @@ function caseDrawer(){
  $('[data-fresh]',d).onclick=()=>{close(d);birthSheet(null);};
 }
 
-function instantChart(){
- const at=new Date();generation++;flight?.abort();state.pending=false;
+function restoreInstant(){if(state.instantSnapshot){Object.assign(state,state.instantSnapshot);state.instantSnapshot=null;}}
+async function instantChart(){
+ const at=new Date(),system=['bazi','ziwei','vedic','west'].includes(state.system)?state.system:'ziwei',token=++generation;flight?.abort();
  for(const d of document.querySelectorAll('dialog'))close(d);
- const base=state.profile?normalized(state.profile):null,settings=state.settings;
- const valid=n=>typeof n==='number'&&Number.isFinite(n);
- const city=base?.city||{label:valid(settings.lat)&&valid(settings.lon)?settings.place||'默认坐标':'默认上海（未定位）',lat:valid(settings.lat)?settings.lat:31.23,lon:valid(settings.lon)?settings.lon:121.47,tz:valid(settings.tz)?settings.tz:8};
- const wall=new Date(+at+city.tz*3600000),Y=wall.getUTCFullYear(),M=wall.getUTCMonth()+1,D=wall.getUTCDate(),h=wall.getUTCHours(),mi=wall.getUTCMinutes();
- const fallback={Y,M,D,h,mi,gender:'女',name:'即刻天象',calendar:'solar',city};
- state.chartState.west={mode:'sky',at,result:null,token:0,pending:false,error:'',requested:false,birthOverride:state.reading?null:(base||fallback),instant:{at:at.toISOString(),place:city.label||'案例坐标',source:base?'当前案例出生地':'默认地点'}};
- switchTab('chart','west');
+ const birth=localNowParams(at,state.profile?.fields?.city);
+ try{
+  const result=await request('/api/console/reading',{birth});if(token!==generation)return;
+  state.instantSnapshot??={profile:state.profile,reading:state.reading,chartState:state.chartState};
+  state.profile={id:'instant-preview',name:'即刻天象',fields:birth,summary:summary(result)};state.reading=result;state.chartState={};state.pending=false;state.error='';
+  if(system==='west')state.chartState.west={mode:'sky',at,result:null,token:0,error:'',requested:false,instant:{at:at.toISOString(),local:birth.dateStr+' '+birth.timeStr,place:birth.city.label,source:'设备本地时区 UTC'+birth.tz}};
+  state.tab='chart';state.system=system;render();
+ }catch(error){tell(error.message);}
 }
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
@@ -455,7 +476,7 @@ function profileTitle(){
  const dst=info?.timeCorrection?.dstApplied?' · [夏令时-1h]':'';
  const badge=late?' · 晚子时'+((info?.lateZishi||p.fields.lateZishi)==='current-day'?'归当日':'归次日'):'';
  const instant=state.tab==='chart'&&state.system==='west'&&state.chartState.west?.instant;
- const label=p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge+dst:instant?'⏱ 即刻天象':'🌸 开始排盘';
+ const label=state.instantSnapshot?'⏱ 即刻天象 · '+p.fields.dateStr+' '+p.fields.timeStr:p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge+dst:instant?'⏱ 即刻天象':'🌸 开始排盘';
  $('[data-profile-name]').textContent=label.replace(dst,'');
  const dstChip=$('[data-profile-dst]');dstChip.textContent=dst?'夏令时-1h':'';dstChip.hidden=!dst;
  dstChip.title=info?.timeCorrection?.warning||'中国历史夏令时校正';
@@ -512,7 +533,7 @@ function preferences(){
  $('[data-diagnostics]',root).onclick=()=>diagnosticsPanel(ctx);
  $('[data-maintenance-cache]',root).onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{$('[data-maintenance-status]',root).textContent=await resetCaches();}catch(error){tell(error.message);}finally{b.disabled=false;}};
  $('[data-feedback]',root).onchange=e=>setFeedback(e.currentTarget.checked);
- $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:3,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace()},null,2),'FirstLight-cases.json','application/json');
+ $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:4,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace()},null,2),'FirstLight-cases.json','application/json');
  $('[data-import]',root).onclick=()=>$('#importBackup').click();
  $('#importBackup').onchange=async e=>{
   try{
@@ -582,8 +603,8 @@ root.addEventListener('click',e=>{
  const b=e.target.closest('[data-term]');
  if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain);}
 });
-$('#activeProfile').onclick=()=>birthSheet(state.profile);
-$('#btnEditProfile').onclick=e=>{e.stopPropagation();birthSheet(state.profile);};
+$('#activeProfile').onclick=()=>state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);
+$('#btnEditProfile').onclick=e=>{e.stopPropagation();state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);};
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
 $('#instantChartButton').onclick=instantChart;

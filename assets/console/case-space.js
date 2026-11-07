@@ -74,7 +74,7 @@ export function soulCard(reading,name){
 }
 
 export function mergeBackup(data,state,space){
- if(data?.format!=='firstlight-cases'||![2,3].includes(data.version)||!Array.isArray(data.cases)||data.cases.length>1000)throw Error('备份格式无效');
+ if(data?.format!=='firstlight-cases'||![2,3,4].includes(data.version)||!Array.isArray(data.cases)||data.cases.length>1000)throw Error('备份格式无效');
  const cases=[...state.cases],groups=new Set(state.groups),ids=new Set(cases.map(x=>x.id));
  const identifier=id=>typeof id==='string'&&/^[a-zA-Z0-9-]{1,64}$/.test(id);
  const short=(x,n)=>typeof x==='string'&&x.trim()&&x.length<=n;

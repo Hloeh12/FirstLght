@@ -1,3 +1,4 @@
+import {ProfileMachine} from './profile-machine.js';
 import {DIRECTIONS} from '../../src/housing.mjs';
 import {localNowParams} from './now.js';
 import {migrateStorage} from './schema.js';
@@ -29,6 +30,7 @@ const state={
  recent:stored('xy_recent_cases',[]),settings:stored(SETTINGS,{}),reading:null,tab:'chart',system:'ziwei',
  query:'',filter:'全部',chartState:{},pending:false,error:''
 };
+const profileMachine=new ProfileMachine(birth=>request('/api/console/reading',{birth}));
 const root=$('#screen');
 let generation=0,flight,noticeTimer,locationToken=0,locationReply;
 window.firstlightLocation=(token,lat,lon)=>{if(token===locationToken)locationReply?.(lat,lon);};
@@ -112,7 +114,7 @@ function summary(result){
 function installReading(profile,result){
  restoreInstant();
  profile.summary=summary(result);
- profile.tags=Object.values(profile.summary);
+ profile.tags=[...new Set([...(profile.tags||[]),...Object.values(profile.summary)])];
  state.reading=result;state.profile=profile;state.chartState={};state.resonanceProfile=null;state.error='';
  state.cases=[profile,...state.cases.filter(c=>c.id!==profile.id)];
  state.recent=[profile.id,...state.recent.filter(id=>id!==profile.id)].slice(0,5);
@@ -122,13 +124,14 @@ async function activate(profile,go=true){
  restoreInstant();
  const token=++generation;
  flight?.abort();flight=new AbortController();
- state.profile=profile;state.reading=null;state.chartState={};state.error='';state.pending=true;
+ const birth=normalized(profile),cached=profileMachine.peek(birth);
+ state.profile=profile;state.reading=cached;state.chartState={};state.error='';state.pending=!cached;
  state.recent=[profile.id,...state.recent.filter(id=>id!==profile.id)].slice(0,5);
  persist();
  if(go)switchTab('chart');else render();
  try{
-  const result=await request('/api/console/reading',{birth:normalized(profile)},flight.signal);
-  if(token===generation)installReading(profile,result);
+  const result=await profileMachine.activate(profile,birth);
+  if(result&&token===generation)installReading(profile,result);
  }catch(error){if(token===generation)state.error=error.message;}
  finally{if(token===generation){state.pending=false;render();}}
 }
@@ -208,7 +211,7 @@ function confirmDelete(c){
   delete data.notes[c.id];
   for(const reminder of data.reminders[c.id]||[])window.webkit?.messageHandlers?.caseReminder?.postMessage({id:reminder.id,cancel:true});
   delete data.reminders[c.id];save('xy_case_space',data);
-  if(state.profile?.id===c.id){generation++;flight?.abort();state.profile=null;state.reading=null;state.error='';state.pending=false;}
+  if(state.profile?.id===c.id){profileMachine.clear();generation++;flight?.abort();state.profile=null;state.reading=null;state.error='';state.pending=false;}
   persist();close(d);render();
  };
 }
@@ -624,3 +627,13 @@ function pendingReminders(){
 pendingReminders();setInterval(pendingReminders,30000);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/offline.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 if(state.profile)activate(state.profile,false);else{render();birthSheet(null);}
+
+window.addEventListener('storage',event=>{
+ if(![ACTIVE,CASES,SETTINGS].includes(event.key))return;
+ if(event.key===SETTINGS){state.settings=stored(SETTINGS,{});profileMachine.clear();}
+ if(event.key===CASES)state.cases=stored(CASES,[]);
+ const profile=stored(ACTIVE,null);
+ if(profile&&profile.fields&&(event.key===SETTINGS||JSON.stringify(profile)!==JSON.stringify(state.profile)))activate(profile,false);
+ else if(!profile&&event.key===ACTIVE){generation++;profileMachine.clear();state.profile=null;state.reading=null;state.chartState={};state.pending=false;render();}
+ else if(state.tab==='cases')renderCases();
+});

@@ -51,7 +51,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  click('#caseDrawerButton');
  $('#prefs [name=ziweiSchool]').value='quanjiTong';
  $('#prefs').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
- await until(()=> $('[data-profile-rule]').textContent.includes('同相')&&!$('#caseDrawer').open,'school applies without re-entering birth');
+ await until(()=> $('[data-profile-rule]').textContent.includes('同相')&&!$('#caseDrawer').open&&many('.zi-triad').length===1,'school applies without re-entering birth');
  assert.equal(JSON.parse(w.localStorage.getItem('xy:settings:v2')).ziweiSchool,'quanjiTong');
  assert.equal(many('.zi-triad').length,1);
  assert.equal(many('.zi-laser').length,3);

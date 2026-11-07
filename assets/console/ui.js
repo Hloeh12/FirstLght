@@ -12,7 +12,10 @@ export function table(headers,rows){
  rows.map(r=>'<tr>'+r.map(x=>'<td>'+esc(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
 }
 export function bars(values){
- return Object.entries(values).map(([key,value])=>`<label class="bar"><span>${esc(key)}</span><meter min="0" max="100" value="${value}">${value}</meter><small>${Number(value).toFixed(1)}%</small></label>`).join('');
+ return Object.entries(values).map(([key,value])=>{
+  const n=Math.max(0,Math.min(100,Number.isFinite(Number(value))?Number(value):0));
+  return `<div class="bar"><span>${esc(key)}</span><span class="energy-track" role="meter" aria-label="${esc(key)}能量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${n}" aria-valuetext="${n.toFixed(1)}%"><i class="energy-fill" style="width:${n}%"></i></span><small>${n.toFixed(1)}%</small></div>`;
+ }).join('');
 }
 export function row(label,items,active){
  return `<div class="time-row"><strong>${esc(label)}</strong><div class="rail" role="group" aria-label="${esc(label)}">${items.map(([key,name])=>btn(name,`data-pick="${esc(key)}" data-rail="${esc(label)}" aria-pressed="${String(key===active)}"`)).join('')||'<small>　选择上一级后展开</small>'}</div></div>`;

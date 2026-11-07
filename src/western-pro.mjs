@@ -123,7 +123,7 @@ export function findReturn(birth,target,id,ayan,zone=0){
    let l=a,r=b;
    while(r-l>1){const m=Math.floor((l+r)/2);if(diff(m)<0)l=m;else r=m;}
    const root=Math.abs(diff(l))<=Math.abs(diff(r))?l:r;
-   if(root<hi&&Math.abs(diff(root))<=0.0001)matches.push(root);
+   if(root<hi&&Math.abs(diff(root))<0.0001)matches.push(root);
   }
   a=b;fa=fb;
  }

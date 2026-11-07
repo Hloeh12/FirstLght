@@ -61,6 +61,8 @@ try{
   await page.locator('#toolSheet [data-close]').click();
   await useSystem('west','西洋盘');
   await page.locator('#westernChart').waitFor();
+  assert(await page.getByRole('meter').count()>0);
+  assert((await page.locator('.energy-fill').first().evaluate(n=>getComputedStyle(n).backgroundImage)).includes('255, 119, 170'));
   await page.screenshot({path:'build/mobile-'+engine+'-western-'+width+'.png'});
   await page.locator('[data-wheel-focus="inner-sun"]').click();
   await page.locator('[data-wheel-card]:not([hidden])').waitFor();

@@ -88,7 +88,7 @@ try{
   assert(metrics.wide<=metrics.viewport);
   const layers=await page.evaluate(()=>{
    const top=document.querySelector('#appTopBar').getBoundingClientRect(),main=document.querySelector('#mainScrollView').getBoundingClientRect(),nav=document.querySelector('#bottomNav').getBoundingClientRect();
-   const buttons=[...document.querySelectorAll('#appTopBar button')].map(b=>{const r=b.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};});
+   const buttons=[...document.querySelectorAll('#appTopBar button')].filter(b=>b.getClientRects().length).map(b=>{const r=b.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};});
    return {top:top.bottom,main:main.top,navHeight:nav.height,buttons,width:innerWidth,rootX:document.documentElement.getBoundingClientRect().left};
   });
   assert(layers.top<=layers.main+.5);assert.equal(layers.navHeight,56);assert.equal(layers.rootX,0);

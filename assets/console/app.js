@@ -128,6 +128,7 @@ async function activate(profile,go=true){
  state.profile=profile;state.reading=cached;state.chartState={};state.error='';state.pending=!cached;
  state.recent=[profile.id,...state.recent.filter(id=>id!==profile.id)].slice(0,5);
  persist();
+ if(cached){profileMachine.sequence++;profileMachine.profile=profile;profileMachine.status='ready';installReading(profile,cached);state.pending=false;if(go)switchTab('chart');else render();return;}
  if(go)switchTab('chart');else render();
  try{
   const result=await profileMachine.activate(profile,birth);

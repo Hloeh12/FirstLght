@@ -42,9 +42,9 @@ async function runChecks(){
    localStorage.setItem(probe,'ok');
    try{return localStorage.getItem(probe)==='ok';}finally{localStorage.removeItem(probe);}
   }],
-  ['八字与紫微排盘',async()=>{
+  ['八字、紫微与印度排盘',async()=>{
    reading=await request('/api/console/reading',{birth:sample});
-   return reading.bazi.pillars.length===4&&reading.ziwei.palaces.length===12;
+   return reading.bazi.pillars.length===4&&reading.ziwei.palaces.length===12&&reading.vedic.planets.length===9&&reading.vedic.dashas.length===9;
   }],
   ['西洋本命与行运',async()=>{
    const r=await request('/api/console/western',{birth:sample,mode:'transit',at:'2026-11-06T04:00:00Z'});
@@ -66,7 +66,7 @@ async function runChecks(){
  return results;
 }
 
-async function resetCaches(){
+export async function resetCaches(){
  clearMemo();
  clearRelationshipCache();
  if(!navigator.serviceWorker?.controller)return '本机排盘缓存已清理。';

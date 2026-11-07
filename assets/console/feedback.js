@@ -65,7 +65,7 @@ export function installFeedback(){
   const target=event.target.closest('button:not(:disabled), [data-palace], [data-zi-star], [data-pillar]');
   if(!target||target.closest('[data-wheel-focus]'))return;
   playTapSound();
-  if(target.matches('.primary,[data-tab],[data-mode],[data-rail],[data-combine],[data-palace],[data-badge],[data-destination]'))particles(event,target);
+  if(target.matches('.primary,[data-mode],[data-rail],[data-combine],[data-palace],[data-badge],[data-destination]'))particles(event,target);
  },true);
 }
 export function starFeedback(event,target){

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 const release=JSON.parse(await readFile(new URL('../app-release.json',import.meta.url),'utf8'));
 import {chromium,webkit} from 'playwright';
 const engine=process.env.FIRSTLIGHT_BROWSER||'chromium';
@@ -27,10 +27,10 @@ try{
    await page.locator('dialog[open]').evaluateAll(nodes=>Promise.all(nodes.flatMap(n=>n.getAnimations().map(a=>a.finished.catch(()=>{})))));
    const boxes=await page.locator('dialog[open]').evaluateAll(nodes=>nodes.map(n=>{
     const b=n.getBoundingClientRect(),s=n.querySelector('.sheet-body');
-    return {top:b.top,bottom:b.bottom,height:b.height,viewport:innerHeight,scroll:s&&getComputedStyle(s).overflowY};
+    return {drawer:n.id==='caseDrawer',width:b.width,top:b.top,bottom:b.bottom,height:b.height,viewport:innerHeight,viewportWidth:innerWidth,scroll:s&&getComputedStyle(s).overflowY};
    }));
    assert(boxes.length>0);
-   for(const b of boxes){assert(b.top>=-.5&&b.bottom<=b.viewport+.5,JSON.stringify(b));assert(b.height<=b.viewport*.80+1);assert.equal(b.scroll,'auto');}
+   for(const b of boxes){assert(b.top>=-.5&&b.bottom<=b.viewport+.5,JSON.stringify(b));if(b.drawer){assert(Math.abs(b.height-b.viewport)<1);assert(b.width<=Math.min(b.viewportWidth*.82,340)+1);}else assert(b.height<=b.viewport*.80+1);assert.equal(b.scroll,'auto');}
   };
   await checkSheet();
   // Simulate the iOS visual viewport shrinking while the layout viewport stays fixed.
@@ -65,6 +65,33 @@ try{
    await page.locator('summary').filter({hasText:sub}).click();
    await page.locator('[data-destination="'+id+'"]').click();
   };
+  await page.getByRole('button',{name:'快捷案例',exact:true}).click();
+  await checkSheet();
+  assert.equal(await page.locator('#mainScrollView').evaluate(n=>getComputedStyle(n).overflowY),'hidden');
+  await page.screenshot({path:'build/mobile-'+engine+'-drawer-'+width+'.png'});
+  await page.locator('#caseDrawer summary').filter({hasText:'命理口径与算法配置'}).click();
+  await page.locator('#prefs [name=place]').focus();
+  await page.evaluate(()=>{Object.defineProperty(visualViewport,'height',{value:innerHeight*.5,configurable:true});visualViewport.dispatchEvent(new Event('resize'));});
+  await page.waitForFunction(()=>document.documentElement.style.getPropertyValue('--drawer-content-height')!=='');
+  const drawerKeyboard=await page.locator('#caseDrawer .dialog-content').evaluate(n=>({bottom:n.getBoundingClientRect().bottom,limit:visualViewport.height}));
+  assert(drawerKeyboard.bottom<=drawerKeyboard.limit+1,JSON.stringify(drawerKeyboard));
+  await page.evaluate(()=>{delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'));});
+  await page.waitForFunction(()=>document.documentElement.style.getPropertyValue('--drawer-content-height')==='');
+
+  await page.locator('#caseDrawer [data-close]').click();
+  const shareSnapshot=async(kind)=>{
+   await page.evaluate(()=>{
+    window.__sharedChart=null;
+    Object.defineProperty(window,'webkit',{configurable:true,value:{messageHandlers:{shareChart:{postMessage:data=>{window.__sharedChart=data;}}}}});
+   });
+   await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
+   await page.locator('[data-share-current]').click();
+   await page.waitForFunction(()=>typeof window.__sharedChart==='string',{timeout:15000});
+   const data=Buffer.from((await page.evaluate(()=>window.__sharedChart)).split(',')[1],'base64');
+   assert.equal(data.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(data.readUInt32BE(16),1440);assert(data.readUInt32BE(20)>500);
+   await writeFile('build/mobile-'+engine+'-share-'+kind+'-'+width+'.png',data);
+   await page.locator('#toolSheet [data-close]').click();
+  };
   await useSystem('bazi','东方盘');
   await page.locator('[data-rail="流年"]').first().click();
   await page.locator('.period-guidance').waitFor();
@@ -75,6 +102,13 @@ try{
   await checkSheet();
   assert.equal(await page.locator('#toolSheet [data-bazi-tool]').count(),5);
   await page.locator('#toolSheet [data-close]').click();
+  await shareSnapshot('bazi');
+  await useSystem('vedic','印度盘');
+  await page.locator('.vedic-chart').waitFor();assert.equal(await page.locator('[data-vedic-house]').count(),12);
+  await page.locator('[data-dasha]').last().click();
+  assert((await page.locator('[data-dasha-detail]').textContent()).includes('大运'));
+  await page.screenshot({path:'build/mobile-'+engine+'-vedic-'+width+'.png'});
+  await shareSnapshot('vedic');
   await useSystem('west','西洋盘');
   await page.locator('#westernChart').waitFor();
   assert(await page.getByRole('meter').count()>0);
@@ -84,12 +118,30 @@ try{
   await page.locator('[data-wheel-card]:not([hidden])').waitFor();
   assert((await page.locator('[data-wheel-card]').textContent()).includes('太阳'));
   assert((await page.locator('.aspect-detail').first().textContent()).includes('标准角'));
+  assert(await page.locator('.aspect-detail').count()<=12);
+  await page.locator('[data-aspect-filter=all]').click();assert(await page.locator('.aspect-detail').count()>12);
+  await page.locator('[data-aspect-toggle]').click();assert(await page.locator('.aspect-detail').count()<=12);
+  await page.locator('[data-aspect-filter=tight]').click();
+  await page.locator('[data-aspect-filter=main]').click();
   await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
   await page.locator('[data-astro-config]').click();
   await checkSheet();
   const internal=await page.locator('#toolSheet .sheet-body').evaluate(n=>({height:n.clientHeight,content:n.scrollHeight}));
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
+  await page.locator('[data-tab=cases]').click();await page.waitForTimeout(400);
+  const samples=await page.evaluate(async()=>{
+   const nav=document.querySelector('#bottomNav'),pill=document.querySelector('#tabLiquidPill'),button=nav.querySelector('[data-tab=me]');
+   button.click();const positions=[];
+   for(let i=0;i<25;i++){
+    await new Promise(resolve=>requestAnimationFrame(resolve));const p=pill.getBoundingClientRect(),b=button.getBoundingClientRect();
+    positions.push({x:p.left,y:b.top,animations:pill.getAnimations().map(a=>a.effect.getKeyframes().map(k=>k.scale))});
+   }
+   return positions;
+  });
+  assert(samples.every((s,i)=>!i||s.x>=samples[i-1].x-.6),'pill must never rebound');
+  assert(Math.max(...samples.map(s=>s.y))-Math.min(...samples.map(s=>s.y))<=1.6,'selected tab moves only 1.5 px');
+  assert(samples.every(s=>s.animations.flat().every(scale=>scale===undefined)),'pill has no scale keyframes');
   for(const tab of ['cases','chart','insights','me']){
    await page.locator('[data-tab="'+tab+'"]').click();
    await page.waitForTimeout(500);
@@ -100,6 +152,7 @@ try{
    assert(pill.left>=pill.tabLeft-1&&pill.right<=pill.tabRight+1,JSON.stringify(pill));
   }
   await page.locator('[data-tab="me"]').click();
+  await page.locator('[data-maintenance]>summary').click();
   assert.equal(await page.locator('[data-app-version]').textContent(),`FirstLght ${release.version}（${release.build}）`);
   if(process.env.GITHUB_SHA)assert((await page.locator('[data-app-build]').textContent()).includes(process.env.GITHUB_SHA.slice(0,7)));
   assert((await page.locator('[data-app-build]').textContent()).includes('构建标识'));
@@ -148,6 +201,30 @@ try{
   await page.locator('.house-warning').waitFor();
   assert((await page.locator('.house-warning').textContent()).includes('高纬度'));
   await page.screenshot({path:'build/mobile-'+engine+'-polar-'+width+'.png'});
+  assert.deepEqual(api,[]);assert.deepEqual(errors,[]);
+  await page.locator('[data-tab=cases]').click();
+  await page.locator('[data-create]').click();
+  await page.locator('#inputSheet').getByLabel('命主姓名',{exact:true}).fill('跨组同伴');
+  await page.locator('#inputSheet').getByLabel('出生日期',{exact:true}).fill('2001-05-04');
+  await page.locator('#inputSheet').getByLabel('案例分组',{exact:true}).selectOption({label:'亲人'});
+  await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('31.23');
+  await page.locator('#inputSheet').getByLabel('经度',{exact:true}).fill('121.47');
+  await page.getByRole('button',{name:'生成命盘',exact:true}).click();await page.locator('.zi-board').waitFor();
+  await page.locator('[data-tab=cases]').click();await page.locator('[data-group=我的]').click();
+  await page.locator('#caseSearch').fill('跨组同伴');
+  assert.equal(await page.locator('[data-case]').count(),1);assert((await page.locator('.case-group-badge').textContent()).includes('亲人'));
+  await page.locator('[data-action=delete]').click();await checkSheet();await page.locator('[data-cancel-delete]').click();
+  assert.equal(await page.locator('[data-case]').count(),1);
+  await page.locator('[data-clear-search]').click();assert((await page.locator('[data-case]').first().textContent()).includes('布局示例'));
+  await page.locator('[data-tab=chart]').click();await page.getByRole('button',{name:'快捷案例',exact:true}).click();await page.locator('summary').filter({hasText:'关系星系'}).click();await page.locator('summary').filter({hasText:'双向案例'}).click();await page.locator('[data-destination=synastry]').click();
+  await page.locator('[data-select-other]').click();await page.locator('[data-other]').first().click();
+  await page.getByText(/契合度 \d+%/).first().waitFor();
+  await page.locator('[data-pair-mode=composite]').click();await page.locator('.pair-reading').waitFor();assert.equal(await page.locator('#westernChart').count(),1);
+  await page.screenshot({path:'build/mobile-'+engine+'-composite-'+width+'.png'});await shareSnapshot('composite');
+  const active=await page.evaluate(()=>localStorage.getItem('xy_active_profile'));await page.locator('#instantChartButton').click();
+  await page.locator('[data-mode=sky][aria-pressed=true]').waitFor();await page.locator('#westernChart').waitFor();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('xy_active_profile')),active);
+  assert((await page.locator('[data-instant-caption]').textContent()).includes('UT'));await shareSnapshot('instant');
   assert.deepEqual(api,[]);assert.deepEqual(errors,[]);
   await page.screenshot({path:'build/mobile-'+engine+'-'+width+'.png'});
   console.log('PASS',width+'px','offline charts, Chinese aspects, sheet limits and TabBar clearance');

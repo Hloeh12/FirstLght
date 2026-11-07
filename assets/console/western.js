@@ -1,3 +1,4 @@
+import {aspectBrowser,bindAspectBrowser} from './aspects.js';
 import {bindWheel} from './wheel-gesture.js';
 import {$,esc,btn,stored,save,table,bars,symbols,zodiacNames,isoLocal,selectedRails} from './ui.js';
 
@@ -62,7 +63,7 @@ function radialLayout(inner,outer,xy){
  return placed;
 }
 const wheelBodies=data=>data.planets.filter(p=>!['asc','dsc','mc','ic'].includes(p.key));
-function wheel(r){
+export function wheel(r){
  const a=r.chart,b=r.outer,c=220;
  const angle=lon=>(180-norm(lon-a.axes.asc))*Math.PI/180;
  const xy=(lon,rad)=>[c+rad*Math.cos(angle(lon)),c-rad*Math.sin(angle(lon))];
@@ -136,26 +137,12 @@ const degreeMinutes=x=>{
  const n=Math.round(Math.abs(x)*60);
  return Math.floor(n/60)+'°'+pad(n%60)+'′';
 };
-function planetList(planets){
+export function planetList(planets){
  return '<div class="planet-list">'+planets.map(p=>`<div class="planet-row"><b>${esc(p.symbol+' '+p.name)}</b>
- <span>${esc(p.sign+' '+dms(p.degree))} · 第${p.house}宫 ${p.retro?'逆行 Rx':''}
- ${dignityLabels[p.dignity]?`<span class="dignity-badge">${dignityLabels[p.dignity]}</span>`:''}${p.approximate?' · 近似位置':''}</span></div>`).join('')+'</div>';
+ <div class="planet-position"><span class="planet-sign">${esc(p.sign)}</span><span class="planet-degree">${esc(dms(p.degree))}</span>
+ <span class="planet-meta">第${p.house}宫 ${p.retro?'逆行 Rx':''} ${dignityLabels[p.dignity]?`<span class="dignity-badge">${dignityLabels[p.dignity]}</span>`:''}${p.approximate?' · 近似位置':''}</span></div></div>`).join('')+'</div>';
 }
-function aspectDetails(r){
- const from=r.outer?.planets??r.chart.planets,to=r.chart.planets;
- const list=r.outer?r.cross:r.chart.aspects;
- return `<details class="aspect-details" open><summary>相位明细 · ${list.length} 条</summary><div class="stack">${list.map(x=>{
-  const a=from.find(p=>p.key===x.aKey),b=to.find(p=>p.key===x.bKey);
-  const gap=a&&b?Math.min(norm(a.lon-b.lon),norm(b.lon-a.lon)):null;
-  const phase=x.applying===true?'入相位':x.applying===false?'出相位':x.orb<1e-7?'精确相位':'阶段未定';
-  const sign=x.applying===true?'−':x.applying===false?'+':'';
-  const type=[60,120].includes(x.angle)?'soft':[90,180,45,135].includes(x.angle)?'hard':'neutral';
-  return `<div class="aspect-detail" data-applying="${x.applying===true}" data-aspect="${type}"><b>${esc((r.outer?'行运':'')+x.a+' '+x.type+' '+(r.outer?'本命':'')+x.b)}</b>
-  <span>标准角 ${degreeMinutes(x.angle)}${gap===null?'':' · 实际夹角 '+degreeMinutes(gap)}</span>
-  <span>Orb ${sign}${degreeMinutes(x.orb)} · ${phase}</span></div>`;
- }).join('')}</div></details>`;
-}
-function facts(r){
+function facts(r,s){
  const p=r.chart.planets;
  const allPatterns=r.chart.analysis.patterns;
  const sign=s=>zodiacNames[Math.floor(norm(s)/30)]+' '+Math.floor(norm(s)%30)+'°';
@@ -166,7 +153,7 @@ function facts(r){
  });
  return `<article class="card"><h2>星体与位置</h2>${planetList(p)}</article>
  ${r.outer?`<article class="card"><h2>外圈星体</h2>${planetList(r.outer.planets)}</article>`:''}
- <article class="card"><h2>${r.outer?'跨盘相位':'相位容许度矩阵'}</h2>${aspectDetails(r)}${matrix(r)}<small>入相用 −，出相用 +。轴线或没有速度的虚点只显示距离。≈ 表示轨道传播近似。</small></article>
+ <article class="card"><h2>${r.outer?'跨盘相位':'相位容许度矩阵'}</h2>${aspectBrowser(r,s.aspects??={filter:'main',expanded:false})}<details><summary>查看相位网格</summary>${matrix(r)}</details><small>入相用 −，出相用 +。轴线或没有速度的虚点只显示距离。≈ 表示轨道传播近似。</small></article>
  <article class="card"><h2>宫主星</h2>${table(['宫位','宫头','古典宫主','飞入宫'],cusp)}</article>
  <article class="card"><h2>经典格局</h2>${allPatterns.length?allPatterns.map(x=>`<p><b>${esc(x.type)}</b> · ${esc(x.planets.join('、'))}</p>`).join(''):'<p class="muted">在当前容许度和显示星体下未识别格局。</p>'}</article>`;
 }
@@ -185,16 +172,17 @@ export function westernView(ctx){
   r?.profection?`<article class="card"><h2>古典小限</h2><p>${r.profection.age} ${r.profection.nominal?'虚岁':'周岁'} · 第 ${r.profection.house} 整宫 ${esc(r.profection.sign)} · 年主星 ${esc(r.profection.ruler)} 落本命第 ${r.profection.lordHouse} 宫。</p></article>`:'';
  const display=r?.chart;
  ctx.root.innerHTML=`<section aria-label="西洋占星"><div class="spread"><h1>西洋占星</h1><small>${esc(display?houses[display.houseSystem]:'')}</small></div>
- <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
- <p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
+ <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).filter(([id])=>!s.birthOverride||id==='sky').map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
+ ${s.instant?`<p class="thin" data-instant-caption>即刻 ${esc(s.instant.at.slice(0,23).replace('T',' '))} UT · ${esc(s.instant.place)}（${esc(s.instant.source)}）</p>`:''}<p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
  ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
  <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
  ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 东八区</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
  ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}
  <p class="thin">${display.analysis.elements.missing.length?'未覆盖 '+display.analysis.elements.missing.join('、'):'四元素均有星体'} · 主导 ${display.analysis.elements.dominant.join('、')}</p>
  ${bars(Object.fromEntries(Object.entries(display.analysis.modalities.percentages).map(([k,v])=>[k==='基本'?'本位':k,Number.isFinite(v)?v:0])))}</article>
- ${effects}${facts(r)}`:''}</section>`;
+ ${effects}${facts(r,s)}`:''}</section>`;
  if(r){
+  bindAspectBrowser(ctx.root,r,s.aspects);
   const stage=$('.wheel-stage',ctx.root),card=$('[data-wheel-card]',stage);
   const lookup=new Map([['inner',r.chart],['outer',r.outer]].flatMap(([layer,data])=>(data?.planets||[]).map(p=>[layer+'-'+p.key,p])));
   bindWheel(stage,s,key=>{
@@ -216,9 +204,10 @@ export function westernView(ctx){
 async function update(ctx,mode,at){
  const s=stateOf(ctx),token=++s.token;
  const status=$('#astroStatus',ctx.root);if(status)status.textContent='正在重算星历…';
+ if(s.instant&&(mode!=='sky'||at.toISOString()!==s.instant.at))s.instant=null;
  s.mode=mode;s.at=at;
  try{
-  const result=await ctx.request('/api/console/western',{birth:ctx.birth,config:cfg(),mode,at:at.toISOString()});
+  const result=await ctx.request('/api/console/western',{birth:s.birthOverride??ctx.birth,config:cfg(),mode,at:at.toISOString()});
   if(token!==s.token||ctx.state.chartState.west!==s)return;
   s.result=result;s.error='';
  }catch(error){if(token===s.token){s.error=error.message;s.result=null;}}
@@ -230,14 +219,14 @@ export const houseOptions=value=>options(houses,value);
 export function setAstroHouse(ctx,value){
  if(!Object.hasOwn(houses,value)||value===astroHouse())return;
  save(key,{...cfg(),house:value});
- if(ctx.birth&&ctx.state.chartState.west){
+ if((ctx.birth||ctx.state.chartState.west?.birthOverride)&&ctx.state.chartState.west){
   const s=ctx.state.chartState.west;
   update(ctx,s.mode,s.at);
  }
 }
 export function westernTools(ctx,host){
  const s=stateOf(ctx);
- host.innerHTML='<h3>推运盘类</h3><div class="tool-grid">'+Object.entries(modes).filter(([id])=>['transit','secondary','tertiary','solar','lunar'].includes(id)).map(([id,label])=>btn(label,`data-west-tool="${id}" aria-pressed="${s.mode===id}"`)).join('')+'</div>'+
+ host.innerHTML='<h3>推运盘类</h3><div class="tool-grid">'+Object.entries(modes).filter(([id])=>!s.birthOverride&&['transit','secondary','tertiary','solar','lunar'].includes(id)).map(([id,label])=>btn(label,`data-west-tool="${id}" aria-pressed="${s.mode===id}"`)).join('')+'</div>'+
   btn('分宫制与小行星配置','data-astro-config class="tool-full"');
  for(const b of host.querySelectorAll('[data-west-tool]'))b.onclick=()=>{ctx.close($('#toolSheet'));update(ctx,b.dataset.westTool,s.at);};
  $('[data-astro-config]',host).onclick=()=>configSheet(ctx);

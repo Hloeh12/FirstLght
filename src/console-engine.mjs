@@ -1,3 +1,5 @@
+import {compositePro} from './composite.mjs';
+import {vedicReading,vedicPro} from './vedic-pro.mjs';
 import {resonance} from './resonance.mjs';
 import {ashtakoota} from './ashtakoota.mjs';
 import {chart,synastry} from './chart.mjs';
@@ -21,10 +23,11 @@ function consoleReading({birth}){
  const utcOffset=(Date.UTC(Y,M-1,D,h,mi)-Date.parse(bazi.info.utc))/3600000;
  const ziwei=ziweiChart(standard);
  const full=chart({...standard,skipZiwei:true});
- return {bazi,ziwei,western:full.western,vedic:full.vedic,analysis:full.analysis,meta:full.meta,
+ return {bazi,ziwei,western:full.western,vedic:vedicReading(full.vedic,full.meta.utc),analysis:full.analysis,meta:full.meta,
   report:localTemplateReport({...full,ziwei})};
 }
-function pairReading({a,b,mode}){
+function pairReading({a,b,mode,config}){
+ if(mode!==undefined&&!['synastry','composite','midpoint','davison'].includes(mode))throw Error('无效合盘类型');
  const ba=baziPro({birth:a}),bb=baziPro({birth:b});
  const result=synastry({...solarInput(a,ba),skipZiwei:true},{...solarInput(b,bb),skipZiwei:true},mode||'synastry');
  const {total:forward,max}=result.vedic.koota;
@@ -43,10 +46,11 @@ function pairReading({a,b,mode}){
   {name:'相处留意',text:[challenging?label(challenging):'',tension?aspect(tension):''].filter(Boolean).join('；')||'当前规则未检出突出的冲克线索。'}
  ];
  const fit={total,max,percent:Math.round(100*total/max),highlight:supportive?label(supportive):challenging?label(challenging):key?aspect(key):'',insights};
- return {ok:true,...result,fit,crossRelations:cross};
+ const combined=mode==='composite'?compositePro({a,b,config}):null;
+ return {ok:true,...result,western:combined?{...result.western,chart:combined.chart,composite:combined.chart}:result.western,fit,crossRelations:cross,composite:combined};
 }
 export const consoleRoutes={
- '/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,
+ '/api/console/vedic':vedicPro,'/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,
  '/api/console/reverse-bazi':reverseBazi,'/api/console/convert':convertBirth,
  '/api/console/bones':({birth})=>boneWeight(birth),'/api/console/qizheng':({birth})=>qizheng(birth),
  '/api/console/yijing':yijing,'/api/console/calendar':almanac,

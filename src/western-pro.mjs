@@ -211,3 +211,5 @@ export function westernPro({birth,config,mode='natal',at}){
  return {mode,chart:natal,outer:progressed,cross:aspectPairs(progressed.planets,natal.planets,cfg,false)};
 }
 export function ephemerisBody(date,id){return bodyAt(date,id,null);}
+
+export function calculateAspects(planets,raw={}){return aspectPairs(planets,planets,settings(raw),true);}

@@ -2,7 +2,7 @@ import {localRequest} from '../../src/console-engine.mjs';
 
 export const $=(selector,root=document)=>root.querySelector(selector);
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export const labels={ziwei:'紫微斗数',bazi:'四柱八字',west:'西洋占星',synastry:'双人合盘',qizheng:'七政四余',yijing:'易经推命',calendar:'万年历择日'};
+export const labels={ziwei:'紫微斗数',bazi:'四柱八字',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘',qizheng:'七政四余',yijing:'易经推命',calendar:'万年历择日'};
 export function stored(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}}
 export function save(key,value){localStorage.setItem(key,JSON.stringify(value));}
 export const btn=(text,attrs='')=>`<button type="button" ${attrs}>${esc(text)}</button>`;

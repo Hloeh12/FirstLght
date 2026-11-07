@@ -56,7 +56,11 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         webView.uiDelegate = self
         webView.isOpaque = false
         webView.backgroundColor = .clear
-        webView.scrollView.bounces = true
+        webView.scrollView.bounces = false
+        webView.scrollView.alwaysBounceVertical = false
+        webView.scrollView.alwaysBounceHorizontal = false
+        webView.scrollView.isDirectionalLockEnabled = true
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
 
         view.addSubview(webView)

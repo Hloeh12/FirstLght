@@ -137,9 +137,34 @@ test('local sky derives real new/full moon and daily draws use the Shanghai doub
  assert(sky('2024-04-08T18:21:00Z').litPercent<1);
  assert.equal(sky('2024-04-23T23:49:00Z').phase,'满月');
  assert(sky('2024-04-23T23:49:00Z').litPercent>99);
- const guide=at=>localRequest('/api/console/daily-guidance',{at});
+ const guide=at=>localRequest('/api/console/daily-guidance',{at,birth});
  assert.deepEqual(guide('2026-11-06T15:03:00Z'),guide('2026-11-06T15:55:00Z'));
  assert.equal(guide('2026-11-06T15:03:00Z').branch,'子');
  assert.equal(guide('2026-11-06T16:03:00Z').day,'2026-11-07');
  assert.equal(guide('2026-11-06T17:03:00Z').branch,'丑');
+});
+
+test('daily guidance differentiates Bing-fire and Gui-water and Bazi readings follow the selected flow',()=>{
+ const a={...birth,Y:2000,M:8,D:16,h:12,mi:0,dateStr:'2000-08-16',timeStr:'12:00'};
+ const b={...birth,D:22,dateStr:'1998-11-22'};
+ const fire=localRequest('/api/console/daily-guidance',{birth:a,at});
+ const water=localRequest('/api/console/daily-guidance',{birth:b,at});
+ assert.equal(fire.dayMaster,'丙火');
+ assert.equal(water.dayMaster,'癸水');
+ assert.notDeepEqual(fire,water);
+ assert.notEqual(fire.energy,water.energy);
+ assert.notEqual(fire.motto,water.motto);
+ assert(Number.isFinite(fire.support)&&fire.energy.includes('丙火日主'));
+ assert.equal(fire.seed%10,2);
+ assert.equal(water.seed%10,9);
+ assert.throws(()=>localRequest('/api/console/daily-guidance',{at}),/先选择命主/);
+ const natal=baziPro({birth});
+ assert.equal(natal.guidance,null);
+ const timed=baziPro({birth,selection:{year:2026}});
+ assert(timed.guidance.influences.some(r=>r.type==='六冲'&&r.pattern==='子午'));
+ assert(timed.guidance.summary.includes('流年'));
+ assert.equal(timed.guidance.advice.length,3);
+ const month=baziPro({birth,selection:{year:2026,month:9}});
+ assert.equal(month.guidance.scope,'流月');
+ assert.notEqual(month.guidance.title,timed.guidance.title);
 });

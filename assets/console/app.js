@@ -1,3 +1,4 @@
+import {lockViewport} from './viewport.js';
 import {diagnosticsPanel,installDiagnostics} from './diagnostics.js';
 import {soulWidgets,wireSoul} from './soul-home.js';
 import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
@@ -10,6 +11,7 @@ import {shareChart} from './share.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
 
 installDiagnostics();
+lockViewport();
 
 const CASES='xy:cases:v2',ACTIVE='xy_active_profile',SETTINGS='xy:settings:v2';
 const standardGroups=['我的','亲人','朋友','特别关注'];
@@ -51,7 +53,7 @@ for(const d of document.querySelectorAll('dialog')){
 function sheet(id,title,body){
  const d=$('#'+id),prefix={birthSheet:'birth',caseDrawer:'drawer',toolSheet:'tool',termSheet:'term'}[id];
  d.innerHTML=`<div class="dialog-content"><div class="sheet-grip" aria-hidden="true"></div><header class="sheet-head">
- <h2 id="${prefix}Title">${esc(title)}</h2>${btn('×','class="icon" aria-label="关闭" data-close')}</header>${body}</div>`;
+ <h2 id="${prefix}Title">${esc(title)}</h2>${btn('×','class="icon" aria-label="关闭" data-close')}</header><div class="sheet-body">${body}</div></div>`;
  $('[data-close]',d).onclick=()=>close(d);
  open(d);
  return d;
@@ -60,7 +62,7 @@ function switchTab(tab,system=state.system){
  for(const d of document.querySelectorAll('dialog'))close(d);
  state.tab=tab;state.system=system;
  render();
- window.scrollTo?.(0,0);
+ $('#mainContent').scrollTo?.(0,0);
 }
 function persist(){
  save(CASES,state.cases);

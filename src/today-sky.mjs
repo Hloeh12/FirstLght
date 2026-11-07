@@ -1,9 +1,11 @@
+import {Solar,LunarUtil} from 'lunar-javascript';
+import {baziPro,stems,stemElements} from './bazi-pro.mjs';
+import {tenGod} from './bazi.mjs';
 import {bodyAt,norm} from './ephemeris.mjs';
 
 const zodiac=['白羊','金牛','双子','巨蟹','狮子','处女','天秤','天蝎','射手','摩羯','水瓶','双鱼'];
 const phases=['新月','娥眉月','上弦月','盈凸月','满月','亏凸月','下弦月','残月'];
 const moods=['适合从一件小事开始。','适合给刚萌芽的计划留一点空间。','适合把犹豫拆成一个可执行步骤。','适合调整细节，让计划更容易持续。','适合回顾结果，也给自己片刻停顿。','适合整理所得，分享一条有用经验。','适合删去一件已经不必坚持的事。','适合放慢节奏，给新周期留白。'];
-const DAY=86400000;
 const position=longitude=>{
  const minutes=Math.floor(norm(longitude)*60),sign=Math.floor(minutes/1800);
  return {longitude,sign:zodiac[sign],degree:Math.floor(minutes%1800/60),minute:minutes%60};
@@ -19,23 +21,51 @@ export function todaySky({at}={}){
   hint:`月亮在${moon.sign}座 · ${moods[phase]}`};
 }
 
-const cards=[
- ['樱花粉','#ff77aa','东方','开始一件小事','在犹豫时反复责备自己','花开的速度，由它自己决定。'],
- ['玫瑰粉','#f57ba6','东南','说出具体的愿望','替别人预先作决定','温柔地开口，也是一种勇气。'],
- ['蜜桃粉','#ffb4a8','南方','整理一件重要物品','同时开启太多任务','把今天照亮一小块，就已经足够。'],
- ['晨曦金','#f3be7d','西南','给自己留出散步时间','把忙碌当成唯一答案','脚步放慢时，你依然在前进。'],
- ['雾樱紫','#d7a2cf','西方','写下一件想感谢的事','把片刻情绪当成定论','有些事只需要被看见，就会轻一点。'],
- ['暖桃粉','#f9adba','西北','完成一个小承诺','把每件事都变成考核','你的节奏不必与任何人相同。'],
- ['蔷薇粉','#ec8eb3','北方','先休息，再处理复杂的事','在疲惫时急着回复','停下来，也是照顾正在生长的自己。'],
- ['初光粉','#ffcedf','东北','为明天准备一件轻便的物品','为没做完的事熬夜','留一点空白，光才有地方落下。']
-];
-export function dailyGuidance({at}={}){
+const produce={木:'火',火:'土',土:'金',金:'水',水:'木'};
+const controls={木:'土',火:'金',土:'水',金:'木',水:'火'};
+const palettes={
+ 木:{color:'樱芽粉',swatch:'#efabd2',direction:'东方',action:'梳理学习计划，向可信任的人请教',rest:'给想法留一段生长时间'},
+ 火:{color:'玫瑰粉',swatch:'#ff77aa',direction:'南方',action:'清楚表达想法，完成一个可展示的小成果',rest:'把热情留给真正想照亮的事'},
+ 土:{color:'晨曦金',swatch:'#edc396',direction:'中央',action:'整理清单、预算与居住空间',rest:'先安顿好自己，再处理复杂的问题'},
+ 金:{color:'珍珠樱白',swatch:'#ffe6f0',direction:'西方',action:'划清任务边界，复核约定与细节',rest:'放下多余的要求，让重要的事有位置'},
+ 水:{color:'雾樱紫',swatch:'#d8acd4',direction:'北方',action:'记录感受，给行程与对话留出弹性',rest:'允许自己调整方向，节奏也可以温柔'}
+};
+const angleRelation=(day,element)=>element===day?'同我':produce[element]===day?'生我':produce[day]===element?'我生':controls[element]===day?'克我':'我克';
+export function dailyGuidance({at,birth}={}){
+ if(!birth)throw Error('请先选择命主，抽取专属指引');
  const date=at===undefined?new Date():new Date(at);
  if(!Number.isFinite(+date))throw Error('无效的抽取时间');
- const wall=+date+8*3600000,clock=new Date(wall);
- const day=Math.floor(wall/DAY),slot=Math.floor((clock.getUTCHours()+1)/2)%12;
- const ordinal=day*12+slot;
- const seed=Math.imul(ordinal^(ordinal>>>13),0x45d9f3b)>>>0;
- const [color,swatch,direction,good,avoid,motto]=cards[seed%cards.length];
- return {day:clock.toISOString().slice(0,10),branch:'子丑寅卯辰巳午未申酉戌亥'[slot],color,swatch,direction,good,avoid,motto};
+ const natal=baziPro({birth}),master=natal.dayMaster,stemIndex=stems.indexOf(master.stem);
+ const clock=new Date(+date+8*3600000);
+ const lunar=Solar.fromYmdHms(clock.getUTCFullYear(),clock.getUTCMonth()+1,clock.getUTCDate(),clock.getUTCHours(),clock.getUTCMinutes(),clock.getUTCSeconds()).getLunar();
+ const eight=lunar.getEightChar();
+ eight.setSect(birth.lateZishi==='current-day'?2:1);
+ const day=eight.getDay(),hour=eight.getTime(),dayStem=day[0],hourStem=hour[0];
+ const weights={...natal.strength.weights};
+ for(const [pillar,scale] of [[day,1],[hour,.65]]){
+  weights[stemElements[stems.indexOf(pillar[0])]]+=scale;
+  const hidden=LunarUtil.ZHI_HIDE_GAN[pillar[1]];
+  const fractions=[[],[1],[.7,.3],[.6,.25,.15]][hidden.length];
+  hidden.forEach((s,i)=>{weights[stemElements[stems.indexOf(s)]]+=scale*fractions[i];});
+ }
+ const resource=Object.keys(produce).find(e=>produce[e]===master.element);
+ const total=Object.values(weights).reduce((sum,value)=>sum+value,0);
+ const support=100*(weights[master.element]+weights[resource])/total;
+ const mode=support<40?'扶助偏少':support>60?'扶助较多':'扶助相对均衡';
+ const useful=support<40?resource:support>60?produce[master.element]:controls[master.element];
+ const palette=palettes[useful];
+ const dayElement=stemElements[stems.indexOf(dayStem)],hourElement=stemElements[stems.indexOf(hourStem)];
+ const dayGod=tenGod(stemIndex,stems.indexOf(dayStem)),hourGod=tenGod(stemIndex,stems.indexOf(hourStem));
+ const branch=hour[1],ganzhiIndex=LunarUtil.JIA_ZI.indexOf(day),hourIndex=LunarUtil.ZHI.indexOf(branch)-1;
+ const seed=(ganzhiIndex*12+hourIndex)*10+stemIndex;
+ const benefit=produce[dayElement]===master.element||dayElement===master.element;
+ const avoid=benefit?'在获得支持时接下过多承诺':'在疲惫或犹豫时急着作重要承诺';
+ return {
+  day:clock.toISOString().slice(0,10),branch,dayPillar:day,hourPillar:hour,dayMaster:master.stem+master.element,
+  seed,color:palette.color,swatch:palette.swatch,direction:palette.direction,element:useful,
+  energy:`${master.stem}${master.element}日主 · 今日${day}（${dayGod}，${angleRelation(master.element,dayElement)}） · ${hour}时（${hourGod}，${angleRelation(master.element,hourElement)}）。加入日时权重后，扶助约 ${support.toFixed(1)}%，${mode}。`,
+  good:palette.action+'；'+(/食神|伤官/.test(hourGod)?'此时可先整理表达，再确认对方的理解。':/官|杀/.test(hourGod)?'此时先明确责任与期限。':'此时适合把计划拆成一件可完成的小事。'),
+  avoid,motto:`${master.stem}${master.element}的你，${palette.rest}。`,
+  support:Number(support.toFixed(2))
+ };
 }

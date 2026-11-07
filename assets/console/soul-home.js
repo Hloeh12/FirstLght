@@ -23,7 +23,7 @@ function compass(sky){
 }
 export function soulWidgets(){
  return `<article class="card soul-sky" data-today-sky><h2>今日即时星象</h2><p role="status">正在读取本地星历…</p></article>
- <article class="card soul-divination"><div><span class="kicker">DAILY INSPIRATION</span><h2>每日灵感占卜</h2><p>按东八区的日期与时辰，抽取一则灵感。</p></div>
+ <article class="card soul-divination"><div><span class="kicker">DAILY INSPIRATION</span><h2>每日灵感占卜</h2><p>结合活跃命主日主与今日干支时辰，抽取专属指引。</p></div>
  <button type="button" data-draw-guide class="crystal-button" aria-label="点亮水晶球，抽取今日灵性指引"><span aria-hidden="true">✦</span><small>点亮水晶球</small></button>
  <div data-guidance class="guidance" aria-live="polite"></div></article>`;
 }
@@ -49,11 +49,14 @@ export function wireSoul(ctx){
   if(working)return;
   working=true;draw.disabled=true;draw.classList.remove('lighting');void draw.offsetWidth;draw.classList.add('lighting');
   try{
-   const g=await ctx.request('/api/console/daily-guidance',{});
+   const profile=ctx.state.profile,birth=ctx.birth;
+   if(!birth){out.textContent='请先点按顶部名片选择命主。';return;}
+   const g=await ctx.request('/api/console/daily-guidance',{birth});
    if(!reducedMotion())await new Promise(resolve=>setTimeout(resolve,280));
-   if(!out.isConnected)return;
+   if(!out.isConnected||ctx.state.profile?.id!==profile?.id)return;
    out.innerHTML=`<h3>今日灵性指引 · ${esc(g.branch)}时</h3>
-   <dl><div><dt>幸运色</dt><dd><i class="guide-swatch" style="background:${g.swatch}"></i>${esc(g.color)}</dd></div>
+   <p><b>今日能量天平</b> ${esc(g.energy)}</p>
+   <dl><div><dt>今日开运五行与幸运色</dt><dd><i class="guide-swatch" style="background:${g.swatch}"></i>${esc(g.element+' · '+g.color)}</dd></div>
    <div><dt>开运方位</dt><dd>${esc(g.direction)}</dd></div><div><dt>适宜</dt><dd>${esc(g.good)}</dd></div>
    <div><dt>避讳</dt><dd>${esc(g.avoid)}</dd></div></dl><blockquote>${esc(g.motto)}</blockquote>`;
    playSuccessSound();

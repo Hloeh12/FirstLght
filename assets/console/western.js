@@ -19,7 +19,7 @@ const norm=x=>((x%360)+360)%360;
 const pad=x=>String(x).padStart(2,'0');
 const dms=d=>d.degrees+'°'+pad(d.minutes)+'′'+pad(d.seconds)+'″';
 const dateTime=r=>r?.slice(0,19).replace('T',' ')+' UT';
-const aspectColors={0:'#d192cd',30:'#cb87ac',45:'#df76a1',60:'#c99b5e',90:'#eb5e91',120:'#b484bf',135:'#df76a1',150:'#b484bf',180:'#ac376a'};
+const aspectColors={0:'#d192cd',30:'#cb87ac',45:'#df76a1',60:'#77aa99',90:'#eb5e91',120:'#7aaf9c',135:'#df76a1',150:'#b484bf',180:'#ac376a'};
 const stateOf=ctx=>ctx.state.chartState.west??={mode:'natal',at:new Date(),result:null,token:0,pending:false,error:'',requested:false};
 function spaced(planets,min){
  const list=planets.map(p=>({...p,plot:norm(p.lon)})).sort((a,b)=>a.plot-b.plot);
@@ -39,18 +39,18 @@ function spaced(planets,min){
  return rotated;
 }
 function radialLayout(inner,outer,xy){
- const placed=spaced(inner,10).map(p=>({...p,radius:117,outer:false}));
+ const placed=spaced(inner,16).map(p=>({...p,radius:117,outer:false}));
  const near=(a,b)=>Math.abs(norm(a-b+180)-180);
  const box=(lon,radius)=>{const [x,y]=xy(lon,radius);return [x,y+4];};
  const overlaps=(p,lon,radius)=>{
   const a=box(p.plot,p.radius),b=box(lon,radius);
-  return Math.abs(a[0]-b[0])<20&&Math.abs(a[1]-b[1])<21;
+  return Math.abs(a[0]-b[0])<34&&Math.abs(a[1]-b[1])<23;
  };
- for(const p of spaced(outer,9)){
+ for(const p of spaced(outer,16)){
   const conjunction=inner.some(n=>near(p.lon,n.lon)<6);
   const radii=conjunction?[151,137]:[137,151];
   let candidate;
-  for(const delta of [0,4,-4,8,-8,12,-12,16,-16,20,-20,24,-24]){
+  for(const delta of [0,4,-4,8,-8,12,-12,16,-16,20,-20,24,-24,32,-32,40,-40,48,-48,60,-60,75,-75,90,-90]){
    for(const radius of radii){
     const lon=p.plot+delta;
     if(!placed.some(q=>overlaps(q,lon,radius))){candidate={plot:lon,radius};break;}
@@ -82,10 +82,10 @@ function wheel(r){
  const circles=[202,177,161,135,107].map((rad,i)=>`<circle cx="${c}" cy="${c}" r="${rad}" fill="${i%2?'#fffbfd':'#f8ebf3'}" stroke="#d6b3c9" stroke-width="1"/>`).join('');
  const houses=a.cusps.map((lon,i)=>{
   const mid=lon+norm(a.cusps[(i+1)%12]-lon)/2;
-  return line(xy(lon,162),xy(lon,0),'stroke="#e2c7d9" stroke-width=".65"')+label(mid,169,i+1,'font-size="11" fill="#7e5372"');
+  return line(xy(lon,162),xy(lon,0),'stroke="#e2c7d9" stroke-width=".65"')+label(mid,169,'第'+(i+1)+'宫','font-size="7.6" fill="#7e5372"');
  }).join('');
  const axes=Object.entries(a.axes).filter(([k])=>a.planets.some(p=>p.key===k)).map(([key,lon])=>
-  line(xy(lon,161),xy(lon,104),'stroke="#a15781" stroke-width="1.4"')+label(lon,157,key.toUpperCase(),'font-size="9" font-weight="750" fill="#8b315e"')).join('');
+  line(xy(lon,161),xy(lon,104),'stroke="#a15781" stroke-width="1.4"')+label(lon,157,({asc:'上升 ASC',dsc:'下降 DSC',mc:'天顶 MC',ic:'天底 IC'})[key],'font-size="7" font-weight="750" fill="#8b315e"')).join('');
  const placements=radialLayout(wheelBodies(a),b?wheelBodies(b):[],xy);
  const stars=placements.map(p=>{
   const anchor=p.outer?135:104,color=p.outer?'#a84575':'#8a4f91';
@@ -96,12 +96,12 @@ function wheel(r){
    line([x,y],[lx,ly],`stroke="${color}" stroke-opacity=".5" stroke-width=".65"`)+
    `<g transform="translate(${lx} ${ly})"><g class="wheel-body-glyph" role="button" tabindex="0" aria-pressed="false" data-wheel-focus="${p.outer?'outer':'inner'}-${p.key}" aria-label="${p.outer?'行运':'本盘'} ${esc(p.name)}">
    <g class="wheel-star-visual"><circle class="wheel-star-halo" r="12" cy="2"/><circle class="wheel-star-hit" r="13" cy="2"/>
-   <text y="0" text-anchor="middle" dominant-baseline="central" font-size="${p.outer?13:15}" font-weight="650" fill="${color}">${esc(p.symbol)}</text>
+   <text y="0" text-anchor="middle" dominant-baseline="central" font-size="8.5" font-weight="650" fill="${color}">${esc(p.symbol+' '+p.name)}</text>
    <text y="10" text-anchor="middle" dominant-baseline="central" font-size="7.4" fill="${color}">${degree}</text></g></g></g></g>`;
 
  }).join('');
  return `<svg id="westernChart" class="wheel" viewBox="0 0 440 440" role="group" aria-label="${b?'本命与行运双圈圆盘':'西洋占星圆盘'}">${circles}<g class="wheel-ring">${ticks}
- ${symbols.map((s,i)=>label(i*30+15,187,s,'font-size="18" fill="#8b557b"')).join('')}${houses}
+ ${symbols.map((s,i)=>label(i*30+15,184,s,'font-size="13" fill="#8b557b"')+label(i*30+15,195,zodiacNames[i],'font-size="7" fill="#8b557b"')).join('')}${houses}
  ${aspectLayer(b?r.cross:a.aspects,!!b)}${axes}
  ${r.profection?`<path d="M220 220 L${pos(r.profection.wholeStart+(r.profection.house-1)*30,161)} A161 161 0 0 1 ${pos(r.profection.wholeStart+r.profection.house*30,161)} Z" fill="#d184b238"/>`:''}${stars}</g></svg>`;
 }
@@ -118,8 +118,8 @@ function matrix(r){
   const type=[90,180,45,135].includes(x.angle)?'hard':[60,120].includes(x.angle)?'soft':'neutral';
   return `<td data-aspect="${type}" title="${esc(x.type+' '+offset+' '+phase)}">${esc(x.symbol)}<br>${phase==='入'?'−':phase==='出'?'+':''}${offset} ${phase}</td>`;
  };
- return `<div class="scroll"><table class="grid-table astro-grid"><thead><tr><th>星体</th>${p.map(x=>'<th>'+esc(x.symbol)+'</th>').join('')}</tr></thead><tbody>
- ${q.map((a,i)=>'<tr><th>'+esc(a.symbol)+'</th>'+p.map((b,j)=>outer||j<i?cell(a,b):'<td></td>').join('')+'</tr>').join('')}</tbody></table></div>`;
+ return `<div class="scroll"><table class="grid-table astro-grid"><thead><tr><th>星体</th>${p.map(x=>'<th>'+esc(x.symbol+' '+x.name)+'</th>').join('')}</tr></thead><tbody>
+ ${q.map((a,i)=>'<tr><th>'+esc(a.symbol+' '+a.name)+'</th>'+p.map((b,j)=>outer||j<i?cell(a,b):'<td></td>').join('')+'</tr>').join('')}</tbody></table></div>`;
 }
 function timeLabel(s){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',dateStyle:'short',timeStyle:'short'}).format(s.at);}
 function shift(date,unit,n){
@@ -131,10 +131,32 @@ function shift(date,unit,n){
  const last=new Date(Date.UTC(out.getUTCFullYear(),out.getUTCMonth()+1,0)).getUTCDate();
  out.setUTCDate(Math.min(day,last));return out;
 }
+const dignityLabels={入庙:'庙',旺相:'旺',入弱:'陷',落陷:'落'};
+const degreeMinutes=x=>{
+ const n=Math.round(Math.abs(x)*60);
+ return Math.floor(n/60)+'°'+pad(n%60)+'′';
+};
+function planetList(planets){
+ return '<div class="planet-list">'+planets.map(p=>`<div class="planet-row"><b>${esc(p.symbol+' '+p.name)}</b>
+ <span>${esc(p.sign+' '+dms(p.degree))} · 第${p.house}宫 ${p.retro?'逆行 Rx':''}
+ ${dignityLabels[p.dignity]?`<span class="dignity-badge">${dignityLabels[p.dignity]}</span>`:''}${p.approximate?' · 近似位置':''}</span></div>`).join('')+'</div>';
+}
+function aspectDetails(r){
+ const from=r.outer?.planets??r.chart.planets,to=r.chart.planets;
+ const list=r.outer?r.cross:r.chart.aspects;
+ return `<details class="aspect-details" open><summary>相位明细 · ${list.length} 条</summary><div class="stack">${list.map(x=>{
+  const a=from.find(p=>p.key===x.aKey),b=to.find(p=>p.key===x.bKey);
+  const gap=a&&b?Math.min(norm(a.lon-b.lon),norm(b.lon-a.lon)):null;
+  const phase=x.applying===true?'入相位':x.applying===false?'出相位':x.orb<1e-7?'精确相位':'阶段未定';
+  const sign=x.applying===true?'−':x.applying===false?'+':'';
+  const type=[60,120].includes(x.angle)?'soft':[90,180,45,135].includes(x.angle)?'hard':'neutral';
+  return `<div class="aspect-detail" data-aspect="${type}"><b>${esc((r.outer?'行运':'')+x.a+' '+x.type+' '+(r.outer?'本命':'')+x.b)}</b>
+  <span>标准角 ${degreeMinutes(x.angle)}${gap===null?'':' · 实际夹角 '+degreeMinutes(gap)}</span>
+  <span>Orb ${sign}${degreeMinutes(x.orb)} · ${phase}</span></div>`;
+ }).join('')}</div></details>`;
+}
 function facts(r){
  const p=r.chart.planets;
- const dignities={入庙:'庙',旺相:'旺',入弱:'陷',落陷:'落',中性:'—'};
- const planetRows=(data)=>data.map(x=>[x.name,x.sign+' '+dms(x.degree)+(x.approximate?' ≈':''),x.house,x.retro?'Rx':'—',dignities[x.dignity]||'—']);
  const allPatterns=r.chart.analysis.patterns;
  const sign=s=>zodiacNames[Math.floor(norm(s)/30)]+' '+Math.floor(norm(s)%30)+'°';
  const rulers=['火星','金星','水星','月亮','太阳','水星','金星','火星','木星','土星','土星','木星'];
@@ -142,9 +164,9 @@ function facts(r){
   const name=rulers[Math.floor(norm(lon)/30)];
   return [i+1,sign(lon),name,p.find(s=>s.name===name)?.house||'—'];
  });
- return `<article class="card"><h2>星体与位置</h2>${table(['星体','星座度数','宫位','逆行','尊贵'],planetRows(p))}</article>
- ${r.outer?`<article class="card"><h2>外圈星体</h2>${table(['星体','星座度数','宫位','逆行','尊贵'],planetRows(r.outer.planets))}</article>`:''}
- <article class="card"><h2>${r.outer?'跨盘相位':'相位容许度矩阵'}</h2>${matrix(r)}<small>入相用 −，出相用 +。轴线或没有速度的虚点只显示距离。≈ 表示轨道传播近似。</small></article>
+ return `<article class="card"><h2>星体与位置</h2>${planetList(p)}</article>
+ ${r.outer?`<article class="card"><h2>外圈星体</h2>${planetList(r.outer.planets)}</article>`:''}
+ <article class="card"><h2>${r.outer?'跨盘相位':'相位容许度矩阵'}</h2>${aspectDetails(r)}${matrix(r)}<small>入相用 −，出相用 +。轴线或没有速度的虚点只显示距离。≈ 表示轨道传播近似。</small></article>
  <article class="card"><h2>宫主星</h2>${table(['宫位','宫头','古典宫主','飞入宫'],cusp)}</article>
  <article class="card"><h2>经典格局</h2>${allPatterns.length?allPatterns.map(x=>`<p><b>${esc(x.type)}</b> · ${esc(x.planets.join('、'))}</p>`).join(''):'<p class="muted">在当前容许度和显示星体下未识别格局。</p>'}</article>`;
 }
@@ -178,7 +200,7 @@ export function westernView(ctx){
   bindWheel(stage,s,key=>{
    const p=lookup.get(key);
    card.hidden=!p;
-   card.innerHTML=p?`<b>${esc(p.name)}${key.startsWith('outer-')?' · 行运':''}</b><span>${esc(p.sign+' '+dms(p.degree))}</span><span>第 ${p.house} 宫 · ${esc(p.dignity||'无尊贵标记')}</span>`:'';
+   card.innerHTML=p?`<b>${esc(p.symbol+' '+p.name)}${key.startsWith('outer-')?' · 行运':''}</b><span>${esc(p.sign+' '+dms(p.degree))}</span><span>第 ${p.house} 宫 · ${dignityLabels[p.dignity]||'无庙旺陷落'}</span>`:'';
   });
  }
  selectedRails(ctx.root);

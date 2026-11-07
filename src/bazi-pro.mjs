@@ -1,3 +1,4 @@
+import {periodGuidance} from './bazi-guidance.mjs';
 import {Solar,Lunar,LunarUtil} from 'lunar-javascript';
 import {baziFromInput} from './baziInput.mjs';
 import {flowYears,tenGod,yearPillar,monthPillar} from './bazi.mjs';
@@ -146,13 +147,15 @@ export function baziPro({birth,selection={},combine=false}){
  }
  const matrix=[...pillars,...selected],links=relations(matrix);
  const node=b.luck.forward?lunar.getNextJie():lunar.getPrevJie();
- return {pillars,cycles,years,months,selected,relationships:links,strength:strength(matrix,links,combine),
+ const result={pillars,cycles,years,months,selected,relationships:links,strength:strength(matrix,links,combine),
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
   info:{solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
    clock:birth.timeUnknown?'时辰未知':birth.timeStr??[h,mi].map(n=>String(n).padStart(2,'0')).join(':'),
    lunarYear:birthLunar.getYearInGanZhi(),lunarMonth:Math.abs(birthLunar.getMonth()),lunarDay:birthLunar.getDay(),
    startAge:b.luck.startAge,forward:b.luck.forward,node:{name:node.getName(),at:node.getSolar().toYmdHms()},
    correction,lateZishi:birth.lateZishi||'next-day',hourBranch:pillars[3].branch,utc:b.meta.utc}};
+ result.guidance=periodGuidance(result);
+ return result;
 }
 export function reverseBazi({pillars,start=1900,end=2100,lateZishi}){
  if(!Array.isArray(pillars)||pillars.length!==4||pillars.some(p=>typeof p!=='string'||p.length!==2||!stems.includes(p[0])||!branches.includes(p[1])))throw Error('请依次输入四组有效干支');

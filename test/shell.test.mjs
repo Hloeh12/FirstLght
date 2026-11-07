@@ -30,6 +30,8 @@ test('bundled console creates fresh charts and progresses them without any netwo
   assert(predicate(),label+' | '+($('#birthStatus')?.textContent||'')+' | '+($('#screen')?.textContent||'').slice(0,180));
  };
  assert($('#birthSheet').open);
+ assert($('#birthSheet .sheet-body'));
+ assert($('#mainContent #screen'));
  assert(!$('#screen').querySelector('form'));
  let form=$('#birthForm');
  for(const [k,v] of Object.entries({name:'测试案例',date:'1998-11-21',clock:'00:02',lat:'30.361448',lon:'109.492552',tz:'8'}))form.elements[k].value=v;
@@ -96,6 +98,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert($('.bazi-link.clash'));
  click('[data-rail=大运]:nth-child(2)');
  await until(()=>$('#screen').textContent.includes('当前运程'),'Bazi period data');
+ assert($('.period-guidance').textContent.includes('财务与边界'));
  assert.equal($('.matrix'),natalMatrix);
  click('#toolsButton');
  assert.equal(many('[data-bazi-tool]').length,5);
@@ -115,6 +118,9 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert(!$('[data-wheel-card]').hidden);
  assert($('[data-wheel-card]').textContent.includes('宫'));
  assert($('[data-highlight=false]'));
+ assert(many('.aspect-detail').length>0);
+ assert($('.aspect-detail').textContent.includes('标准角'));
+ assert($('.planet-row').textContent.includes('太阳'));
  wheel.getBoundingClientRect=()=>({left:0,top:0,width:400,height:400});
  const touch=(type,x,y)=>{
   const e=new w.Event(type,{bubbles:true,cancelable:true});
@@ -153,6 +159,8 @@ test('bundled console creates fresh charts and progresses them without any netwo
  click('[data-draw-guide]');
  await until(()=> $('[data-guidance]').textContent.includes('幸运色')&&$('[data-guidance]').textContent.includes('避讳'),'local guidance');
  assert($('#screen').textContent.includes('缘分不过天时地利'));
+ assert($('[data-guidance]').textContent.includes('今日能量天平'));
+ assert($('[data-guidance]').textContent.includes('壬水日主'));
  // Create a second offline case and confirm the active-case galaxy deep link.
  click('[data-tab=cases]');click('[data-create]');
  form=$('#birthForm');

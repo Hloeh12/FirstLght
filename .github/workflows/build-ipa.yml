@@ -19,6 +19,10 @@ jobs:
           npm ci
           npm test
           npm run build:console
+      - name: Verify mobile viewport and offline interactions
+        run: |
+          npx playwright install chromium
+          node scripts/mobile-smoke.mjs
       - name: Detect Xcode
         shell: bash
         run: |
@@ -93,6 +97,7 @@ jobs:
           name: FirstLight-build-diagnostics
           path: |
             build/xcodebuild.log
+            build/mobile-*.png
             FirstLight.xcodeproj/project.pbxproj
           if-no-files-found: ignore
 

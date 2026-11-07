@@ -1,6 +1,7 @@
 import {build} from 'esbuild';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
+import {checkRelease} from './check-release.mjs';
 
 const root = new URL('../', import.meta.url);
 const legacy = {
@@ -24,9 +25,12 @@ const embeddedData = {
 };
 
 export function buildConsole(write = true) {
+ checkRelease();
+ const commit=process.env.FIRSTLIGHT_COMMIT||process.env.GITHUB_SHA||'local';
  return build({
   absWorkingDir: fileURLToPath(root), entryPoints: ['assets/console/app.js'],
   outfile: 'js/console.js', bundle: true, platform: 'browser', format: 'iife',
+  define:{__FIRSTLIGHT_COMMIT__:JSON.stringify(commit)},
   target: 'safari15', legalComments: 'inline', minify: true, plugins: [embeddedData], write,
  });
 }

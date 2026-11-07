@@ -1,3 +1,4 @@
+import {appBuild} from './releases.js';
 import {$,btn,esc,request} from './ui.js';
 import {clearMemo} from '../../src/memo.mjs';
 import {clearRelationshipCache} from './case-space.js';
@@ -116,7 +117,7 @@ export function diagnosticsPanel(ctx){
   }finally{button.disabled=false;}
  };
  $('[data-copy-logs]',d).onclick=async()=>{
-  output.value=JSON.stringify({app:'FirstLght',at:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight},online:navigator.onLine,userAgent:navigator.userAgent,checks:ctx.state.lastDiagnostics||[],logs},null,2);
+  output.value=JSON.stringify({app:'FirstLght',version:appBuild.version,build:appBuild.build,revision:appBuild.revision,at:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight},online:navigator.onLine,userAgent:navigator.userAgent,checks:ctx.state.lastDiagnostics||[],logs},null,2);
   status.textContent=await copyLogs(output)?'诊断包已复制。':'诊断包已选中，可以手动复制。';
  };
  $('[data-reset-cache]',d).onclick=async e=>{

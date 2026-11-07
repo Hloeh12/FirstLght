@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdir} from 'node:fs/promises';
+import {mkdir,readFile} from 'node:fs/promises';
+const release=JSON.parse(await readFile(new URL('../app-release.json',import.meta.url),'utf8'));
 import {chromium,webkit} from 'playwright';
 const engine=process.env.FIRSTLIGHT_BROWSER||'chromium';
 const browserType={chromium,webkit}[engine];
@@ -75,6 +76,15 @@ try{
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
   await page.locator('[data-tab="me"]').click();
+  assert.equal(await page.locator('[data-app-version]').textContent(),`FirstLght ${release.version}（${release.build}）`);
+  if(process.env.GITHUB_SHA)assert((await page.locator('[data-app-build]').textContent()).includes(process.env.GITHUB_SHA.slice(0,7)));
+  assert((await page.locator('[data-app-build]').textContent()).includes('构建标识'));
+  await page.locator('[data-release-history]').click();
+  await checkSheet();
+  await page.locator('.release-entry').nth(1).locator('summary').click();
+  assert((await page.locator('#toolSheet').textContent()).includes('9903fbf'));
+  await page.screenshot({path:'build/mobile-'+engine+'-releases-'+width+'.png'});
+  await page.locator('#toolSheet [data-close]').click();
   await page.locator('[data-draw-guide]').click();
   await page.getByText('今日能量天平',{exact:true}).waitFor();
   const metrics=await page.evaluate(()=>{

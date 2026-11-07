@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 
 test('bundled console creates fresh charts and progresses them without any network',async t=>{
  const base='https://offline.test';
+ const release=JSON.parse(readFileSync('app-release.json','utf8'));
  const js=(await buildConsole(false)).outputFiles[0].text;
  const attempted=[],haptics=[],pitches=[],clipboard=[];
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
@@ -184,6 +185,13 @@ test('bundled console creates fresh charts and progresses them without any netwo
  await until(()=>$('#screen').textContent.includes('八字跨盘干支'),'deep pair calculation');
  assert($('#screen').textContent.includes(fit));
  click('[data-tab=me]');
+ assert.equal($('[data-app-version]').textContent,`FirstLght ${release.version}（${release.build}）`);
+ assert($('[data-app-build]').textContent.includes('构建标识'));
+ click('[data-release-history]');
+ assert($('#toolSheet').textContent.includes('历次更新与修复'));
+ assert($('#toolSheet').textContent.includes('9903fbf'));
+ assert($('#toolSheet').textContent.includes('历史构建'));
+ click('#toolSheet [data-close]');
  click('[data-diagnostics]');
  const diag=$('#toolSheet');
  for(let i=0;i<101;i++)w.dispatchEvent(new w.ErrorEvent('error',{message:'synthetic-event-'+i}));
@@ -198,6 +206,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  click('[data-copy-logs]');
  await until(()=>clipboard.length===1,'diagnostics copy');
  const report=JSON.parse(clipboard[0]);
+ assert.equal(report.version,release.version);assert.equal(report.build,release.build);
  assert.equal(report.checks.length,5);
  assert.equal(report.logs.length,100);
  assert(report.logs.some(l=>l.stack.includes('synthetic-rejection')));

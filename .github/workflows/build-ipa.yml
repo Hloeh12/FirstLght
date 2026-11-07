@@ -10,6 +10,8 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -17,6 +19,7 @@ jobs:
       - name: Test and bundle the offline engine
         run: |
           npm ci
+          node scripts/check-release.mjs --previous
           npm test
           npm run build:console
       - name: Verify mobile viewport and offline interactions
@@ -68,7 +71,9 @@ jobs:
           import pathlib, plistlib, sys
           app = pathlib.Path(sys.argv[1])
           info = plistlib.loads((app / 'Info.plist').read_bytes())
-          expected = dict(CFBundleDisplayName='FirstLght', CFBundleName='FirstLght', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString='0.15.0', CFBundleVersion='1', LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
+          import json
+          release = json.loads(pathlib.Path('app-release.json').read_text())
+          expected = dict(CFBundleDisplayName='FirstLght', CFBundleName='FirstLght', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString=release['version'], CFBundleVersion=str(release['build']), LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
           for key, value in expected.items():
               assert info.get(key) == value, (key, info.get(key), value)
           catalog = app / 'Assets.car'
@@ -85,11 +90,14 @@ jobs:
           unzip -tq build/FirstLight.ipa
           unzip -p build/FirstLight.ipa Payload/FirstLight.app/Assets.car > build/PackagedAssets.car
           cmp "$APP/Assets.car" build/PackagedAssets.car
+          IPA_NAME="$(node -p '"FirstLght-"+require("./app-release.json").version+"-build"+require("./app-release.json").build+".ipa"')"
+          cp build/FirstLight.ipa "build/$IPA_NAME"
+          echo "IPA_FILE=$IPA_NAME" >> "$GITHUB_ENV"
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
           name: FirstLight-IPA-unsigned
-          path: build/FirstLight.ipa
+          path: build/${{ env.IPA_FILE }}
           if-no-files-found: error
       - name: Upload build diagnostics
         if: always()

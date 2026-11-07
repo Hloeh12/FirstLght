@@ -1,17 +1,10 @@
 import bones from './reference/chenggu.json' with {type:'json'};
-import hexagrams from './reference/zhouyi.json' with {type:'json'};
 import mansions from './reference/mansions.json' with {type:'json'};
 import {Solar,LunarYear} from 'lunar-javascript';
 import * as Astronomy from 'astronomy-engine';
 import {baziPro,branches,relations,civilSolar} from './bazi-pro.mjs';
 import {ephemerisBody,normalize,houseOf} from './western-pro.mjs';
 
-const trigrams=['乾','兑','离','震','巽','坎','艮','坤'];
-const traditional=['乾','兌','離','震','巽','坎','艮','坤'];
-const bits=['111','110','101','100','011','010','001','000'];
-const images=['天','泽','火','雷','风','水','山','地'];
-const themes=['主动开创','交流协商','辨明方向','应对变动','循序渗透','审慎过险','设立边界','承载与配合'];
-const mod=(n,x)=>((n-1)%x+x)%x;
 export function boneWeight(birth){
  if(birth.timeUnknown)throw Error('称骨需要已知出生时辰');
  const info=baziPro({birth}).info;
@@ -20,28 +13,7 @@ export function boneWeight(birth){
  const reading=qian<33?'歌诀多用勤劳和渐进的意象，可借此回看如何积累资源和寻求支持。':qian<49?'歌诀多写独立经营和阶段转折，可借此梳理哪些事适合自己主导、哪些需要协作。':'歌诀多用福禄、名望或家业作比喻，可借此思考如何经营已有资源和责任。';
  return {parts,qian,song:bones.SONG[qian],reading,method:'农历年月日与时支四项相加。闰月并本月，歌诀采用通行单本。'};
 }
-function namedHex(upper,lower,change){
- const g=hexagrams.find(x=>[traditional[upper],trigrams[upper]].includes(x.trigrams.upper)&&[traditional[lower],trigrams[lower]].includes(x.trigrams.lower));
- const lines=[...bits[lower]+bits[upper]].map(Number);
- return {number:g.number,name:g.name_full,guaci:g.guaci,line:g.yaoci[change]?.text,change:change+1,lines,
-  reading:'上卦'+images[upper]+'侧重'+themes[upper]+'，下卦'+images[lower]+'侧重'+themes[lower]+'。结合第 '+(change+1)+' 爻，先观察事态所处阶段，再决定推进、等待还是调整。'};
-}
-function fromNumbers(year,month,day,hour){
- const upper=mod(year+month+day,8),lower=mod(year+month+day+hour,8),change=mod(year+month+day+hour,6);
- const original=namedHex(upper,lower,change);
- const lines=[...original.lines];lines[change]=1-lines[change];
- const changed=namedHex(bits.indexOf(lines.slice(3).join('')),bits.indexOf(lines.slice(0,3).join('')),change);
- return {original,changed};
-}
-export function yijing({birth,year=new Date().getUTCFullYear()}){
- if(birth.timeUnknown)throw Error('年月日时起卦需要出生时辰');
- if(!Number.isInteger(year)||year<1800||year>2399)throw Error('无效流年');
- const b=baziPro({birth}).info,month=b.lunarMonth,day=b.lunarDay,hour=branches.indexOf(b.hourBranch)+1;
- const natal=fromNumbers(branches.indexOf(b.lunarYear[1])+1,month,day,hour);
- const library=hexagrams.map(g=>namedHex(traditional.indexOf(g.trigrams.upper)>=0?traditional.indexOf(g.trigrams.upper):trigrams.indexOf(g.trigrams.upper),traditional.indexOf(g.trigrams.lower)>=0?traditional.indexOf(g.trigrams.lower):trigrams.indexOf(g.trigrams.lower),0));
- return {library,natal:natal.original,changed:natal.changed,annual:fromNumbers(((year-4)%12+12)%12+1,month,day,hour).original,year,
-  method:'梅花年月日时起例。先天栏显示本卦，后天栏显示动爻变卦；流年栏以所选年支替换出生年支重新取数。'};
-}
+export {yijing} from './yijing-tianji.mjs';
 function validSolar(value){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(value??''))throw Error('请选择有效公历日期');
  const s=civilSolar(...value.split('-').map(Number));

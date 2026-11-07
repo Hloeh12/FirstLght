@@ -1,5 +1,5 @@
 'use strict';
-const name = 'firstlight-console-shell-v6';
+const name = 'firstlight-console-shell-v7';
 const files = ['/', '/js/console.js', '/assets/console/design.css', '/assets/console/credits.html'];
 async function refreshShell(){
  const cache = await caches.open(name);

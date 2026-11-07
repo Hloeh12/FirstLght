@@ -1,3 +1,4 @@
+import {DAY_MS,TROPICAL_YEAR_MS,SIDEREAL_MONTH_DAYS} from './time-constants.mjs';
 import {ayanamsa,bodyAt,housesAt} from './ephemeris.mjs';
 import {baziFromInput} from './baziInput.mjs';
 import {analyze} from './analysis.mjs';
@@ -17,7 +18,7 @@ const ASPECTS=[
  [0,'合相','☌',8,5],[60,'六合','⚹',5,3],[90,'刑相','□',7,5],[120,'三合','△',7,5],[180,'对冲','☍',8,5],
  [30,'半六合','⚺',2,0],[45,'半刑','∠',2,0],[135,'补八分','⚼',2,0],[150,'梅花相','⚻',2,1.5]
 ];
-const DAY=86400000,YEAR=365.2422*DAY,MONTH=27.321661*DAY;
+const DAY=DAY_MS,YEAR=TROPICAL_YEAR_MS,MONTH=SIDEREAL_MONTH_DAYS*DAY;
 const AYAN={lahiri:1,fagan:0,krishnamurti:5};
 export const normalize=x=>((x%360)+360)%360;
 const signed=x=>normalize(x+180)-180;
@@ -185,7 +186,11 @@ export function westernPro({birth,config,mode='natal',at}){
   return {mode,chart:natal,profection:{age:age+(cfg.nominalAge?1:0),nominal:cfg.nominalAge,house,sign:SIGNS[idx],ruler,lordHouse:lord.house,wholeStart:sign(natal.axes.asc)*30}};
  }
  let date=target;
- if(mode==='secondary'||mode==='tertiary')date=new Date(+born+(target-born)*DAY/(mode==='secondary'?YEAR:MONTH));
+ if(mode==='secondary'||mode==='tertiary'){
+  const tropicalAge=(target-born)/YEAR;
+  const daysPerYear=mode==='secondary'?1:YEAR/MONTH;
+  date=new Date(+born+tropicalAge*daysPerYear*DAY);
+ }
  if(mode==='solar'||mode==='lunar')date=findReturn(born,target,mode==='solar'?0:1,cfg.sidereal?cfg.ayan:null,Number(birth.city.tz)||0);
  const progressed=chartAt(date,birth.city,cfg);
  if(mode==='solar'||mode==='lunar'){

@@ -1,5 +1,6 @@
+import {mutagensFor,ziweiSchool} from './ziwei-rules.mjs';
 import {generateChart,detectPatterns,calculateTrueSolarTime,resolveZiweiDayOffset,shiftGregorianDate,schoolStarBrightness} from './renhuai-engine.mjs';
-import { astro, util } from 'iztro';
+import { astro } from 'iztro';
 import { Lunar, LunarYear } from 'lunar-javascript';
 import { memoTTL, cacheKey } from './memo.mjs';
 /* 紫微盘：使用公开发布的 iztro 库（默认中州派配置）独立实现。
@@ -27,6 +28,9 @@ export function ziweiChart(input){
   ({year,month,day}=shiftGregorianDate({year,month,day},resolveZiweiDayOffset(correction,input.lateZishi||'next-day')));hour=correction.branch;
  }
  const c=generateChart({year,month,day,hour,gender:gender==='男'?'male':gender==='女'?'female':gender,longitude:Number(input.city?.lon??120)},{astroType});
+ const school=ziweiSchool(input.ziweiSchool);
+ const natal=mutagensFor(STEMS[c.lunarInfo.yearStem],school.id);
+ for(const p of c.palaces)for(const star of p.stars){const i=natal.indexOf(star.name);star.siHua=i<0?'':'禄权科忌'[i];}
  const patterns=detectPatterns(c);
  const palaces=c.palaces.map(p=>({name:p.name,heavenlyStem:STEMS[p.stem],earthlyBranch:BRANCHES[p.branch],branch:p.branch,isBodyPalace:p.isShenGong,decadal:p.daXianAge?{range:p.daXianAge}:null,majorStars:p.stars.filter(s=>s.type==='major').map(s=>({...s,mutagen:s.siHua||'',brightness:s.brightnessRaw||''})),minorStars:p.stars.filter(s=>s.type!=='major').map(s=>({...s,mutagen:s.siHua||'',brightness:s.brightnessRaw||''})),adjectiveStars:[],relatedBranches:[p.branch,(p.branch+4)%12,(p.branch+8)%12,(p.branch+6)%12],stars:p.stars}));
  for(const p of palaces){
@@ -38,8 +42,9 @@ export function ziweiChart(input){
   const brightnessWeights={};
   for(const [i,grade] of [...'庙旺得利平不陷'].entries())brightnessWeights[grade]=(7-i)/7;
   p.starWeight=Number(basis.reduce((sum,star)=>sum+(brightnessWeights[star.brightness]??0)*(p.majorStars.length?1:.6),0).toFixed(2));
-  p.flying=transformations(util.getMutagensByHeavenlyStem(p.heavenlyStem),palaces);
+  p.flying=transformations(mutagensFor(p.heavenlyStem,school.id),palaces);
  }
+ for(const p of palaces){p.triadWeight=Number(p.relatedBranches.reduce((sum,b)=>sum+palaces.find(q=>q.branch===b).starWeight,0).toFixed(2));}
  const effectiveDate=[year,String(month).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
  const a=cachedAstro(effectiveDate,hour,gender,astroType);
  for(const p of palaces){
@@ -47,23 +52,25 @@ export function ziweiChart(input){
   p.annualStars=[ring?.suiqian12,ring?.jiangqian12].filter(Boolean);
  }
  const decades=a.decadalList().map(({palaceName,ageRange,yearRange})=>({palaceName,ageRange,yearRange}));
- return {astroType,decades,effectiveDate,effectiveTimeIndex:hour,soul:c.mingZhu,body:c.shenZhu,fiveElementsClass:c.wuxingJuName,lunarDate:JSON.stringify(c.lunarInfo),palaces,patterns,correction,sihua:palaces.flatMap(p=>p.stars.filter(s=>s.siHua).map(s=>({star:s.name,type:s.siHua,palace:p.name}))),source:'Renhuai123/ziwei-doushu a600484 · MIT · iztro',rules:{lateZishi:input.lateZishi||'next-day',brightness:'QS（斗数全书）上游默认表',dataset:false}};
+ return {school,astroType,decades,effectiveDate,effectiveTimeIndex:hour,soul:c.mingZhu,body:c.shenZhu,fiveElementsClass:c.wuxingJuName,lunarDate:JSON.stringify(c.lunarInfo),palaces,patterns,correction,sihua:palaces.flatMap(p=>p.stars.filter(s=>s.siHua).map(s=>({star:s.name,type:s.siHua,palace:p.name}))),source:'Renhuai123/ziwei-doushu a600484 · MIT · iztro',rules:{school:school.id,lateZishi:input.lateZishi||'next-day',brightness:'QS（斗数全书）上游默认表',dataset:false}};
 }
-export function ziweiFlow({dateStr,timeIndex,gender,flowYear,astroType,scope,month,day}){
+export function ziweiFlow({dateStr,timeIndex,gender,flowYear,astroType,scope,month,day,ziweiSchool:schoolId}){
+  const school=ziweiSchool(schoolId);
   astroType=validateAstroType(astroType);
   const a=cachedAstro(dateStr,timeIndex,gender,astroType);
   const y=Number(flowYear??new Date().getFullYear());
   if(!Number.isInteger(y)||y<1||y>9999)throw new Error('无效流年');
-  if(scope!==undefined)return scopedFlow(a,y,scope,month,day);
+  if(scope!==undefined)return scopedFlow(a,y,scope,month,day,school);
   const date=new Date(0);
   date.setFullYear(y,6,1);
   const h=a.horoscope(date);
-  return {year:y,astroType,ganZhi:`${h.yearly.heavenlyStem}${h.yearly.earthlyBranch}`,yearly:h.yearly,decadal:h.decadal,age:h.age,source:'iztro@2.6.3'};
+  for(const layer of ['yearly','decadal'])h[layer].mutagen=mutagensFor(h[layer].heavenlyStem,school.id);
+  return {school,year:y,astroType,ganZhi:`${h.yearly.heavenlyStem}${h.yearly.earthlyBranch}`,yearly:h.yearly,decadal:h.decadal,age:h.age,source:'iztro@2.6.3'};
 }
 
 
 // Signed months distinguish regular and intercalary lunar months.
-function scopedFlow(a,year,scope,month,day){
+function scopedFlow(a,year,scope,month,day,school){
  const levels={decadal:'大限',yearly:'流年',monthly:'流月',daily:'流日'};
  if(!Object.hasOwn(levels,scope))throw new Error('无效运限层级');
  const months=LunarYear.fromYear(year).getMonthsInYear().map(m=>({
@@ -84,8 +91,8 @@ function scopedFlow(a,year,scope,month,day){
  const palaces=a.palaces.map(p=>({
   branch:BRANCHES.indexOf(p.earthlyBranch),stars:[...p.majorStars,...p.minorStars,...p.adjectiveStars]
  }));
- const mutagens=transformations(period.mutagen,palaces);
- return {year,date,scope,label:levels[scope],ganZhi:period.heavenlyStem+period.earthlyBranch,
+ const mutagens=transformations(mutagensFor(period.heavenlyStem,school.id),palaces);
+ return {school,year,date,scope,label:levels[scope],ganZhi:period.heavenlyStem+period.earthlyBranch,
   month:scopedMonth?selected.month:null,day:scope==='daily'?selectedDay:null,
   months,days,palaceNames,mutagens};
 }

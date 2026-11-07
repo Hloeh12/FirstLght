@@ -1,3 +1,4 @@
+import hexagrams from './reference/zhouyi.json' with {type:'json'};
 import {Solar,LunarUtil} from 'lunar-javascript';
 import {baziPro,stems,stemElements} from './bazi-pro.mjs';
 import {tenGod} from './bazi.mjs';
@@ -57,15 +58,18 @@ export function dailyGuidance({at,birth}={}){
  const dayElement=stemElements[stems.indexOf(dayStem)],hourElement=stemElements[stems.indexOf(hourStem)];
  const dayGod=tenGod(stemIndex,stems.indexOf(dayStem)),hourGod=tenGod(stemIndex,stems.indexOf(hourStem));
  const branch=hour[1],ganzhiIndex=LunarUtil.JIA_ZI.indexOf(day),hourIndex=LunarUtil.ZHI.indexOf(branch)-1;
- const seed=(ganzhiIndex*12+hourIndex)*10+stemIndex;
+ const dateHour=((clock.getUTCFullYear()*12+clock.getUTCMonth())*31+clock.getUTCDate()-1)*24+clock.getUTCHours();
+ const elementIndex='木火土金水'.indexOf(master.element);
+ const seed=dateHour*50+stemIndex*5+elementIndex;
+ const hexagram=hexagrams[((seed%64)+64)%64];
  const benefit=produce[dayElement]===master.element||dayElement===master.element;
  const avoid=benefit?'在获得支持时接下过多承诺':'在疲惫或犹豫时急着作重要承诺';
  return {
   day:clock.toISOString().slice(0,10),branch,dayPillar:day,hourPillar:hour,dayMaster:master.stem+master.element,
-  seed,color:palette.color,swatch:palette.swatch,direction:palette.direction,element:useful,
+  seed,seedSource:{calendar:'Asia/Shanghai',dateHour,stem:master.stem,element:master.element},hexagram:{number:hexagram.number,name:hexagram.name_full,guaci:hexagram.guaci},color:palette.color,swatch:palette.swatch,direction:palette.direction,element:useful,
   energy:`${master.stem}${master.element}日主 · 今日${day}（${dayGod}，${angleRelation(master.element,dayElement)}） · ${hour}时（${hourGod}，${angleRelation(master.element,hourElement)}）。加入日时权重后，扶助约 ${support.toFixed(1)}%，${mode}。`,
   good:palette.action+'；'+(/食神|伤官/.test(hourGod)?'此时可先整理表达，再确认对方的理解。':/官|杀/.test(hourGod)?'此时先明确责任与期限。':'此时适合把计划拆成一件可完成的小事。'),
-  avoid,motto:`${master.stem}${master.element}的你，${palette.rest}。`,
+  avoid,motto:`${master.stem}${master.element}的你，${palette.rest}。${['慢一点，也能走到心之所向','把今天过好，就是新的转机','温柔待己，也是一种笃定','容许不同的节奏，共处仍有空间','不必一次解答所有问题','做一件小事，让生活重新流动','先听见自己，再回应世界','每次停顿都可以是重新选择'][seed%8]}。`,
   support:Number(support.toFixed(2))
  };
 }

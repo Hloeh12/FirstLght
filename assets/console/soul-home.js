@@ -55,7 +55,7 @@ export function wireSoul(ctx){
    if(!reducedMotion())await new Promise(resolve=>setTimeout(resolve,280));
    if(!out.isConnected||ctx.state.profile?.id!==profile?.id)return;
    out.innerHTML=`<h3>今日灵性指引 · ${esc(g.branch)}时</h3>
-   <p><b>今日能量天平</b> ${esc(g.energy)}</p>
+   <p><b>今日能量天平</b> ${esc(g.energy)}</p><p class="thin">今日时空卦 · ${esc(g.hexagram.name)}</p>
    <dl><div><dt>今日开运五行与幸运色</dt><dd><i class="guide-swatch" style="background:${g.swatch}"></i>${esc(g.element+' · '+g.color)}</dd></div>
    <div><dt>开运方位</dt><dd>${esc(g.direction)}</dd></div><div><dt>适宜</dt><dd>${esc(g.good)}</dd></div>
    <div><dt>避讳</dt><dd>${esc(g.avoid)}</dd></div></dl><blockquote>${esc(g.motto)}</blockquote>`;

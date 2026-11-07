@@ -1,3 +1,4 @@
+import {DAY_MS,TROPICAL_YEAR_MS,TROPICAL_YEAR_DAYS} from './time-constants.mjs';
 import {Solar,LunarUtil} from 'lunar-javascript';
 import * as Astronomy from 'astronomy-engine';
 
@@ -15,19 +16,25 @@ const norm=x=>((x%360)+360)%360;
 const sunLon=date=>norm(Astronomy.SunPosition(date).elon);
 
 /** 求某年太阳黄经达到 lon 的时刻（就近搜索，返回 Date） */
-function termNear(year, lon){
-  // 以黄经 0° 约在 3/20 为基准估算日期，再在 ±25 天内二分
-  const target=norm(lon);
-  let guess=new Date(Date.UTC(year,2,20,12)-((340-target+360)%360)*0.9856*86400000/0.9856*1);
-  // 用粗略比例：黄经每天约 +0.9856°
-  const nowLon=sunLon(new Date(Date.UTC(year,2,20,12)));
-  const delta=((target-nowLon+540)%360)-180;
-  guess=new Date(Date.UTC(year,2,20,12)+delta/0.98565*86400000);
-  if(guess.getUTCFullYear()<year)guess.setUTCFullYear(year);
-  let lo=+guess-3*86400000, hi=+guess+3*86400000;
-  const f=t=>{const d=((sunLon(new Date(t))-target+540)%360)-180;return d;};
-  for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(f(mid)<0)lo=mid;else hi=mid;}
-  return new Date(Math.round((lo+hi)/2));
+const termCache=new Map();
+export function termNear(year,lon){
+ const key=year+':'+lon;
+ if(termCache.has(key))return new Date(termCache.get(key));
+ const target=norm(lon);
+ const anchor=new Date(Date.UTC(year,2,20,12));
+ const delta=norm(target-sunLon(anchor)+180)-180;
+ const guess=new Date(+anchor+delta/.98565*DAY_MS);
+ if(guess.getUTCFullYear()!==year)guess.setUTCFullYear(year);
+ const event=Astronomy.SearchSunLongitude(target,new Date(+guess-7*DAY_MS),14);
+ if(!event||event.date.getUTCFullYear()!==year)throw Error('节气搜索未收敛');
+ let lo=+event.date-DAY_MS,hi=+event.date+DAY_MS;
+ const residual=t=>norm(sunLon(new Date(t))-target+180)-180;
+ if(residual(lo)>0||residual(hi)<0)throw Error('节气未形成有效搜索区间');
+ while(hi-lo>1){const mid=Math.floor((lo+hi)/2);if(residual(mid)<0)lo=mid;else hi=mid;}
+ const at=Math.abs(residual(lo))<=Math.abs(residual(hi))?lo:hi;
+ if(Math.abs(residual(at))>=.0001)throw Error('节气数值残差超限');
+ if(termCache.size>=2400)termCache.clear();
+ termCache.set(key,at);return new Date(at);
 }
 
 /** 12 节的黄经：立春 315 起，每 30° 一个 */
@@ -96,9 +103,11 @@ export function luckCycles(utc, localYear, month, yearStemIdx, gender, count=8){
   for(let i=1;i<=count;i++){
     const step=forward?i:-i;
     const sIdx=((mStem+step)%10+10)%10, bIdx=((2+monthIdx+step)%12+12)%12;
-    out.push({age:Math.round((startAge+(i-1)*10)*10)/10,stem:STEMS[sIdx],branch:BRANCHES[bIdx],startYear:localYear+Math.floor(startAge+(i-1)*10)});
+    const exactAge=startAge+(i-1)*10;
+    const startUtc=new Date(+utc+exactAge*TROPICAL_YEAR_MS).toISOString(),endUtc=new Date(+utc+(exactAge+10)*TROPICAL_YEAR_MS).toISOString();
+    out.push({age:Math.round(exactAge*10)/10,exactAge,stem:STEMS[sIdx],branch:BRANCHES[bIdx],startYear:new Date(startUtc).getUTCFullYear(),startUtc,endUtc});
   }
-  return {forward,startAge:Math.round(startAge*10)/10,cycles:out};
+  return {forward,startAge:Math.round(startAge*10)/10,exactStartAge:startAge,tropicalYearDays:TROPICAL_YEAR_DAYS,edge:{name:edge.name,utc:edge.date.toISOString()},cycles:out};
 }
 
 export function flowYears(localYear,count=3,startYear=null){

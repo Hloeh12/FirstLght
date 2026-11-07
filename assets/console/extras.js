@@ -28,8 +28,8 @@ function yi(ctx){
  const id='yijing',s=stateFor(ctx,id,{year:new Date().getFullYear()}),r=s.result;
  ctx.root.innerHTML=`<section id="yijing"><div class="spread"><h1>易经推命</h1><div class="rail">${btn('上一年','data-year="-1"')}${btn(String(s.year),'disabled')}${btn('下一年','data-year="1"')}</div></div>
  <p data-extra-status role="status">${esc(s.error)}</p>
- ${r?hexagram('先天 · 本卦',r.natal)+hexagram('后天 · 变卦',r.changed)+hexagram(r.year+' 流年',r.annual)+
- `<p class="thin">${esc(r.method)}</p><article class="card"><h2>六十四卦典籍</h2><label>选择卦<select data-hex>${r.library.map(x=>`<option value="${x.number}" ${x.number===s.hex?'selected':''}>${x.number} · ${esc(x.name)}</option>`).join('')}</select></label><div data-selected-hex></div></article>`:''}</section>`;
+ ${r?hexagram('先天 · 本卦',r.natal)+hexagram('后天 · 变卦',r.changed)+(r.annual?hexagram(r.year+' 流年 · 太岁'+r.annual.taisuibranch+' · '+r.annual.period,r.annual):'<p>'+esc(r.notice)+'</p>')+
+ `<article class="card"><h3>天纪取数与元堂</h3>${table(['四柱','天干洛书','地支河图'],r.numbers.rows.map(x=>[x.pillar,x.stem,x.branch.join('、')]))}<p>天数 ${r.numbers.heaven.sum} → ${r.numbers.heaven.number}（${r.numbers.sky}） · 地数 ${r.numbers.earth.sum} → ${r.numbers.earth.number}（${r.numbers.land}）</p><p>${r.numbers.era} · 五数寄${r.numbers.lodging} · ${r.yangSeason?'阳令':'阴令'} · 元堂第${r.natal.origin+1}爻</p>${r.changed.special?'<p>'+esc(r.changed.special)+'</p>':''}</article><p class="thin">${esc(r.method)}</p><article class="card"><h2>六十四卦典籍</h2><label>选择卦<select data-hex>${r.library.map(x=>`<option value="${x.number}" ${x.number===s.hex?'selected':''}>${x.number} · ${esc(x.name)}</option>`).join('')}</select></label><div data-selected-hex></div></article>`:''}</section>`;
  for(const b of ctx.root.querySelectorAll('[data-year]'))b.onclick=()=>{s.year+=+b.dataset.year;load(ctx,id,s,'/api/console/yijing',{birth:ctx.birth,year:s.year});};
  if(r){
   const choose=$('[data-hex]',ctx.root);

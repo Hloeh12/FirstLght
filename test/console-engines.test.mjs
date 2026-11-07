@@ -102,7 +102,8 @@ test('natal transformations, eleven luminaries, hexagrams and almanac have compu
  const z=yijing({birth,year:2026});
  assert.equal(z.library.length,64);
  assert.equal(new Set(z.library.map(g=>g.lines.join(''))).size,64);
- assert.equal(z.natal.lines.filter((x,i)=>x!==z.changed.lines[i]).length,1);
+ assert(z.numbers.heaven.sum>0&&z.numbers.earth.sum>0);
+ assert(Number.isInteger(z.natal.origin)&&z.natal.origin>=0&&z.natal.origin<6);
  const a=almanac({birth,date:'2026-11-06',days:2});
  assert.equal(a.dates.length,2);
  assert(a.dates.every(d=>d.hours.length===12&&d.yi.length>0));
@@ -155,8 +156,8 @@ test('daily guidance differentiates Bing-fire and Gui-water and Bazi readings fo
  assert.notEqual(fire.energy,water.energy);
  assert.notEqual(fire.motto,water.motto);
  assert(Number.isFinite(fire.support)&&fire.energy.includes('丙火日主'));
- assert.equal(fire.seed%10,2);
- assert.equal(water.seed%10,9);
+ assert.equal(fire.seedSource.stem,'丙');
+ assert.equal(water.seedSource.stem,'癸');
  assert.throws(()=>localRequest('/api/console/daily-guidance',{at}),/先选择命主/);
  const natal=baziPro({birth});
  assert.equal(natal.guidance,null);

@@ -10,18 +10,19 @@
 </head>
 <body>
  <div id="app">
-  <header class="chrome liquid-glass">
+  <header id="appTopBar" class="chrome liquid-glass">
    <button type="button" class="icon" id="caseDrawerButton" aria-label="快捷案例">☰</button>
-   <button type="button" class="profile-pill" id="activeProfile" aria-haspopup="dialog"><span data-profile-name>🌸 开始排盘</span><span data-profile-edit>＋ 起盘</span></button>
+   <button type="button" class="profile-pill" id="activeProfile" aria-haspopup="dialog"><span data-profile-name>🌸 开始排盘</span><span data-profile-rule hidden></span><span data-profile-edit>＋ 起盘</span></button>
    <button type="button" class="icon" id="toolsButton" aria-label="当前页面功能" aria-haspopup="dialog">•••</button>
   </header>
-  <main id="mainContent" aria-label="主内容">
+  <main id="mainScrollView" aria-label="主内容">
   <div id="notice" role="status" aria-live="polite" hidden></div>
   <div id="screen" tabindex="-1"></div>
+  <div class="scroll-clearance" aria-hidden="true"></div>
   </main>
-  <nav id="tabBar" class="tabbar liquid-glass" aria-label="主导航"></nav>
+  <nav id="bottomNav" class="tabbar liquid-glass" aria-label="主导航"></nav>
  </div>
- <dialog id="birthSheet" class="sheet liquid-glass" aria-labelledby="birthTitle"></dialog>
+ <dialog id="inputSheet" class="sheet liquid-glass" aria-labelledby="birthTitle"></dialog>
  <dialog id="caseDrawer" class="drawer liquid-glass" aria-labelledby="drawerTitle"></dialog>
  <dialog id="toolSheet" class="sheet liquid-glass" aria-labelledby="toolTitle"></dialog>
  <dialog id="termSheet" class="sheet liquid-glass" aria-labelledby="termTitle"></dialog>

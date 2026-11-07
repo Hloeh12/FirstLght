@@ -21,8 +21,9 @@ jobs:
           npm run build:console
       - name: Verify mobile viewport and offline interactions
         run: |
-          npx playwright install chromium
+          npx playwright install chromium webkit
           node scripts/mobile-smoke.mjs
+          FIRSTLIGHT_BROWSER=webkit node scripts/mobile-smoke.mjs
       - name: Detect Xcode
         shell: bash
         run: |

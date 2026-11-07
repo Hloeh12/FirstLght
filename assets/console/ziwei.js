@@ -177,7 +177,7 @@ function detail(s){
  const opposing=flow?.mutagens.filter(m=>m.branch===(p.branch+6)%12)||[];
  const positives=flow?.mutagens.filter(m=>m.type!=='忌')||[];
  const risk=flow?.mutagens.find(m=>m.type==='忌');
- const weight='主星亮度权重 '+p.starWeight.toFixed(2)+'（'+(p.majorStars.length?'本宫':'借对宫')+'）';
+ const weight='三方四正权重 '+p.triadWeight.toFixed(2)+' · 主星亮度权重 '+p.starWeight.toFixed(2)+'（'+(p.majorStars.length?'本宫':'借对宫')+'）';
  const heading=flow?flow.label+' '+flow.ganZhi+' · '+p.name:p.name+' · 本命观察';
  let description=flow
   ? [`选定 ${flow.date}，${p.name}在本时段对应${related||'原宫'}，先观察${theme}。`,
@@ -250,7 +250,7 @@ async function setPeriod(ctx,p,type){
   const selection=p||(type==='human'?{scope:'decadal',year:railData({...s,chart:target}).d.yearRange[0]}:null);
   const flow=selection?await ctx.request('/api/ziwei-flow',{
    dateStr:target.effectiveDate,timeIndex:target.effectiveTimeIndex,gender:birth.gender,astroType:target.astroType,
-   flowYear:selection.year,scope:selection.scope,month:selection.month,day:selection.day
+   ziweiSchool:birth.ziweiSchool,flowYear:selection.year,scope:selection.scope,month:selection.month,day:selection.day
   }):null;
   if(ctx.state.chartState.ziwei!==s||n!==s.token)return;
   s.chart=target;s.flow=flow;s.badge=null;s.error='';

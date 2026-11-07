@@ -60,6 +60,11 @@ function intersection(plane,eps){
  return norm(atan2(-plane[0],plane[1]*cos(eps)+plane[2]*sin(eps)));
 }
 export function housesAt(date,city,system){
+ const requestedSystem=system;
+ let warning='';
+ if(Math.abs(city.lat)>=66&&['placidus','koch'].includes(system)){
+  system='porphyry';warning='检测到高纬度地区，分宫制已自动安全切换为波菲利制';
+ }
  const eps=A.e_tilt(A.MakeTime(date)).tobl,ramc=norm(A.SiderealTime(date)*15+city.lon);
  const lat=Math.max(-89.9999,Math.min(89.9999,city.lat));
  const ascAt=t=>norm(atan2(cos(t),-(sin(t)*cos(eps)+tan(lat)*sin(eps))));
@@ -70,7 +75,7 @@ export function housesAt(date,city,system){
  const vertex=norm(vert+(dot(v,east)>0?180:0));
  const anchors=[asc,ic,dsc,mc];
  const porphyry=()=>anchors.flatMap((x,i)=>[x,norm(x+norm(anchors[(i+1)%4]-x)/3),norm(x+2*norm(anchors[(i+1)%4]-x)/3)]);
- let cusps,warning='';
+ let cusps;
  if(system==='equal'||system==='whole')cusps=Array.from({length:12},(_,i)=>norm((system==='whole'?Math.floor(asc/30)*30:asc)+i*30));
  else if(system==='porphyry')cusps=porphyry();
  else if(system==='campanus'||system==='regiomontanus'){
@@ -110,8 +115,8 @@ export function housesAt(date,city,system){
  if(!ordered){
   warning='该纬度或时刻无法稳定求得所选分宫制，采用 Porphyry。';system='porphyry';cusps=porphyry();
   if(!cusps.every((x,i)=>i===0||norm(x-cusps[0])>norm(cusps[i-1]-cusps[0]))){
-   warning='极区宫头退化，采用等宫。';system='equal';cusps=Array.from({length:12},(_,i)=>norm(asc+30*i));
+   warning='极区宫头退化，已自动安全切换为整宫制';system='whole';cusps=Array.from({length:12},(_,i)=>norm(Math.floor(asc/30)*30+30*i));
   }
  }
- return {asc,mc,vertex,cusps,system,warning};
+ return {asc,mc,vertex,cusps,system,requestedSystem,warning};
 }

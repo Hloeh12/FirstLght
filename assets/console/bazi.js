@@ -13,7 +13,8 @@ function pillar(p,voids,index){
  return `<div class="pillar" data-pillar="${index}">
  ${btn(p.name,'class="pillar-select" aria-pressed="false"')}<span class="element" data-e="${p.stemElement}">${term(p.tenGod)}</span>
  <strong class="element" data-e="${p.stemElement}" data-pillar-anchor="stem">${esc(p.stem)}</strong><strong class="element" data-e="${p.branchElement}" data-pillar-anchor="branch">${esc(p.branch)}</strong>
- <div>${p.hidden.map(h=>`<div class="element" data-e="${h.element}">${term(h.stem+' '+h.god,h.rank+'藏干 '+h.stem+'，属'+h.element+'，相对于日主为'+h.god+'。')}</div>`).join('')}</div>
+ <div>${p.hidden.map(h=>`<div class="element ${h.commanding?'commanding':''}" data-e="${h.element}">${h.commanding?'<small class="command-badge">司令</small>':''}${term(h.stem+' '+h.god,h.rank+'藏干 '+h.stem+'，属'+h.element+'，相对于日主为'+h.god+'。')}</div>`).join('')}</div>
+ ${p.commander?`<span class="command-note">当令 ${esc(p.commander.stem)} · 交${esc(p.commander.term.name)}后 ${p.commander.elapsedDays.toFixed(2)}日</span>`:''}
  <span>${term(p.changsheng,stages[p.changsheng]+'。这是十二长生阶段，不表示寿命。')}</span>
  <span>${term(p.nayin,p.stem+p.branch+'的纳音为'+p.nayin+'。纳音是六十甲子的分类，可与实际五行强弱分别阅读。')}</span>
  ${voids.includes(p.branch)?term('空亡'):''}<div class="chips">${p.shensha.map(x=>term(x)).join('')}</div></div>`;
@@ -147,7 +148,8 @@ async function showTool(ctx,i){
  let content='';
  if(i===0)content=table(['项目','结果'],[
   ['公历',b.solar+' '+b.clock],['农历',b.lunar],['四柱',d.pillars.map(p=>p.stem+p.branch).join(' ')],
-  ['起运',b.startAge+' 岁 · '+(b.forward?'顺行':'逆行')],['交运取节',b.node.name+' '+b.node.at+'（东八区节气）'],
+  ['交节司令',d.commander.stem+' · '+d.commander.term.name+' '+d.commander.term.utc+' · 交节后 '+d.commander.elapsedDays.toFixed(6)+' 日'],
+  ['起运时刻',b.startUtc+'（UT）'],['起运年长',b.tropicalYearDays+' 日/回归年'],['起运',b.startAge+' 岁 · '+(b.forward?'顺行':'逆行')],['交运取节',b.node.name+' '+b.node.at+'（东八区节气）'],
   ['校准',correction(b)],['晚子时',b.lateZishi==='current-day'?'归当日':'归次日']
  ]);
  if(i===1)content=`<h3>${d.strength.kind} · 扶助 ${d.strength.support.toFixed(1)}%</h3><p>${stepText(d.strength.kind)}。</p>${bars(d.strength.percentages)}

@@ -1,7 +1,8 @@
+import {seasonalCommand} from './seasonal-command.mjs';
 import {periodGuidance} from './bazi-guidance.mjs';
 import {Solar,Lunar,LunarUtil} from 'lunar-javascript';
 import {baziFromInput} from './baziInput.mjs';
-import {flowYears,tenGod,yearPillar,monthPillar} from './bazi.mjs';
+import {flowYears,tenGod,yearPillar,monthPillar,solarTerms} from './bazi.mjs';
 import {calculateTrueSolarTime} from './renhuai-engine.mjs';
 
 export const stems='甲乙丙丁戊己庚辛壬癸',branches='子丑寅卯辰巳午未申酉戌亥';
@@ -117,6 +118,9 @@ export function baziPro({birth,selection={},combine=false}){
  const [year,,day]=b.pillars;
  const add=p=>({...describePillar(p,day),shensha:gods(p,year,day,b.pillars[1])});
  const pillars=b.pillars.map(add);
+ const commander=seasonalCommand(b.meta.utc);
+ for(const item of pillars[1].hidden)item.commanding=item.stem===commander.stem;
+ pillars[1].commander=commander;
  const cycles=b.luck.cycles.map((p,i)=>({...add({...p,name:'大运'}),index:i}));
  const selected=[];
  let cycle=null;
@@ -131,14 +135,10 @@ export function baziPro({birth,selection={},combine=false}){
   const y=Number(selection.year);
   if(!Number.isInteger(y)||y<1800||y>2330)throw Error('无效流年');
   selected.push(add({...flowYears(y,1)[0],name:'流年'}));
-  const terms=['立春','惊蛰','清明','立夏','芒种','小暑','立秋','白露','寒露','立冬','大雪','小寒'];
-  const jq=Solar.fromYmd(y,7,1).getLunar().getJieQiTable();
-  months=terms.map((label,i)=>{
-   const solarTerm=jq[label==='小寒'?'XIAO_HAN':label]??jq[label];
-   const iso=solarTerm.toYmdHms(),utc=new Date(iso.replace(' ','T')+'+08:00');
-   const next=new Date(+utc+86400000);
-   const yp=yearPillar(next,solarTerm.getYear()),mp=monthPillar(next,solarTerm.getYear(),stems.indexOf(yp.stem));
-   return {...add({...mp,name:'流月'}),index:i,label,date:iso};
+  const terms=[...solarTerms(y).filter(t=>t.lon!==285),...solarTerms(y+1).filter(t=>t.lon===285)].sort((a,b)=>a.date-b.date);
+  months=terms.map((term,i)=>{
+   const at=new Date(+term.date+1),yp=yearPillar(at,at.getUTCFullYear()),mp=monthPillar(at,at.getUTCFullYear(),stems.indexOf(yp.stem));
+   return {...add({...mp,name:'流月'}),index:i,label:term.name,date:term.date.toISOString(),longitude:term.lon};
   });
   if(selection.month!==undefined&&selection.month!==null){
    if(!months[selection.month])throw Error('无效流月');
@@ -146,13 +146,14 @@ export function baziPro({birth,selection={},combine=false}){
   }
  }
  const matrix=[...pillars,...selected],links=relations(matrix);
- const node=b.luck.forward?lunar.getNextJie():lunar.getPrevJie();
+ const node=b.luck.edge;
+ const nodeWall=new Date(Date.parse(node.utc)+8*3600000).toISOString().slice(0,19).replace('T',' ');
  const result={pillars,cycles,years,months,selected,relationships:links,strength:strength(matrix,links,combine),
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
-  info:{solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
+  commander,info:{solarYear:b.meta.yearPillarYear,solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
    clock:birth.timeUnknown?'时辰未知':birth.timeStr??[h,mi].map(n=>String(n).padStart(2,'0')).join(':'),
    lunarYear:birthLunar.getYearInGanZhi(),lunarMonth:Math.abs(birthLunar.getMonth()),lunarDay:birthLunar.getDay(),
-   startAge:b.luck.startAge,forward:b.luck.forward,node:{name:node.getName(),at:node.getSolar().toYmdHms()},
+   startAge:b.luck.startAge,exactStartAge:b.luck.exactStartAge,startUtc:cycles[0].startUtc,forward:b.luck.forward,node:{name:node.name,utc:node.utc,at:nodeWall},tropicalYearDays:b.luck.tropicalYearDays,
    correction,lateZishi:birth.lateZishi||'next-day',hourBranch:pillars[3].branch,utc:b.meta.utc}};
  result.guidance=periodGuidance(result);
  return result;

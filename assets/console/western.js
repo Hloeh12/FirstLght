@@ -150,7 +150,7 @@ function aspectDetails(r){
   const phase=x.applying===true?'入相位':x.applying===false?'出相位':x.orb<1e-7?'精确相位':'阶段未定';
   const sign=x.applying===true?'−':x.applying===false?'+':'';
   const type=[60,120].includes(x.angle)?'soft':[90,180,45,135].includes(x.angle)?'hard':'neutral';
-  return `<div class="aspect-detail" data-aspect="${type}"><b>${esc((r.outer?'行运':'')+x.a+' '+x.type+' '+(r.outer?'本命':'')+x.b)}</b>
+  return `<div class="aspect-detail" data-applying="${x.applying===true}" data-aspect="${type}"><b>${esc((r.outer?'行运':'')+x.a+' '+x.type+' '+(r.outer?'本命':'')+x.b)}</b>
   <span>标准角 ${degreeMinutes(x.angle)}${gap===null?'':' · 实际夹角 '+degreeMinutes(gap)}</span>
   <span>Orb ${sign}${degreeMinutes(x.orb)} · ${phase}</span></div>`;
  }).join('')}</div></details>`;
@@ -188,7 +188,7 @@ export function westernView(ctx){
  <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
  <p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
  ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
- <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div><small>${esc(dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
+ <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
  ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 东八区</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
  ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}
  <p class="thin">${display.analysis.elements.missing.length?'未覆盖 '+display.analysis.elements.missing.join('、'):'四元素均有星体'} · 主导 ${display.analysis.elements.dominant.join('、')}</p>

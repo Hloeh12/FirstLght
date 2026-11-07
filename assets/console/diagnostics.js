@@ -18,7 +18,7 @@ function clean(value){
   .slice(0,280);
 }
 function write(kind,error){
- const entry={at:new Date().toISOString(),kind,message:clean(error?.message??error)};
+ const entry={at:new Date().toISOString(),kind,message:clean(error?.message??error),stack:String(error?.stack??'').replace(/(?:https?|firstlight|file):\/\/[^\s)]+/gi,'[资源地址]').slice(0,8000)};
  logs.push(entry);
  if(logs.length>capacity)logs.shift();
  try{localStorage.setItem(key,JSON.stringify(logs));}catch{}
@@ -27,7 +27,7 @@ function write(kind,error){
 export function installDiagnostics(){
  window.addEventListener('error',event=>{
   const source=event.target?.tagName;
-  write('页面错误',event.message||event.error||(source?'资源加载失败 · '+source:'未知页面错误'));
+  write('页面错误',event.error||event.message||(source?'资源加载失败 · '+source:'未知页面错误'));
  },true);
  window.addEventListener('unhandledrejection',event=>write('未处理 Promise',event.reason));
 }
@@ -91,7 +91,7 @@ async function copyLogs(output){
 }
 export function diagnosticsPanel(ctx){
  const d=ctx.sheet('toolSheet','🛠️ 运行诊断与日志',`<div class="tool-grid diagnostics-actions">
- ${btn('一键全机自检','data-check-device')}${btn('复制日志','data-copy-logs')}${btn('重置缓存','data-reset-cache')}</div>
+ ${btn('一键全机自检','data-check-device')}${btn('复制诊断包','data-copy-logs')}${btn('重置缓存','data-reset-cache')}</div>
  <p class="thin">自检使用示例资料，在本机运行。缓存重置保留案例、偏好与日志。</p>
  <p data-diagnostic-status role="status"></p><ul data-diagnostic-checks></ul>
  <label>最近 <span data-log-count></span> 条日志（最多 100 条）<textarea readonly rows="8" data-logs aria-label="运行日志"></textarea></label>`);
@@ -99,7 +99,7 @@ export function diagnosticsPanel(ctx){
  const draw=()=>{
   if(!output.isConnected){messages.removeEventListener('update',draw);return;}
   $('[data-log-count]',d).textContent=logs.length;
-  output.value=logs.map(l=>[l.at,l.kind,l.message].join(' · ')).join('\n');
+  output.value=logs.map(l=>[l.at,l.kind,l.message].join(' · ')+(l.stack?'\n'+l.stack:'')).join('\n\n');
  };
  draw();
  messages.addEventListener('update',draw);
@@ -108,15 +108,16 @@ export function diagnosticsPanel(ctx){
   const button=e.currentTarget;button.disabled=true;status.textContent='正在进行本机自检…';
   try{
    const result=await runChecks();
+   ctx.state.lastDiagnostics=result;
    const passed=result.filter(r=>r.ok).length;
-   checks.innerHTML=result.map(r=>`<li>${esc(r.label)} · ${r.ok?'通过':'失败'} · ${r.ms} ms</li>`).join('');
+   checks.innerHTML=result.map(r=>`<li class="${r.ok?'diagnostic-pass':'diagnostic-fail'}">${r.ok?'✓':'!'} ${esc(r.label)} · ${r.ok?'通过':'失败'} · ${r.ms} ms</li>`).join('');
    status.textContent=`${passed}/${result.length} 项通过`;
    write('本机自检',status.textContent);
   }finally{button.disabled=false;}
  };
  $('[data-copy-logs]',d).onclick=async()=>{
-  if(!output.value){status.textContent='目前没有日志可复制。';return;}
-  status.textContent=await copyLogs(output)?'日志已复制。':'日志已选中，可以手动复制。';
+  output.value=JSON.stringify({app:'FirstLght',at:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight},online:navigator.onLine,userAgent:navigator.userAgent,checks:ctx.state.lastDiagnostics||[],logs},null,2);
+  status.textContent=await copyLogs(output)?'诊断包已复制。':'诊断包已选中，可以手动复制。';
  };
  $('[data-reset-cache]',d).onclick=async e=>{
   const button=e.currentTarget;button.disabled=true;

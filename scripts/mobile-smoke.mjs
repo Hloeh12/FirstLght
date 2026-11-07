@@ -92,6 +92,8 @@ try{
    await writeFile('build/mobile-'+engine+'-share-'+kind+'-'+width+'.png',data);
    await page.locator('#toolSheet [data-close]').click();
   };
+  await page.locator('[data-mode=flying]').click();
+  await shareSnapshot('ziwei');
   await useSystem('bazi','东方盘');
   await page.locator('[data-rail="流年"]').first().click();
   await page.locator('.period-guidance').waitFor();

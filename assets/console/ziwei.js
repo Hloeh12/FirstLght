@@ -233,6 +233,7 @@ export function ziweiView(ctx,arrival=false){
  };
  for(const b of panel.querySelectorAll('[data-rail]'))b.onclick=()=>{
   const v=b.dataset.pick;
+  ctx.state.activeTimeSystem='ziwei';
   if(v==='natal'){s.token++;s.flow=null;s.badge=null;s.error='';ziweiView(ctx);return;}
   const n=Number(v),key=b.dataset.rail;
   const p=key==='大限'?{scope:'decadal',year:n}:key==='流年'?{scope:'yearly',year:n}:

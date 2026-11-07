@@ -89,6 +89,7 @@ export function baziView(ctx){
   const b=e.target.closest('[data-rail]');
   if(!b)return;
   const {rail:id,pick:v}=b.dataset,n=Number(v),{pick}=s;
+  ctx.state.activeTimeSystem='bazi';
   update(ctx,id==='大运'?(v==='natal'?{}:{luck:n}):id==='流年'?{...pick,year:n,month:undefined}:{...pick,month:n},s.combine);
  };
  for(const cell of ctx.root.querySelectorAll('[data-pillar]'))cell.onclick=e=>{

@@ -115,7 +115,7 @@ function installReading(profile,result){
  restoreInstant();
  profile.summary=summary(result);
  profile.tags=[...new Set([...(profile.tags||[]),...Object.values(profile.summary)])];
- state.reading=result;state.profile=profile;state.chartState={};state.resonanceProfile=null;state.error='';
+ state.reading=result;state.profile=profile;state.chartState={};state.activeTimeSystem=null;state.resonanceProfile=null;state.error='';
  state.cases=[profile,...state.cases.filter(c=>c.id!==profile.id)];
  state.recent=[profile.id,...state.recent.filter(id=>id!==profile.id)].slice(0,5);
  persist();
@@ -125,7 +125,7 @@ async function activate(profile,go=true){
  const token=++generation;
  flight?.abort();flight=new AbortController();
  const birth=normalized(profile),cached=profileMachine.peek(birth);
- state.profile=profile;state.reading=cached;state.chartState={};state.error='';state.pending=!cached;
+ state.profile=profile;state.reading=cached;state.chartState={};state.activeTimeSystem=null;state.error='';state.pending=!cached;
  state.recent=[profile.id,...state.recent.filter(id=>id!==profile.id)].slice(0,5);
  persist();
  if(cached){profileMachine.sequence++;profileMachine.profile=profile;profileMachine.status='ready';installReading(profile,cached);state.pending=false;if(go)switchTab('chart');else render();return;}
@@ -499,6 +499,19 @@ function resonanceCard(){
  <p>${result.consensus.length?'检出 '+result.consensus.length+' 组同主题、同向的三体系线索。':'当前没有三体系同主题同向共振，不强行拼接结论。'}</p>
  ${result.chains.slice(0,6).map(c=>`<div class="resonance-evidence"><b>${esc(c.topic+' · '+c.direction)} · ${c.coverage}/3 体系</b><div class="energy-track" role="meter" aria-label="证据覆盖体系数" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${c.coverage}"><span class="energy-fill" style="width:${c.coverage/3*100}%"></span></div>${c.items.slice(0,6).map(e=>`<p><small>${esc(e.system)}</small> ${esc(e.text)}</p>`).join('')}</div>`).join('')}<small>${esc(result.method)}</small></article>`;
 }
+function selectedPeriodCard(){
+ const b=state.activeTimeSystem==='bazi'?state.chartState.bazi?.data?.guidance:null;
+ const z=state.activeTimeSystem==='ziwei'?state.chartState.ziwei?.flow:null;
+ if(!b&&!z)return '<article class="card liquid-glass"><h2>当前时空点</h2><p>当前为本命视角。选择时间滑轨后，这里展示对应的阶段线索。</p></article>';
+ const parts=[];
+ if(b)parts.push(`<h3>八字 · ${esc(b.title)}</h3><p>${esc(b.summary)}</p>${b.influences.map(x=>`<p>${esc(x.text)}</p>`).join('')}${b.advice.map(x=>`<p><b>${esc(x.topic)}</b> ${esc(x.text)}</p>`).join('')}`);
+ if(z){
+  const chart=state.chartState.ziwei.chart;
+  const palace=chart?.palaces.find(p=>z.palaceNames[p.branch]==='命宫');
+  parts.push(`<h3>紫微 · ${esc(z.label+' '+z.ganZhi)}</h3><p>流命落 ${esc(palace?.name||'待定位')}；${esc(z.mutagens.map(m=>m.star+'化'+m.type+'入'+(chart?.palaces.find(p=>p.branch===m.branch)?.name||'待定位')).join('、'))}。结合流官与流财的位置核对本期职责和资源变化。</p>`);
+ }
+ return `<article class="card liquid-glass period-guidance" aria-live="polite"><h2>当前时空点 · 专属推演</h2>${parts.join('')}<small>根据所选时间滑轨的本地盘面重算结果生成；传统术数仅作观察参考。</small></article>`;
+}
 function insights(){
  const r=state.reading;
  if(!r){root.innerHTML='<p class="empty">激活案例后查看八字、紫微与西洋占星的综合报告。</p>';return;}
@@ -515,6 +528,7 @@ function insights(){
  const {bazi,ziwei,western}=r;
  const active=ziwei.decades.map(d=>[d.ageRange.join('–')+' 岁',d.yearRange.join('–'),d.palaceName]);
  root.innerHTML=`<section><h1>洞见</h1><p class="muted">${esc(state.profile.name)} · 四体系合参</p>
+ ${selectedPeriodCard()}
  ${resonanceCard()}<article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
  <article class="card liquid-glass"><h2>职责、资源与人际</h2><p>官禄与财帛可分别观察职责和资源，西方天顶 ${esc(western.mc.sign)} 可对照事业表达，印度上升 ${esc(r.vedic.lagna)} 采用恒星黄道。</p><p>${esc(bazi.relationships.map(l=>l.pattern+l.type).join('、')||'本命未触发当前规则表中的干支关系')}</p></article>
  <article class="card liquid-glass"><h2>印度占星 · 星宿与大运</h2><p>Lahiri上升 ${esc(r.vedic.lagna)}；月亮 ${esc(r.vedic.planets.find(p=>p.key==='moon').nakshatra)}，宿度 ${r.vedic.planets.find(p=>p.key==='moon').nakDegree.toFixed(4)}°。</p><p>当前 Vimshottari 大运：${esc(r.vedic.active?.lord||'未落在当前所列区间')}。可对照该星本命宫位与前三体系的阶段线索。</p></article>

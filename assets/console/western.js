@@ -85,7 +85,7 @@ export function wheel(r){
   const mid=lon+norm(a.cusps[(i+1)%12]-lon)/2;
   return line(xy(lon,162),xy(lon,0),'stroke="#e2c7d9" stroke-width=".65"')+label(mid,169,'第'+(i+1)+'宫','font-size="7.6" fill="#7e5372"');
  }).join('');
- const axes=Object.entries(a.axes).filter(([k])=>a.planets.some(p=>p.key===k)).map(([key,lon])=>
+ const axes=Object.entries(a.axes).filter(([k])=>r.mode==='composite'||a.planets.some(p=>p.key===k)).map(([key,lon])=>
   line(xy(lon,161),xy(lon,104),'stroke="#a15781" stroke-width="1.4"')+label(lon,157,({asc:'上升 ASC',dsc:'下降 DSC',mc:'天顶 MC',ic:'天底 IC'})[key],'font-size="7" font-weight="750" fill="#8b315e"')).join('');
  const placements=radialLayout(wheelBodies(a),b?wheelBodies(b):[],xy);
  const stars=placements.map(p=>{

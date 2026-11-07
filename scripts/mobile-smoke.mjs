@@ -209,7 +209,7 @@ try{
   await page.locator('#birthForm [name=category]').selectOption({label:'亲人'});
   await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('31.23');
   await page.locator('#inputSheet').getByLabel('经度',{exact:true}).fill('121.47');
-  await page.getByRole('button',{name:'生成命盘',exact:true}).click();await page.locator('.zi-board').waitFor();
+  await page.getByRole('button',{name:'生成命盘',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#inputSheet').open&&document.querySelector('[data-profile-name]').textContent.includes('跨组同伴'));
   await page.locator('[data-tab=cases]').click();await page.locator('[data-group=我的]').click();
   await page.locator('#caseSearch').fill('跨组同伴');
   assert.equal(await page.locator('[data-case]').count(),1);assert((await page.locator('.case-group-badge').textContent()).includes('亲人'));

@@ -302,3 +302,5 @@ input,textarea{user-select:text;-webkit-user-select:text}
 @media(prefers-reduced-motion:reduce){#bottomNav button,.tab-liquid-pill,.aspect-expansion{transition:none!important}#caseDrawer{animation:none}}
 
 #bottomNav button[aria-current=page] svg g[style] [fill]:not([fill=none]){fill:var(--tab-pink)}
+
+.aspect-browser{overflow:hidden}

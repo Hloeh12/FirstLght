@@ -53,7 +53,7 @@ test('offline global cases, compact aspects, Vedic, composite and instant sky fo
  click('[data-aspect-filter=all]');assert(all('.aspect-detail').length>12);click('[data-aspect-toggle]');assert(all('.aspect-detail').length<=12);
  click('[data-aspect-filter=applying]');assert(all('.aspect-detail').every(x=>x.dataset.applying==='true'));
  click('#caseDrawerButton');click('[data-destination=synastry]');click('[data-select-other]');click('[data-other=family]');await until(()=>$('.pair-mode-rail')&&$('#screen').textContent.includes('契合度'),'pair');
- click('[data-pair-mode=composite]');await until(()=>$('.pair-reading'),'composite');assert($('#westernChart'));assert(all('.aspect-detail').length<=12);
+ click('[data-pair-mode=composite]');await until(()=>$('.pair-reading'),'composite');assert($('#westernChart'));assert($('#westernChart').textContent.includes('上升 ASC'));assert($('#westernChart').textContent.includes('天顶 MC'));assert(all('.aspect-detail').length<=12);
  const before=w.localStorage.getItem('xy_active_profile'),start=Date.now();click('#instantChartButton');await until(()=>$('#westernChart')&&$('[data-mode=sky][aria-pressed=true]'),'instant');assert.equal(w.localStorage.getItem('xy_active_profile'),before);assert(Date.parse($('[data-instant-caption]').textContent.match(/\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}/)[0].replace(' ','T')+'Z')>=start);
  click('[data-tab=me]');assert(!$('[data-maintenance]').open);click('[data-maintenance]>summary');assert($('[data-app-version]'));assert($('[data-maintenance] [data-diagnostics]'));assert($('[data-maintenance] [data-maintenance-cache]'));
  assert.deepEqual(attempted,[]);assert.deepEqual(errors,[]);

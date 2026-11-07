@@ -42,7 +42,7 @@ export async function shareChart(root,title){
  g.font='16px -apple-system,sans-serif';
  const pillarRows=matrix?[...matrix.querySelectorAll('.pillar')].map(p=>p.innerText.trim().split(/\n+/).flatMap(t=>wrap(g,t.trim(),body/4-14))):[];
  const visual=board?body*1.25:wheel||vedic?body:matrix?Math.max(...pillarRows.map(p=>p.length))*23+25:0;
- const selectors='.zi-detail p,.period-guidance p,.period-guidance dd,.vedic-period p,.pair-reading p,.orbit-info span,[data-instant-caption]';
+ const selectors='.zi-detail p,.period-guidance p,.period-guidance dd,.vedic-period h3,.vedic-period p,.pair-reading h3,.pair-reading p,.orbit-info span,[data-instant-caption]';
  let info=[...root.querySelectorAll(selectors)].map(x=>x.innerText.trim().replace(/\s+/g,' ')).filter(Boolean);
  if(!info.length)info=[...root.querySelectorAll('.card h2,.card p,.grid-table tbody tr')].slice(0,14).map(x=>x.innerText.trim().replace(/\s+/g,' '));
  info=[...new Set(info)].slice(0,24);

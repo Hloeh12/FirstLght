@@ -100,7 +100,6 @@ dialog.fallback{z-index:500;outline:200vmax solid #db8eae55}.case-groups{margin:
 .pillar-clash strong{animation:clash-shiver .32s ease-out both,glowPulse 3s .32s ease-in-out infinite}
 @keyframes clash-shiver{20%,60%{transform:translateX(-1.5px)}40%,80%{transform:translateX(1.5px)}}
 .bazi-crossfade{position:relative}
-.bazi-ghost{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 #termSheet[open] .dialog-content{animation:term-pop .32s var(--spring) both}
 @keyframes term-pop{0%{transform:scale(.96)}60%{transform:scale(1.02)}100%{transform:scale(1)}}
 
@@ -199,3 +198,7 @@ input,textarea{user-select:text;-webkit-user-select:text}
 
 .modal-open #bottomNav{visibility:hidden;pointer-events:none}
 .house-warning{font-size:.78rem;background:#fff0f7;border:1px solid #ffc8df;border-radius:10px;padding:7px;color:#a8285d}
+
+.bar meter::-webkit-meter-bar{background:#fff0f7;border:1px solid #f0c6dc;border-radius:8px}
+.bar meter::-webkit-meter-optimum-value,.bar meter::-webkit-meter-suboptimum-value,.bar meter::-webkit-meter-even-less-good-value{background:linear-gradient(90deg,#ff77aa,#ff4f8b);border-radius:8px}
+.bar meter::-moz-meter-bar{background:linear-gradient(90deg,#ff77aa,#ff4f8b);border-radius:8px}

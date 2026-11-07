@@ -1,3 +1,4 @@
+import {localRequest} from '../src/console-engine.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {SunPosition} from 'astronomy-engine';
@@ -24,6 +25,9 @@ test('high-latitude house guard is explicit at 66 degrees and always has twelve 
  }
  assert.equal(housesAt(new Date('2026-06-21T03:00Z'),{lat:65.99,lon:20},'placidus').requestedSystem,'placidus');
  assert.equal(housesAt(new Date(),{lat:70,lon:20},'whole').system,'whole');
+ const overview=localRequest('/api/console/reading',{birth:{...birth,city:{...birth.city,lat:70}}});
+ assert(overview.western.houseWarning.includes('高纬度'));
+ assert.equal(overview.western.houseSystem,'porphyry');
 });
 test('solar longitude changes month and year pillars exactly across the Lichun numerical root',()=>{
  const edge=termNear(2026,315);

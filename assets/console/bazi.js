@@ -110,17 +110,11 @@ function refresh(ctx,s){
  }
  selectedRails(root);
  $('[data-combine]',root).setAttribute('aria-pressed',String(s.combine));
- if(!reducedMotion()&&current.animate){
-  const ghost=current.cloneNode(true);
-  ghost.removeAttribute('data-bazi-data');
-  ghost.className='bazi-ghost';ghost.setAttribute('aria-hidden','true');ghost.inert=true;
-  current.parentNode.querySelector('.bazi-ghost')?.remove();
-  current.after(ghost);
-  ghost.animate([{opacity:1},{opacity:0}],{duration:200,easing:'ease-out',fill:'forwards'}).onfinish=()=>ghost.remove();
-  current.getAnimations?.().forEach(a=>a.cancel());
-  current.animate([{opacity:0},{opacity:1}],{duration:200,easing:'ease-in'});
- }
+ current.getAnimations?.().forEach(a=>a.cancel());
  current.innerHTML=details(s.data);
+ if(!reducedMotion()&&current.animate){
+  current.animate([{opacity:.72,transform:'translateY(1px)'},{opacity:1,transform:'translateY(0)'}],{duration:200,easing:'ease-out'});
+ }
  drawRelations(ctx,s,true);
 }
 async function update(ctx,pick,combine){

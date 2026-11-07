@@ -101,7 +101,7 @@ function wheel(r){
 
  }).join('');
  return `<svg id="westernChart" class="wheel" viewBox="0 0 440 440" role="group" aria-label="${b?'本命与行运双圈圆盘':'西洋占星圆盘'}">${circles}<g class="wheel-ring">${ticks}
- ${symbols.map((s,i)=>label(i*30+15,184,s,'font-size="13" fill="#8b557b"')+label(i*30+15,195,zodiacNames[i],'font-size="7" fill="#8b557b"')).join('')}${houses}
+ ${symbols.map((s,i)=>label(i*30+15,184,s+'\uFE0E','font-size="13" fill="#8b557b"')+label(i*30+15,195,zodiacNames[i],'font-size="7" fill="#8b557b"')).join('')}${houses}
  ${aspectLayer(b?r.cross:a.aspects,!!b)}${axes}
  ${r.profection?`<path d="M220 220 L${pos(r.profection.wholeStart+(r.profection.house-1)*30,161)} A161 161 0 0 1 ${pos(r.profection.wholeStart+r.profection.house*30,161)} Z" fill="#d184b238"/>`:''}${stars}</g></svg>`;
 }

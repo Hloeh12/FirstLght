@@ -32,11 +32,11 @@ try{
    for(const b of boxes){assert(b.top>=-.5&&b.bottom<=b.viewport+.5,JSON.stringify(b));assert(b.height<=b.viewport*.80+1);assert.equal(b.scroll,'auto');}
   };
   await checkSheet();
-  await page.getByLabel('命主姓名',{exact:true}).fill('布局示例');
-  await page.getByLabel('出生日期',{exact:true}).fill('1998-11-21');
-  await page.getByLabel('出生时刻',{exact:true}).fill('00:02');
-  await page.getByLabel('纬度',{exact:true}).fill('30.361448');
-  await page.getByLabel('经度',{exact:true}).fill('109.492552');
+  await page.locator('#inputSheet').getByLabel('命主姓名',{exact:true}).fill('布局示例');
+  await page.locator('#inputSheet').getByLabel('出生日期',{exact:true}).fill('1998-11-21');
+  await page.locator('#inputSheet').getByLabel('出生时刻',{exact:true}).fill('00:02');
+  await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('30.361448');
+  await page.locator('#inputSheet').getByLabel('经度',{exact:true}).fill('109.492552');
   await context.setOffline(true);
   await page.getByRole('button',{name:'生成命盘',exact:true}).click();
   await page.locator('.zi-board').waitFor();
@@ -52,6 +52,8 @@ try{
   await useSystem('bazi','东方盘');
   await page.locator('[data-rail="流年"]').first().click();
   await page.locator('.period-guidance').waitFor();
+  assert.equal(await page.locator('.bazi-ghost').count(),0);
+  await page.locator('[data-bazi-data]').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));
   await page.screenshot({path:'build/mobile-'+engine+'-bazi-'+width+'.png'});
   await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
   await checkSheet();
@@ -104,7 +106,7 @@ try{
   await page.locator('#toolSheet [data-close]').click();
   await page.locator('#activeProfile').click();
   await checkSheet();
-  await page.getByLabel('纬度',{exact:true}).fill('70');
+  await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('70');
   await page.getByRole('button',{name:'生成命盘',exact:true}).click();
   await useSystem('west','西洋盘');
   await page.locator('.house-warning').waitFor();

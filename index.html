@@ -12,7 +12,7 @@
  <div id="app">
   <header id="appTopBar" class="chrome liquid-glass">
    <button type="button" class="icon" id="caseDrawerButton" aria-label="快捷案例">☰</button>
-   <button type="button" class="profile-pill" id="activeProfile" aria-haspopup="dialog"><span data-profile-name>🌸 开始排盘</span><span data-profile-rule hidden></span><span data-profile-edit>＋ 起盘</span></button>
+   <div class="profile-pill profile-capsule" id="activeProfile"><button type="button" class="capsule-left" aria-haspopup="dialog"><span data-profile-name id="curName">🌸 开始排盘</span><span data-profile-dst hidden></span><span data-profile-rule id="curBaZi" hidden></span></button><button type="button" id="btnEditProfile" class="capsule-edit-btn" data-profile-edit aria-haspopup="dialog">＋ 起盘</button></div>
    <button type="button" class="icon" id="toolsButton" aria-label="当前页面功能" aria-haspopup="dialog">•••</button>
   </header>
   <main id="mainScrollView" aria-label="主内容">

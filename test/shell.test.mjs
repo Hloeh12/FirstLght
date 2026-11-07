@@ -230,3 +230,39 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert.deepEqual(attempted,[]);
  assert.deepEqual(errors,[]);
 });
+
+test('liquid navigation has one measured physical pill, inline editing, keyboard-safe sheets and quota controls',async t=>{
+ const js=(await buildConsole(false)).outputFiles[0].text;
+ const vc=new VirtualConsole(),errors=[];vc.on('jsdomError',e=>errors.push(e.message));
+ const dom=new JSDOM(readFileSync('index.html','utf8'),{url:'https://offline.test',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
+  Object.defineProperty(w,'innerHeight',{value:844,configurable:true});
+  const vv=new w.EventTarget();vv.height=844;vv.offsetTop=0;w.visualViewport=vv;
+  w.fetch=()=>{throw Error('network blocked');};
+  w.URL.createObjectURL=()=> 'blob:logs';w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=()=>{};
+ }});t.after(()=>dom.window.close());
+ const w=dom.window,d=w.document,$=s=>d.querySelector(s),click=s=>{assert($(s),s);$(s).click();};
+ const script=d.createElement('script');script.textContent=js;d.body.append(script);
+ const tick=()=>new Promise(resolve=>setTimeout(resolve,65));
+ await tick();assert($('#inputSheet').open);
+ const input=$('#inputSheet input');input.focus();w.visualViewport.height=330;w.visualViewport.dispatchEvent(new w.Event('resize'));await tick();
+ assert.equal(d.documentElement.style.getPropertyValue('--sheet-limit'),'290px');
+ assert.equal(d.documentElement.style.getPropertyValue('--keyboard-inset'),'514px');
+ w.visualViewport.height=844;w.visualViewport.dispatchEvent(new w.Event('resize'));await tick();
+ assert.equal(d.documentElement.style.getPropertyValue('--sheet-limit'),'');
+ click('#inputSheet [data-close]');
+ assert.equal(d.querySelectorAll('#tabLiquidPill').length,1);assert.equal(d.querySelectorAll('#bottomNav [data-tab]').length,4);
+ assert(!$('#btnEditProfile').closest('button button'));assert.equal($('#btnEditProfile').parentElement.id,'activeProfile');
+ for(const [i,tab] of ['cases','chart','insights','me'].entries()){
+  click('[data-tab="'+tab+'"]');assert.equal($('#tabLiquidPill').style.transform,`translateX(${i*100}%)`);
+ }
+ click('[data-diagnostics]');assert($('#toolSheet .scroll-clearance'));
+ const key='quota-test',value='x'.repeat(2100000);w.localStorage.setItem(key,value);
+ w.dispatchEvent(new w.StorageEvent('storage'));assert.equal($('[data-storage-warning]').hidden,false);
+ assert($('[data-storage-text]').textContent.includes('/ 5000 KB'));
+ // Export clears only old logs; quota-heavy case data and preferences survive.
+ w.localStorage.setItem('xy_active_profile','{"id":"keep"}');
+ w.dispatchEvent(new w.ErrorEvent('error',{message:'quota example'}));assert(w.localStorage.getItem('xy_runtime_diagnostics'));
+ click('[data-export-clear-logs]');assert.equal(w.localStorage.getItem('xy_active_profile'),'{"id":"keep"}');assert.equal(w.localStorage.getItem(key),value);
+ assert.equal(w.localStorage.getItem('xy_runtime_diagnostics'),null);
+ w.localStorage.removeItem(key);assert.equal(errors.length,0,errors.join('\n'));
+});

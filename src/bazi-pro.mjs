@@ -1,3 +1,4 @@
+import {offsetMinutes} from './tz.mjs';
 import {seasonalCommand} from './seasonal-command.mjs';
 import {periodGuidance} from './bazi-guidance.mjs';
 import {Solar,Lunar,LunarUtil} from 'lunar-javascript';
@@ -113,7 +114,9 @@ export function baziPro({birth,selection={},combine=false}){
  const normal={...birth,Y:solar.getYear(),M:solar.getMonth(),D:solar.getDay(),dateStr:date,calendar:'solar',h,mi};
  const b=baziFromInput({...normal,dayBoundaryAt2300:birth.lateZishi!=='current-day'});
  const offset=(Date.UTC(normal.Y,normal.M-1,normal.D,h,mi)-Date.parse(b.meta.utc))/60000;
- const correction=calculateTrueSolarTime({year:normal.Y,month:normal.M,day:normal.D,clockHour:h,clockMinute:mi,longitude:birth.useSolarTime?birth.city.lon:undefined,utcOffsetMinutes:offset});
+ const standard=b.meta.timeCorrection.standard;
+ const correctedClock=birth.useSolarTime?{Y:normal.Y,M:normal.M,D:normal.D,h,mi}:standard;
+ const correction=calculateTrueSolarTime({year:correctedClock.Y,month:correctedClock.M,day:correctedClock.D,clockHour:correctedClock.h,clockMinute:correctedClock.mi,longitude:birth.useSolarTime?birth.city.lon:undefined,utcOffsetMinutes:offset});
  const birthLunar=solar.getLunar(), lunar=Solar.fromYmdHms(normal.Y,normal.M,normal.D,h,mi,0).getLunar();
  const [year,,day]=b.pillars;
  const add=p=>({...describePillar(p,day),shensha:gods(p,year,day,b.pillars[1])});
@@ -148,13 +151,21 @@ export function baziPro({birth,selection={},combine=false}){
  const matrix=[...pillars,...selected],links=relations(matrix);
  const node=b.luck.edge;
  const nodeWall=new Date(Date.parse(node.utc)+8*3600000).toISOString().slice(0,19).replace('T',' ');
- const result={pillars,cycles,years,months,selected,relationships:links,strength:strength(matrix,links,combine),
+ const start=new Date(cycles[0].startUtc),startYear=start.getUTCFullYear();
+ const prior=[...solarTerms(startYear-1),...solarTerms(startYear)].filter(t=>t.date<=start).sort((a,b)=>b.date-a.date)[0];
+ const elapsedDays=Math.floor((start-prior.date)/86400000),entryYear=yearPillar(start,startYear);
+ const entryOffset=birth.city.tzName?offsetMinutes(+start,birth.city.tzName):Number(birth.city.tz??8)*60;
+ const startLocal=new Date(+start+entryOffset*60000).toISOString().slice(0,19).replace('T',' ');
+ const entry={duration:b.luck.duration,intervalSeconds:b.luck.intervalSeconds,utc:cycles[0].startUtc,local:startLocal,offsetMinutes:entryOffset,
+  term:prior.name,termUtc:prior.date.toISOString(),daysAfter:elapsedDays,year:entryYear.stem+entryYear.branch,
+  method:'起运年龄按三天一年、一日四月、一时辰十天折算；交运UT按365.24219878日回归年累计。年龄年月日为传统360日年表示。'};
+ const result={entry,pillars,cycles,years,months,selected,relationships:links,strength:strength(matrix,links,combine),
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
   commander,info:{solarYear:b.meta.yearPillarYear,solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
    clock:birth.timeUnknown?'时辰未知':birth.timeStr??[h,mi].map(n=>String(n).padStart(2,'0')).join(':'),
    lunarYear:birthLunar.getYearInGanZhi(),lunarMonth:Math.abs(birthLunar.getMonth()),lunarDay:birthLunar.getDay(),
    startAge:b.luck.startAge,exactStartAge:b.luck.exactStartAge,startUtc:cycles[0].startUtc,forward:b.luck.forward,node:{name:node.name,utc:node.utc,at:nodeWall},tropicalYearDays:b.luck.tropicalYearDays,
-   correction,lateZishi:birth.lateZishi||'next-day',hourBranch:pillars[3].branch,utc:b.meta.utc}};
+   effectiveHour:b.meta.local.h,timeCorrection:b.meta.timeCorrection,correction,lateZishi:birth.lateZishi||'next-day',hourBranch:pillars[3].branch,utc:b.meta.utc}};
  result.guidance=periodGuidance(result);
  return result;
 }

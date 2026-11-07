@@ -2,7 +2,7 @@ import {housesAt} from './ephemeris.mjs';
 import { baziFromInput } from './baziInput.mjs';
 import * as Astronomy from 'astronomy-engine';
 import { ashtakoota } from './ashtakoota.mjs';
-import { birthCorrections } from './birth.mjs';
+import { birthCorrections,resolveBirthTime } from './birth.mjs';
 import { ziweiChart } from './ziwei.mjs';
 import { analyze } from './analysis.mjs';
 import { localToUtc, offsetLabel } from './tz.mjs';
@@ -41,12 +41,8 @@ function composite(a,b){const asc=midpoint(a.asc.lon,b.asc.lon),planets=a.planet
 export function synastry(aInput,bInput,mode='synastry'){const a=chart(aInput),b=chart(bInput),interAspects=crossAspects(a.western,b.western),comp=composite(a.western,b.western);let selected=comp;if(mode==='davison'){const d1=new Date(a.meta.utc),d2=new Date(b.meta.utc),date=new Date((+d1 + +d2)/2),lat=(aInput.city.lat+bInput.city.lat)/2,lon=midpoint(aInput.city.lon,bInput.city.lon),utc=date;selected=western(utc,lat,lon);}return {mode,persons:{a:a.raw||{western:a.western,vedic:a.vedic,ziwei:null},b:{western:b.western,vedic:b.vedic,ziwei:null}},western:{interAspects,chart:selected,composite:comp},vedic:{a:{d1:a.vedic,d9:a.vedicD9},b:{d1:b.vedic,d9:b.vedicD9},koota:ashtakoota(a.vedic,b.vedic)},ziwei:null,limitations:mode==='midpoint'?'Current midpoint preview aliases the midpoint-method placeholder to Composite; not equivalent to a server implementation.':'Original server may apply additional configuration.'};}
 function ziweiSafe(dateStr,timeIndex,gender){try{return ziweiChart({dateStr,timeIndex,gender:gender||'女'});}catch(e){return {error:'紫微排盘失败: '+e.message};}}
 export function chart(input){let Y=Number(input.Y),M=Number(input.M),D=Number(input.D);let lunarMeta=null;if(input.calendar==='lunar'){const iso=lunarToSolar(Y,M,D,input.leapMonth);if(!iso)throw Error('农历日期无效或超出 1900–2100 范围');const p0=iso.split('-').map(Number);lunarMeta={lunar:{Y,M,D,leap:!!input.leapMonth},solar:{Y:p0[0],M:p0[1],D:p0[2]}};Y=p0[0];M=p0[1];D=p0[2];}const timeUnknown=!!input.timeUnknown;const h=timeUnknown?12:Number(input.h??12),mi=timeUnknown?0:Number(input.mi??0),lat=Number(input.city?.lat),lon=Number(input.city?.lon),tz=Number(input.city?.tz??8);if(![Y,M,D,h,mi,lat,lon,tz].every(Number.isFinite))throw Error('需要有效出生年月日时和城市经纬度/时区');if(M<1||M>12||D<1||D>31||h<0||h>23||mi<0||mi>59||lat< -90||lat>90||lon< -180||lon>180)throw Error('出生信息超出有效范围');let date,bcMeta,tzUsed=tz,tzLabel=null;
- if(input.city&&input.city.tzName){
-  const r=localToUtc({Y,M,D,h,mi},input.city.tzName);date=r.utc;tzUsed=r.offsetMin/60;tzLabel=offsetLabel(+date,input.city.tzName);
-  const useSolar=!!input.useSolarTime;let solarMin=null,clock=null,timeIndex2=null;
-  if(useSolar){const eot=(()=>{const B=2*Math.PI*((Math.floor((Date.UTC(Y,M-1,D)-Date.UTC(Y,0,1))/86400000)+1)-81)/364;return 9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);})();const lonMin=(lon-r.offsetMin/60*15)*4;solarMin=(h*60+mi)+lonMin+eot;const sMin=((solarMin%1440)+1440)%1440;clock=`${String(Math.floor(sMin/60)).padStart(2,'0')}:${String(Math.round(sMin%60)).padStart(2,'0')}`;timeIndex2=sMin<60?0:sMin>=1380?12:Math.floor((sMin-60)/120)+1;}
-  bcMeta={tzdb:true,tzName:input.city.tzName,offsetMin:r.offsetMin,offsetLabel:tzLabel,solarApplied:useSolar,solarClock:clock,ziweiTimeIndex:timeIndex2};
- } else {
-  const bc=birthCorrections({Y,M,D,h,mi,tz,lon,useSolarTime:input.useSolarTime});date=bc.utcDate;bcMeta={tzdb:false,...bc.meta,ziweiTimeIndex:bc.solar.timeIndex,solarClock:bc.solar.clock};
- }
+ const resolved=resolveBirthTime({Y,M,D,h,mi,city:input.city,dst1988Rule:input.dst1988Rule});
+ date=resolved.utc;tzUsed=resolved.offsetMin/60;
+ const bc=birthCorrections({Y,M,D,h,mi,tz,lon,city:input.city,dst1988Rule:input.dst1988Rule,useSolarTime:input.useSolarTime});
+ bcMeta={tzdb:!!input.city?.tzName,...bc.meta,offsetMin:resolved.offsetMin,ziweiTimeIndex:bc.solar.timeIndex,solarClock:bc.solar.clock};
  const ziweiIdx=bcMeta.ziweiTimeIndex??0;const dateStr=(lunarMeta?'':input.dateStr)||`${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`;const pos=positionsOf(date),west=western(date,lat,lon,input.houseSystem,pos),v=vedic(date,lat,lon,pos),vargas={};for(const id of ['D2','D3','D4','D7','D9','D10','D12','D60'])vargas[id]=makeVarga(v,id);return {bazi:baziFromInput({...input,Y,M,D,h,mi,calendar:'solar'}),western:west,analysis:analyze(west),vedic:v,vedicD9:vargas.D9,vedicVargas:vargas,westernHarmonics:Object.fromEntries(Array.from({length:12},(_,i)=>['H'+(i+1),harmonic(west,i+1)])),ziwei:input.skipZiwei?null:ziweiChart({...input,dateStr,h,mi}),meta:{utc:date.toISOString(),input:{dateStr,timeStr:input.timeStr||`${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`,timeUnknown,useSolarTime:!!input.useSolarTime,gender:input.gender||null,city:input.city,corrections:bcMeta,lunar:lunarMeta,reliability:{timeUnknown,note:timeUnknown?'出生时间未知，按正午 12:00 排盘：上升、中天、宫位与紫微命宫仅供参考':'时间已知'},ziweiTimeIndex:ziweiIdx,ziweiSolarClock:bcMeta.solarClock||null}}};}

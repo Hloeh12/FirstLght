@@ -39,8 +39,9 @@ function center(ctx,s){
  return `<div class="zi-center ${s.mode==='triad'?'glow':''}">
   <span class="kicker">FIRST LIGHT · ${names[z.astroType]}</span>
   <strong>${esc(p.name)} · ${esc(b.gender)} · ${esc(z.fiveElementsClass)}</strong>
-  <p>公历 ${esc(b.solar)} ${esc(b.clock)}</p><p>农历 ${esc(b.lunar)}</p>
+  <p>公历 ${esc(b.solar)} ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时-1h':''}</p><p>农历 ${esc(b.lunar)}</p>
   <p><b>${esc(p.summary.pillars)}</b></p>
+  <p class="muted thin">闰月：${esc(z.leapLabel)}</p>
   <p>命主 ${esc(z.soul)}　身主 ${esc(z.body)}</p>
   <p>${z.decades[0].ageRange[0]} 岁起限 · ${esc(s.flow?timeLabels[s.flow.scope]+' '+s.flow.ganZhi:'本命总览')}</p>
   <p class="muted thin">${esc(s.flow?.date||'本次排盘 '+new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',dateStyle:'short',timeStyle:'short'}).format(new Date()))}</p>
@@ -244,13 +245,13 @@ async function setPeriod(ctx,p,type){
   const birth=ctx.birth,z=s.chart;
   const target=type&&type!==z.astroType?await ctx.request('/api/ziwei',{
    ...birth,...Object.fromEntries(ctx.state.reading.bazi.info.solar.split('-').map((x,i)=>[['Y','M','D'][i],+x])),
-   dateStr:ctx.state.reading.bazi.info.solar,calendar:'solar',astroType:type,city:{...birth.city,tz:(Date.parse(ctx.state.reading.bazi.info.solar+'T'+(birth.timeUnknown?'12:00':birth.timeStr)+'Z')-Date.parse(ctx.state.reading.bazi.info.utc))/3600000},
+   dateStr:ctx.state.reading.bazi.info.solar,calendar:'solar',astroType:type,city:birth.city,
    h:birth.timeUnknown?12:birth.h,mi:birth.timeUnknown?0:birth.mi
   }):z;
   const selection=p||(type==='human'?{scope:'decadal',year:railData({...s,chart:target}).d.yearRange[0]}:null);
   const flow=selection?await ctx.request('/api/ziwei-flow',{
    dateStr:target.effectiveDate,timeIndex:target.effectiveTimeIndex,gender:birth.gender,astroType:target.astroType,
-   ziweiSchool:birth.ziweiSchool,flowYear:selection.year,scope:selection.scope,month:selection.month,day:selection.day
+   ziweiLeap:birth.ziweiLeap,ziweiSchool:birth.ziweiSchool,flowYear:selection.year,scope:selection.scope,month:selection.month,day:selection.day
   }):null;
   if(ctx.state.chartState.ziwei!==s||n!==s.token)return;
   s.chart=target;s.flow=flow;s.badge=null;s.error='';

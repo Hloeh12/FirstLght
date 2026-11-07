@@ -1,3 +1,4 @@
+import {resonance} from './resonance.mjs';
 import {ashtakoota} from './ashtakoota.mjs';
 import {chart,synastry} from './chart.mjs';
 import {ziweiChart,ziweiFlow} from './ziwei.mjs';
@@ -18,7 +19,7 @@ function consoleReading({birth}){
  const bazi=baziPro({birth}),standard=solarInput(birth,bazi);
  const {Y,M,D,h,mi}=standard;
  const utcOffset=(Date.UTC(Y,M-1,D,h,mi)-Date.parse(bazi.info.utc))/3600000;
- const ziwei=ziweiChart({...standard,city:{...birth.city,tz:utcOffset}});
+ const ziwei=ziweiChart(standard);
  const full=chart({...standard,skipZiwei:true});
  return {bazi,ziwei,western:full.western,vedic:full.vedic,analysis:full.analysis,meta:full.meta,
   report:localTemplateReport({...full,ziwei})};
@@ -45,7 +46,7 @@ function pairReading({a,b,mode}){
  return {ok:true,...result,fit,crossRelations:cross};
 }
 export const consoleRoutes={
- '/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,
+ '/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,
  '/api/console/reverse-bazi':reverseBazi,'/api/console/convert':convertBirth,
  '/api/console/bones':({birth})=>boneWeight(birth),'/api/console/qizheng':({birth})=>qizheng(birth),
  '/api/console/yijing':yijing,'/api/console/calendar':almanac,

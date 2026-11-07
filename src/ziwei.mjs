@@ -1,5 +1,6 @@
+import {resolveBirthTime} from './birth.mjs';
 import {mutagensFor,ziweiSchool} from './ziwei-rules.mjs';
-import {generateChart,detectPatterns,calculateTrueSolarTime,resolveZiweiDayOffset,shiftGregorianDate,schoolStarBrightness} from './renhuai-engine.mjs';
+import {generateChart,resolveEffectiveLunarDate,detectPatterns,calculateTrueSolarTime,resolveZiweiDayOffset,shiftGregorianDate,schoolStarBrightness} from './renhuai-engine.mjs';
 import { astro } from 'iztro';
 import { Lunar, LunarYear } from 'lunar-javascript';
 import { memoTTL, cacheKey } from './memo.mjs';
@@ -8,8 +9,13 @@ import { memoTTL, cacheKey } from './memo.mjs';
 const STEMS='甲乙丙丁戊己庚辛壬癸',BRANCHES='子丑寅卯辰巳午未申酉戌亥';
 const transformations=(names,palaces)=>names.map((star,index)=>({star,type:'禄权科忌'[index],branch:palaces.find(p=>p.stars.some(s=>s.name===star))?.branch??null}));
 const norm=d=>{const m=String(d).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(!m)throw new Error('dateStr 需为 YYYY-MM-DD');return `${Number(m[1])}-${Number(m[2])}-${Number(m[3])}`;};
-function cachedAstro(dateStr,timeIndex,gender,astroType){
- const options={dateStr:norm(dateStr),timeIndex:Number(timeIndex),gender:gender==='男'?'男':'女',astroType,fixLeap:true,language:'zh-CN'};
+export const ZIWEI_LEAP_RULES={split:'15日分界','prev-month':'视作本月','next-month':'视作下月'};
+function leapPolicy(value='split'){if(!Object.hasOwn(ZIWEI_LEAP_RULES,value))throw Error('无效闰月规则');return value;}
+function cachedAstro(dateStr,timeIndex,gender,astroType,ziweiLeap='split'){
+ const policy=leapPolicy(ziweiLeap),[year,month,day]=norm(dateStr).split('-').map(Number);
+ const lunar=resolveEffectiveLunarDate(year,month,day,policy);
+ const adjusted=policy!=='split'&&lunar.rawLunarMonth<0;
+ const options={dateStr:adjusted?[lunar.lunarYear,lunar.lunarMonth,lunar.lunarDay].join('-'):norm(dateStr),type:adjusted?'lunar':'solar',isLeapMonth:false,timeIndex:Number(timeIndex),gender:gender==='男'?'男':'女',astroType,fixLeap:!adjusted,language:'zh-CN'};
  return memoTTL('zw|'+cacheKey(options),30*60*1000,()=>astro.withOptions(options));
 }
 function validateAstroType(value='heaven'){
@@ -18,16 +24,19 @@ function validateAstroType(value='heaven'){
 }
 export function ziweiChart(input){
  const {dateStr,timeIndex,gender}=input;
- const astroType=validateAstroType(input.astroType);
+ const astroType=validateAstroType(input.astroType),ziweiLeap=leapPolicy(input.ziweiLeap);
  let [year,month,day]=String(dateStr).split('-').map(Number),hour=Number(timeIndex??0), correction=null;
  if(input.h!==undefined){
   if(!Number.isInteger(Number(input.h))||Number(input.h)<0||Number(input.h)>23||!Number.isInteger(Number(input.mi||0))||Number(input.mi||0)<0||Number(input.mi||0)>59)throw new Error('无效出生时间');
   if(input.useSolarTime&&(!Number.isFinite(Number(input.city?.lon))||Math.abs(Number(input.city?.lon))>180))throw new Error('真太阳时需要有效经度');
-  correction=calculateTrueSolarTime({year,month,day,clockHour:Number(input.h),clockMinute:Number(input.mi||0),longitude:input.useSolarTime?Number(input.city?.lon):undefined,utcOffsetMinutes:Number(input.city?.tz??8)*60});
+  const resolved=resolveBirthTime({Y:year,M:month,D:day,h:Number(input.h),mi:Number(input.mi||0),city:input.city,dst1988Rule:input.dst1988Rule});
+  const standard=resolved.standard;
+  if(!input.useSolarTime){year=standard.Y;month=standard.M;day=standard.D;}
+  correction=calculateTrueSolarTime({year,month,day,clockHour:input.useSolarTime?Number(input.h):standard.h,clockMinute:input.useSolarTime?Number(input.mi||0):standard.mi,longitude:input.useSolarTime?Number(input.city?.lon):undefined,utcOffsetMinutes:resolved.offsetMin});
   if(!correction.dateValid)throw new Error('无效出生日期');
   ({year,month,day}=shiftGregorianDate({year,month,day},resolveZiweiDayOffset(correction,input.lateZishi||'next-day')));hour=correction.branch;
  }
- const c=generateChart({year,month,day,hour,gender:gender==='男'?'male':gender==='女'?'female':gender,longitude:Number(input.city?.lon??120)},{astroType});
+ const c=generateChart({year,month,day,hour,gender:gender==='男'?'male':gender==='女'?'female':gender,longitude:Number(input.city?.lon??120)},{astroType,leapMonth:ziweiLeap});
  const school=ziweiSchool(input.ziweiSchool);
  const natal=mutagensFor(STEMS[c.lunarInfo.yearStem],school.id);
  for(const p of c.palaces)for(const star of p.stars){const i=natal.indexOf(star.name);star.siHua=i<0?'':'禄权科忌'[i];}
@@ -46,18 +55,18 @@ export function ziweiChart(input){
  }
  for(const p of palaces){p.triadWeight=Number(p.relatedBranches.reduce((sum,b)=>sum+palaces.find(q=>q.branch===b).starWeight,0).toFixed(2));}
  const effectiveDate=[year,String(month).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
- const a=cachedAstro(effectiveDate,hour,gender,astroType);
+ const a=cachedAstro(effectiveDate,hour,gender,astroType,ziweiLeap);
  for(const p of palaces){
   const ring=a.palaces.find(x=>x.earthlyBranch===p.earthlyBranch);
   p.annualStars=[ring?.suiqian12,ring?.jiangqian12].filter(Boolean);
  }
  const decades=a.decadalList().map(({palaceName,ageRange,yearRange})=>({palaceName,ageRange,yearRange}));
- return {school,astroType,decades,effectiveDate,effectiveTimeIndex:hour,soul:c.mingZhu,body:c.shenZhu,fiveElementsClass:c.wuxingJuName,lunarDate:JSON.stringify(c.lunarInfo),palaces,patterns,correction,sihua:palaces.flatMap(p=>p.stars.filter(s=>s.siHua).map(s=>({star:s.name,type:s.siHua,palace:p.name}))),source:'Renhuai123/ziwei-doushu a600484 · MIT · iztro',rules:{school:school.id,lateZishi:input.lateZishi||'next-day',brightness:'QS（斗数全书）上游默认表',dataset:false}};
+ return {leapPolicy:ziweiLeap,leapLabel:ZIWEI_LEAP_RULES[ziweiLeap],school,astroType,decades,effectiveDate,effectiveTimeIndex:hour,soul:c.mingZhu,body:c.shenZhu,fiveElementsClass:c.wuxingJuName,lunarDate:JSON.stringify(c.lunarInfo),palaces,patterns,correction,sihua:palaces.flatMap(p=>p.stars.filter(s=>s.siHua).map(s=>({star:s.name,type:s.siHua,palace:p.name}))),source:'Renhuai123/ziwei-doushu a600484 · MIT · iztro',rules:{school:school.id,lateZishi:input.lateZishi||'next-day',brightness:'QS（斗数全书）上游默认表',dataset:false}};
 }
-export function ziweiFlow({dateStr,timeIndex,gender,flowYear,astroType,scope,month,day,ziweiSchool:schoolId}){
+export function ziweiFlow({dateStr,timeIndex,gender,flowYear,astroType,scope,month,day,ziweiSchool:schoolId,ziweiLeap}){
   const school=ziweiSchool(schoolId);
   astroType=validateAstroType(astroType);
-  const a=cachedAstro(dateStr,timeIndex,gender,astroType);
+  const a=cachedAstro(dateStr,timeIndex,gender,astroType,ziweiLeap);
   const y=Number(flowYear??new Date().getFullYear());
   if(!Number.isInteger(y)||y<1||y>9999)throw new Error('无效流年');
   if(scope!==undefined)return scopedFlow(a,y,scope,month,day,school);

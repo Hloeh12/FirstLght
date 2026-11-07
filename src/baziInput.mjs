@@ -1,5 +1,4 @@
-import { birthCorrections } from './birth.mjs';
-import { localToUtc } from './tz.mjs';
+import { resolveBirthTime } from './birth.mjs';
 import { lunarToSolar } from './lunar.mjs';
 import { calculateTrueSolarTime } from './renhuai-engine.mjs';
 import { bazi, dynamicBazi } from './bazi.mjs';
@@ -11,13 +10,8 @@ export function baziFromInput(input){
   const h=Number(input.h??12),mi=Number(input.mi??0);
   const tz=Number(input.city?.tz??8),lon=Number(input.city?.lon);
   let utc,shift=0,eot=0,solarClock=null,local;
-  if(input.city?.tzName){
-    const r=localToUtc({Y,M,D,h,mi},input.city.tzName);
-    utc=r.utc;shift=r.offsetMin/60;
-  }else{
-    const bc=birthCorrections({Y,M,D,h,mi,tz,lon,useSolarTime:false});
-    utc=bc.utcDate;shift=(+new Date(Date.UTC(Y,M-1,D,h,mi))-+utc)/3600000;
-  }
+  const resolved=resolveBirthTime({Y,M,D,h,mi,city:input.city,dst1988Rule:input.dst1988Rule});
+  utc=resolved.utc;shift=resolved.offsetMin/60;
   if(input.useSolarTime){
     const c=calculateTrueSolarTime({year:Y,month:M,day:D,clockHour:h,clockMinute:mi,longitude:lon,utcOffsetMinutes:shift*60});
     if(!c.dateValid)throw Error('无效出生日期');
@@ -26,11 +20,12 @@ export function baziFromInput(input){
     solarClock=`${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')}`;
     eot=c.equationOfTimeMinutes;
   }else{
-    local={y:Y,m:M,d:D,h,mi};
+    const c=resolved.standard;local={y:c.Y,m:c.M,d:c.D,h:c.h,mi:c.mi};
   }
   const out=bazi({utc,local,gender:input.gender==='女'?'女':'男',dayBoundaryAt2300:!!input.dayBoundaryAt2300});
   out.meta.input={...input,city:{label:input.city?.label,lat:input.city?.lat,lon,tz}};
   out.meta.solarClock=solarClock;out.meta.eotMin=Math.round(eot*10)/10;
+  out.meta.timeCorrection={dstApplied:resolved.dstApplied,dstRule:resolved.dstRule,warning:resolved.warning,standard:resolved.standard,offsetMin:resolved.offsetMin};
   out.meta.utc=utc.toISOString();out.meta.local=local;
   out.dynamic=dynamicBazi(out,input);
   return out;

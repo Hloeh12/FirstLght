@@ -7,7 +7,8 @@ const stages={
 const stepText=kind=>kind==='身强'?'同我与生我权重超过 60%':kind==='身弱'?'同我与生我权重低于 40%':'同我与生我权重在 40% 至 60% 之间';
 function correction(b){
  const c=b.correction,format=x=>(x>=0?'+':'')+Number(x).toFixed(1)+'m';
- return c.corrected?`钟表 ${b.clock} → 经度差 ${format(c.longitudeCorrectionMinutes)} → 均时差 ${format(c.equationOfTimeMinutes)} → 真太阳时 ${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')}（${b.hourBranch}时${c.dayOffset?'，跨 '+c.dayOffset+' 日':''}）`:'钟表时 '+b.clock;
+ const dst=b.timeCorrection?.dstApplied?'（夏令时-1h，标准时 '+[b.timeCorrection.standard.h,b.timeCorrection.standard.mi].map(n=>String(n).padStart(2,'0')).join(':')+'）':'';
+ return c.corrected?`钟表 ${b.clock}${dst} → 经度差 ${format(c.longitudeCorrectionMinutes)} → 均时差 ${format(c.equationOfTimeMinutes)} → 真太阳时 ${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')}（${b.hourBranch}时${c.dayOffset?'，跨 '+c.dayOffset+' 日':''}）`:'钟表时 '+b.clock+dst;
 }
 function pillar(p,voids,index){
  return `<div class="pillar" data-pillar="${index}">
@@ -31,6 +32,11 @@ function details(d){
  ${d.guidance.influences.map(r=>`<p class="period-influence">${esc(r.text)}</p>`).join('')}
  <dl>${d.guidance.advice.map(a=>`<div><dt>${esc(a.topic)}</dt><dd>${esc(a.text)}</dd></div>`).join('')}</dl><small>传统干支规则与权重模型提供的观察参考。</small></article>`:''}
  ${d.selected.length?`<article class="card"><h2>当前运程</h2>${d.selected.map(p=>`<p>${esc(p.name+' '+p.stem+p.branch)} · ${term(p.tenGod)} · ${term(p.changsheng,stages[p.changsheng])} · ${term(p.nayin,'六十甲子的纳音分类。')}</p>`).join('')}</article>`:''}`;
+}
+function entryCard(d){
+ const e=d.entry,a=e.duration;
+ return `<article class="card liquid-glass luck-entry"><h2>精确起运与交运</h2><p>起运：出生后 ${a.years}年${a.months}个月${a.days}天${a.hours}小时 · ${d.info.forward?'顺行':'逆行'}</p>
+ <p>首次交运：${esc(e.local)}（出生地历史UTC偏移 ${e.offsetMinutes/60}）</p><p>${esc(e.year)}年 ${esc(e.term)}后第 ${e.daysAfter} 天交运 · 每十回归年换运</p><small>${esc(e.method)}</small></article>`;
 }
 function timeline(d,pick){
  const year=d.years.map(y=>[y.year,y.year+' '+y.stem+y.branch]);
@@ -73,7 +79,7 @@ export function baziView(ctx){
  ctx.root.innerHTML=`<section aria-label="四柱八字">
  <div class="spread"><h1>四柱八字</h1>${btn('生克合化',`data-combine aria-pressed="${s.combine}"`)}</div>
  <div class="bazi-board"><div class="matrix">${d.pillars.map((p,i)=>pillar(p,d.voidBranches,i)).join('')}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
- <p id="pillarRelation" class="thin" role="status"></p>
+ <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d)}
  <div class="timeline" data-bazi-rails>${timeline(d,s.pick)}</div>
  <p id="baziStatus" class="muted" role="status"></p>
  <div class="bazi-crossfade"><div data-bazi-data>${details(d)}</div></div></section>`;
@@ -143,7 +149,7 @@ async function showTool(ctx,i){
  if(i===0)content=table(['项目','结果'],[
   ['公历',b.solar+' '+b.clock],['农历',b.lunar],['四柱',d.pillars.map(p=>p.stem+p.branch).join(' ')],
   ['交节司令',d.commander.stem+' · '+d.commander.term.name+' '+d.commander.term.utc+' · 交节后 '+d.commander.elapsedDays.toFixed(6)+' 日'],
-  ['起运时刻',b.startUtc+'（UT）'],['起运年长',b.tropicalYearDays+' 日/回归年'],['起运',b.startAge+' 岁 · '+(b.forward?'顺行':'逆行')],['交运取节',b.node.name+' '+b.node.at+'（东八区节气）'],
+  ['起运时刻',b.startUtc+'（UT）'],['起运年长',b.tropicalYearDays+' 日/回归年'],['起运',b.startAge+' 岁 · '+(b.forward?'顺行':'逆行')],['夏令时校正',b.timeCorrection.dstApplied?'夏令时-1h':'未应用'],['时间提示',b.timeCorrection.warning||'无切换歧义'],['交运取节',b.node.name+' '+b.node.at+'（东八区节气）'],
   ['校准',correction(b)],['晚子时',b.lateZishi==='current-day'?'归当日':'归次日']
  ]);
  if(i===1)content=`<h3>${d.strength.kind} · 扶助 ${d.strength.support.toFixed(1)}%</h3><p>${stepText(d.strength.kind)}。</p>${bars(d.strength.percentages)}

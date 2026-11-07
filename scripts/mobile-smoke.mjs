@@ -33,6 +33,21 @@ try{
    for(const b of boxes){assert(b.top>=-.5&&b.bottom<=b.viewport+.5,JSON.stringify(b));assert(b.height<=b.viewport*.80+1);assert.equal(b.scroll,'auto');}
   };
   await checkSheet();
+  // Simulate the iOS visual viewport shrinking while the layout viewport stays fixed.
+  await page.locator('#inputSheet input').first().focus();
+  await page.evaluate(()=>{
+   Object.defineProperty(visualViewport,'height',{value:innerHeight*.5,configurable:true});
+   visualViewport.dispatchEvent(new Event('resize'));
+  });
+  await page.waitForFunction(()=>document.documentElement.style.getPropertyValue('--sheet-limit')!=='');
+  const keyboard=await page.locator('#inputSheet').evaluate(n=>{
+   const b=n.getBoundingClientRect(),head=n.querySelector('.sheet-head').getBoundingClientRect();
+   return {top:b.top,bottom:b.bottom,height:b.height,limit:visualViewport.height,closeTop:head.top,closeBottom:head.bottom};
+  });
+  assert(keyboard.height<=keyboard.limit*.88+1,JSON.stringify(keyboard));
+  assert(keyboard.top>=0&&keyboard.closeTop>=0&&keyboard.closeBottom<=keyboard.limit+1,JSON.stringify(keyboard));
+  await page.evaluate(()=>{delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'));});
+  await page.waitForFunction(()=>document.documentElement.style.getPropertyValue('--sheet-limit')==='');
   await page.locator('#inputSheet').getByLabel('命主姓名',{exact:true}).fill('布局示例');
   await page.locator('#inputSheet').getByLabel('出生日期',{exact:true}).fill('1998-11-21');
   await page.locator('#inputSheet').getByLabel('出生时刻',{exact:true}).fill('00:02');
@@ -75,6 +90,15 @@ try{
   const internal=await page.locator('#toolSheet .sheet-body').evaluate(n=>({height:n.clientHeight,content:n.scrollHeight}));
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
+  for(const tab of ['cases','chart','insights','me']){
+   await page.locator('[data-tab="'+tab+'"]').click();
+   await page.waitForTimeout(500);
+   const pill=await page.locator('#tabLiquidPill').evaluate(n=>{
+    const p=n.getBoundingClientRect(),b=document.querySelector('#bottomNav [aria-current=page]').getBoundingClientRect();
+    return {left:p.left,right:p.right,top:p.top,bottom:p.bottom,tabLeft:b.left,tabRight:b.right,tabTop:b.top,tabBottom:b.bottom};
+   });
+   assert(pill.left>=pill.tabLeft-1&&pill.right<=pill.tabRight+1,JSON.stringify(pill));
+  }
   await page.locator('[data-tab="me"]').click();
   assert.equal(await page.locator('[data-app-version]').textContent(),`FirstLght ${release.version}（${release.build}）`);
   if(process.env.GITHUB_SHA)assert((await page.locator('[data-app-build]').textContent()).includes(process.env.GITHUB_SHA.slice(0,7)));
@@ -97,7 +121,7 @@ try{
     footer:footer.bottom,tab:tab.top,z:getComputedStyle(document.querySelector('#bottomNav')).zIndex,wide:document.documentElement.scrollWidth,viewport:innerWidth};
   });
   assert.equal(metrics.root,0);assert.equal(metrics.bodyY,0);
-  assert.equal(metrics.overflow,'hidden');assert.equal(metrics.position,'fixed');assert.equal(metrics.z,'300');
+  assert.equal(metrics.overflow,'hidden');assert.equal(metrics.position,'fixed');assert.equal(metrics.z,'999');
   assert(metrics.scroll>0);assert(metrics.footer<=metrics.tab+1);
   assert(metrics.wide<=metrics.viewport);
   const layers=await page.evaluate(()=>{
@@ -105,7 +129,7 @@ try{
    const buttons=[...document.querySelectorAll('#appTopBar button')].filter(b=>b.getClientRects().length).map(b=>{const r=b.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};});
    return {top:top.bottom,main:main.top,navHeight:nav.height,buttons,width:innerWidth,rootX:document.documentElement.getBoundingClientRect().left};
   });
-  assert(layers.top<=layers.main+.5);assert.equal(layers.navHeight,56);assert.equal(layers.rootX,0);
+  assert(layers.top<=layers.main+.5);assert.equal(layers.navHeight,60);assert.equal(layers.rootX,0);
   for(let i=0;i<layers.buttons.length;i++){
    const b=layers.buttons[i];assert(b.left>=0&&b.right<=layers.width);if(i)assert(b.left>=layers.buttons[i-1].right);
   }

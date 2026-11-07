@@ -75,6 +75,15 @@ function chartAt(date,city,cfg){
  const patterns=patternsOf(majors,aspects,analysis.patterns);
  return {utc:date.toISOString(),houseSystem,warning,zodiac:cfg.sidereal?'sidereal':'tropical',ayan:cfg.ayan,offset,axes,cusps,planets:raw,aspects,analysis:{...analysis,patterns},diurnal};
 }
+export function effectiveOrb(p,q,angle,cfg={}){
+ const row=ASPECTS.find(x=>x[0]===angle);if(!row)return 0;
+ let orb=cfg.preset==='custom'?Number(cfg.orbs?.[angle]??row[3]):cfg.preset==='strict'?row[4]:row[3];
+ if([30,45,135,150].includes(angle))return Math.min(2,Math.max(0,orb));
+ const luminary=[p.key,q.key].some(k=>['sun','moon'].includes(k));
+ const outer=[p.key,q.key].some(k=>['jupiter','saturn','uranus','neptune','pluto'].includes(k));
+ if(cfg.preset!=='custom'&&!luminary&&outer)orb=Math.min(6,orb);
+ return Math.max(0,orb);
+}
 function aspectPairs(a,b,cfg,same){
  const result=[];
  for(const [i,p] of a.entries())for(let j=same?i+1:0;j<b.length;j++){
@@ -84,9 +93,9 @@ function aspectPairs(a,b,cfg,same){
   const matches=ASPECTS.flatMap(([angle,type,symbol,normal,strict])=>{
    const deviation=gap-angle;
    const applying=slope===null||Math.abs(deviation)<1e-7?null:deviation*slope<0;
-   let orb=cfg.preset==='custom'?cfg.orbs[angle]:cfg.preset==='strict'?strict:normal;
+   let orb=effectiveOrb(p,q,angle,cfg);
    if(cfg.phaseWeight&&applying===false)orb*=.8;
-   return orb>0&&Math.abs(deviation)<=orb?[{a:p.name,b:q.name,aKey:p.key,bKey:q.key,type,symbol,angle,orb:Math.abs(deviation),deviation,applying}]:[];
+   return orb>0&&Math.abs(deviation)<=orb?[{a:p.name,b:q.name,aKey:p.key,bKey:q.key,type,symbol,angle,orb:Math.abs(deviation),deviation,applying,allowedOrb:orb}]:[];
   });
   matches.sort((x,y)=>x.orb-y.orb);
   if(matches.length)result.push(matches[0]);

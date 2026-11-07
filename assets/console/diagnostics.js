@@ -90,21 +90,40 @@ async function copyLogs(output){
  output.focus();output.select();
  try{return document.execCommand?.('copy')===true;}catch{return false;}
 }
+export function storageUsage(storage=localStorage){
+ let bytes=0;for(let i=0;i<storage.length;i++){const k=storage.key(i);bytes+=(k.length+(storage.getItem(k)||'').length)*2;}
+ return {kb:bytes/1024,limitKb:5000,warning:bytes>4*1024*1024};
+}
 export function diagnosticsPanel(ctx){
  const d=ctx.sheet('toolSheet','🛠️ 运行诊断与日志',`<div class="tool-grid diagnostics-actions">
  ${btn('一键全机自检','data-check-device')}${btn('复制诊断包','data-copy-logs')}${btn('重置缓存','data-reset-cache')}</div>
  <p class="thin">自检使用示例资料，在本机运行。缓存重置保留案例、偏好与日志。</p>
+ <article class="card" data-storage-monitor><h3>本地存储配额</h3><p data-storage-text></p><div class="energy-track" role="meter" aria-label="本地存储估算" aria-valuemin="0" aria-valuemax="5000"><span class="energy-fill" data-storage-fill></span></div><p class="thin">按键名和内容 UTF-16 字节估算，5000KB 为保守参考额度；实际配额由设备决定。</p><p class="storage-warning" data-storage-warning hidden>存储已超过 4MB。先备份案例，再导出并清空旧日志。</p>${btn('导出并清空旧日志','data-export-clear-logs')}</article>
  <p data-diagnostic-status role="status"></p><ul data-diagnostic-checks></ul>
  <label>最近 <span data-log-count></span> 条日志（最多 100 条）<textarea readonly rows="8" data-logs aria-label="运行日志"></textarea></label>`);
  const output=$('[data-logs]',d),status=$('[data-diagnostic-status]',d),checks=$('[data-diagnostic-checks]',d);
  const draw=()=>{
   if(!output.isConnected){messages.removeEventListener('update',draw);return;}
+  const usage=storageUsage();
+  $('[data-storage-text]',d).textContent=usage.kb.toFixed(1)+' KB / 5000 KB';
+  $('[data-storage-monitor] [role=meter]',d).setAttribute('aria-valuenow',String(Math.round(usage.kb)));
+  $('[data-storage-fill]',d).style.width=Math.min(100,usage.kb/50)+'%';
+  $('[data-storage-warning]',d).hidden=!usage.warning;
   $('[data-log-count]',d).textContent=logs.length;
   output.value=logs.map(l=>[l.at,l.kind,l.message].join(' · ')+(l.stack?'\n'+l.stack:'')).join('\n\n');
  };
  draw();
  messages.addEventListener('update',draw);
  d.addEventListener('close',()=>messages.removeEventListener('update',draw),{once:true});
+ $('[data-export-clear-logs]',d).onclick=()=>{
+  try{
+   ctx.download(JSON.stringify({version:appBuild.version,build:appBuild.build,logs},null,2),'FirstLght-runtime-logs.json','application/json');
+   localStorage.removeItem(key);logs=[];draw();
+   status.textContent='已发起日志导出并清空本地旧日志；案例与偏好完整保留。';
+  }catch(error){status.textContent='导出失败，旧日志已保留：'+error.message;}
+ };
+ window.addEventListener('storage',draw,{signal:undefined});
+ d.addEventListener('close',()=>window.removeEventListener('storage',draw),{once:true});
  $('[data-check-device]',d).onclick=async e=>{
   const button=e.currentTarget;button.disabled=true;status.textContent='正在进行本机自检…';
   try{

@@ -594,14 +594,16 @@ function generateChart(birthInfo, opts) {
   let astrolabe;
   if (leapMode !== "split" && effectiveLunar.rawLunarMonth < 0) {
     const lunarDateStr = `${effectiveLunar.lunarYear}-${effectiveLunar.lunarMonth}-${effectiveLunar.lunarDay}`;
-    astrolabe = astro.byLunar(
-      lunarDateStr,
-      hour,
-      iztroGender,
-      effectiveLunar.isLeapMonth,
-      false,
-      "zh-CN"
-    );
+    astrolabe = astro.withOptions({
+      type: "lunar",
+      dateStr: lunarDateStr,
+      timeIndex: hour,
+      gender: iztroGender,
+      isLeapMonth: effectiveLunar.isLeapMonth,
+      fixLeap: false,
+      language: "zh-CN",
+      astroType: opts?.astroType
+    });
   } else if (opts?.astroType && opts.astroType !== "heaven") {
     astrolabe = astro.withOptions({
       dateStr: `${year}-${month}-${day}`,
@@ -1689,6 +1691,7 @@ export {
   calculateTrueSolarTime,
   detectPatterns,
   generateChart,
+  resolveEffectiveLunarDate,
   resolveZiweiDayOffset,
   schoolStarBrightness,
   shiftGregorianDate

@@ -28,3 +28,24 @@ export function lockViewport(){
   if(event.cancelable)event.preventDefault();
  },{passive:false});
 }
+
+// visualViewport resize is the keyboard's usable region, not a page resize.
+export function fitKeyboard(){
+ const viewport=window.visualViewport;
+ if(!viewport)return;
+ let frame;
+ const update=()=>{
+  cancelAnimationFrame(frame);
+  frame=requestAnimationFrame(()=>{
+   const focused=document.activeElement,editing=focused?.matches('input,textarea,select,[contenteditable=true]');
+   const keyboard=editing&&viewport.height<innerHeight-100;
+   const style=document.documentElement.style;
+   style.setProperty('--keyboard-inset',keyboard?Math.max(0,innerHeight-viewport.height-viewport.offsetTop)+'px':'0px');
+   if(keyboard){style.setProperty('--sheet-limit',Math.floor(viewport.height*.88)+'px');focused.scrollIntoView?.({behavior:'smooth',block:'center'});}
+   else style.removeProperty('--sheet-limit');
+  });
+ };
+ viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);
+ document.addEventListener('focusin',update);document.addEventListener('focusout',update);
+ update();
+}

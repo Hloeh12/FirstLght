@@ -1,6 +1,7 @@
 import {versionCard,releaseHistory} from './releases.js';
 import {ZIWEI_SCHOOLS} from '../../src/ziwei-rules.mjs';
-import {lockViewport} from './viewport.js';
+import {updateLiquidPill} from './bottom-nav.js';
+import {lockViewport,fitKeyboard} from './viewport.js';
 import {diagnosticsPanel,installDiagnostics} from './diagnostics.js';
 import {soulWidgets,wireSoul} from './soul-home.js';
 import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
@@ -14,6 +15,7 @@ import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,so
 
 installDiagnostics();
 lockViewport();
+fitKeyboard();
 
 const CASES='xy:cases:v2',ACTIVE='xy_active_profile',SETTINGS='xy:settings:v2';
 const standardGroups=['我的','亲人','朋友','特别关注'];
@@ -32,7 +34,7 @@ const icons=[
  '<circle cx="5" cy="7" r="3.5" fill="#f2bbd2"/><circle cx="19" cy="7" r="3.5" fill="#f2bbd2"/><path d="M3 14a9 8 0 0 1 18 0c0 8-18 8-18 0Z" fill="#ffe1ee" stroke="#ae7392"/><path d="M8 13h.1m7.9 0h.1m-5 3 1 1 1-1" stroke="#6a4560" stroke-width="1.6" stroke-linecap="round"/>'
 ];
 const tabs={cases:'案例',chart:'排盘',insights:'洞见',me:'我'};
-$('#bottomNav').innerHTML=Object.entries(tabs).map(([id,label],i)=>`<button type="button" data-tab="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${icons[i]}</svg>${label}</button>`).join('');
+$('#bottomNav').innerHTML='<div id="tabLiquidPill" class="tab-liquid-pill" aria-hidden="true"></div>'+Object.entries(tabs).map(([id,label],i)=>`<button type="button" data-tab="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${icons[i]}</svg>${label}</button>`).join('');
 function tell(message){
  const node=$('#notice');node.textContent=message;node.hidden=false;
  clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>{node.hidden=true;},3600);
@@ -57,7 +59,7 @@ for(const d of document.querySelectorAll('dialog')){
 function sheet(id,title,body){
  const d=$('#'+id),prefix={inputSheet:'birth',caseDrawer:'drawer',toolSheet:'tool',termSheet:'term'}[id];
  d.innerHTML=`<div class="dialog-content"><div class="sheet-grip" aria-hidden="true"></div><header class="sheet-head">
- <h2 id="${prefix}Title">${esc(title)}</h2>${btn('×','class="icon" aria-label="关闭" data-close')}</header><div class="sheet-body">${body}</div></div>`;
+ <h2 id="${prefix}Title">${esc(title)}</h2>${btn('×','class="icon" aria-label="关闭" data-close')}</header><div class="sheet-body">${body}<div class="scroll-clearance" aria-hidden="true"></div></div></div>`;
  $('[data-close]',d).onclick=()=>close(d);
  open(d);
  return d;
@@ -82,6 +84,7 @@ function normalized(profile){
  return {...f,...splitDate(date),name:profile.name,dateStr:date,timeStr:clock,h,mi,gender:f.gender||'女',
   useSolarTime:f.useSolarTime??state.settings.useSolarTime??false,
   ziweiSchool:state.settings.ziweiSchool||'quanshu',
+  ziweiLeap:state.settings.ziweiLeap||'split',dst1988Rule:state.settings.dst1988Rule||'iana',
   lateZishi:f.lateZishi||state.settings.lateZishi||'next-day',
   city:{...f.city,lat:Number(f.city?.lat),lon:Number(f.city?.lon),tz:Number(f.city?.tz??8)}};
 }
@@ -102,7 +105,7 @@ function summary(result){
 function installReading(profile,result){
  profile.summary=summary(result);
  profile.tags=Object.values(profile.summary);
- state.reading=result;state.profile=profile;state.chartState={};state.error='';
+ state.reading=result;state.profile=profile;state.chartState={};state.resonanceProfile=null;state.error='';
  state.cases=[profile,...state.cases.filter(c=>c.id!==profile.id)];
  state.recent=[profile.id,...state.recent.filter(id=>id!==profile.id)].slice(0,5);
  persist();
@@ -372,6 +375,8 @@ function settingsForm(){
  ${state.profile?`<label class="checks wide"><input name="activeSolar" type="checkbox" ${normalized(state.profile).useSolarTime?'checked':''}>当前案例使用真太阳时</label>`: ''}
  <label>晚子时（23:00–24:00）<select name="late"><option value="next-day">归次日</option><option value="current-day" ${s.lateZishi==='current-day'?'selected':''}>归当日</option></select></label>
  <label class="wide">紫微十干四化口径<select name="ziweiSchool">${Object.entries(ZIWEI_SCHOOLS).map(([id,v])=>`<option value="${id}" ${s.ziweiSchool===id?'selected':''}>${esc(v.label+' · '+v.description)}</option>`).join('')}</select></label>
+ <label>紫微闰月规则<select name="ziweiLeap">${[['split','15日分界'],['prev-month','视作本月'],['next-month','视作下月']].map(([id,label])=>`<option value="${id}" ${s.ziweiLeap===id?'selected':''}>${label}</option>`).join('')}</select></label>
+ <label>1988 夏令时口径<select name="dst1988Rule"><option value="iana">公告 / IANA：4月17日</option><option value="compat-apr10" ${s.dst1988Rule==='compat-apr10'?'selected':''}>4月10日兼容（非公告）</option></select></label>
  <label>西洋分宫制<select name="house">${houseOptions(astroHouse())}</select></label>
  <label>默认地点<input name="place" value="${esc(s.place)}"></label><label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(s.tz??8)}"></label>
  <label>纬度<input name="lat" type="number" step="any" value="${esc(s.lat)}"></label><label>经度<input name="lon" type="number" step="any" value="${esc(s.lon)}"></label>
@@ -381,7 +386,7 @@ function savePreferences(e){
  e.preventDefault();
  const f=new FormData(e.currentTarget),[lat,lon,tz]=['lat','lon','tz'].map(k=>f.get(k)===''?undefined:Number(f.get(k)));
  if([lat,lon,tz].some(v=>v!==undefined&&!Number.isFinite(v))||Math.abs(lat)>90||Math.abs(lon)>180||tz< -12||tz>14){tell('默认坐标或时区无效');return;}
- state.settings={ziweiSchool:f.get('ziweiSchool'),lateZishi:f.get('late'),useSolarTime:f.has('solar'),place:f.get('place'),lat,lon,tz:tz??8};
+ state.settings={ziweiLeap:f.get('ziweiLeap'),dst1988Rule:f.get('dst1988Rule'),ziweiSchool:f.get('ziweiSchool'),lateZishi:f.get('late'),useSolarTime:f.has('solar'),place:f.get('place'),lat,lon,tz:tz??8};
  save(SETTINGS,state.settings);
  const drawer=e.currentTarget.closest('dialog');if(drawer)close(drawer);
  setAstroHouse(ctx,f.get('house'));
@@ -428,10 +433,13 @@ function caseDrawer(){
 
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
- const late=(info?.correction.corrected?info.correction.hour:Number(p?.fields?.h??p?.fields?.timeStr?.split(':')[0]))===23;
+ const late=(info?.effectiveHour??Number(p?.fields?.h??p?.fields?.timeStr?.split(':')[0]))===23;
+ const dst=info?.timeCorrection?.dstApplied?' · [夏令时-1h]':'';
  const badge=late?' · 晚子时'+((info?.lateZishi||p.fields.lateZishi)==='current-day'?'归当日':'归次日'):'';
- const label=p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge:'🌸 开始排盘';
- $('[data-profile-name]').textContent=label;
+ const label=p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge+dst:'🌸 开始排盘';
+ $('[data-profile-name]').textContent=label.replace(dst,'');
+ const dstChip=$('[data-profile-dst]');dstChip.textContent=dst?'夏令时-1h':'';dstChip.hidden=!dst;
+ dstChip.title=info?.timeCorrection?.warning||'中国历史夏令时校正';
  const rule=$('[data-profile-rule]'),school=ZIWEI_SCHOOLS[state.settings.ziweiSchool||'quanshu'];
  $('#activeProfile').dataset.showRule=String(Boolean(p&&state.tab==='chart'&&state.system==='ziwei'));
  rule.textContent=school.label;rule.title=school.description;rule.hidden=!p||state.tab!=='chart'||state.system!=='ziwei';
@@ -439,13 +447,31 @@ function profileTitle(){
  $('#activeProfile').setAttribute('aria-label',p?label+'，编辑出生资料':label);
 
 }
+function resonanceCard(){
+ const result=state.resonance;
+ if(!result)return '<article class="card liquid-glass" data-resonance><h2>三盘共振证据链</h2><p role="status">正在本机交叉核对岁运、四化与行运…</p></article>';
+ if(result.error)return `<article class="card" data-resonance><h2>三盘共振证据链</h2><p>${esc(result.error)}</p></article>`;
+ return `<article class="card liquid-glass" data-resonance><h2>三盘共振证据链</h2><p class="thin">核对时刻 ${esc(result.at.replace('T',' ').replace('Z',' UT'))}</p>
+ <p>${result.consensus.length?'检出 '+result.consensus.length+' 组同主题、同向的三体系线索。':'当前没有三体系同主题同向共振，不强行拼接结论。'}</p>
+ ${result.chains.slice(0,6).map(c=>`<div class="resonance-evidence"><b>${esc(c.topic+' · '+c.direction)} · ${c.coverage}/3 体系</b><div class="energy-track" role="meter" aria-label="证据覆盖体系数" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${c.coverage}"><span class="energy-fill" style="width:${c.coverage/3*100}%"></span></div>${c.items.slice(0,6).map(e=>`<p><small>${esc(e.system)}</small> ${esc(e.text)}</p>`).join('')}</div>`).join('')}<small>${esc(result.method)}</small></article>`;
+}
 function insights(){
  const r=state.reading;
  if(!r){root.innerHTML='<p class="empty">激活案例后查看八字、紫微与西洋占星的综合报告。</p>';return;}
+ const resonanceAt=new Date().toISOString(),resonanceConfig=stored('xy_astro_config',{});
+ const resonanceKey=state.profile.id+'|'+resonanceAt.slice(0,13)+'|'+JSON.stringify(resonanceConfig);
+ if(state.resonanceProfile!==resonanceKey){
+  state.resonanceProfile=resonanceKey;state.resonance=null;
+  const id=state.profile.id,token=state.reading;
+  request('/api/console/resonance',{birth:normalized(state.profile),at:resonanceAt,config:resonanceConfig}).then(result=>{
+   if(state.reading!==token||state.profile.id!==id)return;
+   state.resonance=result;if(state.tab==='insights')insights();
+  }).catch(error=>{if(state.reading===token){state.resonance={error:error.message};if(state.tab==='insights')insights();}});
+ }
  const {bazi,ziwei,western}=r;
  const active=ziwei.decades.map(d=>[d.ageRange.join('–')+' 岁',d.yearRange.join('–'),d.palaceName]);
  root.innerHTML=`<section><h1>洞见</h1><p class="muted">${esc(state.profile.name)} · 三盘合参</p>
- <article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
+ ${resonanceCard()}<article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
  <article class="card liquid-glass"><h2>职责、资源与人际</h2><p>官禄与财帛可分别观察职责和资源，西方天顶 ${esc(western.mc.sign)} 可对照事业表达，印度上升 ${esc(r.vedic.lagna)} 采用恒星黄道。</p><p>${esc(bazi.relationships.map(l=>l.pattern+l.type).join('、')||'本命未触发当前规则表中的干支关系')}</p></article>
  <article class="card liquid-glass"><h2>全生命周期 · 紫微大限</h2>${table(['虚岁','年份','大限宫'],active)}</article>
  ${Object.entries(r.report?.sections||{}).map(([name,lines])=>`<article class="card"><h2>${esc(reportTitle(name))}</h2>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}</article>`).join('')}</section>`;
@@ -512,7 +538,8 @@ const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,swit
 function render(){
  profileTitle();
  $('#toolsButton').hidden=!(state.tab==='chart'&&state.reading&&chartTools[state.system]);
- for(const b of $('#bottomNav').children){if(b.dataset.tab===state.tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
+ updateLiquidPill(state.tab);
+ for(const b of $('#bottomNav').querySelectorAll('[data-tab]')){if(b.dataset.tab===state.tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
  if(state.tab==='cases'){renderCases();return;}
  if(state.tab==='insights'){insights();return;}
  if(state.tab==='me'){preferences();return;}
@@ -532,6 +559,7 @@ root.addEventListener('click',e=>{
  if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain);}
 });
 $('#activeProfile').onclick=()=>birthSheet(state.profile);
+$('#btnEditProfile').onclick=e=>{e.stopPropagation();birthSheet(state.profile);};
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
 $('#bottomNav').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab);};

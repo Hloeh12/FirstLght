@@ -107,7 +107,10 @@ export function luckCycles(utc, localYear, month, yearStemIdx, gender, count=8){
     const startUtc=new Date(+utc+exactAge*TROPICAL_YEAR_MS).toISOString(),endUtc=new Date(+utc+(exactAge+10)*TROPICAL_YEAR_MS).toISOString();
     out.push({age:Math.round(exactAge*10)/10,exactAge,stem:STEMS[sIdx],branch:BRANCHES[bIdx],startYear:new Date(startUtc).getUTCFullYear(),startUtc,endUtc});
   }
-  return {forward,startAge:Math.round(startAge*10)/10,exactStartAge:startAge,tropicalYearDays:TROPICAL_YEAR_DAYS,edge:{name:edge.name,utc:edge.date.toISOString()},cycles:out};
+  const totalMonths=days*4,years=Math.floor(totalMonths/12),months=Math.floor(totalMonths-years*12);
+  const remainderDays=(totalMonths-years*12-months)*30;
+  const duration={years,months,days:Math.floor(remainderDays+1e-9),hours:Math.floor((remainderDays%1)*24+1e-7)};
+  return {duration,intervalSeconds:Math.round(days*86400),forward,startAge:Math.round(startAge*10)/10,exactStartAge:startAge,tropicalYearDays:TROPICAL_YEAR_DAYS,edge:{name:edge.name,utc:edge.date.toISOString()},cycles:out};
 }
 
 export function flowYears(localYear,count=3,startYear=null){

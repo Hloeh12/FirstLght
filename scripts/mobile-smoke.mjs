@@ -86,7 +86,7 @@ try{
    });
    await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
    await page.locator('[data-share-current]').click();
-   await page.waitForFunction(()=>typeof window.__sharedChart==='string',{timeout:15000});
+   try{await page.waitForFunction(()=>typeof window.__sharedChart==='string',null,{timeout:15000});}catch(error){throw Error(kind+' share: '+await page.locator('[data-share-status]').textContent()+' | '+error.message);}
    const data=Buffer.from((await page.evaluate(()=>window.__sharedChart)).split(',')[1],'base64');
    assert.equal(data.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(data.readUInt32BE(16),1440);assert(data.readUInt32BE(20)>500);
    await writeFile('build/mobile-'+engine+'-share-'+kind+'-'+width+'.png',data);

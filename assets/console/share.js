@@ -1,3 +1,4 @@
+import {drawSvg} from './vector-canvas.js';
 function wrap(ctx,value,width){
  const out=[];
  let line='';
@@ -7,27 +8,6 @@ function wrap(ctx,value,width){
  }
  if(line)out.push(line);
  return out;
-}
-async function drawSvg(ctx,svg,x,y,w,h){
- const copy=svg.cloneNode(true);
- copy.setAttribute('width',w);copy.setAttribute('height',h);
- copy.querySelectorAll('.comet-head,.flight-current').forEach(p=>p.remove());
- const styles=['fill','stroke','stroke-width','opacity','stroke-dasharray','transform','transform-origin','font-size','font-family','font-weight'];
- const originals=svg.querySelectorAll('.wheel-aspect,.wheel-body-glyph,.wheel-star-visual,.wheel-star-halo,.wheel-star-hit,.zi-laser,.zi-laser-node,polygon,text');
- const duplicates=copy.querySelectorAll('.wheel-aspect,.wheel-body-glyph,.wheel-star-visual,.wheel-star-halo,.wheel-star-hit,.zi-laser,.zi-laser-node,polygon,text');
- originals.forEach((element,i)=>{
-  const computed=getComputedStyle(element),target=duplicates[i];
-  for(const key of styles)target.style.setProperty(key,computed.getPropertyValue(key).replace(/url\(["']?[^)"']*#([^)"']+)["']?\)/g,'url(#$1)'));
-  if(element.matches('.zi-laser'))target.style.setProperty('stroke-dasharray',element.matches('.zi-opposition')?'4 3':'none');
-  if(element.matches('.wheel-body-glyph'))target.style.removeProperty('fill');
- });
- copy.querySelectorAll('.zi-path').forEach(p=>{p.setAttribute('fill','none');p.setAttribute('stroke-width','1.65');});
- const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml'}));
- try{
-  const image=new Image();
-  await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('盘面矢量导出失败'));image.src=url;});
-  ctx.drawImage(image,x,y,w,h);
- }finally{URL.revokeObjectURL(url);}
 }
 function panel(g,x,y,w,h){
  const r=20;g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();

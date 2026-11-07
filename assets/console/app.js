@@ -548,8 +548,8 @@ function toolPanel(){
  if(state.tab!=='chart'||(!state.reading&&!state.chartState.west?.birthOverride))return;
  const d=sheet('toolSheet',labels[state.system]+' · 功能','<div id="viewTools"></div>');
  if(tool)tool(ctx,$('#viewTools',d));
- const host=$('#viewTools',d);host.insertAdjacentHTML('beforeend',btn('📷 分享长图','data-share-current class="tool-full"'));
- $('[data-share-current]',host).onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await shareChart(root,$('[data-profile-name]').textContent);}catch(error){tell(error.message);}finally{b.disabled=false;}};
+ const host=$('#viewTools',d);host.insertAdjacentHTML('beforeend',btn('📷 分享长图','data-share-current class="tool-full"')+'<p data-share-status class="thin" role="status"></p>');
+ $('[data-share-current]',host).onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await shareChart(root,$('[data-profile-name]').textContent);$('[data-share-status]',host).textContent='长图已生成。';}catch(error){$('[data-share-status]',host).textContent='导出失败：'+error.message;tell(error.message);}finally{b.disabled=false;}};
 }
 const definitions={
  日主:'出生日的天干，是十神关系和扶助比例的参照。',正官:'克日主且阴阳相异，常用来观察规则、责任和约束。',七杀:'克日主且阴阳相同，常用来观察压力、竞争和行动。',正印:'生日主且阴阳相异，常用来观察正规支持和学习。',偏印:'生日主且阴阳相同，常用来观察非标准的学习和支持。',比肩:'与日主同五行同阴阳，常用来观察同辈和自主性。',劫财:'与日主同五行异阴阳，常用来观察共享与竞争。',食神:'日主所生且阴阳相同，常用来观察输出与创造。',伤官:'日主所生且阴阳相异，常用来观察表达与打破常规。',正财:'日主所克且阴阳相异，常用来观察稳定资源。',偏财:'日主所克且阴阳相同，常用来观察流动资源与机会。',空亡:'以干支十位一旬计，两支未配天干，即为该旬空亡。',天乙贵人:'按年干或日干查出的地支标记，传统用来描述支持与援助。',驿马:'按三合局取对冲的生地，常用来观察移动、变换和外部往来。',咸池桃花:'按年支或日支查表，传统用来观察社交与吸引力。',华盖:'按三合局墓支取，常用来观察独处、专注和技艺。',羊刃:'阳日干的特定旺支，传统用来观察力量集中和张力。',劫煞:'按年支或日支所属三合局查表，传统用来观察竞争或突变。',天医:'以月支前一支取，属于传统辅助标记。',文昌:'按年干或日干查表，传统用来观察学习、书写和表达。',太极贵人:'按年干或日干查表，传统用来观察学习和钻研。'

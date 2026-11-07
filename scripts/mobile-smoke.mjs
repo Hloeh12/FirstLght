@@ -206,7 +206,7 @@ try{
   await page.locator('[data-create]').click();
   await page.locator('#inputSheet').getByLabel('命主姓名',{exact:true}).fill('跨组同伴');
   await page.locator('#inputSheet').getByLabel('出生日期',{exact:true}).fill('2001-05-04');
-  await page.locator('#inputSheet').getByLabel('案例分组',{exact:true}).selectOption({label:'亲人'});
+  await page.locator('#birthForm [name=category]').selectOption({label:'亲人'});
   await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('31.23');
   await page.locator('#inputSheet').getByLabel('经度',{exact:true}).fill('121.47');
   await page.getByRole('button',{name:'生成命盘',exact:true}).click();await page.locator('.zi-board').waitFor();

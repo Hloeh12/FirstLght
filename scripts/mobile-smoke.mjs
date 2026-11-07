@@ -20,12 +20,13 @@ try{
   page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/'))api.push(request.url());});
   await page.goto('http://127.0.0.1:18824/',{waitUntil:'networkidle'});
   const checkSheet=async()=>{
+   await page.locator('dialog[open]').evaluateAll(nodes=>Promise.all(nodes.flatMap(n=>n.getAnimations().map(a=>a.finished.catch(()=>{})))));
    const boxes=await page.locator('dialog[open]').evaluateAll(nodes=>nodes.map(n=>{
     const b=n.getBoundingClientRect(),s=n.querySelector('.sheet-body');
     return {top:b.top,bottom:b.bottom,height:b.height,viewport:innerHeight,scroll:s&&getComputedStyle(s).overflowY};
    }));
    assert(boxes.length>0);
-   for(const b of boxes){assert(b.top>=-.5&&b.bottom<=b.viewport+.5);assert(b.height<=b.viewport*.82+1);assert.equal(b.scroll,'auto');}
+   for(const b of boxes){assert(b.top>=-.5&&b.bottom<=b.viewport+.5,JSON.stringify(b));assert(b.height<=b.viewport*.82+1);assert.equal(b.scroll,'auto');}
   };
   await checkSheet();
   await page.getByLabel('命主姓名',{exact:true}).fill('布局示例');

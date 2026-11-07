@@ -71,5 +71,5 @@ test('planet states separate domicile, exaltation, combustion and war',()=>{
 });
 test('eight Koota scores expose 36 points, Nadi and Bhakoot fixture boundaries',()=>{
  const moon=(signIndex,nakIndex,sid=signIndex*30)=>({planets:[{name:'月亮',signIndex,nakIndex,sid,pada:1}]});
- const r=ashtakoota(moon(0,0),moon(0,1));assert.equal(r.items.reduce((a,b)=>a+b.max,0),36);assert.equal(r.items.find(x=>x.key==='nadi').score,8);assert.equal(r.items.find(x=>x.key==='bhakoot').score,7);assert.equal(ashtakoota(moon(0,0),moon(1,3)).items.find(x=>x.key==='bhakoot').score,0);assert.equal(ashtakoota(moon(0,0),moon(0,0)).items.find(x=>x.key==='nadi').score,0);
+ const r=ashtakoota(moon(0,0),moon(0,1));assert.equal(r.items.reduce((a,b)=>a+b.max,0),36);const yoni=(a,b)=>ashtakoota(moon(0,a),moon(0,b)).items.find(x=>x.key==='yoni').score;assert.equal(yoni(12,19),2);assert.equal(yoni(19,12),2);for(let a=0;a<27;a++)for(let b=0;b<27;b++)assert.equal(yoni(a,b),yoni(b,a));assert.equal(r.items.find(x=>x.key==='nadi').score,8);assert.equal(r.items.find(x=>x.key==='bhakoot').score,7);assert.equal(ashtakoota(moon(0,0),moon(1,3)).items.find(x=>x.key==='bhakoot').score,0);assert.equal(ashtakoota(moon(0,0),moon(0,0)).items.find(x=>x.key==='nadi').score,0);
 });

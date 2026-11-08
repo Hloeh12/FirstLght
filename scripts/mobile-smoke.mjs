@@ -23,6 +23,12 @@ try{
   page.on('pageerror',error=>errors.push(error.message));
   page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/'))api.push(request.url());});
   await page.goto('http://127.0.0.1:18824/',{waitUntil:'networkidle'});
+  const viewportGap=await page.evaluate(()=>{
+   const scroll=document.getElementById('mainScrollView').getBoundingClientRect();
+   const nav=document.getElementById('bottomNav').getBoundingClientRect();
+   return {scrollBottom:scroll.bottom,navTop:nav.top};
+  });
+  assert(viewportGap.scrollBottom<=viewportGap.navTop-8,'scroll viewport must end above navigation: '+JSON.stringify(viewportGap));
   const checkSheet=async()=>{
    await page.locator('dialog[open]').evaluateAll(nodes=>Promise.all(nodes.flatMap(n=>n.getAnimations().map(a=>a.finished.catch(()=>{})))));
    const boxes=await page.locator('dialog[open]').evaluateAll(nodes=>nodes.map(n=>{

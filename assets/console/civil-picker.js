@@ -52,7 +52,12 @@ export function installCivilPickers(sheet) {
    list.className='civil-wheel';
    list.setAttribute('role','listbox');list.setAttribute('aria-label',title);
    list.dataset.wheel=key;
-   const paint=()=>[...list.children].forEach((node,i)=>node.setAttribute('aria-selected',String(values[i]===selected[key])));
+   let marked;
+   const paint=()=>{
+    marked?.setAttribute('aria-selected','false');
+    marked=list.children[values.indexOf(selected[key])];
+    marked?.setAttribute('aria-selected','true');
+   };
    const commit=(index)=>{
     const value=values[index];
     if(value==null||selected[key]===value)return;
@@ -60,12 +65,16 @@ export function installCivilPickers(sheet) {
     if(key==='Y'||key==='M'){
      selected.D=Math.min(selected.D,days());
      const old=host.querySelector('[data-wheel=D]');
-     if(old)old.parentElement.replaceWith(column('D','日期',numberRange(1,days())));
+     if(old){
+      const replacement=column('D','日期',numberRange(1,days()));
+      old.parentElement.replaceWith(replacement);
+      place(replacement.lastElementChild,selected.D-1);
+     }
     }
    };
    for(const [index,value] of values.entries()){
     const button=document.createElement('button');
-    button.type='button';button.role='option';button.textContent=format(value);button.dataset.wheelValue=value;
+    button.type='button';button.role='option';button.setAttribute('aria-selected','false');button.textContent=format(value);button.dataset.wheelValue=value;
     button.onclick=()=>{commit(index);place(list,index);};
     list.append(button);
    }
@@ -75,7 +84,6 @@ export function installCivilPickers(sheet) {
     frame=requestAnimationFrame(()=>{if(list.isConnected)commit(Math.round(list.scrollTop/rowHeight));});
    },{passive:true});
    wrap.append(heading,list);paint();
-   requestAnimationFrame(()=>{if(list.isConnected)place(list,values.indexOf(selected[key]));});
    return wrap;
   }
   const draw=()=>{
@@ -84,6 +92,10 @@ export function installCivilPickers(sheet) {
    if(date)host.append(column('Y','年份',isLunar()?numberRange(1900,2100):numberRange(Math.min(1800,selected.Y),Math.max(2200,selected.Y)),String),
     column('M','月份',numberRange(1,12)),column('D','日期',numberRange(1,days())));
    if(combined||clock&&!clock.disabled)host.append(column('minute','时辰',numberRange(0,1439),value=>pad(Math.floor(value/60))+':'+pad(value%60)));
+   for(const list of host.querySelectorAll('[data-wheel]')){
+    const index=[...list.children].findIndex(option=>option.getAttribute('aria-selected')==='true');
+    if(index>=0)place(list,index);
+   }
   };
   const set=(value)=>{
    selected={...value,minute:value.h*60+value.mi};

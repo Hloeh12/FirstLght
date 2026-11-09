@@ -62,6 +62,7 @@ try{
     const wheel=picker.locator('[data-wheel="'+key+'"]');
     const selector='[data-wheel-value="'+value+'"]';
     await wheel.locator(selector).waitFor({state:'attached'});
+    await wheel.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await wheel.evaluate((node,value)=>{const index=[...node.children].findIndex(option=>Number(option.dataset.wheelValue)===value);node.scrollTop=index*36;},value);
     await wheel.locator(selector+'[aria-selected="true"]').waitFor({state:'attached'});
    }

@@ -47,3 +47,28 @@ test('dynamic report contains four evidence layers and more than one thousand ch
  assert(sections.map(x=>x.lines.join('')).join('').length>=1000);
  assert(sections.flatMap(x=>x.lines).join('').includes('财务资金流'));
 });
+
+test('actual bundled corpus is present in the offline console entry',async()=>{
+ const {buildBaziKnowledgeReport,buildZiweiKnowledgeReport}=await import('../www/js/rules.js');
+ const data=baziPro({birth,selection:{year:2026}});
+ const report=buildBaziKnowledgeReport(data);
+ assert.equal(report.sections.length,4);
+ const minimums=[250,350,300,150];
+ report.sections.forEach((section,i)=>{
+  assert(section.lines.join('').length>=minimums[i],section.title+' is too short');
+ });
+ assert(report.characters>=1050);
+ const ziwei=buildZiweiKnowledgeReport({palaces:Array.from({length:12},(_,branch)=>({branch,name:'宫'+branch,majorStars:[],borrowedStars:[]}))},{label:'流年',ganZhi:'丙午',date:'2026-01-01',mutagens:[]});
+ assert.equal(ziwei.sections.length,4);
+ assert(ziwei.characters>=1000);
+ const {buildConsole}=await import('../scripts/build-console.mjs');
+ const built=await buildConsole(false);
+ const bundle=built.outputFiles.find(file=>file.path.endsWith('/js/console.js'))?.text||built.outputFiles[0].text;
+ assert(bundle.includes('BAZI_FLOW_RULES'));
+ assert(bundle.includes('ZIWEI_FLOW_RULES'));
+ assert(bundle.includes('globalThis.BAZI_FLOW_RULES'));
+ assert(bundle.includes('globalThis.ZIWEI_FLOW_RULES'));
+ const html=await (await import('node:fs/promises')).readFile(new URL('../index.html',import.meta.url),'utf8');
+ assert.match(html,/src="\\/js\\/console\\.js"/);
+ assert.doesNotMatch(html,/rules\\.js/);
+});

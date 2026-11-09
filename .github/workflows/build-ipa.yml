@@ -83,6 +83,13 @@ jobs:
           assert icon.get('CFBundleIconFiles'), icon
           for name in ['index.html', 'js/console.js', 'assets/console/design.css', 'assets/console/credits.html']:
               assert (app / 'www' / name).exists(), name
+          console_path = app / 'www/js/console.js'
+          console_text = console_path.read_text()
+          for marker in ['BAZI_FLOW_RULES', 'ZIWEI_FLOW_RULES', 'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES', '甲木重主干', '冲去忌神破局发越', '羊陀夹忌候选']:
+              assert marker in console_text, 'compiled offline rules missing: ' + marker
+          assert not (app / 'www/js/rules.js').exists(), 'rules.js must be bundled, not shipped as a sidecar'
+          html = (app / 'www/index.html').read_text()
+          assert '/js/console.js' in html and 'rules.js' not in html, 'index must load only the compiled console entry'
           PY
           mkdir -p build/Payload
           ditto "$APP" build/Payload/FirstLight.app

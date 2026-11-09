@@ -53,7 +53,9 @@ test('dynamic report contains four evidence layers and more than one thousand ch
 test('actual bundled corpus is present in the offline console entry',async()=>{
  const {buildBaziKnowledgeReport,buildZiweiKnowledgeReport}=await import('../www/js/rules.js');
  const data=baziPro({birth,selection:{year:2026}});
+ const started=performance.now();
  const report=buildBaziKnowledgeReport(data);
+ assert(performance.now()-started<30,'offline report assembly must finish within 30ms');
  assert.equal(report.sections.length,4);
  const minimums=[250,350,300,150];
  report.sections.forEach((section,i)=>{

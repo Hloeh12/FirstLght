@@ -69,6 +69,6 @@ test('actual bundled corpus is present in the offline console entry',async()=>{
  assert(bundle.includes('globalThis.BAZI_FLOW_RULES'));
  assert(bundle.includes('globalThis.ZIWEI_FLOW_RULES'));
  const html=await (await import('node:fs/promises')).readFile(new URL('../index.html',import.meta.url),'utf8');
- assert.match(html,/src="\\/js\\/console\\.js"/);
+ assert(html.includes('src="/js/console.js"'));
  assert.doesNotMatch(html,/rules\\.js/);
 });

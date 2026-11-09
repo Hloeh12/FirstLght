@@ -10,7 +10,7 @@ export function generateTimeStepInsight(data){
  const influences=links.map(r=>{
   const locations=r.ids.filter(i=>i<pillars.length).map(i=>pillars[i].name+'（'+themes[i]+'）');
   const activated=strength.activated.some(a=>a.type===r.type&&a.pattern===r.pattern&&a.ids.join()===r.ids.join());
-  const affected=r.type==='六冲'?r.ids.filter(i=>i<pillars.length).map(i=>{
+  const affected=riskTypes.has(r.type)?r.ids.filter(i=>i<pillars.length).map(i=>{
    const element=pillars[i].branchElement;
    const role=natalStrength.useful.includes(element)?'useful':natalStrength.caution.includes(element)?'caution':'neutral';
    return {pillar:pillars[i].name,branch:pillars[i].branch,element,role};

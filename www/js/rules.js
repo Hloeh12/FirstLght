@@ -142,7 +142,7 @@ export function buildZiweiKnowledgeReport(chart,flow){
  if(luBroken)risks.push('禄逢冲破候选：至少一处化忌落在禄位对宫，形成明确冲照；应检查回款延迟、资源被占用、合作条件反复与合同退出成本，采用分期交付和验收。');
  if(clamped)risks.push('羊陀夹忌候选：擎羊与陀罗分居化忌宫两侧相邻宫位，构成夹制证据；推进阻力和资源占用风险上升，宜缩小承诺、保留复核节点。');
  if(jiMoves.length&&!clamped)risks.push('化忌虽已定位，但当前资料未证明擎羊、陀罗同时夹在忌宫两侧；不将“盘中有羊陀”误判为羊陀夹忌。');
- const themes=ZIWEI_FLOW_RULES.palaceThemes||{};
+ const themes=ZIWEI_FLOW_RULES.palaces||{};
  const sections=[
  {title:'一、流年命宫与当期格局定性',lines:[
  '当前层级为'+(flow?.label||flow?.scope||'所选运限')+'，干支'+(flow?.ganZhi||'待定')+'，时间'+(flow?.date||'待定')+'。流命定位应以流年宫干支映射为准；本宫主星为'+starText+'。若本宫空宫，应读取对宫借星，并将借星作为参考而非假装本宫坐守。',

@@ -26,8 +26,8 @@ test('natal favorable and unfavorable branch clashes lead to distinct advice',as
  const input={pillars,selected:[current],strength,natalStrength:strength};
  const opening=generateTimeStepInsight({...input,relationships:[clash(0)]});
  const defense=generateTimeStepInsight({...input,relationships:[clash(1)]});
- assert.match(opening.influences[0].text,/冲忌有松动旧局的机会/);
- assert.match(defense.influences[0].text,/用神受冲/);
+ assert.match(opening.influences[0].text,/【冲去忌神·枯木逢春】/);
+ assert.match(defense.influences[0].text,/【用神受制·惊涛骇浪】/);
  assert.notEqual(opening.advice[1].text,defense.advice[1].text);
 });
 

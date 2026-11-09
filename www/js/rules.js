@@ -113,7 +113,8 @@ export function buildBaziKnowledgeReport(data) {
  ...(data.months||[]).map(m=>(m.label||'节气月')+' '+(m.stem||'')+(m.branch||'')+'：'+((m.links||[]).join('、')||'未列出直接关系')+'。应结合柱位和喜忌观察，不将月份标签直接解释为事件保证。'),
  '未提供具体月度关系时，不硬造所谓必然转折。可把节气交接前后作为复盘窗口，记录工作排期、回款、协作和关系沟通是否发生可核实变化。应期只是传统历法下的观察窗口，不是事件发生日期。']}
  ];
- return {title:g.title||('八字 · '+label+'岁运结构化推演'),sections,characters:sections.reduce((n,x)=>n+x.title.length+x.lines.join('').length,0)};
+ const rendered=g.sections?.length===4?g.sections:sections;
+ return {title:g.title||('八字 · '+label+'岁运结构化推演'),sections:rendered,characters:rendered.reduce((n,x)=>n+x.title.length+x.lines.join('').length,0)};
 }
 
 export function buildZiweiKnowledgeReport(chart,flow){

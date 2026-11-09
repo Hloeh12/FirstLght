@@ -5,7 +5,7 @@ const periodName=selected=>selected.map(p=>p.stem+p.branch+p.name).join('／');
 export function buildPeriodReport(data,current,influences,months=[]) {
  const {pillars,strength,natalStrength=strength,selected=[]}=data;
  const day=data.dayMaster??pillars.find(p=>p.name==='日柱')??{};
- const dayStem=day.stem??'日主',dayElement=day.element??'五行待核';
+ const dayStem=day.stem??'日主',dayElement=day.element??pillars.find(p=>p.name==='日柱')?.stemElement??'五行待核';
  const difference=Number(strength.support)-Number(natalStrength.support);
  const useful=influences.some(x=>x.affected?.some(y=>y.role==='useful'));
  const caution=influences.some(x=>x.affected?.some(y=>y.role==='caution'));
@@ -22,16 +22,17 @@ export function buildPeriodReport(data,current,influences,months=[]) {
  const relations=influences.map(link=>{
   const hits=(link.affected??[]).map(hit=>{
    const i=pillars.findIndex(p=>p.name===hit.pillar);
-   return hit.pillar+hit.branch+'（'+hit.element+'）：'+(rules.clash[hit.role]??rules.clash.neutral)+' '+(rules.palaces[Math.max(0,i)]??'按实际柱位复核。');
+   return hit.pillar+hit.branch+'（'+hit.element+'）：'+(rules.clash[hit.role]??rules.clash.neutral)+' '+(i>=0?rules.palaces[i]:'按实际柱位复核。');
   });
   return link.pattern+link.type+'牵动'+((link.locations??[]).join('、')||'原局相关柱位')+'。'+(rules.relations[link.type]??'须结合完整结构核验。')+' '+hits.join(' ');
  });
- const status=useful?'防守蛰伏期':caution?'破局开拓期':Math.abs(difference)>=8?'转型沉淀期':'转型沉淀期';
+ const mixed=useful&&caution;
+ const status=mixed?'转型沉淀期':useful?'防守蛰伏期':caution?'破局开拓期':'转型沉淀期';
  const layer1=[
   '本次选定时段：'+periodName(selected)+'；当期干支 '+current.stem+current.branch+'，天干对日主透出'+current.tenGod+'。日主为'+dayStem+'（'+dayElement+'），原局扶助权重 '+fmt(natalStrength.support)+'%，加入所选岁运后为 '+fmt(strength.support)+'%，变化 '+(difference>0?'+':'')+fmt(difference)+' 个百分点。此比例是本应用五行模型的相对权重，不是传统命理唯一标准，仍须结合月令、通根、透干、藏干司令和合化条件。',
   '日主详解：'+(rules.dayMasters[dayStem]??'日主断语资料不足，仅按已计算权重和干支关系观察，不补造个性断语。'),
   '月令司令：月柱为'+(pillars.find(p=>p.name==='月柱')?.stem??'未明')+(pillars.find(p=>p.name==='月柱')?.branch??'未明')+'。'+(commander?'当前司令为'+commander.stem+'，交'+commander.term.name+'后 '+fmt(commander.elapsedDays)+' 日。':'排盘未提供司令分段，不能臆断当权藏干。')+' 当期透干'+current.stem+'为'+current.tenGod+'，有根且得令时议题较容易落实；无根或受制时可能只是议题浮现，需资源、团队和时间配合。',
-  '综合定性为“'+status+'”。'+(useful?'有原局喜用五行受冲证据，先保护稳定支持、现金缓冲和关键协作，修复承载能力后再扩大行动。':caution?'有原局忌神受冲证据，可视为清理低效流程和测试替代渠道的窗口，但不把冲动解释成暴利或必然成功。':'当前没有明确喜忌受冲证据，按月令司令、扶助差值和现实反馈决定节奏，先设阶段目标。')
+  '综合定性为“'+status+'”。'+(mixed?'同一岁运同时触及原局喜用与忌偏，定性为转型沉淀期：分事项列出保护清单与可调整清单，不用单一吉凶覆盖全局。':useful?'有原局喜用五行受冲证据，先保护稳定支持、现金缓冲和关键协作，修复承载能力后再扩大行动。':caution?'有原局忌神受冲证据，可视为清理低效流程和测试替代渠道的窗口，但不把冲动解释成暴利或必然成功。':'当前没有明确喜忌受冲证据，按月令司令、扶助差值和现实反馈决定节奏，先设阶段目标。')
  ];
  const layer2=[
   '自动扫描发现原局与所选岁运关系 '+influences.length+' 项，其中刑冲害破 '+risks.length+' 项、合会 '+merges.length+' 项。合不等于化，冲也不天然为凶；必须定位参与地支、检查化神与月令，再判断受触动的是喜用还是忌偏。以下只列出模型实际识别的关系，不补造未出现的组合。',

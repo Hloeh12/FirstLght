@@ -11,16 +11,16 @@ export function practicalZiwei(chart,flow){
    if(!seen.has(key)){seen.add(key);results.push({name:'双禄交驰',palace:hua.palace.name,branch:hua.branch,text:(delta===0?'禄存与生年化禄同宫。':'禄存与生年化禄三合会照。')+'传统上观察资源协同与可用渠道增多；仍需核验兑现条件、成本与分配，不代表必然收益。'});}
   }
  }
- const annualLu=flow?.scope==='yearly'?(flow.mutagens||[]).find(m=>m.type==='禄'&&Number.isInteger(m.branch)):null;
+ const flowLu=(flow?.mutagens||[]).find(m=>m.type==='禄'&&Number.isInteger(m.branch));
  const yearlyLuCun=flow?.yearlyLuCunBranch;
- if(annualLu&&Number.isInteger(yearlyLuCun)){
-  const palace=byBranch(annualLu.branch),delta=(annualLu.branch-yearlyLuCun+12)%12;
+ if(flowLu&&Number.isInteger(yearlyLuCun)){
+  const palace=byBranch(flowLu.branch),delta=(flowLu.branch-yearlyLuCun+12)%12;
   const natalLu=palace?.stars?.some(star=>star.name==='禄存');
   if(palace&&([0,4,8].includes(delta)||natalLu)){
    results.push({name:'双禄交驰',palace:palace.name,branch:palace.branch,
-    text:(natalLu?'流年化禄进入本命禄存宫。':delta===0?'流年禄存与流年化禄同宫。':'流年禄存与流年化禄三合会照。')+'传统上观察资源入口、合作机会与资产沉淀；必须核验付款方、合同、交付能力和现金到账。'});
+    text:(natalLu?'所选'+(flow.label||'流限')+'化禄进入本命禄存宫。':delta===0?'所选'+(flow.label||'流限')+'禄存与化禄同宫。':'所选'+(flow.label||'流限')+'禄存与化禄三合会照。')+'传统上观察资源入口、合作机会与资产沉淀；必须核验付款方、合同、交付能力和现金到账。'});
   }else if(palace&&delta===6){
-   results.push({name:'禄逢冲破',palace:palace.name,branch:palace.branch,text:'流年化禄与流年禄存处于对冲位置，机会可能伴随竞争、延迟或资源分流；宜分阶段签约、验收后付款，并预留回款缓冲。'});
+   results.push({name:'禄逢冲破',palace:palace.name,branch:palace.branch,text:'所选'+(flow.label||'流限')+'化禄与流年禄存处于对冲位置，机会可能伴随竞争、延迟或资源分流；宜分阶段签约、验收后付款，并预留回款缓冲。'});
   }
  }
  for(const m of flow?.mutagens||[]){

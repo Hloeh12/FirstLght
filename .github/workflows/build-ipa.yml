@@ -50,6 +50,7 @@ jobs:
           mkdir -p www/js www/assets/console
           cp index.html www/
           cp js/console.js www/js/
+          rm -f www/js/rules.js
           cp assets/console/{design.css,credits.html} www/assets/console/
           xcodegen generate --spec project.yml
           xcodebuild -list -project FirstLight.xcodeproj
@@ -71,7 +72,7 @@ jobs:
           import pathlib, plistlib, sys
           app = pathlib.Path(sys.argv[1])
           info = plistlib.loads((app / 'Info.plist').read_bytes())
-          import json
+          import json, re
           release = json.loads(pathlib.Path('app-release.json').read_text())
           expected = dict(CFBundleDisplayName='FirstLght', CFBundleName='FirstLght', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString=release['version'], CFBundleVersion=str(release['build']), LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
           for key, value in expected.items():
@@ -85,8 +86,9 @@ jobs:
               assert (app / 'www' / name).exists(), name
           console_path = app / 'www/js/console.js'
           console_text = console_path.read_text()
+          decoded_console = re.sub(r'\\u\\{([0-9a-fA-F]+)\\}|\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1) or m.group(2), 16)), console_text)
           for marker in ['BAZI_FLOW_RULES', 'ZIWEI_FLOW_RULES', 'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES', '甲木重主干', '冲去忌神破局发越', '羊陀夹忌候选']:
-              assert marker in console_text, 'compiled offline rules missing: ' + marker
+              assert marker in console_text or marker in decoded_console, 'compiled offline rules missing: ' + marker
           assert not (app / 'www/js/rules.js').exists(), 'rules.js must be bundled, not shipped as a sidecar'
           html = (app / 'www/index.html').read_text()
           assert '/js/console.js' in html and 'rules.js' not in html, 'index must load only the compiled console entry'

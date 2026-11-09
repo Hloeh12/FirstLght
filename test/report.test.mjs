@@ -22,8 +22,8 @@ test('offline Bazi report emits four evidence-based long sections',()=>{
  });
  assert.equal(report.sections.length,4);
  assert.ok(report.characters>=1000);
- assert.match(report.sections[1].lines.join(''),'用神受制');
- assert.match(report.sections[1].lines.join(''),'忌神');
+ assert.ok(report.sections[1].lines.join('').includes('用神受制'));
+ assert.ok(report.sections[1].lines.join('').includes('忌神'));
 });
 test('offline Ziwei report emits four layers and validates real pattern evidence',()=>{
  const report=buildZiweiKnowledgeReport({palaces:[{branch:0,name:'命宫',majorStars:[{name:'紫微'}],borrowedStars:[],minorStars:[{name:'擎羊'}]}]},{
@@ -32,7 +32,7 @@ test('offline Ziwei report emits four layers and validates real pattern evidence
  });
  assert.equal(report.sections.length,4);
  assert.ok(report.characters>=1000);
- assert.match(report.sections[1].lines.join(''),'双禄交驰');
- assert.match(report.sections[1].lines.join(''),'禄逢冲破');
- assert.match(report.sections[1].lines.join(''),'羊陀夹忌候选');
+ assert.ok(report.sections[1].lines.join('').includes('双禄交驰'));
+ assert.ok(report.sections[1].lines.join('').includes('禄逢冲破'));
+ assert.ok(report.sections[1].lines.join('').includes('羊陀夹忌候选'));
 });

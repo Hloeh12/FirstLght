@@ -199,7 +199,7 @@ export function westernView(ctx){
  for(const b of ctx.root.querySelectorAll('[data-unit]'))b.onclick=()=>update(ctx,s.mode,shift(s.at,b.dataset.unit,+b.dataset.step));
  const picker=$('[data-astro-date]',ctx.root);
  if(picker)picker.onclick=()=>{
-  const d=ctx.sheet('toolSheet','选择推运时间',`<form class="form-grid"><label>日期<input type="date" name="date" value="${timeLabel(s).slice(0,10)}" required></label><label>本地时间<input type="time" name="clock" value="${timeLabel(s).slice(11,16)}" required></label><button class="wide primary">重新排盘</button></form>`);
+  const d=ctx.sheet('toolSheet','选择推运时间',`<form class="form-grid" data-wheel-submit><label>日期<input type="date" name="date" value="${timeLabel(s).slice(0,10)}" required></label><label>本地时间<input type="time" name="clock" value="${timeLabel(s).slice(11,16)}" required></label></form>`);
   $('form',d).onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget);const at=new Date(f.get('date')+'T'+f.get('clock'));ctx.close(d);update(ctx,s.mode,at);};
  };
  if(!s.requested){s.requested=true;update(ctx,s.mode,s.at);}

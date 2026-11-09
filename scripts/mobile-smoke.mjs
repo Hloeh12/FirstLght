@@ -146,6 +146,11 @@ try{
   assert.equal(await page.locator('#toolSheet [data-bazi-tool]').count(),5);
   await page.locator('#toolSheet [data-close]').click();
   await shareSnapshot('bazi');
+  await page.locator('[data-bazi-rails] [data-reset-period]').first().click();
+  await page.locator('.period-guidance').waitFor({state:'detached'});
+  await page.locator('[data-tab=insights]').click();
+  assert.match(await page.locator('[data-analysis-basis]').textContent(),/布局示例.*本命/);
+  await page.locator('[data-tab=chart]').click();
   await useSystem('vedic','印度盘');
   await page.locator('.vedic-chart').waitFor();assert.equal(await page.locator('[data-vedic-house]').count(),12);
   await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
@@ -163,6 +168,11 @@ try{
   await page.locator('#westernChart').waitFor();
   await page.locator('[data-mode=transit]').click();await page.waitForFunction(()=>document.querySelector('[data-dynamic-insight]')?.textContent.includes('西洋'));
   const westPeriod=await page.locator('[data-dynamic-insight]').textContent();await page.locator('[data-unit=month][data-step="1"]').click();await page.waitForFunction(previous=>document.querySelector('[data-dynamic-insight]')?.textContent!==previous,westPeriod);
+  await page.locator('[data-astro-date]').click();
+  await page.locator('#toolSheet .civil-picker[open] [data-wheel=minute]').waitFor();
+  await page.locator('#toolSheet [data-wheel-now]').click();
+  await page.locator('#toolSheet [data-wheel-apply]').click();
+  await page.locator('#toolSheet[open]').waitFor({state:'detached'});
   await page.locator('[data-tab=insights]').click();assert((await page.locator('#insightContent').textContent()).includes('西洋'));
   await page.locator('[data-tab=chart]').click();
   assert(await page.getByRole('meter').count()>0);

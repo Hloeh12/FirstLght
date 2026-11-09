@@ -579,7 +579,7 @@ let insightGeneration=0;
 function forceRefreshAllInsights(){
  const revision=++insightGeneration;
  const box=$('#insightContent');
- if(!box||!state.reading||!state.profile)return;
+ if(state.tab!=='insights'||!box||!state.reading||!state.profile)return;
  const {bazi,ziwei,west,vedic}=state.chartState;
  const b=bazi?.data?.guidance;
  const z=ziwei?.flow;

@@ -1,4 +1,4 @@
-import {LunarYear} from 'lunar-javascript';
+import {LunarYear,Solar} from 'lunar-javascript';
 import {formatLocalDisplayTime,localNowParams} from './now.js';
 
 const rowHeight=36;
@@ -91,7 +91,14 @@ export function installCivilPickers(sheet) {
    draw();
   };
   picker.addEventListener('toggle',()=>{if(picker.open)set(read());});
-  picker.querySelector('[data-wheel-now]').onclick=()=>set(localNowParams());
+  picker.querySelector('[data-wheel-now]').onclick=()=>{
+   const now=localNowParams();
+   if(!isLunar()){set(now);return;}
+   const lunar=Solar.fromYmd(now.Y,now.M,now.D).getLunar();
+   const month=lunar.getMonth();
+   if(form.elements.leap)form.elements.leap.checked=month<0;
+   set({...now,Y:lunar.getYear(),M:Math.abs(month),D:lunar.getDay()});
+  };
   picker.querySelector('[data-wheel-apply]').onclick=()=>{
    for(const list of host.querySelectorAll('[data-wheel]')){
     const option=list.children[Math.round(list.scrollTop/rowHeight)];
@@ -101,10 +108,12 @@ export function installCivilPickers(sheet) {
    const value=formatLocalDisplayTime({...selected,h:Math.floor(selected.minute/60),mi:selected.minute%60});
    if(date)date.value=combined?value.replace(' ','T'):value.slice(0,10);
    if(clock&&!clock.disabled)clock.value=value.slice(11);
-   display();picker.open=false;summary.focus();
+   display();picker.open=false;
+   if(form.hasAttribute('data-wheel-submit'))form.requestSubmit();else summary.focus();
   };
   form.elements.calendar?.addEventListener('change',()=>{if(picker.open)set(read());});
   form.elements.leap?.addEventListener('change',()=>{if(picker.open)draw();});
   form.elements.unknown?.addEventListener('change',()=>{if(picker.open)set(read());});
+  if(form.hasAttribute('data-wheel-submit'))picker.open=true;
  }
 }

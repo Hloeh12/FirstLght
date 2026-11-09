@@ -87,7 +87,7 @@ jobs:
           console_path = app / 'www/js/console.js'
           console_text = console_path.read_text()
           decoded_console = re.sub(r'\\u\{([0-9a-fA-F]+)\}|\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1) or m.group(2), 16)), console_text)
-          for marker in ['BAZI_FLOW_RULES', 'ZIWEI_FLOW_RULES', 'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES', '甲木重主干', '冲去忌神破局发越', '羊陀夹忌候选']:
+          for marker in ['BAZI_FLOW_RULES', 'ZIWEI_FLOW_RULES', 'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES', '甲木参天', '【冲去忌神·枯木逢春】', '【羊陀夹忌·动辄得咎】']:
               assert marker in console_text or marker in decoded_console, 'compiled offline rules missing: ' + marker
           assert not (app / 'www/js/rules.js').exists(), 'rules.js must be bundled, not shipped as a sidecar'
           html = (app / 'www/index.html').read_text()

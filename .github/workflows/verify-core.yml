@@ -37,12 +37,14 @@ jobs:
           bundle = Path('js/console.js')
           assert bundle.is_file(), 'compiled console.js missing'
           source = bundle.read_text()
-          for marker in (
+          markers = (
               'BAZI_FLOW_RULES', 'ZIWEI_FLOW_RULES',
               'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES',
-              '冲去忌神破局发越', '羊陀夹忌候选'
-          ):
-              assert marker in source, f'missing bundled knowledge marker: {marker}'
+              '甲木重主干', '冲去忌神破局发越', '羊陀夹忌候选'
+          )
+          for marker in markers:
+              escaped = marker.encode('unicode_escape').decode('ascii')
+              assert marker in source or escaped in source, f'missing bundled knowledge marker: {marker}'
           html = Path('index.html').read_text()
           assert 'src="/js/console.js"' in html
           assert 'rules.js' not in html

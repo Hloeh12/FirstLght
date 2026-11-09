@@ -16,7 +16,7 @@ try{
   processServer.once('error',reject);
   processServer.once('exit',code=>reject(Error('server exit '+code)));
  });
- browser=await browserType.launch({headless:true});
+ browser=await browserType.launch({headless:true,executablePath:process.env.FIRSTLIGHT_BROWSER_EXECUTABLE||undefined});
  for(const [width,height] of [[390,844],[320,568],[844,390]]){
   const context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   const page=await context.newPage(),errors=[],api=[];
@@ -171,6 +171,7 @@ try{
   await page.locator('#toolSheet [data-close]').click();
   await page.locator('#instantChartButton').click();await page.locator('#restoreOriginalButton:not([hidden])').waitFor();await page.locator('#restoreOriginalButton').click();assert.equal(await page.locator('#restoreOriginalButton').isHidden(),true);
   await page.locator('#mainScrollView').evaluate(n=>n.scrollTop=500);await page.locator('#appTopBar').click({position:{x:130,y:2}});await page.waitForFunction(()=>document.querySelector('#mainScrollView').scrollTop<5);
+  assert(await page.locator('[data-tab=cases]').isVisible(),JSON.stringify(await page.evaluate(()=>({body:document.body.className,dialogs:[...document.querySelectorAll('dialog[open]')].map(n=>n.id),nav:getComputedStyle(document.querySelector('#bottomNav')).visibility,instant:document.querySelector('#restoreOriginalButton').hidden}))));
   await page.locator('[data-tab=cases]').click();await page.waitForTimeout(400);
   const samples=await page.evaluate(async()=>{
    const nav=document.querySelector('#bottomNav'),pill=document.querySelector('#tabLiquidPill'),button=nav.querySelector('[data-tab=me]');

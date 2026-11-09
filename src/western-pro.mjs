@@ -205,7 +205,7 @@ export function westernPro({birth,config,mode='natal',at}){
  if(mode==='solar'||mode==='lunar'){
   const id=mode==='solar'?0:1,ayan=cfg.sidereal?cfg.ayan:null;
   const natalLongitude=bodyAt(born,id,ayan).longitude,longitude=bodyAt(date,id,ayan).longitude;
-  return {mode,chart:progressed,returnEvent:{utc:date.toISOString(),natalLongitude,longitude,errorDegrees:Math.abs(signed(longitude-natalLongitude))}};
+  return {mode,chart:progressed,natalCross:aspectPairs(progressed.planets,natal.planets,cfg,false),returnEvent:{utc:date.toISOString(),natalLongitude,longitude,errorDegrees:Math.abs(signed(longitude-natalLongitude))}};
  }
  if(mode==='sky')return {mode,chart:progressed};
  return {mode,chart:natal,outer:progressed,cross:aspectPairs(progressed.planets,natal.planets,cfg,false)};

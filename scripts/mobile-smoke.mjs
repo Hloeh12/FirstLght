@@ -56,6 +56,11 @@ try{
   await page.waitForFunction(()=>document.documentElement.style.getPropertyValue('--sheet-limit')==='');
   await page.locator('#inputSheet').getByLabel('命主姓名',{exact:true}).fill('布局示例');
   await page.locator('#inputSheet').getByLabel('出生日期',{exact:true}).fill('1998-11-21');
+  assert.equal(await page.locator('#inputSheet input[type=date],#inputSheet input[type=time]').count(),0);
+  await page.locator('#inputSheet .civil-picker summary').click();
+  await page.locator('#inputSheet [data-day="22"]').click();
+  assert.equal(await page.locator('#inputSheet [name=date]').inputValue(),'1998-11-22');
+  await page.locator('#inputSheet [name=date]').fill('1998-11-21');
   await page.locator('#inputSheet').getByLabel('出生时刻',{exact:true}).fill('00:02');
   await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('30.361448');
   await page.locator('#inputSheet').getByLabel('经度',{exact:true}).fill('109.492552');
@@ -217,7 +222,7 @@ try{
     footer:footer.bottom,tab:tab.top,z:getComputedStyle(document.querySelector('#bottomNav')).zIndex,wide:document.documentElement.scrollWidth,viewport:innerWidth};
   });
   assert.equal(metrics.root,0);assert.equal(metrics.bodyY,0);
-  assert.equal(metrics.overflow,'hidden');assert.equal(metrics.position,'fixed');assert.equal(metrics.z,'999');
+  assert.equal(metrics.overflow,'hidden');assert.equal(metrics.position,'fixed');assert.equal(metrics.z,'300');
   assert(metrics.scroll>0);assert(metrics.footer<=metrics.tab+1);
   assert(metrics.wide<=metrics.viewport);
   const layers=await page.evaluate(()=>{

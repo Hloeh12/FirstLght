@@ -75,6 +75,11 @@ function board(ctx,s){
    <div class="zi-age"><span>${esc(p.heavenlyStem+p.earthlyBranch)} ${p.isBodyPalace?'身':''}</span><small>${esc(p.decadal?.range?.join('–')||'')}岁</small></div></footer></article>`;
  }).join('')}${center(ctx,s)}<svg class="zi-overlay" aria-hidden="true" preserveAspectRatio="none"></svg></div>`;
 }
+function clearFlyingLayer(host, canvas){
+ canvas.replaceChildren();
+ for(const dot of host.querySelectorAll('.flight-target-dot'))dot.remove();
+ for(const badge of host.querySelectorAll('.flight-target-pulse'))badge.classList.remove('flight-target-pulse');
+}
 function overlay(root,s,arrival=false){
  const host=$('.zi-board',root),canvas=$('.zi-overlay',host),r=canvas.getBoundingClientRect();
  const unit=!(r.width&&r.height),w=unit?400:r.width,h=unit?400:r.height;
@@ -82,7 +87,7 @@ function overlay(root,s,arrival=false){
  if(canvas.dataset.size===size)return;
  canvas.dataset.size=size;
  canvas.setAttribute('viewBox',`0 0 ${w} ${h}`);
- canvas.replaceChildren();
+ clearFlyingLayer(host,canvas);
  const point=id=>{
   const cell=$('[data-palace="'+id+'"]',host),b=cell.getBoundingClientRect();
   if(!unit)return [b.left-r.left+b.width/2,b.top-r.top+b.height/2];
@@ -158,7 +163,7 @@ function overlay(root,s,arrival=false){
   g.append(label);capsules.push(g);
  }
  canvas.append(...ripples,...capsules);
- if(arrival&&ripples.length)setTimeout(()=>{if(canvas.isConnected)playSuccessSound();},reducedMotion()?0:350);
+ if(arrival&&ripples.length)setTimeout(()=>{if(canvas.isConnected)playSuccessSound();},reducedMotion()?0:280);
 }
 function railData(s){
  const birthYear=s.chart.decades[0].yearRange[0]-s.chart.decades[0].ageRange[0]+1;
@@ -170,6 +175,29 @@ function railData(s){
  const years=Array.from({length:d.yearRange[1]-d.yearRange[0]+1},(_,j)=>d.yearRange[0]+j);
  return {decades,d,years};
 }
+export function ziweiPeriodEvidence(chart, flow){
+ if(!chart||!flow)return [];
+ const actions={
+  禄:'盘点新增资源，先确认兑现条件',
+  权:'核对权限与职责，明确谁做决定',
+  科:'借助文书、专业意见或公开反馈降低误解',
+  忌:'把反复、延误或误解纳入预案，保留回旋余地'
+ };
+ const rows=flow.mutagens.map(move=>{
+  const target=palace(chart,move.branch);
+  if(!target)return move.star+'化'+move.type+'：待定位。';
+  const phase=flow.palaceNames[target.branch];
+  return mutagenName(flow,move.type)+' · '+move.star+'入本命'+target.name+
+   (phase?'（当期'+phase+'）':'')+'，观察'+(themes[phase]||themes[target.name]||target.name)+'。'+actions[move.type]+'。';
+ });
+ const life=chart.palaces.find(p=>flow.palaceNames[p.branch]==='命宫');
+ const stars=life?.majorStars.length?life.majorStars:life?.borrowedStars;
+ if(stars?.length)rows.unshift('流命主星：'+stars.map(starInfo).join(' '));
+ const patterns=practicalZiwei(chart,flow);
+ rows.push(...patterns.map(p=>p.name+' · '+p.palace+'：'+p.text));
+ return rows;
+}
+
 function detail(s){
  const z=s.chart,p=palace(z,s.selected),flow=s.flow;
  const other=p.relatedBranches.slice(1).map(i=>palace(z,i).name);
@@ -195,7 +223,7 @@ function detail(s){
   const t=palace(z,m.branch),[a,b,o]=t.relatedBranches.slice(1).map(id=>palace(z,id).name);
   return [m.star+' 化'+m.type,t.name+(t===p?' · 自化':''),a+'、'+b,o];
  })):'';
- return `<article class="card liquid-glass zi-detail" aria-live="polite"><h2>${esc(heading)}</h2>${description.filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')}${flying?'<h3>四化飞星明细</h3>'+grid:''}<small>${esc(weight)} · 传统术数观察 · 借星按借入宫重查亮度，并以 0.6 系数计入参考。</small></article>`;
+ return `<article class="card liquid-glass zi-detail" aria-live="polite"><h2>${esc(heading)}</h2>${[...description,...ziweiPeriodEvidence(z,flow)].filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')}${flying?'<h3>四化飞星明细</h3>'+grid:''}<small>${esc(weight)} · 传统术数观察 · 借星按借入宫重查亮度，并以 0.6 系数计入参考。</small></article>`;
 }
 let observer;
 export function ziweiView(ctx,arrival=false){

@@ -16,3 +16,17 @@ test('flow day is a real local calendar day inside the selected solar-term month
  assert.notEqual(first.guidance.title,next.guidance.title);
  assert.throws(()=>baziPro({birth,selection:{year:2026,month:9,day:99}}),/无效流日/);
 });
+
+test('natal favorable and unfavorable branch clashes lead to distinct advice',async()=>{
+ const {generateTimeStepInsight}=await import('../src/bazi-guidance.mjs');
+ const strength={useful:['火'],caution:['水'],support:70,kind:'身强',activated:[]};
+ const current={name:'流年',stem:'丙',branch:'午',stemElement:'火',tenGod:'偏印'};
+ const pillars=[{name:'年柱',branch:'子',branchElement:'水'},{name:'月柱',branch:'午',branchElement:'火'}];
+ const clash=i=>({ids:[i,2],type:'六冲',pattern:'子午',meaning:'观察变动。'});
+ const input={pillars,selected:[current],strength,natalStrength:strength};
+ const opening=generateTimeStepInsight({...input,relationships:[clash(0)]});
+ const defense=generateTimeStepInsight({...input,relationships:[clash(1)]});
+ assert.match(opening.influences[0].text,/冲忌有松动旧局的机会/);
+ assert.match(defense.influences[0].text,/用神受冲/);
+ assert.notEqual(opening.advice[1].text,defense.advice[1].text);
+});

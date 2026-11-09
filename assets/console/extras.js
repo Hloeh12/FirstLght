@@ -23,7 +23,7 @@ function qi(ctx){
  if(!r&&!s.pending&&!s.error)load(ctx,id,s,'/api/console/qizheng',{birth:ctx.birth});
 }
 function hexagram(heading,h){
- return `<article class="card liquid-glass"><h2>${esc(heading)} · ${term(h.name,h.guaci+' '+(h.reading||''))}</h2>
+ return `<article class="card liquid-glass"><h2>${esc(heading)} · ${term(h.name,h.reading||'可结合卦象与所选爻位阅读。','《周易》'+h.name+'卦：'+h.guaci+(h.line?' '+h.line:''))}</h2>
  <div class="hexagram" role="img" aria-label="${esc(h.name+'六爻卦象')}">${[...h.lines].reverse().map(x=>`<span class="${x?'solid':'broken'}"></span>`).join('')}</div>
  <blockquote>${esc(h.guaci)}</blockquote>${h.line?`<p>${esc(h.line)}</p>`:''}<p>${esc(h.reading)}</p></article>`;
 }

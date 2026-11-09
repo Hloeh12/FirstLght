@@ -6,7 +6,7 @@ export const labels={ziwei:'紫微斗数',bazi:'四柱八字',west:'西洋占星
 export function stored(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}}
 export function save(key,value){localStorage.setItem(key,JSON.stringify(value));}
 export const btn=(text,attrs='')=>`<button type="button" ${attrs}>${esc(text)}</button>`;
-export const term=(word,description='')=>btn(word,`class="term" data-term="${esc(word)}" data-explain="${esc(description)}"`);
+export const term=(word,description='',source='')=>btn(word,`class="term" data-term="${esc(word)}" data-explain="${esc(description)}" data-source="${esc(source)}"`);
 export function table(headers,rows){
  return '<div class="scroll"><table class="grid-table"><thead><tr>'+headers.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+
  rows.map(r=>'<tr>'+r.map(x=>'<td>'+esc(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';

@@ -26,7 +26,7 @@ export function vedicView(ctx){
  s.activePeriod={date:(s.at||base.at).slice(0,10),lords:chosen.map(p=>p.lord),lord:selected.lord,house:lord?.house,aspects,varga:s.n};
  ctx.root.innerHTML=`<section id="vedic"><h1>印度占星 · Jyotish</h1><p class="thin">Lahiri 恒星黄道 · 整宫制 · 平交点</p>
  <div class="rail">${[1,9,10,7,2,60].map(n=>btn('D'+n+' '+VARGAS[n],`data-varga="${n}" aria-pressed="${s.n===n}"`)).join('')}</div><label>完整分盘<select data-varga-select>${Array.from({length:60},(_,i)=>`<option value="${i+1}" ${s.n===i+1?'selected':''}>D${i+1} ${VARGAS[i+1]||'谐波映射（非经典列示）'}</option>`).join('')}</select></label><div class="rail">${btn('北印菱形盘',`data-layout="north" aria-pressed="${s.layout==='north'}"`)}${btn('南印方格盘',`data-layout="south" aria-pressed="${s.layout==='south'}"`)}</div>
- <article class="card liquid-glass"><h2>${s.layout==='north'?'北印菱形盘':'南印方格盘'} · D${s.n}</h2>${s.layout==='north'?northIndianChart(d):southIndianChart(d)}<p>D${s.n} ${VARGAS[s.n]||'谐波'}：上升${esc(d.lagna)}，主运星${esc(selected.lord)}落第${lord?.house||'—'}宫；专项观察${esc(VARGAS[s.n]||'对应分盘')}中的职责与资源。${esc(d.method)}</p><p class="thin">上升 ${esc(d.lagna)} · 岁差 ${d.ayanamsa.toFixed(6)}° · 出生UT ${esc(d.utc.slice(0,19).replace('T',' '))}</p></article>
+ <article class="card liquid-glass"><h2>${s.layout==='north'?'北印菱形盘':'南印方格盘'} · D${s.n}</h2>${s.layout==='north'?northIndianChart(d):southIndianChart(d,base)}<p>D${s.n} ${VARGAS[s.n]||'谐波'}：上升${esc(d.lagna)}，主运星${esc(selected.lord)}落第${lord?.house||'—'}宫；专项观察${esc(VARGAS[s.n]||'对应分盘')}中的职责与资源。${esc(d.method)}</p><p class="thin">上升 ${esc(d.lagna)} · 岁差 ${d.ayanamsa.toFixed(6)}° · 出生UT ${esc(d.utc.slice(0,19).replace('T',' '))}</p></article>
  <article class="card" data-vedic-nakshatra><h2>27 星宿与宿度</h2><p class="thin">以下为 D1 出生恒星黄道；分盘只改变上方宫位映射。宿主落1/5/9宫侧重支持，落6/8/12宫侧重磨练，需合参宫主与相位。</p>${table(['星体','星座 / 宫位','精确度数','星宿 / 宿度','宿主 / 分足'],[{key:'lagna',name:'上升 Lagna',sid:base.ascSid,house:1,nakIndex:Math.floor(base.ascSid/(360/27)),nakshatra:nakNames[Math.floor(base.ascSid/(360/27))],nakDegree:base.ascSid%(360/27),nakLord:base.sequence[Math.floor(base.ascSid/(360/27))%9],pada:Math.floor(base.ascSid/(360/108))%4+1,sign:base.lagna,degree:{degrees:Math.floor(base.ascSid%30),minutes:Math.floor(base.ascSid%1*60),seconds:Math.floor(base.ascSid%1*3600)%60}},...base.planets].map(p=>[p.name+' '+planetStates(p,base.planets).join(' / '),p.sign+' · '+p.house+'宫',dms(p.degree),(nakNames[p.nakIndex]||p.nakshatra)+' '+p.nakDegree.toFixed(4)+'°',p.nakLord+' · Pada '+p.pada+'（本命宿主落'+(base.planets.find(q=>q.name===p.nakLord)?.house||1)+'宫）']))}</article>
  <article class="card liquid-glass" data-vedic-states><h2>行星状态检视</h2><div class="chips">${d.planets.map(p=>term(p.name+' · '+(planetStates(p,d.planets).join(' / ')||'平常'),p.name+'落'+p.sign+'第'+p.house+'宫。'+(planetStates(p,d.planets).join('、')||'本模型未检出特殊状态')+'；仅按所选分盘观察宫位。')).join('')}</div><small>逆行、燃烧、行星战与尊贵状态按当前本地模型计算，传统象意不等于事件保证。</small></article>
  <article class="card liquid-glass vedic-period"><h2>Vimshottari 大运</h2><p>当前大运：${esc(d.active?.lord||'不在所列运限')} · 出生大运余额 ${d.balanceYears.toFixed(4)} 年</p>
@@ -44,9 +44,17 @@ export function vedicView(ctx){
  for(const g of ctx.root.querySelectorAll('[data-vedic-house]')){g.onclick=()=>show(+g.dataset.vedicHouse);g.onkeydown=e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();show(+g.dataset.vedicHouse);}};}
 }
 
-export function southIndianChart(d){
+const statusMark={'庙':'Ex','旺':'Ex','陷':'Deb','逆':'R','焦':'C','战':'W'};
+function southPlanet(p, data, natal){
+ const states=planetStates(p,data.planets).filter(state=>!['焦','战'].includes(state[0]));
+ const physical=natal.planets.find(star=>star.key===p.key);
+ if(physical)states.push(...planetStates(physical,natal.planets).filter(state=>['焦','战'].includes(state[0])));
+ const marks=[...new Set(states.map(state=>statusMark[state[0]]).filter(Boolean))];
+ return `<span title="${esc([p.name,...states].join(' · '))}">${esc(p.name.slice(0,2))}${marks.length?`<sup>${marks.join('/')}</sup>`:''}</span>`;
+}
+export function southIndianChart(d,natal=d){
  const cells=[[1,0],[2,0],[3,0],[3,1],[3,2],[3,3],[2,3],[1,3],[0,3],[0,2],[0,1],[0,0]];
- return `<div class="south-chart" role="group" aria-label="南印方格盘，星座位置固定">${cells.map(([x,y],sign)=>{const h=(sign-d.lagnaIndex+12)%12+1,stars=d.planets.filter(p=>p.signIndex===sign);return `<button type="button" class="south-house" style="grid-column:${x+1};grid-row:${y+1}" data-vedic-house="${h}" data-current="${h===1}" data-dasha-lit="${d.highlight?.includes(h)||false}" aria-label="第${h}宫 ${esc(d.houseSigns[h-1])} ${esc(stars.map(p=>p.name).join('、'))}"><span class="south-house-label">${sign+1} · ${h===1?'ASC':h+'宫'}</span><span class="south-planets">${stars.map(p=>`<span title="${esc(p.name)}">${esc(p.name.slice(0,2))}</span>`).join('')||'·'}</span></button>`;}).join('')}<div class="south-center" aria-hidden="true">南印盘 · D${d.varga||1}</div></div>`;
+ return `<div class="south-chart" role="group" aria-label="南印方格盘，星座位置固定">${cells.map(([x,y],sign)=>{const h=(sign-d.lagnaIndex+12)%12+1,stars=d.planets.filter(p=>p.signIndex===sign);return `<button type="button" class="south-house" style="grid-column:${x+1};grid-row:${y+1}" data-vedic-house="${h}" data-current="${h===1}" data-dasha-lit="${d.highlight?.includes(h)||false}" aria-label="第${h}宫 ${esc(d.houseSigns[h-1])} ${esc(stars.map(p=>p.name).join('、'))}"><span class="south-house-label">${sign+1} · ${h===1?'ASC':h+'宫'}</span><span class="south-planets">${stars.map(p=>southPlanet(p,d,natal)).join('')||'·'}</span></button>`;}).join('')}<div class="south-center" aria-hidden="true">南印盘 · D${d.n||1}</div></div>`;
 }
 
 export function vedicTools(ctx,host){

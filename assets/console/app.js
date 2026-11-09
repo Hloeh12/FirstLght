@@ -1,3 +1,4 @@
+import {installCivilPickers} from './civil-picker.js';
 import {ProfileMachine} from './profile-machine.js';
 import {DIRECTIONS} from '../../src/housing.mjs';
 import {localNowParams} from './now.js';
@@ -5,14 +6,13 @@ import {migrateStorage} from './schema.js';
 import {vedicView,vedicTools} from './vedic.js';
 import {versionCard,releaseHistory} from './releases.js';
 import {ZIWEI_SCHOOLS} from '../../src/ziwei-rules.mjs';
-import {practicalZiwei} from '../../src/ziwei-practical.mjs';
 import {updateLiquidPill} from './bottom-nav.js';
 import {lockViewport,fitKeyboard} from './viewport.js';
 import {diagnosticsPanel,installDiagnostics,resetCaches} from './diagnostics.js';
 import {soulWidgets,wireSoul} from './soul-home.js';
 import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
-import {ziweiView,ziweiTools,ziweiPatterns} from './ziwei.js';
+import {ziweiView,ziweiTools,ziweiPatterns,ziweiPeriodEvidence} from './ziwei.js';
 import {baziView,baziTools,baziQuick} from './bazi.js';
 import {westernView,westernTools,astroHouse,houseOptions,setAstroHouse} from './western.js';
 import {extraView} from './extras.js';
@@ -60,6 +60,7 @@ function sheet(id,title,body){
  const d=$('#'+id),prefix={inputSheet:'birth',caseDrawer:'drawer',toolSheet:'tool',termSheet:'term'}[id];
  d.innerHTML=`<div class="dialog-content"><div class="sheet-grip" aria-hidden="true"></div><header class="sheet-head">
  <h2 id="${prefix}Title">${esc(title)}</h2>${btn('×','class="icon" aria-label="关闭" data-close')}</header><div class="sheet-body">${body}<div class="scroll-clearance" aria-hidden="true"></div></div></div>`;
+ installCivilPickers(d);
  $('[data-close]',d).onclick=()=>close(d);
  open(d);
  return d;
@@ -318,7 +319,7 @@ function birthSheet(profile,seed={}){
   <label>命主姓名<input name="name" value="${esc(f.name)}" maxlength="40" placeholder="姓名或昵称"></label>
   <label>性别<select name="gender"><option ${f.gender==='男'?'selected':''}>男</option><option ${f.gender!=='男'?'selected':''}>女</option></select></label>
   <label>历法<select name="calendar"><option value="solar">公历</option><option value="lunar" ${f.calendar==='lunar'?'selected':''}>农历</option></select></label>
-  <label>出生日期<input name="date" value="${esc(f.dateStr||'')}" placeholder="YYYY-MM-DD"></label>
+  <label>出生日期<input name="date" type="date" value="${esc(f.dateStr||'')}" placeholder="YYYY-MM-DD"></label>
   <label>出生时刻<input name="clock" type="time" value="${esc(f.timeStr||'12:00')}"></label>
   <label>案例分组<select name="category">${options}</select></label>
   <label>阳宅居住方位（可选）<select name="homeDirection"><option value="">不设置</option>${Object.entries(DIRECTIONS).map(([k,v])=>`<option value="${k}" ${f.housing?.direction===k?'selected':''}>${k}(${v})</option>`).join('')}</select></label><label>家庭身份（可选）<select name="homeMember"><option value="">不设置</option>${Object.entries({乾:'父',坤:'母',震:'长子',巽:'长女',坎:'中子',离:'中女',艮:'少子',兑:'少女'}).map(([k,v])=>`<option value="${k}" ${f.housing?.member===k?'selected':''}>${v}</option>`).join('')}</select></label>
@@ -334,8 +335,11 @@ function birthSheet(profile,seed={}){
  <div class="rail" aria-label="历史案例">${state.cases.slice(0,5).map(c=>btn(c.name,`data-use-case="${esc(c.id)}"`)).join('')}${profile?btn('＋ 起新盘','data-new'):''}</div>`);
  const form=$('form',d),fields=form.elements,feedback=$('#birthStatus',d),matches=$('#cityMatches',d);
  const calendar=()=>{
-  const lunar=fields.calendar.value==='lunar',value=fields.date.value;
-  fields.date.type=lunar?'text':'date';fields.date.value=value;$('[data-leap]',d).hidden=!lunar;
+  const lunar=fields.calendar.value==='lunar';
+  const picker=fields.date.closest('.civil-picker').querySelector('details');
+  picker.hidden=lunar;
+  if(lunar)picker.open=false;
+  $('[data-leap]',d).hidden=!lunar;
  };
  fields.calendar.onchange=calendar;calendar();
  fields.unknown.onchange=()=>{fields.clock.disabled=fields.unknown.checked;};fields.unknown.onchange();
@@ -381,7 +385,7 @@ function birthSheet(profile,seed={}){
   const lat=Number(fields.lat.value),lon=Number(fields.lon.value),tz=fields.tz.value.trim()===''?(setting.tz??8):Number(fields.tz.value);
   if([fields.lat,fields.lon].some(k=>k.value.trim()==='')||![lat,lon,tz].every(Number.isFinite)||Math.abs(lat)>90||Math.abs(lon)>180||tz< -12||tz>14){feedback.textContent='请填写有效经纬度和 UTC 偏移';return;}
   const dateStr=fields.date.value.trim(),timeStr=fields.unknown.checked?'12:00':fields.clock.value;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)||!/^\d{2}:\d{2}$/.test(timeStr)){feedback.textContent='请填写有效出生日期和时间';return;}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)||!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(timeStr)){feedback.textContent='请填写有效出生日期和时间';return;}
   const [h,mi]=timeStr.split(':').map(Number),name=fields.name.value.trim()||'未命名案例';
   const next={...profile,id:profile?.id??(crypto.randomUUID?.()||Date.now().toString()),name,category:fields.category.value,updatedAt:new Date().toISOString(),
    fields:{housing:fields.homeDirection.value&&fields.homeMember.value?{direction:fields.homeDirection.value,member:fields.homeMember.value}:null,...splitDate(dateStr),dateStr,timeStr,h,mi,name,gender:fields.gender.value,calendar:fields.calendar.value,leapMonth:fields.calendar.value==='lunar'&&fields.leap.checked,
@@ -471,8 +475,8 @@ async function instantChart(){
  const birth=localNowParams(at,state.profile?.fields?.city);
  try{
   const result=await request('/api/console/reading',{birth});if(token!==generation)return;
-  state.instantSnapshot??={profile:state.profile,reading:state.reading,chartState:state.chartState};
-  state.profile={id:'instant-preview',name:'即刻天象',fields:birth,summary:summary(result)};state.reading=result;state.chartState={};state.pending=false;state.error='';
+  state.instantSnapshot??={profile:state.profile,reading:state.reading,chartState:state.chartState,activeTimeSystem:state.activeTimeSystem};
+  state.profile={id:'instant-preview',name:'即刻天象',fields:birth,summary:summary(result)};state.reading=result;state.chartState={};state.activeTimeSystem=null;state.pending=false;state.error='';
   if(system==='west')state.chartState.west={mode:'sky',at,result:null,token:0,error:'',requested:false,instant:{at:at.toISOString(),local:birth.dateStr+' '+birth.timeStr,place:birth.city.label,source:'设备本地时区 UTC'+birth.tz}};
   state.tab='chart';state.system=system;render();
  }catch(error){tell(error.message);}
@@ -517,14 +521,18 @@ function selectedPeriodCard(){
   const chart=state.chartState.ziwei.chart;
   const palace=chart?.palaces.find(p=>z.palaceNames[p.branch]==='命宫');
   const named=name=>chart?.palaces.find(p=>z.palaceNames[p.branch]===name)?.name||'待定位';
-  const risks=practicalZiwei(chart,z).filter(p=>['禄逢冲破','羊陀夹忌','忌冲本命忌'].includes(p.name));
-  const changes=z.mutagens.map(m=>m.star+'化'+m.type+'入'+(chart?.palaces.find(p=>p.branch===m.branch)?.name||'待定位'));
-  parts.push(`<h3>紫微 · ${esc(z.label+' '+z.ganZhi+' · '+z.date)}</h3><p>流命落 ${esc(palace?.name||'待定位')}，流官对应 ${esc(named('官禄'))}，流财对应 ${esc(named('财帛'))}。${esc(changes.join('、'))}。</p><p><b>职责与资源</b> 先核对流官宫的责任安排，以及流财宫的预算和兑现条件；化禄所在宫可观察资源，化忌所在宫宜预留反复余量。</p><p><b>当期格局</b> ${esc(risks.length?risks.map(p=>p.name+'落'+p.palace+'：'+p.text).join('；'):'未检出流忌冲禄或羊陀夹忌条件，不凭空添加凶断。')}</p>`);
+  const evidence=ziweiPeriodEvidence(chart,z);
+  parts.push(`<h3>紫微 · ${esc(z.label+' '+z.ganZhi+' · '+z.date)}</h3><p>流命落 ${esc(palace?.name||'待定位')}，流官对应 ${esc(named('官禄'))}，流财对应 ${esc(named('财帛'))}。</p>${evidence.map(line=>'<p>'+esc(line)+'</p>').join('')}`);
  }
  if(w?.result){
-  const result=w.result,relations=(result.cross||result.chart?.aspects||[]).slice().sort((a,b)=>a.orb-b.orb).slice(0,3);
+  const result=w.result;
+  const cross=result.cross||result.natalCross;
+  const outerKeys=new Set(['jupiter','saturn','uranus','neptune','pluto']);
+  const relations=(cross||result.chart?.aspects||[])
+   .filter(a=>[0,90,180].includes(a.angle)&&outerKeys.has(a.aKey))
+   .sort((a,b)=>a.orb-b.orb).slice(0,5);
   const title={sky:'天象',transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',profection:'小限',natal:'本命'}[w.mode]||w.mode;
-  parts.push(`<h3>西洋 · ${esc(w.at.getFullYear()+'年'+(w.at.getMonth()+1)+'月')} ${esc(title)}推演</h3><p>所选时刻 ${esc(w.at.toISOString().slice(0,16).replace('T',' '))} UT；${result.outer?'外圈行运切入本命星位':'当前盘面'}。</p>${relations.map(a=>`<p><b>${esc(a.a+' '+a.type+' '+a.b)}</b> · Orb ${a.orb.toFixed(2)}°，${a.applying===true?'入相':a.applying===false?'出相':'阶段未定'}；${[90,180].includes(a.angle)?'优先核对现实压力与边界，暂缓过量承诺。':'可观察合作、表达或行动窗口，仍须结合具体落宫。'}</p>`).join('')||'<p>当前容许度内未检出关键相位，不额外编造事件。</p>'}`);
+  parts.push(`<h3>西洋 · ${esc(w.at.getFullYear()+'年'+(w.at.getMonth()+1)+'月')} ${esc(title)}推演</h3><p>所选时刻 ${esc(w.at.toISOString().slice(0,16).replace('T',' '))} UT；${cross?'推运星体对照本命星位':'当前盘面'}。</p>${relations.map(a=>`<p><b>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}</b> · Orb ${a.orb.toFixed(2)}°，${a.applying===true?'入相':a.applying===false?'出相':'阶段未定'}；${[90,180].includes(a.angle)?'优先核对现实压力与边界，暂缓过量承诺。':'可观察合作、表达或行动窗口，仍须结合具体落宫。'}</p>`).join('')||'<p>当前容许度内未检出关键相位，不额外编造事件。</p>'}`);
  }
  if(v?.activePeriod){
   const p=v.activePeriod;
@@ -566,9 +574,9 @@ function insights(){
   state.resonanceProfile=resonanceKey;state.resonance=null;
   const id=state.profile.id,token=state.reading;
   request('/api/console/resonance',{birth:normalized(state.profile),at:resonanceAt,config:resonanceConfig}).then(result=>{
-   if(state.reading!==token||state.profile.id!==id)return;
+   if(state.reading!==token||state.profile?.id!==id||state.resonanceProfile!==resonanceKey)return;
    state.resonance=result;if(state.tab==='insights')insights();
-  }).catch(error=>{if(state.reading===token){state.resonance={error:error.message};if(state.tab==='insights')insights();}});
+  }).catch(error=>{if(state.reading===token&&state.resonanceProfile===resonanceKey){state.resonance={error:error.message};if(state.tab==='insights')insights();}});
  }
  const {bazi,ziwei,western}=r;
  const active=ziwei.decades.map(d=>[d.ageRange.join('–')+' 岁',d.yearRange.join('–'),d.palaceName]);
@@ -641,7 +649,7 @@ const definitions={
 };
 const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,switchTab,onSelectTimeNode,download,
  get birth(){return state.profile?normalized(state.profile):null;},
- explain(word,text){sheet('termSheet',word,`<p>${esc(text||definitions[word]||'这是传统术数的辅助标记，需要结合所在宫位、干支及同盘条件理解。')}</p>`);}
+ explain(word,text,source){sheet('termSheet',word,`<p>${esc(text||definitions[word]||'这是传统术数的辅助标记，需要结合所在宫位、干支及同盘条件理解。')}</p>${source?`<h3>典籍引证</h3><blockquote>${esc(source)}</blockquote>`:''}`);}
 };
 function render(){
  profileTitle();
@@ -665,16 +673,16 @@ function render(){
 installFeedback();
 root.addEventListener('click',e=>{
  const b=e.target.closest('[data-term]');
- if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain);}
+ if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain,b.dataset.source);}
 });
 $('#activeProfile').onclick=()=>state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);
 $('#btnEditProfile').onclick=e=>{e.stopPropagation();state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);};
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
 $('#instantChartButton').onclick=instantChart;
-$('#restoreOriginalButton').onclick=restoreOriginal;
+$('#restoreOriginalButton').onclick=event=>{event.stopPropagation();event.preventDefault();restoreOriginal();};
 $('#appTopBar').addEventListener('click',e=>{
- if(e.target.closest('button,.topbar-btn'))return;
+ if(e.target!==e.currentTarget&&!e.target.closest('[data-scroll-top-title]'))return;
  $('#mainScrollView').scrollTo?.({top:0,behavior:'smooth'});
  window.triggerHaptic?.('light');
 });

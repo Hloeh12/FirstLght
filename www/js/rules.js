@@ -126,10 +126,15 @@ export function buildZiweiKnowledgeReport(chart,flow){
  const starText=lifeStars.map(s=>s.name+'（'+(ZIWEI_FLOW_RULES.stars[s.name]||'本宫星曜主题')+'）').join('、')||'流命主星资料待核对';
  const moveText=moves.map(m=>{const p=find(m.branch);return (m.star||'星曜')+'化'+m.type+'入'+(p?.name||'待定位')+'宫';});
  const risks=[];
- const luMoves=moves.filter(m=>m.type==='禄'),jiMoves=moves.filter(m=>m.type==='忌');
- const related=(a,b)=>a===b||((a-b+12)%12===6)||((a-b+12)%12===4)||((a-b+12)%12===8);
- const doubleLu=luMoves.some((a,i)=>luMoves.slice(i+1).some(b=>related(a.branch,b.branch)));
- const luBroken=luMoves.some(a=>jiMoves.some(b=>(a.branch+6)%12===b.branch));
+ const luMoves=moves.filter(m=>m.type==='禄'&&Number.isInteger(m.branch)),jiMoves=moves.filter(m=>m.type==='忌'&&Number.isInteger(m.branch));
+ const triad=(a,b)=>a===b||((a-b+12)%12===4)||((a-b+12)%12===8);
+ const natalLuCun=palaces.filter(p=>(p.stars||[]).some(s=>s.name==='禄存'));
+ const natalHuaLu=palaces.filter(p=>(p.stars||[]).some(s=>s.siHua==='禄'));
+ const yearlyOpposition=Number.isInteger(flow?.yearlyLuCunBranch)&&luMoves.some(m=>(m.branch-flow.yearlyLuCunBranch+12)%12===6);
+ const doubleLu=luMoves.some(m=>natalLuCun.some(p=>triad(m.branch,p.branch))||natalHuaLu.some(p=>triad(m.branch,p.branch)))||
+  luMoves.some((a,i)=>luMoves.slice(i+1).some(b=>triad(a.branch,b.branch)));
+ const luBroken=yearlyOpposition||luMoves.some(a=>jiMoves.some(b=>(a.branch+6)%12===b.branch))||
+  jiMoves.some(m=>natalLuCun.some(p=>(m.branch+6)%12===p.branch)||natalHuaLu.some(p=>(m.branch+6)%12===p.branch));
  const sheep=new Set(palaces.filter(p=>(p.minorStars||[]).some(s=>s.name==='擎羊')).map(p=>p.branch));
  const tuo=new Set(palaces.filter(p=>(p.minorStars||[]).some(s=>s.name==='陀罗')).map(p=>p.branch));
  const clamped=jiMoves.some(m=>sheep.has((m.branch+11)%12)&&tuo.has((m.branch+1)%12)||sheep.has((m.branch+1)%12)&&tuo.has((m.branch+11)%12));

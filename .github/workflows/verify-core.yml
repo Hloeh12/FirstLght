@@ -1,0 +1,56 @@
+name: Verify Offline Core
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'www/js/rules.js'
+      - 'assets/console/**'
+      - 'scripts/**'
+      - 'test/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/verify-core.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run complete Node test suite
+        run: npm test
+      - name: Build offline console bundle
+        run: npm run build:console
+      - name: Audit compiled offline knowledge corpus
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          bundle = Path('js/console.js')
+          assert bundle.is_file(), 'compiled console.js missing'
+          source = bundle.read_text()
+          for marker in (
+              'BAZI_FLOW_RULES', 'ZIWEI_FLOW_RULES',
+              'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES',
+              '冲去忌神破局发越', '羊陀夹忌候选'
+          ):
+              assert marker in source, f'missing bundled knowledge marker: {marker}'
+          html = Path('index.html').read_text()
+          assert 'src="/js/console.js"' in html
+          assert 'rules.js' not in html
+          print(f'PASS: {bundle.stat().st_size} bytes; all offline corpus markers present')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-console-${{ github.sha }}
+          path: js/console.js
+          if-no-files-found: error
+          retention-days: 7

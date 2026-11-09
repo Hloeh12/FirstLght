@@ -4,6 +4,7 @@ import {practicalZiwei} from '../../src/ziwei-practical.mjs';
 import {playSuccessSound,reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,selectedRails,table} from './ui.js';
 
+globalThis.ZIWEI_FLOW_RULES = flowRules;
 const branches='子丑寅卯辰巳午未申酉戌亥',stems='甲乙丙丁戊己庚辛壬癸';
 const positions=[[4,3],[4,2],[4,1],[3,1],[2,1],[1,1],[1,2],[1,3],[1,4],[2,4],[3,4],[4,4]];
 const months=['正','二','三','四','五','六','七','八','九','十','冬','腊'];

@@ -1,5 +1,4 @@
 import {buildBaziKnowledgeReport} from '../../www/js/rules.js';
-globalThis.BAZI_FLOW_RULES = BAZI_FLOW_RULES;
 import {BAZI_FLOW_RULES} from '../../www/js/rules.js';
 globalThis.BAZI_FLOW_RULES = BAZI_FLOW_RULES;
 import {reducedMotion} from './feedback.js';

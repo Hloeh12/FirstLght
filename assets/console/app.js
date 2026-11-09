@@ -528,11 +528,11 @@ function renderDynamicInsightBySystem(){
  }
  if(!b&&!z&&!w?.result&&!v?.activePeriod)return '<article class="card liquid-glass"><h2>当前时空点</h2><p>当前为本命视角。选择时间滑轨后，这里展示对应的阶段线索。</p></article>';
  const parts=[];
- if(b){const report=buildBaziKnowledgeReport(state.chartState.bazi.data);parts.push(`<article class="card liquid-glass knowledge-report" data-knowledge-report><h3>${esc(report.title)}</h3><p class="thin">离线岁运知识库 · ${report.characters} 字</p>${report.sections.map(section=>`<section><h4>${esc(section.title)}</h4>${section.lines.map(line=>`<p>${esc(line)}</p>`).join('')}</section>`).join('')}<small>传统术数观察，不构成事实预测、投资建议或医疗意见。</small></article>`);}
+ if(b){const report=buildBaziKnowledgeReport(state.chartState.bazi.data);parts.push(`<article class="card liquid-glass knowledge-report" data-knowledge-report data-report-characters="${report.characters}"><h3>${esc(report.title)}</h3><p class="thin">离线岁运知识库 · ${report.characters} 字</p>${report.sections.map(section=>`<section><h4>${esc(section.title)}</h4>${section.lines.map(line=>`<p>${esc(line)}</p>`).join('')}</section>`).join('')}<small>传统术数观察，不构成事实预测、投资建议或医疗意见。</small></article>`);}
  if(z){
   const chart=state.chartState.ziwei.chart;
   const report=buildZiweiKnowledgeReport(chart,z);
-  parts.push(`<article class="card liquid-glass knowledge-report" data-knowledge-report><h3>${esc(report.title)}</h3><p class="thin">流年命宫、四化落宫与格局证据 · ${report.characters} 字</p>${report.sections.map(section=>`<section><h4>${esc(section.title)}</h4>${section.lines.map(line=>`<p>${esc(line)}</p>`).join('')}</section>`).join('')}<small>传统术数观察，不构成事实预测、投资建议或医疗意见。</small></article>`);
+  parts.push(`<article class="card liquid-glass knowledge-report" data-knowledge-report data-report-characters="${report.characters}"><h3>${esc(report.title)}</h3><p class="thin">流年命宫、四化落宫与格局证据 · ${report.characters} 字</p>${report.sections.map(section=>`<section><h4>${esc(section.title)}</h4>${section.lines.map(line=>`<p>${esc(line)}</p>`).join('')}</section>`).join('')}<small>传统术数观察，不构成事实预测、投资建议或医疗意见。</small></article>`);
   const palace=chart?.palaces.find(p=>z.palaceNames[p.branch]==='命宫');
   const named=name=>chart?.palaces.find(p=>z.palaceNames[p.branch]===name)?.name||'待定位';
   const evidence=ziweiPeriodEvidence(chart,z);

@@ -512,7 +512,7 @@ function resonanceCard(){
  <p>${result.consensus.length?'检出 '+result.consensus.length+' 组同主题、同向的三体系线索。':'当前没有三体系同主题同向共振，不强行拼接结论。'}</p>
  ${result.chains.slice(0,6).map(c=>`<div class="resonance-evidence"><b>${esc(c.topic+' · '+c.direction)} · ${c.coverage}/3 体系</b><div class="energy-track" role="meter" aria-label="证据覆盖体系数" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${c.coverage}"><span class="energy-fill" style="width:${c.coverage/3*100}%"></span></div>${c.items.slice(0,6).map(e=>`<p><small>${esc(e.system)}</small> ${esc(e.text)}</p>`).join('')}</div>`).join('')}<small>${esc(result.method)}</small></article>`;
 }
-function selectedPeriodCard(){
+function renderDynamicInsightBySystem(){
  const system=state.system;
  const b=system==='bazi'?state.chartState.bazi?.data?.guidance:null;
  const z=system==='ziwei'?state.chartState.ziwei?.flow:null;
@@ -533,7 +533,18 @@ function selectedPeriodCard(){
   const palace=chart?.palaces.find(p=>z.palaceNames[p.branch]==='命宫');
   const named=name=>chart?.palaces.find(p=>z.palaceNames[p.branch]===name)?.name||'待定位';
   const evidence=ziweiPeriodEvidence(chart,z);
-  parts.push(`<h3>紫微 · ${esc(z.label+' '+z.ganZhi+' · '+z.date)}</h3><p>流命落 ${esc(palace?.name||'待定位')}，流官对应 ${esc(named('官禄'))}，流财对应 ${esc(named('财帛'))}。</p>${evidence.map(line=>'<p>'+esc(line)+'</p>').join('')}`);
+  const lifeStars=palace?.majorStars?.length?palace.majorStars:palace?.borrowedStars||[];
+  const four=(z.mutagens||[]).map(m=>{const target=chart?.palaces.find(p=>p.branch===m.branch);const opposite=chart?.palaces.find(p=>p.branch===(m.branch+6)%12);return m.star+'化'+m.type+'落'+(target?.name||'待定位')+'宫，对宫'+(opposite?.name||'待定位')+'。'+(globalThis.ZIWEI_FLOW_RULES?.transformations?.[m.type]||'按实际落宫复核四化作用。');});
+  const starText=lifeStars.map(s=>s.name+(s.brightness?'（'+s.brightness+'）':'')).join('、')||'流命主星待定位';
+  const palaceText=globalThis.ZIWEI_FLOW_RULES?.palaces||{};
+  const long=[
+   '第一层｜流命与三方四正定性：本次选择'+z.label+' '+z.ganZhi+'（'+z.date+'），流命落本命'+(palace?.name||'待定位')+'宫，流官对应'+named('官禄')+'，流财对应'+named('财帛')+'。流命主星为'+starText+'。'+(palace?.majorStars?.length?'以本宫坐守星曜为主，结合三方四正事业、财帛和迁移结构综合判断。':'本宫无主星时借对宫主星作为结构补充，再回看三方四正，不将空宫解释为缺乏能力。')+'当前先辨认资源来自本宫还是对宫会照，再判断行动主轴；宫位主题是现实核对范围，不是事件必然发生。',
+   '第二层｜流年四化入宫与对冲：四化依当前流年天干和所选派别计算，逐项列出星曜、落宫和对宫。'+(four.join(' ')||'本次没有可定位的四化落宫数据，不补造星曜。')+'化禄看资源入口和兑现链，化权看责任、授权与执行压力，化科看文书、资质和第三方缓冲，化忌看反复、延误、占用与边界问题。冲击力须同时检查本宫、对宫、三方四正及禄科权会照；单见化忌不等于灾祸，单见化禄也不等于现金到账。',
+   '第三层｜实战格局核验：系统按实际星曜宫位识别双禄交驰、禄逢冲破、羊陀夹忌等结构。'+(evidence.join(' ')||'当前未检出已满足条件的实战格局。')+'双禄交驰须确认禄星或禄存真实会照且无严重冲破；禄逢冲破须确认禄位受到化忌、对冲或煞曜破坏；羊陀夹忌须核对擎羊、陀罗和化忌形成实际夹制，不能只因三者同时出现就下结论。成立时优先核验合作分配、项目回款、岗位授权、合同附件和时间成本。',
+   '第四层｜现实四维落地：事业看流官宫及流命主星是否得到权禄科支持，若责任扩大而资源不足，先谈授权和里程碑；财务看流财宫及禄忌对冲，区分机会、应收款和实际到账，避免高杠杆与替人担保；婚恋看夫妻宫与流命互动，具体沟通日程、预算和照顾责任，不凭单一四化断分合；疾厄宫只提示生活节奏管理，不能用于疾病诊断。'
+  ];
+  const palaceDetails=Object.entries(palaceText).map(([name,meaning])=>name+'：'+meaning);
+  parts.push(`<h3>紫微 · ${esc(z.label+' '+z.ganZhi+' · '+z.date)}</h3><p>流命落 ${esc(palace?.name||'待定位')}，流官对应 ${esc(named('官禄'))}，流财对应 ${esc(named('财帛'))}。</p>${long.map((line,i)=>'<section><h4>'+['第一层｜流命与三方四正','第二层｜流年四化入宫与对冲','第三层｜实战格局核验','第四层｜现实维度建议'][i]+'</h4><p>'+esc(line)+'</p></section>').join('')}${palaceDetails.map(line=>'<p>'+esc(line)+'</p>').join('')}`);
  }
  if(w?.result){
   const result=w.result;
@@ -551,6 +562,7 @@ function selectedPeriodCard(){
  }
  return `<article class="card liquid-glass period-guidance" aria-live="polite"><h2>当前时空点 · 专属推演</h2>${parts.join('')}<small>根据所选时间滑轨的本地盘面重算结果生成；传统术数仅作观察参考。</small></article>`;
 }
+const selectedPeriodCard = renderDynamicInsightBySystem;
 function onSelectTimeNode(system){
  state.activeTimeSystem=system;
  forceRefreshAllInsights();

@@ -619,6 +619,7 @@ function forceRefreshAllInsights(){
   state.resonance={error:error.message};host.innerHTML=resonanceCard();
  });
 }
+// FINAL_INSIGHT_REPORT_BUNDLE_CHECK: the report dictionaries are imported by this entry and bundled into js/console.js.
 function insights(){
  const r=state.reading;
  if(!r){root.innerHTML='<p class="empty">激活案例后查看八字、紫微与西洋占星的综合报告。</p>';return;}

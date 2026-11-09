@@ -137,7 +137,7 @@ try{
    assert((await insightReport.textContent()).includes('事业职场'));
   assert(await page.locator('[data-natal-background]').count()===1);
   await page.locator('[data-tab=chart]').click();
-  await page.locator('[data-bazi-rails] [data-rail="流年"]').first().click();
+  await page.locator('[data-bazi-rails] [data-rail="流年"]').nth(1).click();
   await page.waitForFunction(previous=>document.querySelector('.period-guidance:not(.knowledge-report)')?.textContent!==previous,firstPeriod);
   await page.locator('[data-tab=insights]').click();
   assert((await page.locator('#insightContent .knowledge-report').first().textContent()).includes('八字'));

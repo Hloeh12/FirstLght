@@ -34,6 +34,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           bundle = Path('js/console.js')
           assert bundle.is_file(), 'compiled console.js missing'
           source = bundle.read_text()
@@ -42,9 +43,9 @@ jobs:
               'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES',
               '甲木重主干', '冲去忌神破局发越', '羊陀夹忌候选'
           )
+          decoded = re.sub(r'\\\\u\\{([0-9a-fA-F]+)\\}|\\\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1) or m.group(2), 16)), source)
           for marker in markers:
-              escaped = marker.encode('unicode_escape').decode('ascii')
-              assert marker in source or escaped in source, f'missing bundled knowledge marker: {marker}'
+              assert marker in source or marker in decoded, f'missing bundled knowledge marker: {marker}'
           html = Path('index.html').read_text()
           assert 'src="/js/console.js"' in html
           assert 'rules.js' not in html

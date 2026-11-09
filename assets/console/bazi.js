@@ -1,3 +1,5 @@
+import {buildBaziKnowledgeReport} from '../../www/js/rules.js';
+globalThis.BAZI_FLOW_RULES = BAZI_FLOW_RULES;
 import {BAZI_FLOW_RULES} from '../../www/js/rules.js';
 globalThis.BAZI_FLOW_RULES = BAZI_FLOW_RULES;
 import {reducedMotion} from './feedback.js';
@@ -26,12 +28,20 @@ function relationships(data){
  return `<div class="chips">${data.relationships.map(r=>term(r.pattern+' '+r.type+' · '+r.pillars.join('／'),
   r.meaning+(r.element?' 传统取向为'+r.element+'。':''))).join('')||'<span class="muted">当前柱组未触发所列关系。</span>'}</div>`;
 }
+function knowledgeReport(d){
+ const report=buildBaziKnowledgeReport(d);
+ return '<article class="card liquid-glass period-guidance knowledge-report" data-knowledge-report data-report-characters="'+report.characters+'">'+
+ '<h2>'+esc(report.title)+'</h2><p class="thin">离线知识库 · 当前盘面证据驱动 · '+report.characters+' 字</p>'+
+ report.sections.map(section=>'<section><h3>'+esc(section.title)+'</h3>'+section.lines.map(line=>'<p>'+esc(line)+'</p>').join('')+'</section>').join('')+
+ '<small>传统术数文化观察，不构成事实预测、投资建议或医疗意见。</small></article>';
+}
 function details(d){
  return `<article class="card liquid-glass"><div class="spread"><h2>五行力量</h2><b>${d.strength.kind} · ${d.strength.support.toFixed(1)}%</b></div>
  ${bars(d.strength.percentages)}<p class="thin">喜用参考 ${d.strength.useful.join('、')||'五行扶助较均衡'} · 忌偏参考 ${d.strength.caution.join('、')||'不单列'}</p><small>${esc(d.strength.method)}</small></article>
  <article class="card"><h2>干支关系</h2>${relationships(d)}<p class="thin">日主通根 ${esc(d.roots.map(r=>r.pillar+r.branch+'藏'+r.stem).join('、')||'未见')} · 透干 ${esc(d.revealed.map(r=>r.rootAt+'藏'+r.stem+'透'+r.visibleAt).join('、')||'未见')} · 旬空 ${esc(d.voidBranches.join('、'))}</p></article>
  ${d.guidance?`<article class="card period-guidance" aria-live="polite"><h2>${esc(d.guidance.title)}</h2><p>${esc(d.guidance.summary)}</p>
  ${periodSections(d.guidance)}<small>传统干支规则与权重模型提供的观察参考。</small></article>`:''}
+ ${d.guidance?knowledgeReport(d):''}
  ${d.selected.length?`<article class="card"><h2>当前运程</h2>${d.selected.map(p=>`<p>${esc(p.name+' '+p.stem+p.branch)} · ${term(p.tenGod)} · ${term(p.changsheng,stages[p.changsheng])} · ${term(p.nayin,'六十甲子的纳音分类。')}</p>`).join('')}</article>`:''}`;
 }
 function entryCard(d){

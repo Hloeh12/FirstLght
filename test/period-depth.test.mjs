@@ -46,7 +46,8 @@ test('dynamic report contains four evidence layers and more than one thousand ch
  const sections=result.guidance.sections;
  assert.equal(sections.length,4);
  assert(sections.map(x=>x.title).join(' ').includes('原局命格'));
- assert(sections.map(x=>x.lines.join('')).join('').length>=1000);
+ const reportLength=sections.map(x=>x.title+x.lines.join('')).join('').length;
+ assert(reportLength>=1200&&reportLength<=1800, 'BaZi period report must stay between 1200 and 1800 characters');
  assert(sections.flatMap(x=>x.lines).join('').includes('财务资金流'));
 });
 
@@ -64,7 +65,7 @@ test('actual bundled corpus is present in the offline console entry',async()=>{
  assert(report.characters>=1050);
  const ziwei=buildZiweiKnowledgeReport({palaces:Array.from({length:12},(_,branch)=>({branch,name:'宫'+branch,majorStars:[],borrowedStars:[]}))},{label:'流年',ganZhi:'丙午',date:'2026-01-01',mutagens:[]});
  assert.equal(ziwei.sections.length,4);
- assert(ziwei.characters>=1000);
+ assert(ziwei.characters>=1200&&ziwei.characters<=1800);
  const {buildConsole}=await import('../scripts/build-console.mjs');
  const built=await buildConsole(false);
  const bundle=built.outputFiles.find(file=>file.path.endsWith('/js/console.js'))?.text||built.outputFiles[0].text;

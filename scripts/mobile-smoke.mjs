@@ -128,8 +128,8 @@ try{
   await shareSnapshot('ziwei');
   await useSystem('bazi','东方盘');
   await page.locator('[data-rail="流年"]').first().click();
-  await page.locator('.period-guidance').waitFor();
-  const firstPeriod=await page.locator('.period-guidance').textContent();
+  await page.locator('.period-guidance:not(.knowledge-report)').waitFor();
+  const firstPeriod=await page.locator('.period-guidance:not(.knowledge-report)').textContent();
   await page.locator('[data-tab=insights]').click();
   const insightReport=page.locator('#insightContent .knowledge-report[data-report-characters]').first();
    await insightReport.waitFor();

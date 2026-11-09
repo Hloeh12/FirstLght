@@ -140,7 +140,10 @@ try{
   await page.locator('[data-bazi-rails] [data-rail="流年"]').nth(1).click();
   await page.waitForFunction(previous=>document.querySelector('.period-guidance:not(.knowledge-report)')?.textContent!==previous,firstPeriod);
   await page.locator('[data-tab=insights]').click();
-  assert((await page.locator('#insightContent .knowledge-report').first().textContent()).includes('八字'));
+  const updatedReport=page.locator('#insightContent .knowledge-report[data-report-characters]').first();
+   await updatedReport.waitFor();
+   assert(Number(await updatedReport.getAttribute('data-report-characters'))>=1050);
+   assert((await updatedReport.textContent()).includes('事业职场'));
   await page.locator('[data-tab=chart]').click();
   assert.equal(await page.locator('.bazi-ghost').count(),0);
   await page.locator('[data-bazi-data]').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));

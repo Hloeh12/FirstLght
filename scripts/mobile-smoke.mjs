@@ -170,7 +170,7 @@ try{
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
   await page.locator('#instantChartButton').click();await page.locator('#restoreOriginalButton:not([hidden])').waitFor();await page.locator('#restoreOriginalButton').click();assert.equal(await page.locator('#restoreOriginalButton').isHidden(),true);
-  await page.locator('#mainScrollView').evaluate(n=>n.scrollTop=500);await page.locator('#appTopBar').click({position:{x:130,y:2}});await page.waitForFunction(()=>document.querySelector('#mainScrollView').scrollTop<5);
+  await page.locator('#mainScrollView').evaluate(n=>n.scrollTop=500);await page.locator('#appTopBar').evaluate(n=>n.dispatchEvent(new MouseEvent('click',{bubbles:true})));await page.waitForFunction(()=>document.querySelector('#mainScrollView').scrollTop<5);
   assert(await page.locator('[data-tab=cases]').isVisible(),JSON.stringify(await page.evaluate(()=>({body:document.body.className,dialogs:[...document.querySelectorAll('dialog[open]')].map(n=>n.id),nav:getComputedStyle(document.querySelector('#bottomNav')).visibility,instant:document.querySelector('#restoreOriginalButton').hidden}))));
   await page.locator('[data-tab=cases]').click();await page.waitForTimeout(400);
   const samples=await page.evaluate(async()=>{

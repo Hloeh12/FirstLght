@@ -115,3 +115,41 @@ export function buildBaziKnowledgeReport(data) {
  ];
  return {title:g.title||('八字 · '+label+'岁运结构化推演'),sections,characters:sections.reduce((n,x)=>n+x.title.length+x.lines.join('').length,0)};
 }
+
+export function buildZiweiKnowledgeReport(chart,flow){
+ const palaces=chart?.palaces||[],moves=flow?.mutagens||[],names=flow?.palaceNames||{};
+ const find=branch=>palaces.find(p=>p.branch===branch);
+ const lifeBranch=Number(Object.keys(names).find(k=>names[k]==='命宫'));
+ const life=find(Number.isFinite(lifeBranch)?lifeBranch:palaces.find(p=>p.name==='命宫')?.branch);
+ const lifeStars=(life?.majorStars?.length?life.majorStars:life?.borrowedStars)||[];
+ const starText=lifeStars.map(s=>s.name+'（'+(ZIWEI_FLOW_RULES.stars[s.name]||'本宫星曜主题')+'）').join('、')||'流命主星资料待核对';
+ const moveText=moves.map(m=>{const p=find(m.branch);return (m.star||'星曜')+'化'+m.type+'入'+(p?.name||'待定位')+'宫';});
+ const risks=[];
+ const hasLu=moves.some(m=>m.type==='禄'),hasJi=moves.some(m=>m.type==='忌');
+ if(hasLu&&moves.filter(m=>m.type==='禄').length>1)risks.push('双禄交驰：仅在多个禄曜实际同宫、会照或形成可验证宫系时成立；资源入口增多仍需核验分配、兑现与维护成本。');
+ if(hasLu&&hasJi)risks.push('禄逢冲破：检查禄位是否被对宫化忌、煞曜或结构性冲击；机会可能伴随延迟、回款波动或额外责任，宜分期验收。');
+ const sha=palaces.filter(p=>(p.minorStars||[]).some(s=>['擎羊','陀罗'].includes(s.name)));
+ if(hasJi&&sha.length)risks.push('羊陀夹忌候选：必须逐宫确认擎羊、陀罗是否真实夹制化忌所在宫，不以“盘中同时出现”冒充格局成立。');
+ const themes=ZIWEI_FLOW_RULES.palaceThemes||{};
+ const sections=[
+ {title:'一、流年命宫与当期格局定性',lines:[
+ '当前层级为'+(flow?.label||flow?.scope||'所选运限')+'，干支'+(flow?.ganZhi||'待定')+'，时间'+(flow?.date||'待定')+'。流命定位应以流年宫干支映射为准；本宫主星为'+starText+'。若本宫空宫，应读取对宫借星，并将借星作为参考而非假装本宫坐守。',
+ '主星组合需与三方四正、宫位主题、亮度和四化共同阅读。命宫定调不是单星标签：同一颗星落在命、官禄、财帛或迁移宫，其现实议题不同；辅曜、煞曜与对宫会照也会改变可执行空间。',
+ '当期判断宜先区分资源、权责、名誉和阻力四类变量，再检查是否由流年四化引动。四化是星曜象意的动态标记，不是事件的确定性预报。']},
+ {title:'二、流年四化落宫与格局核验',lines:[
+ '本层四化落宫：'+(moveText.join('；')||'当前流限没有提供可核验的四化数据')+'。化禄观察资源入口与兑现条件，化权观察授权和责任边界，化科观察名誉、文书与第三方认可，化忌观察反复、延迟、资源占用和沟通成本。',
+ ...moves.map(m=>{const p=find(m.branch);return (m.star||'星曜')+'化'+m.type+'落'+(p?.name||'待定位')+'宫：'+(ZIWEI_FLOW_RULES.transformations[m.type]||'结合宫位主题与对宫关系复核')+'；该宫主题为'+(themes[p?.name]||p?.name||'待定位')+'。';}),
+ ...(risks.length?risks:['当前数据未满足双禄交驰、禄逢冲破或羊陀夹忌的充分证据条件，不强行贴格局标签。']),
+ '判断格局必须检查星曜实际落宫、对宫冲照、三方四正和煞曜夹制关系。仅凭同一张盘出现禄、忌、羊或陀，并不能认定格局成立。']},
+ {title:'三、事业、财务、关系与生活行动',lines:[
+ '事业职场：流官与命宫需合看，化权可提示职责扩张或决策权限变化，化科可提示专业表达、资格或公开评价，化忌则应复核流程、审批和沟通链。把岗位变动拆为职责、授权、薪酬、汇报关系四项核验，不凭星曜单独决定跳槽或合伙。',
+ '财务资金：流财、田宅及相关四化应合看。化禄不等于现金到账，必须核对收入来源、付款方、合同、税费和回款时间；化忌触及财帛议题时，优先检查重复支出、账期延迟和共同资金边界。',
+ '婚恋关系：夫妻宫及其对宫、三方宫位共同提供观察背景。四化触动时，优先讨论双方时间、照顾责任、共同预算和承诺兑现；不可把化忌直接解释为分离，也不可把化禄直接解释为婚喜。',
+ '身心与家庭：疾厄、父母、福德等宫位可用于传统象意观察生活负荷、家庭支持和休息需求，但不能用于诊断疾病或推断长辈健康结果。遇到持续不适，应寻求医疗专业人员评估。']},
+ {title:'四、流月变化与关键观察窗口',lines:[
+ '流月应以所选月份的宫位映射和月干四化为准，重新核对禄权科忌落宫是否改变，以及是否重复引动本命或流年同一宫位。月度切换时，重点观察同主题是否连续被触发，而不是把每次切换都描述为重大事件。',
+ '若流月四化与流年四化同宫或形成对照，应检查事项是否累积、延迟或出现资源重新分配；若没有重复证据，则按单月提示处理。将节气交接前后作为复盘窗口，记录工作安排、回款、关系沟通与休息节奏的实际变化。',
+ '应期是传统盘面提供的观察区间，不是事件发生日期。重要决定仍须以合同、财务数据、现实沟通和当事人意愿为依据。']}
+ ];
+ return {title:'紫微 · '+(flow?.label||'所选流限')+'深度联动报告',sections,characters:sections.reduce((n,x)=>n+x.title.length+x.lines.join('').length,0)};
+}

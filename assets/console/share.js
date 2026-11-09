@@ -15,6 +15,7 @@ function panel(g,x,y,w,h){
  g.shadowColor='#ff4f8b22';g.shadowBlur=18;g.shadowOffsetY=7;g.fillStyle=fill;g.fill();g.shadowBlur=0;g.shadowOffsetY=0;g.strokeStyle='#ffffff';g.lineWidth=1.5;g.stroke();
 }
 export async function shareChart(root,title){
+ const native=window.webkit?.messageHandlers?.shareChart;
  await document.fonts?.ready;
  const canvas=document.createElement('canvas'),g=canvas.getContext('2d');
  if(!g)throw Error('设备不支持画布导出');
@@ -53,7 +54,6 @@ export async function shareChart(root,title){
  }
  if(lines.length){panel(g,pad,y-5,body,lines.length*25+24);for(const line of lines){text(line,pad+14,y+17,16);y+=25;}y+=30;}
  text('留一束初光，照见当下的自己',pad,height-20,13,'#a45c82');
- const native=window.webkit?.messageHandlers?.shareChart;
  if(native){native.postMessage(canvas.toDataURL('image/png'));return;}
  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
  if(!blob)throw Error('PNG 导出失败');

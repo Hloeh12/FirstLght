@@ -1,7 +1,8 @@
+import {localDisplayTime} from './now.js';
 import {aspectBrowser,bindAspectBrowser} from './aspects.js';
 import {todaySky} from '../../src/today-sky.mjs';
 import {bindWheel} from './wheel-gesture.js';
-import {$,esc,btn,stored,save,table,bars,symbols,zodiacNames,isoLocal,selectedRails} from './ui.js';
+import {$,esc,btn,stored,save,table,bars,symbols,zodiacNames,selectedRails} from './ui.js';
 
 const bodies={
  sun:'太阳',moon:'月亮',mercury:'水星',venus:'金星',mars:'火星',jupiter:'木星',saturn:'土星',uranus:'天王星',neptune:'海王星',pluto:'冥王星',
@@ -20,7 +21,7 @@ const cfg=()=>({...defaultCfg,...stored(key,{})});
 const norm=x=>((x%360)+360)%360;
 const pad=x=>String(x).padStart(2,'0');
 const dms=d=>d.degrees+'°'+pad(d.minutes)+'′'+pad(d.seconds)+'″';
-const dateTime=r=>r?.slice(0,19).replace('T',' ')+' UT';
+const dateTime=localDisplayTime;
 const aspectColors={0:'#d192cd',30:'#cb87ac',45:'#df76a1',60:'#77aa99',90:'#eb5e91',120:'#7aaf9c',135:'#df76a1',150:'#b484bf',180:'#ac376a'};
 const stateOf=ctx=>ctx.state.chartState.west??={mode:'natal',at:new Date(),result:null,token:0,pending:false,error:'',requested:false};
 function spaced(planets,min){
@@ -123,7 +124,7 @@ function matrix(r){
  return `<div class="scroll"><table class="grid-table astro-grid"><thead><tr><th>星体</th>${p.map(x=>'<th>'+esc(x.symbol+' '+x.name)+'</th>').join('')}</tr></thead><tbody>
  ${q.map((a,i)=>'<tr><th>'+esc(a.symbol+' '+a.name)+'</th>'+p.map((b,j)=>outer||j<i?cell(a,b):'<td></td>').join('')+'</tr>').join('')}</tbody></table></div>`;
 }
-function timeLabel(s){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',dateStyle:'short',timeStyle:'short'}).format(s.at);}
+function timeLabel(s){return localDisplayTime(s.at);}
 function shift(date,unit,n){
  const out=new Date(date);
  if(unit==='day'){out.setUTCDate(out.getUTCDate()+n);return out;}
@@ -175,10 +176,10 @@ export function westernView(ctx){
  const display=r?.chart;
  ctx.root.innerHTML=`<section aria-label="西洋占星"><div class="spread"><h1>西洋占星</h1><small>${esc(display?houses[display.houseSystem]:'')}</small></div>
  <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).filter(([id])=>!s.birthOverride||id==='sky').map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
- ${s.instant?`<p class="thin" data-instant-caption>即刻 ${esc(s.instant.local||s.instant.at.slice(0,23).replace('T',' '))} 本地 · ${esc(s.instant.place)}（${esc(s.instant.source)}）</p>`:''}<p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
+ ${s.instant?`<p class="thin" data-instant-caption>即刻 ${esc(s.instant.local||localDisplayTime(s.instant.at))} 本地 · ${esc(s.instant.place)}（${esc(s.instant.source)}）</p>`:''}<p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
  ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
- <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
- ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 东八区</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
+ <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(s.instant?.local||dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
+ ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 本地</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
  ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}
  <p class="thin">${display.analysis.elements.missing.length?'未覆盖 '+display.analysis.elements.missing.join('、'):'四元素均有星体'} · 主导 ${display.analysis.elements.dominant.join('、')}</p>
  ${bars(Object.fromEntries(Object.entries(display.analysis.modalities.percentages).map(([k,v])=>[k==='基本'?'本位':k,Number.isFinite(v)?v:0])))}</article>
@@ -198,8 +199,8 @@ export function westernView(ctx){
  for(const b of ctx.root.querySelectorAll('[data-unit]'))b.onclick=()=>update(ctx,s.mode,shift(s.at,b.dataset.unit,+b.dataset.step));
  const picker=$('[data-astro-date]',ctx.root);
  if(picker)picker.onclick=()=>{
-  const d=ctx.sheet('toolSheet','选择推运时间',`<form class="form-grid"><label>日期<input type="date" name="date" value="${isoLocal(s.at)}" required></label><label>时间（东八区）<input type="time" name="clock" value="${timeLabel(s).slice(11,16)}" required></label><button class="wide primary">重新排盘</button></form>`);
-  $('form',d).onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget);const at=new Date(f.get('date')+'T'+f.get('clock')+'+08:00');ctx.close(d);update(ctx,s.mode,at);};
+  const d=ctx.sheet('toolSheet','选择推运时间',`<form class="form-grid"><label>日期<input type="date" name="date" value="${timeLabel(s).slice(0,10)}" required></label><label>本地时间<input type="time" name="clock" value="${timeLabel(s).slice(11,16)}" required></label><button class="wide primary">重新排盘</button></form>`);
+  $('form',d).onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget);const at=new Date(f.get('date')+'T'+f.get('clock'));ctx.close(d);update(ctx,s.mode,at);};
  };
  if(!s.requested){s.requested=true;update(ctx,s.mode,s.at);}
 }
@@ -213,7 +214,7 @@ async function update(ctx,mode,at){
   if(token!==s.token||ctx.state.chartState.west!==s)return;
   s.result=result;s.error='';
  }catch(error){if(token===s.token){s.error=error.message;s.result=null;}}
- if(token===s.token&&ctx.state.chartState.west===s&&ctx.state.system==='west'&&ctx.state.tab==='chart'){westernView(ctx);if(!s.error)ctx.onSelectTimeNode('west');}
+ if(token===s.token&&ctx.state.chartState.west===s&&ctx.state.system==='west'){if(ctx.state.tab==='chart')westernView(ctx);if(!s.error)ctx.onSelectTimeNode('west');}
 }
 function options(data,value){return Object.entries(data).map(([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${esc(label)}</option>`).join('');}
 export const astroHouse=()=>cfg().house;

@@ -55,13 +55,22 @@ try{
   await page.evaluate(()=>{delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'));});
   await page.waitForFunction(()=>document.documentElement.style.getPropertyValue('--sheet-limit')==='');
   await page.locator('#inputSheet').getByLabel('命主姓名',{exact:true}).fill('布局示例');
-  await page.locator('#inputSheet').getByLabel('出生日期',{exact:true}).fill('1998-11-21');
+  async function chooseBirthTime(year,month,day,minute){
+   const picker=page.locator('#inputSheet .civil-picker');
+   await picker.locator('summary').click();
+   for(const [key,value] of [['Y',year],['M',month],['D',day],['minute',minute]]){
+    const wheel=picker.locator('[data-wheel="'+key+'"]');
+    const selector='[data-wheel-value="'+value+'"]';
+    await wheel.locator(selector).waitFor({state:'attached'});
+    await wheel.evaluate((node,value)=>{const index=[...node.children].findIndex(option=>Number(option.dataset.wheelValue)===value);node.scrollTop=index*36;},value);
+    await wheel.locator(selector+'[aria-selected="true"]').waitFor({state:'attached'});
+   }
+   await picker.locator('[data-wheel-apply]').click();
+  }
   assert.equal(await page.locator('#inputSheet input[type=date],#inputSheet input[type=time]').count(),0);
-  await page.locator('#inputSheet .civil-picker summary').click();
-  await page.locator('#inputSheet [data-day="22"]').click();
-  assert.equal(await page.locator('#inputSheet [name=date]').inputValue(),'1998-11-22');
-  await page.locator('#inputSheet [name=date]').fill('1998-11-21');
-  await page.locator('#inputSheet').getByLabel('出生时刻',{exact:true}).fill('00:02');
+  await chooseBirthTime(1998,11,21,2);
+  assert.equal(await page.locator('#birthForm [name=date]').inputValue(),'1998-11-21');
+  assert.equal(await page.locator('#birthForm [name=clock]').inputValue(),'00:02');
   await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('30.361448');
   await page.locator('#inputSheet').getByLabel('经度',{exact:true}).fill('109.492552');
   if(width<=390){
@@ -174,7 +183,16 @@ try{
   const internal=await page.locator('#toolSheet .sheet-body').evaluate(n=>({height:n.clientHeight,content:n.scrollHeight}));
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
-  await page.locator('#instantChartButton').click();await page.locator('#restoreOriginalButton:not([hidden])').waitFor();await page.locator('#restoreOriginalButton').click();assert.equal(await page.locator('#restoreOriginalButton').isHidden(),true);
+  await page.locator('#instantChartButton').click();await page.locator('#restoreOriginalButton:not([hidden])').waitFor();const instantClock=(await page.locator('#chartBasisTime').textContent()).split(' · ')[1];
+  assert((await page.locator('[data-profile-name]').textContent()).includes(instantClock));
+  await page.locator('[data-tab=insights]').click();
+  assert((await page.locator('[data-analysis-basis]').textContent()).includes('即刻天象'));
+  assert(await page.locator('#restoreOriginalButton').isVisible());
+  await page.locator('#restoreOriginalButton').click();
+  assert((await page.locator('[data-analysis-basis]').textContent()).includes('布局示例'));
+  assert.equal(await page.locator('#restoreOriginalButton').isHidden(),true);
+  await page.locator('[data-tab=chart]').click();
+  assert((await page.locator('#chartBasisTime').textContent()).includes('1998-11-21 00:02'));
   await page.locator('#mainScrollView').evaluate(n=>n.scrollTop=500);await page.locator('#appTopBar').evaluate(n=>n.dispatchEvent(new MouseEvent('click',{bubbles:true})));await page.waitForFunction(()=>document.querySelector('#mainScrollView').scrollTop<5);
   assert(await page.locator('[data-tab=cases]').isVisible(),JSON.stringify(await page.evaluate(()=>({body:document.body.className,dialogs:[...document.querySelectorAll('dialog[open]')].map(n=>n.id),nav:getComputedStyle(document.querySelector('#bottomNav')).visibility,instant:document.querySelector('#restoreOriginalButton').hidden}))));
   await page.locator('[data-tab=cases]').click();await page.waitForTimeout(400);
@@ -236,7 +254,9 @@ try{
   }
   await page.getByRole('button',{name:'快捷案例',exact:true}).click();
   await checkSheet();
+  assert.equal(await page.locator('#mainScrollView').evaluate(n=>n.style.pointerEvents),'none');
   await page.locator('#caseDrawer [data-diagnostics]').click();
+  assert.equal(await page.locator('#mainScrollView').evaluate(n=>n.style.pointerEvents),'auto');
   await checkSheet();
   await page.locator('[data-check-device]').click();
   await page.getByText('5/5 项通过',{exact:true}).waitFor();
@@ -254,7 +274,7 @@ try{
   await page.locator('[data-tab=cases]').click();
   await page.locator('[data-create]').click();
   await page.locator('#inputSheet').getByLabel('命主姓名',{exact:true}).fill('跨组同伴');
-  await page.locator('#inputSheet').getByLabel('出生日期',{exact:true}).fill('2001-05-04');
+  await chooseBirthTime(2001,5,4,720);
   await page.locator('#birthForm [name=category]').selectOption({label:'亲人'});
   await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('31.23');
   await page.locator('#inputSheet').getByLabel('经度',{exact:true}).fill('121.47');

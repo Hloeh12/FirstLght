@@ -103,5 +103,5 @@ function scopedFlow(a,year,scope,month,day,school){
  const mutagens=transformations(mutagensFor(period.heavenlyStem,school.id),palaces);
  return {school,year,date,scope,label:levels[scope],ganZhi:period.heavenlyStem+period.earthlyBranch,
   month:scopedMonth?selected.month:null,day:scope==='daily'?selectedDay:null,
-  months,days,palaceNames,mutagens};
+  months,days,palaceNames,mutagens,yearlyLuCunBranch:BRANCHES.indexOf('寅卯巳午巳午申酉亥子'[STEMS.indexOf(horoscope.yearly.heavenlyStem)])};
 }

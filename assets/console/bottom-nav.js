@@ -16,3 +16,12 @@ export function updateLiquidPill(tab){
  place();observer?.disconnect();
  if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(place);observer.observe(nav);}
 }
+
+function calibrateActivePill(){
+ const active=document.querySelector('#bottomNav .nav-tab-item.active');
+ if(active)updateLiquidPill(active.dataset.tab);
+}
+window.addEventListener('load',calibrateActivePill);
+window.addEventListener('resize',calibrateActivePill,{passive:true});
+document.fonts?.ready.then(calibrateActivePill);
+document.fonts?.addEventListener?.('loadingdone',calibrateActivePill);

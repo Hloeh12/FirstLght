@@ -1,7 +1,7 @@
 import {installCivilPickers} from './civil-picker.js';
 import {ProfileMachine} from './profile-machine.js';
 import {DIRECTIONS} from '../../src/housing.mjs';
-import {localNowParams} from './now.js';
+import {localNowParams,formatLocalDisplayTime,localDisplayTime} from './now.js';
 import {migrateStorage} from './schema.js';
 import {vedicView,vedicTools} from './vedic.js';
 import {versionCard,releaseHistory} from './releases.js';
@@ -40,20 +40,26 @@ function tell(message){
  clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>{node.hidden=true;},3600);
 }
 window.firstlightReminderStatus=tell;
+function syncModalState(){
+ const drawer=$('#caseDrawer');
+ $('#mainScrollView').style.pointerEvents=drawer?.hasAttribute('open')?'none':'auto';
+ document.body.classList.toggle('modal-open',Boolean(document.querySelector('dialog[open]')));
+}
 function close(dialog){
  if(!dialog.hasAttribute('open'))return;
  if(dialog.close)dialog.close();
  else{dialog.removeAttribute('open');dialog.classList.remove('fallback');}
- document.body.classList.toggle('modal-open',Boolean(document.querySelector('dialog[open]')));
+ syncModalState();
 }
 function open(dialog){
  if(dialog.hasAttribute('open'))return;
  if(dialog.showModal)dialog.showModal();
  else{dialog.setAttribute('open','');dialog.classList.add('fallback');}
- document.body.classList.add('modal-open');
+ syncModalState();
 }
 for(const d of document.querySelectorAll('dialog')){
  d.addEventListener('click',e=>{if(e.target===d)close(d);});
+ d.addEventListener('close',syncModalState);
  d.addEventListener('cancel',e=>{e.preventDefault();close(d);});
 }
 function sheet(id,title,body){
@@ -66,7 +72,7 @@ function sheet(id,title,body){
  return d;
 }
 function switchTab(tab,system=state.system){
- if(tab!=='chart')restoreInstant();
+ if(!['chart','insights'].includes(tab))restoreInstant();
  for(const d of document.querySelectorAll('dialog'))close(d);
  state.tab=tab;state.system=system;
  render();
@@ -336,9 +342,6 @@ function birthSheet(profile,seed={}){
  const form=$('form',d),fields=form.elements,feedback=$('#birthStatus',d),matches=$('#cityMatches',d);
  const calendar=()=>{
   const lunar=fields.calendar.value==='lunar';
-  const picker=fields.date.closest('.civil-picker').querySelector('details');
-  picker.hidden=lunar;
-  if(lunar)picker.open=false;
   $('[data-leap]',d).hidden=!lunar;
  };
  fields.calendar.onchange=calendar;calendar();
@@ -467,7 +470,7 @@ function caseDrawer(){
 function restoreInstant(){if(state.instantSnapshot){Object.assign(state,state.instantSnapshot);state.instantSnapshot=null;}}
 function restoreOriginal(){
  if(!state.instantSnapshot)return;
- restoreInstant();state.pending=false;state.error='';render();
+ restoreInstant();state.chartState={};state.activeTimeSystem=null;state.pending=false;state.error='';render();
 }
 async function instantChart(){
  const at=new Date(),system=['bazi','ziwei','vedic','west'].includes(state.system)?state.system:'ziwei',token=++generation;flight?.abort();
@@ -477,8 +480,8 @@ async function instantChart(){
   const result=await request('/api/console/reading',{birth});if(token!==generation)return;
   state.instantSnapshot??={profile:state.profile,reading:state.reading,chartState:state.chartState,activeTimeSystem:state.activeTimeSystem};
   state.profile={id:'instant-preview',name:'即刻天象',fields:birth,summary:summary(result)};state.reading=result;state.chartState={};state.activeTimeSystem=null;state.pending=false;state.error='';
-  if(system==='west')state.chartState.west={mode:'sky',at,result:null,token:0,error:'',requested:false,instant:{at:at.toISOString(),local:birth.dateStr+' '+birth.timeStr,place:birth.city.label,source:'设备本地时区 UTC'+birth.tz}};
-  state.tab='chart';state.system=system;render();
+  if(system==='west')state.chartState.west={mode:'sky',at,result:null,token:0,error:'',requested:false,instant:{at:at.toISOString(),local:formatLocalDisplayTime(birth),place:birth.city.label,source:'设备本地时区 UTC'+birth.tz}};
+  state.instantAt=at.toISOString();state.tab='chart';state.system=system;render();
  }catch(error){tell(error.message);}
 }
 function profileTitle(){
@@ -487,7 +490,7 @@ function profileTitle(){
  const dst=info?.timeCorrection?.dstApplied?' · [夏令时-1h]':'';
  const badge=late?' · 晚子时'+((info?.lateZishi||p.fields.lateZishi)==='current-day'?'归当日':'归次日'):'';
  const instant=state.tab==='chart'&&state.system==='west'&&state.chartState.west?.instant;
- const label=state.instantSnapshot?'⏱ 即刻天象 · '+p.fields.dateStr+' '+p.fields.timeStr:p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge+dst:instant?'⏱ 即刻天象':'🌸 开始排盘';
+ const label=state.instantSnapshot?'⏱ 即刻天象 · '+formatLocalDisplayTime(p.fields):p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge+dst:instant?'⏱ 即刻天象':'🌸 开始排盘';
  $('[data-profile-name]').textContent=label.replace(dst,'');
  const dstChip=$('[data-profile-dst]');dstChip.textContent=dst?'夏令时-1h':'';dstChip.hidden=!dst;
  dstChip.title=info?.timeCorrection?.warning||'中国历史夏令时校正';
@@ -504,7 +507,7 @@ function resonanceCard(){
  const result=state.resonance;
  if(!result)return '<article class="card liquid-glass" data-resonance><h2>三盘共振证据链</h2><p role="status">正在本机交叉核对岁运、四化与行运…</p></article>';
  if(result.error)return `<article class="card" data-resonance><h2>三盘共振证据链</h2><p>${esc(result.error)}</p></article>`;
- return `<article class="card liquid-glass" data-resonance><h2>三盘共振证据链</h2><p class="thin">核对时刻 ${esc(result.at.replace('T',' ').replace('Z',' UT'))}</p>
+ return `<article class="card liquid-glass" data-resonance><h2>三盘共振证据链</h2><p class="thin">核对时刻 ${esc(localDisplayTime(result.at))}</p>
  <p>${result.consensus.length?'检出 '+result.consensus.length+' 组同主题、同向的三体系线索。':'当前没有三体系同主题同向共振，不强行拼接结论。'}</p>
  ${result.chains.slice(0,6).map(c=>`<div class="resonance-evidence"><b>${esc(c.topic+' · '+c.direction)} · ${c.coverage}/3 体系</b><div class="energy-track" role="meter" aria-label="证据覆盖体系数" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${c.coverage}"><span class="energy-fill" style="width:${c.coverage/3*100}%"></span></div>${c.items.slice(0,6).map(e=>`<p><small>${esc(e.system)}</small> ${esc(e.text)}</p>`).join('')}</div>`).join('')}<small>${esc(result.method)}</small></article>`;
 }
@@ -512,8 +515,15 @@ function selectedPeriodCard(){
  const system=state.system;
  const b=system==='bazi'?state.chartState.bazi?.data?.guidance:null;
  const z=system==='ziwei'?state.chartState.ziwei?.flow:null;
- const w=system==='west'?state.chartState.west:null;
+ const w=system==='west'&&state.chartState.west?.mode!=='natal'?state.chartState.west:null;
  const v=system==='vedic'?state.chartState.vedic:null;
+ if(state.instantSnapshot&&!b&&!z&&!w?.result&&!v?.activePeriod){
+  const data=state.reading;
+  const pillars=data.bazi.pillars.map(p=>p.stem+p.branch).join(' ');
+  const life=data.ziwei.palaces.find(p=>p.name==='命宫');
+  const planet=data.western.planets.find(p=>p.key==='sun');
+  return `<article class="card liquid-glass period-guidance"><h2>即刻天象 · 当下推演</h2><p>${esc(formatLocalDisplayTime(state.profile.fields))}</p><p>八字四柱 ${esc(pillars)} · 日主 ${esc(data.bazi.strength.kind)}。</p><p>紫微命宫 ${esc(life.earthlyBranch)} · 西洋太阳 ${esc(planet.sign)} · 印度上升 ${esc(data.vedic.lagna)}。</p></article>`;
+ }
  if(!b&&!z&&!w?.result&&!v?.activePeriod)return '<article class="card liquid-glass"><h2>当前时空点</h2><p>当前为本命视角。选择时间滑轨后，这里展示对应的阶段线索。</p></article>';
  const parts=[];
  if(b)parts.push(`<h3>八字 · ${esc(b.title)}</h3><p>${esc(b.summary)}</p>${b.influences.map(x=>`<p>${esc(x.text)}</p>`).join('')}${b.advice.map(x=>`<p><b>${esc(x.topic)}</b> ${esc(x.text)}</p>`).join('')}`);
@@ -532,7 +542,7 @@ function selectedPeriodCard(){
    .filter(a=>[0,90,180].includes(a.angle)&&outerKeys.has(a.aKey))
    .sort((a,b)=>a.orb-b.orb).slice(0,5);
   const title={sky:'天象',transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',profection:'小限',natal:'本命'}[w.mode]||w.mode;
-  parts.push(`<h3>西洋 · ${esc(w.at.getFullYear()+'年'+(w.at.getMonth()+1)+'月')} ${esc(title)}推演</h3><p>所选时刻 ${esc(w.at.toISOString().slice(0,16).replace('T',' '))} UT；${cross?'推运星体对照本命星位':'当前盘面'}。</p>${relations.map(a=>`<p><b>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}</b> · Orb ${a.orb.toFixed(2)}°，${a.applying===true?'入相':a.applying===false?'出相':'阶段未定'}；${[90,180].includes(a.angle)?'优先核对现实压力与边界，暂缓过量承诺。':'可观察合作、表达或行动窗口，仍须结合具体落宫。'}</p>`).join('')||'<p>当前容许度内未检出关键相位，不额外编造事件。</p>'}`);
+  parts.push(`<h3>西洋 · ${esc(w.at.getFullYear()+'年'+(w.at.getMonth()+1)+'月')} ${esc(title)}推演</h3><p>所选时刻 ${esc(localDisplayTime(w.at))} 本地；${cross?'推运星体对照本命星位':'当前盘面'}。</p>${relations.map(a=>`<p><b>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}</b> · Orb ${a.orb.toFixed(2)}°，${a.applying===true?'入相':a.applying===false?'出相':'阶段未定'}；${[90,180].includes(a.angle)?'优先核对现实压力与边界，暂缓过量承诺。':'可观察合作、表达或行动窗口，仍须结合具体落宫。'}</p>`).join('')||'<p>当前容许度内未检出关键相位，不额外编造事件。</p>'}`);
  }
  if(v?.activePeriod){
   const p=v.activePeriod;
@@ -542,8 +552,7 @@ function selectedPeriodCard(){
 }
 function onSelectTimeNode(system){
  state.activeTimeSystem=system;
- const box=$('#insightContent');
- if(box)box.innerHTML=selectedPeriodCard();
+ forceRefreshAllInsights();
  if(state.tab==='chart'&&['west','vedic'].includes(system)){
   const section=root.querySelector(system==='west'?'section[aria-label="西洋占星"]':'#vedic');
   if(section){let host=section.querySelector('[data-dynamic-insight]');if(!host){host=document.createElement('div');host.dataset.dynamicInsight='';section.append(host);}host.innerHTML=selectedPeriodCard();}
@@ -561,33 +570,53 @@ function selectedTimeISO(){
   if(s?.pick?.year!=null)return s.pick.year+'-07-01T12:00:00Z';
   if(s?.pick?.luck!=null){const year=s.data.cycles?.[s.pick.luck]?.startYear;if(year)return year+'-07-01T12:00:00Z';}
  }
- if(state.system==='west'&&state.chartState.west?.at)return state.chartState.west.at.toISOString();
- if(state.system==='vedic'&&state.chartState.vedic?.at)return state.chartState.vedic.at;
+ if(state.instantSnapshot&&state.activeTimeSystem===null)return state.instantAt;
+ if(state.system==='west'&&state.chartState.west?.mode!=='natal'&&state.chartState.west?.at)return state.chartState.west.at.toISOString();
+ if(state.system==='vedic'&&state.chartState.vedic?.activePeriod?.at)return state.chartState.vedic.activePeriod.at;
  return new Date().toISOString();
+}
+let insightGeneration=0;
+function forceRefreshAllInsights(){
+ const revision=++insightGeneration;
+ const box=$('#insightContent');
+ if(!box||!state.reading||!state.profile)return;
+ const {bazi,ziwei,west,vedic}=state.chartState;
+ const b=bazi?.data?.guidance;
+ const z=ziwei?.flow;
+ const current={bazi:b&&[b.year,b.title,b.month].filter(Boolean).join(' '),ziwei:z&&[z.year,z.ganZhi+z.label,z.month!=null?z.month+'月':'',z.day!=null?z.day+'日':''].filter(Boolean).join(' '),
+  west:west?.mode!=='natal'&&west?.at?localDisplayTime(west.at):null,vedic:vedic?.activePeriod?.date};
+ const basis=$('[data-analysis-basis]');
+ const clock=formatLocalDisplayTime(normalized(state.profile));
+ basis.textContent='🌸 当前分析基准：'+state.profile.name+' · '+(current[state.system]||(state.instantSnapshot?'即刻 '+clock:'本命 '+clock))+'（'+(labels[state.system]||'综合')+'）';
+ box.innerHTML=selectedPeriodCard();
+ const host=$('[data-resonance-host]');
+ if(!host)return;
+ if(!current[state.system]&&!state.instantSnapshot){host.replaceChildren();return;}
+ state.resonance=null;
+ host.innerHTML=resonanceCard();
+ const at=selectedTimeISO(),config=stored('xy_astro_config',{});
+ request('/api/console/resonance',{birth:normalized(state.profile),at,config}).then(result=>{
+  if(revision!==insightGeneration||!host.isConnected)return;
+  state.resonance=result;host.innerHTML=resonanceCard();
+ }).catch(error=>{
+  if(revision!==insightGeneration||!host.isConnected)return;
+  state.resonance={error:error.message};host.innerHTML=resonanceCard();
+ });
 }
 function insights(){
  const r=state.reading;
  if(!r){root.innerHTML='<p class="empty">激活案例后查看八字、紫微与西洋占星的综合报告。</p>';return;}
- const resonanceAt=selectedTimeISO(),resonanceConfig=stored('xy_astro_config',{});
- const resonanceKey=state.profile.id+'|'+resonanceAt.slice(0,13)+'|'+JSON.stringify(resonanceConfig);
- if(state.resonanceProfile!==resonanceKey){
-  state.resonanceProfile=resonanceKey;state.resonance=null;
-  const id=state.profile.id,token=state.reading;
-  request('/api/console/resonance',{birth:normalized(state.profile),at:resonanceAt,config:resonanceConfig}).then(result=>{
-   if(state.reading!==token||state.profile?.id!==id||state.resonanceProfile!==resonanceKey)return;
-   state.resonance=result;if(state.tab==='insights')insights();
-  }).catch(error=>{if(state.reading===token&&state.resonanceProfile===resonanceKey){state.resonance={error:error.message};if(state.tab==='insights')insights();}});
- }
  const {bazi,ziwei,western}=r;
  const active=ziwei.decades.map(d=>[d.ageRange.join('–')+' 岁',d.yearRange.join('–'),d.palaceName]);
  const periodActive=Boolean(state.system==='bazi'&&state.chartState.bazi?.data?.guidance||state.system==='ziwei'&&state.chartState.ziwei?.flow||state.system==='west'&&state.chartState.west?.result||state.system==='vedic'&&state.chartState.vedic?.activePeriod);
  root.innerHTML=`<section data-period-active="${periodActive}"><h1>洞见${periodActive?' · 当期推演':''}</h1><p class="muted">${esc(state.profile.name)} · 四体系合参</p>
- <div id="insightContent" aria-live="polite">${selectedPeriodCard()}</div>
- ${resonanceCard()}<article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
+ <p class="analysis-basis" data-analysis-basis></p><div id="insightContent" aria-live="polite"></div>
+ <div data-resonance-host></div><article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
  <article class="card liquid-glass"><h2>职责、资源与人际</h2><p>官禄与财帛可分别观察职责和资源，西方天顶 ${esc(western.mc.sign)} 可对照事业表达，印度上升 ${esc(r.vedic.lagna)} 采用恒星黄道。</p><p>${esc(bazi.relationships.map(l=>l.pattern+l.type).join('、')||'本命未触发当前规则表中的干支关系')}</p></article>
  <article class="card liquid-glass"><h2>印度占星 · 星宿与大运</h2><p>Lahiri上升 ${esc(r.vedic.lagna)}；月亮 ${esc(r.vedic.planets.find(p=>p.key==='moon').nakshatra)}，宿度 ${r.vedic.planets.find(p=>p.key==='moon').nakDegree.toFixed(4)}°。</p><p>当前 Vimshottari 大运：${esc(r.vedic.active?.lord||'未落在当前所列区间')}。可对照该星本命宫位与前三体系的阶段线索。</p></article>
  <article class="card liquid-glass"><h2>全生命周期 · 紫微大限</h2>${table(['虚岁','年份','大限宫'],active)}</article>
  <details class="card liquid-glass" data-natal-background><summary>展开本命背景报告（与当前流限分开阅读）</summary>${Object.entries(r.report?.sections||{}).map(([name,lines])=>`<section><h2>${esc(reportTitle(name))}</h2>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}</section>`).join('')}</details></section>`;
+ forceRefreshAllInsights();
 }
 function reportTitle(key){
  return {'w-persona':'性格与天赋','w-career':'事业方向','w-wealth':'资源与财富','w-love':'情感关系','w-health':'生活节奏','z-palaces':'紫微十二宫','z-mutagen':'生年四化','w-risks':'长期课题','v-dasha':'印度大运'}[key]||'综合观察';
@@ -653,11 +682,15 @@ const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,swit
 };
 function render(){
  profileTitle();
+ const chartClock=$('#chartBasisTime');
+ chartClock.hidden=state.tab!=='chart'||!state.profile||!state.reading;
+ if(!chartClock.hidden)chartClock.textContent=(state.instantSnapshot?'即刻天象':'本命基准')+' · '+formatLocalDisplayTime(normalized(state.profile));
  $('#toolsButton').hidden=!(state.tab==='chart'&&(state.reading||state.system==='west'&&state.chartState.west?.birthOverride));
  updateLiquidPill(state.tab);
  for(const b of $('#bottomNav').querySelectorAll('[data-tab]')){const active=b.dataset.tab===state.tab;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
  if(state.tab==='cases'){renderCases();return;}
  if(state.tab==='insights'){insights();return;}
+ forceRefreshAllInsights();
  if(state.tab==='me'){preferences();return;}
  if(!state.reading&&state.system!=='calendar'&&!(state.system==='west'&&state.chartState.west?.birthOverride)){
   root.innerHTML=`<p class="empty">${esc(state.pending?'正在读取命盘…':state.error||'点按顶部命主气泡开始排盘。')}</p>${state.error&&state.profile?btn('重试','data-retry'):''}`;

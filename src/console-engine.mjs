@@ -19,10 +19,8 @@ function solarInput(birth,bazi=baziPro({birth})){
 }
 function consoleReading({birth}){
  const bazi=baziPro({birth}),standard=solarInput(birth,bazi);
- const {Y,M,D,h,mi}=standard;
- const utcOffset=(Date.UTC(Y,M-1,D,h,mi)-Date.parse(bazi.info.utc))/3600000;
  const ziwei=ziweiChart(standard);
- const full=chart({...standard,skipZiwei:true});
+ const full=chart(standard,{baseOnly:true});
  return {bazi,ziwei,western:full.western,vedic:vedicReading(full.vedic,full.meta.utc),analysis:full.analysis,meta:full.meta,
   report:localTemplateReport({...full,ziwei})};
 }

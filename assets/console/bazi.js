@@ -87,6 +87,7 @@ export function baziView(ctx){
  $('[data-combine]',ctx.root).onclick=()=>update(ctx,s.pick,!s.combine);
  const rails=$('[data-bazi-rails]',ctx.root);
  rails.onclick=e=>{
+  if(e.target.closest('[data-reset-period]')){update(ctx,{},s.combine);return;}
   const b=e.target.closest('[data-rail]');
   if(!b)return;
   const {rail:id,pick:v}=b.dataset,n=Number(v),{pick}=s;
@@ -135,8 +136,9 @@ async function update(ctx,pick,combine){
  }catch(error){if(token===s.token)s.error=error.message;}
  if(s.token===token&&ctx.state.chartState.bazi===s&&ctx.state.tab==='chart'&&ctx.state.system==='bazi'){
   $('#baziStatus',ctx.root).textContent=s.error;
-  if(!s.error){refresh(ctx,s);ctx.onSelectTimeNode('bazi');}
+  if(!s.error)refresh(ctx,s);
  }
+ if(s.token===token&&!s.error&&ctx.state.chartState.bazi===s&&ctx.state.system==='bazi')ctx.onSelectTimeNode('bazi');
 }
 const panels=['基础信息','五行关系','干支刑冲合会','天罡称骨','流年全排','快捷八字'];
 export function baziTools(ctx,host){

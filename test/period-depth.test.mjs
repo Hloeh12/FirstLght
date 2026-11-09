@@ -30,3 +30,11 @@ test('natal favorable and unfavorable branch clashes lead to distinct advice',as
  assert.match(defense.influences[0].text,/用神受冲/);
  assert.notEqual(opening.advice[1].text,defense.advice[1].text);
 });
+
+test('annual Lu Cun and Hua Lu recognize meeting, opposition and natal Lu Cun',async()=>{
+ const {practicalZiwei}=await import('../src/ziwei-practical.mjs');
+ const chart={palaces:Array.from({length:12},(_,branch)=>({branch,name:'宫'+branch,stars:branch===4?[{name:'禄存'}]:[]}))};
+ const annual=(branch,yearlyLuCunBranch)=>({scope:'yearly',yearlyLuCunBranch,mutagens:[{type:'禄',branch}]});
+ for(const flow of [annual(2,2),annual(8,2),annual(4,3)])assert(practicalZiwei(chart,flow).some(item=>item.name==='双禄交驰'));
+ assert(!practicalZiwei(chart,annual(3,2)).some(item=>item.name==='双禄交驰'));
+});

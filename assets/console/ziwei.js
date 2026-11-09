@@ -1,3 +1,4 @@
+import {formatLocalDisplayTime} from './now.js';
 import {practicalZiwei} from '../../src/ziwei-practical.mjs';
 import {playSuccessSound,reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,selectedRails,table} from './ui.js';
@@ -46,7 +47,7 @@ function center(ctx,s){
   <div class="chips">${practicalZiwei(z,s.flow).map(x=>`<span class="chip" title="${esc(x.text)}">${esc(x.name+' · '+x.palace)}</span>`).join('')}</div>
   <p>命主 ${esc(z.soul)}　身主 ${esc(z.body)}</p>
   <p>${z.decades[0].ageRange[0]} 岁起限 · ${esc(s.flow?timeLabels[s.flow.scope]+' '+s.flow.ganZhi:'本命总览')}</p>
-  <p class="muted thin">${esc(s.flow?.date||'本次排盘 '+new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',dateStyle:'short',timeStyle:'short'}).format(new Date()))}</p>
+  <p class="muted thin">${esc(s.flow?.date||(ctx.state.instantSnapshot?'即刻 '+formatLocalDisplayTime(p.fields):'本命 '+b.solar+' '+b.clock))}</p>
   <div class="chips">${z.sihua.map(m=>badge(m.type,m.type,palace(z,z.palaces.find(p=>p.name===m.palace)?.branch)?.branch,'natal')).join('')}</div>${precision}</div>`;
 }
 const coreAssist=new Set(['左辅','右弼','文昌','文曲','天魁','天钺','擎羊','陀罗','火星','铃星','地空','地劫']);
@@ -259,10 +260,12 @@ export function ziweiView(ctx,arrival=false){
   ctx.explain(b.textContent,cues[b.dataset.t]+'。四化属于当前所选命盘层。');
 
  };
+ const reset=()=>{s.token++;s.flow=null;s.badge=null;s.error='';ziweiView(ctx);ctx.onSelectTimeNode('ziwei');};
+ for(const b of panel.querySelectorAll('[data-reset-period]'))b.onclick=reset;
  for(const b of panel.querySelectorAll('[data-rail]'))b.onclick=()=>{
   const v=b.dataset.pick;
   ctx.state.activeTimeSystem='ziwei';
-  if(v==='natal'){s.token++;s.flow=null;s.badge=null;s.error='';ziweiView(ctx);ctx.onSelectTimeNode('ziwei');return;}
+  if(v==='natal'){reset();return;}
   const n=Number(v),key=b.dataset.rail;
   const p=key==='大限'?{scope:'decadal',year:n}:key==='流年'?{scope:'yearly',year:n}:
    key==='流月'?{scope:'monthly',year:flow.year,month:n}:{scope:'daily',year:flow.year,month:flow.month,day:n};
@@ -287,7 +290,7 @@ async function setPeriod(ctx,p,type){
   if(ctx.state.chartState.ziwei!==s||n!==s.token)return;
   s.chart=target;s.flow=flow;s.badge=null;s.error='';
  }catch(error){if(n===s.token)s.error=error.message;}
- if(ctx.state.chartState.ziwei===s&&n===s.token&&ctx.state.tab==='chart'&&ctx.state.system==='ziwei'){ziweiView(ctx);if(!s.error)ctx.onSelectTimeNode('ziwei');}
+ if(ctx.state.chartState.ziwei===s&&n===s.token&&ctx.state.system==='ziwei'){if(ctx.state.tab==='chart')ziweiView(ctx);if(!s.error)ctx.onSelectTimeNode('ziwei');}
 }
 export function ziweiTools(ctx,host){
  const s=current(ctx);

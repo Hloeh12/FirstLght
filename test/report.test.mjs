@@ -26,7 +26,7 @@ test('offline Bazi report emits four evidence-based long sections',()=>{
  assert.ok(report.sections[1].lines.join('').includes('忌神'));
 });
 test('offline Ziwei report emits four layers and validates real pattern evidence',()=>{
- const report=buildZiweiKnowledgeReport({palaces:[{branch:0,name:'命宫',majorStars:[{name:'紫微'}],borrowedStars:[],minorStars:[{name:'擎羊'}]}]},{
+ const report=buildZiweiKnowledgeReport({palaces:[{branch:0,name:'命宫',majorStars:[{name:'紫微'}],borrowedStars:[],minorStars:[]},{branch:5,name:'官禄宫',majorStars:[],borrowedStars:[],minorStars:[{name:'擎羊'}]},{branch:6,name:'迁移宫',majorStars:[],borrowedStars:[],minorStars:[]},{branch:7,name:'财帛宫',majorStars:[],borrowedStars:[],minorStars:[{name:'陀罗'}]}]},{
   scope:'yearly',label:'流年',ganZhi:'丙午',date:'2026-06-01',palaceNames:{0:'命宫',6:'迁移'},
   mutagens:[{star:'紫微',type:'禄',branch:0},{star:'天府',type:'禄',branch:6},{star:'天机',type:'忌',branch:6}]
  });

@@ -230,7 +230,7 @@ try{
    const buttons=[...document.querySelectorAll('#appTopBar button')].filter(b=>b.getClientRects().length).map(b=>{const r=b.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};});
    return {top:top.bottom,main:main.top,navHeight:nav.height,buttons,width:innerWidth,rootX:document.documentElement.getBoundingClientRect().left};
   });
-  assert(layers.top<=layers.main+.5);assert.equal(layers.navHeight,60);assert.equal(layers.rootX,0);
+  assert(layers.top<=layers.main+.5);assert.equal(layers.navHeight,56);assert.equal(layers.rootX,0);
   for(let i=0;i<layers.buttons.length;i++){
    const b=layers.buttons[i];assert(b.left>=0&&b.right<=layers.width);if(i)assert(b.left>=layers.buttons[i-1].right);
   }
@@ -240,6 +240,7 @@ try{
   await checkSheet();
   await page.locator('[data-check-device]').click();
   await page.getByText('5/5 项通过',{exact:true}).waitFor();
+  console.log(engine+' '+width+'×'+height+' 离线自检：'+(await page.locator('[data-diagnostic-checks] li').allTextContents()).join(' | '));
   await page.locator('#toolSheet [data-close]').click();
   await page.locator('#activeProfile').click();
   await checkSheet();

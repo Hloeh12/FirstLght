@@ -1,11 +1,11 @@
+import {buildPeriodReport} from './period-report.mjs';
 const themes=['长辈、外部环境','工作与组织','亲密相处、日常安排','长期计划、照顾责任'];
 const riskTypes=new Set(['六冲','相刑','相害','相破']);
 export function generateTimeStepInsight(data){
  const {pillars,selected,relationships,strength,natalStrength=strength}=data;
  if(!selected.length)return null;
  const current=[...selected].reverse().find(p=>['流日','流月','流年'].includes(p.name))??selected.at(-1);
- const index=pillars.length+selected.indexOf(current);
- const links=relationships.filter(r=>r.ids.includes(index)&&r.ids.some(i=>i<pillars.length));
+ const links=relationships.filter(r=>r.ids.some(i=>i<pillars.length)&&r.ids.some(i=>i>=pillars.length));
  const risk=links.filter(r=>riskTypes.has(r.type)),harmonious=links.filter(r=>['天干五合','六合','三合局','三会方'].includes(r.type));
  const influences=links.map(r=>{
   const locations=r.ids.filter(i=>i<pillars.length).map(i=>pillars[i].name+'（'+themes[i]+'）');
@@ -20,7 +20,7 @@ export function generateTimeStepInsight(data){
    role==='caution'?pillar+branch+element+'为原局所忌，冲忌有松动旧局的机会，宜试探新方案，仍需核实成本和回报。':
    pillar+branch+element+'未列入原局喜忌，按该柱领域的变动观察。').join('');
   const meaning=r.type==='天干五合'?(activated?'本次合化模型已计入'+r.element:'先按相合观察，未直接认定化局'):r.meaning;
-  return {type:r.type,pattern:r.pattern,locations,affected,text:current.stem+current.branch+current.name+'引动 '+r.pattern+r.type+'，涉及'+locations.join('、')+'。'+meaning+impact};
+  return {type:r.type,pattern:r.pattern,locations,affected,text:r.ids.filter(i=>i>=pillars.length).map(i=>selected[i-pillars.length]).map(p=>p.stem+p.branch+p.name).join('、')+'引动 '+r.pattern+r.type+'，涉及'+locations.join('、')+'。'+meaning+impact};
  });
  const usefulHit=influences.some(item=>item.affected.some(x=>x.role==='useful'));
  const cautionHit=influences.some(item=>item.affected.some(x=>x.role==='caution'));
@@ -36,6 +36,7 @@ export function generateTimeStepInsight(data){
   stem,scope:current.name,year:current.year??null,month:current.label??null,
   summary:current.stem+current.branch+current.name+'引动：'+stem+'。日主扶助参考 '+strength.support.toFixed(1)+'%，'+strength.kind+'，原局 '+natalStrength.support.toFixed(1)+'%。'+caution,
   influences,
+  sections:buildPeriodReport({...data,natalStrength},current,influences,data.monthWindows??[]),
   advice:[
    {topic:'事业与行动',text:work+(usefulHit?'保留原有支持，分阶段推进。':cautionHit?'可小范围试行替代方案，核对结果再扩大。':'')},
    {topic:'财务与边界',text:usefulHit?'用神受冲，优先保留现金缓冲并延后不可逆的大额承诺。':cautionHit?'可整理低效支出并试行新收入渠道，按实际回款判断。':risk.length?'本期先核对付款、合同和共同支出，减少临时承诺。':

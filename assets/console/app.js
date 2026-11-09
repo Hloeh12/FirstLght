@@ -1,3 +1,4 @@
+import {periodSections} from './ui.js';
 import {installCivilPickers} from './civil-picker.js';
 import {ProfileMachine} from './profile-machine.js';
 import {DIRECTIONS} from '../../src/housing.mjs';
@@ -526,7 +527,7 @@ function selectedPeriodCard(){
  }
  if(!b&&!z&&!w?.result&&!v?.activePeriod)return '<article class="card liquid-glass"><h2>当前时空点</h2><p>当前为本命视角。选择时间滑轨后，这里展示对应的阶段线索。</p></article>';
  const parts=[];
- if(b)parts.push(`<h3>八字 · ${esc(b.title)}</h3><p>${esc(b.summary)}</p>${b.influences.map(x=>`<p>${esc(x.text)}</p>`).join('')}${b.advice.map(x=>`<p><b>${esc(x.topic)}</b> ${esc(x.text)}</p>`).join('')}`);
+ if(b)parts.push(`<h3>八字 · ${esc(b.title)}</h3><p>${esc(b.summary)}</p>${periodSections(b)}`);
  if(z){
   const chart=state.chartState.ziwei.chart;
   const palace=chart?.palaces.find(p=>z.palaceNames[p.branch]==='命宫');
@@ -610,8 +611,7 @@ function insights(){
  const active=ziwei.decades.map(d=>[d.ageRange.join('–')+' 岁',d.yearRange.join('–'),d.palaceName]);
  const periodActive=Boolean(state.system==='bazi'&&state.chartState.bazi?.data?.guidance||state.system==='ziwei'&&state.chartState.ziwei?.flow||state.system==='west'&&state.chartState.west?.result||state.system==='vedic'&&state.chartState.vedic?.activePeriod);
  root.innerHTML=`<section data-period-active="${periodActive}"><h1>洞见${periodActive?' · 当期推演':''}</h1><p class="muted">${esc(state.profile.name)} · 四体系合参</p>
- <p class="analysis-basis" data-analysis-basis></p><div id="insightContent" aria-live="polite"></div>
- <div data-resonance-host></div><article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
+ <p class="analysis-basis" data-analysis-basis></p><div data-resonance-host></div><div id="insightContent" aria-live="polite"></div><article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
  <article class="card liquid-glass"><h2>职责、资源与人际</h2><p>官禄与财帛可分别观察职责和资源，西方天顶 ${esc(western.mc.sign)} 可对照事业表达，印度上升 ${esc(r.vedic.lagna)} 采用恒星黄道。</p><p>${esc(bazi.relationships.map(l=>l.pattern+l.type).join('、')||'本命未触发当前规则表中的干支关系')}</p></article>
  <article class="card liquid-glass"><h2>印度占星 · 星宿与大运</h2><p>Lahiri上升 ${esc(r.vedic.lagna)}；月亮 ${esc(r.vedic.planets.find(p=>p.key==='moon').nakshatra)}，宿度 ${r.vedic.planets.find(p=>p.key==='moon').nakDegree.toFixed(4)}°。</p><p>当前 Vimshottari 大运：${esc(r.vedic.active?.lord||'未落在当前所列区间')}。可对照该星本命宫位与前三体系的阶段线索。</p></article>
  <article class="card liquid-glass"><h2>全生命周期 · 紫微大限</h2>${table(['虚岁','年份','大限宫'],active)}</article>

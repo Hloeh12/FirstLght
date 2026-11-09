@@ -35,3 +35,7 @@ export const isoLocal=(date=new Date())=>new Intl.DateTimeFormat('sv-SE',{timeZo
 export const splitDate=date=>{const [Y,M,D]=date.split('-').map(Number);return {Y,M,D};};
 export const symbols=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 export const zodiacNames=['白羊','金牛','双子','巨蟹','狮子','处女','天秤','天蝎','射手','摩羯','水瓶','双鱼'];
+
+export function periodSections(report){
+ return report.sections.map(section=>`<section><h4>${esc(section.title)}</h4>${section.lines.map(line=>'<p>'+esc(line)+'</p>').join('')}</section>`).join('');
+}

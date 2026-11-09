@@ -1,5 +1,5 @@
 import {reducedMotion} from './feedback.js';
-import {$,btn,esc,term,row,bars,table,selectedRails,splitDate} from './ui.js';
+import {$,btn,esc,term,row,bars,table,selectedRails,splitDate,periodSections} from './ui.js';
 const setUp=ctx=>ctx.state.chartState.bazi??={data:ctx.state.reading.bazi,combine:false,pick:{},token:0,error:'',selected:[],pulse:false};
 const stages={
  长生:'像新生一样，表示力量开始生长。',沐浴:'处于初生后的变化期，表示适应和转换。',冠带:'表示逐渐成形、开始显露。',临官:'表示条件齐备、开始承担职责。',帝旺:'表示力量处在高点。',衰:'表示达到高点后开始回落。',病:'表示力量受到牵制，适合观察休整需求。',死:'表示某一阶段结束。',墓:'表示力量归藏、暂未显露。',绝:'表示旧阶段与新阶段的转折。',胎:'表示新阶段开始孕育。',养:'表示积累条件，准备进入下一阶段。'
@@ -29,8 +29,7 @@ function details(d){
  ${bars(d.strength.percentages)}<p class="thin">喜用参考 ${d.strength.useful.join('、')||'五行扶助较均衡'} · 忌偏参考 ${d.strength.caution.join('、')||'不单列'}</p><small>${esc(d.strength.method)}</small></article>
  <article class="card"><h2>干支关系</h2>${relationships(d)}<p class="thin">日主通根 ${esc(d.roots.map(r=>r.pillar+r.branch+'藏'+r.stem).join('、')||'未见')} · 透干 ${esc(d.revealed.map(r=>r.rootAt+'藏'+r.stem+'透'+r.visibleAt).join('、')||'未见')} · 旬空 ${esc(d.voidBranches.join('、'))}</p></article>
  ${d.guidance?`<article class="card period-guidance" aria-live="polite"><h2>${esc(d.guidance.title)}</h2><p>${esc(d.guidance.summary)}</p>
- ${d.guidance.influences.map(r=>`<p class="period-influence">${esc(r.text)}</p>`).join('')}
- <dl>${d.guidance.advice.map(a=>`<div><dt>${esc(a.topic)}</dt><dd>${esc(a.text)}</dd></div>`).join('')}</dl><small>传统干支规则与权重模型提供的观察参考。</small></article>`:''}
+ ${periodSections(d.guidance)}<small>传统干支规则与权重模型提供的观察参考。</small></article>`:''}
  ${d.selected.length?`<article class="card"><h2>当前运程</h2>${d.selected.map(p=>`<p>${esc(p.name+' '+p.stem+p.branch)} · ${term(p.tenGod)} · ${term(p.changsheng,stages[p.changsheng])} · ${term(p.nayin,'六十甲子的纳音分类。')}</p>`).join('')}</article>`:''}`;
 }
 function entryCard(d){

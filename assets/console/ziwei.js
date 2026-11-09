@@ -1,3 +1,4 @@
+import {ZIWEI_FLOW_RULES as flowRules} from '../../www/js/rules.js';
 import {formatLocalDisplayTime} from './now.js';
 import {practicalZiwei} from '../../src/ziwei-practical.mjs';
 import {playSuccessSound,reducedMotion} from './feedback.js';
@@ -178,18 +179,12 @@ function railData(s){
 }
 export function ziweiPeriodEvidence(chart, flow){
  if(!chart||!flow)return [];
- const actions={
-  禄:'盘点新增资源，先确认兑现条件',
-  权:'核对权限与职责，明确谁做决定',
-  科:'借助文书、专业意见或公开反馈降低误解',
-  忌:'把反复、延误或误解纳入预案，保留回旋余地'
- };
  const rows=flow.mutagens.map(move=>{
   const target=palace(chart,move.branch);
   if(!target)return move.star+'化'+move.type+'：待定位。';
   const phase=flow.palaceNames[target.branch];
   return mutagenName(flow,move.type)+' · '+move.star+'入本命'+target.name+
-   (phase?'（当期'+phase+'）':'')+'，观察'+(themes[phase]||themes[target.name]||target.name)+'。'+actions[move.type]+'。';
+   (phase?'（当期'+phase+'）':'')+'，观察'+(themes[phase]||themes[target.name]||target.name)+'。'+(flowRules.stars[move.star]?'以'+flowRules.stars[move.star]+'为具体观察点。':'')+flowRules.transformations[move.type];
  });
  const life=chart.palaces.find(p=>flow.palaceNames[p.branch]==='命宫');
  const stars=life?.majorStars.length?life.majorStars:life?.borrowedStars;

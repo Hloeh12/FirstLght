@@ -104,7 +104,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert($('.bazi-link.clash'));
  click('[data-rail=大运]:nth-child(2)');
  await until(()=>$('#screen').textContent.includes('当前运程'),'Bazi period data');
- assert($('.period-guidance').textContent.includes('财务与边界'));
+ assert($('.period-guidance').textContent.includes('财务资金流'));
  assert.equal($('.matrix'),natalMatrix);
  click('#toolsButton');
  assert.equal(many('[data-bazi-tool]').length,5);

@@ -178,7 +178,12 @@ export function baziPro({birth,selection={},combine=false}){
    lunarYear:birthLunar.getYearInGanZhi(),lunarMonth:Math.abs(birthLunar.getMonth()),lunarDay:birthLunar.getDay(),
    startAge:b.luck.startAge,exactStartAge:b.luck.exactStartAge,startUtc:cycles[0].startUtc,forward:b.luck.forward,node:{name:node.name,utc:node.utc,at:nodeWall},tropicalYearDays:b.luck.tropicalYearDays,
    effectiveHour:b.meta.local.h,timeCorrection:b.meta.timeCorrection,correction,lateZishi:birth.lateZishi||'next-day',hourBranch:pillars[3].branch,utc:b.meta.utc}};
- result.guidance=periodGuidance(result);
+ const monthWindows=months.map(month=>({
+  ...month,links:relations([...pillars,month]).filter(link=>link.ids.includes(pillars.length))
+   .map(link=>link.pattern+link.type)
+ })).filter(month=>month.links.length).sort((a,b)=>b.links.length-a.links.length)
+  .slice(0,3).sort((a,b)=>a.index-b.index);
+ result.guidance=periodGuidance({...result,monthWindows});
  return result;
 }
 export function reverseBazi({pillars,start=1900,end=2100,lateZishi}){

@@ -38,3 +38,12 @@ test('annual Lu Cun and Hua Lu recognize meeting, opposition and natal Lu Cun',a
  for(const flow of [annual(2,2),annual(8,2),annual(4,3)])assert(practicalZiwei(chart,flow).some(item=>item.name==='双禄交驰'));
  assert(!practicalZiwei(chart,annual(3,2)).some(item=>item.name==='双禄交驰'));
 });
+
+test('dynamic report contains four evidence layers and more than one thousand characters',()=>{
+ const result=baziPro({birth,selection:{year:2026}});
+ const sections=result.guidance.sections;
+ assert.equal(sections.length,4);
+ assert(sections.map(x=>x.title).join(' ').includes('原局命格'));
+ assert(sections.map(x=>x.lines.join('')).join('').length>=1000);
+ assert(sections.flatMap(x=>x.lines).join('').includes('财务资金流'));
+});

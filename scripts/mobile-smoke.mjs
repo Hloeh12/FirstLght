@@ -134,7 +134,7 @@ try{
   const insightReport=page.locator('#insightContent .knowledge-report[data-report-characters]').first();
    await insightReport.waitFor();
    assert(Number(await insightReport.getAttribute('data-report-characters'))>=1050);
-   assert((await insightReport.textContent()).includes('事业职场'));
+   assert((await insightReport.textContent()).includes('事业功名'));
   assert(await page.locator('[data-natal-background]').count()===1);
   await page.locator('[data-tab=chart]').click();
   await page.locator('[data-bazi-rails] [data-rail="流年"]').nth(1).click();
@@ -143,7 +143,7 @@ try{
   const updatedReport=page.locator('#insightContent .knowledge-report[data-report-characters]').first();
    await updatedReport.waitFor();
    assert(Number(await updatedReport.getAttribute('data-report-characters'))>=1050);
-   assert((await updatedReport.textContent()).includes('事业职场'));
+   assert((await updatedReport.textContent()).includes('事业功名'));
   await page.locator('[data-tab=chart]').click();
   assert.equal(await page.locator('.bazi-ghost').count(),0);
   await page.locator('[data-bazi-data]').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));

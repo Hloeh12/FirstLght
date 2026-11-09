@@ -1,3 +1,5 @@
+import {BAZI_FLOW_RULES} from '../../www/js/rules.js';
+globalThis.BAZI_FLOW_RULES = BAZI_FLOW_RULES;
 import {reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,bars,table,selectedRails,splitDate,periodSections} from './ui.js';
 const setUp=ctx=>ctx.state.chartState.bazi??={data:ctx.state.reading.bazi,combine:false,pick:{},token:0,error:'',selected:[],pulse:false};

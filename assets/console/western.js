@@ -213,7 +213,7 @@ async function update(ctx,mode,at){
   if(token!==s.token||ctx.state.chartState.west!==s)return;
   s.result=result;s.error='';
  }catch(error){if(token===s.token){s.error=error.message;s.result=null;}}
- if(token===s.token&&ctx.state.chartState.west===s&&ctx.state.system==='west'&&ctx.state.tab==='chart')westernView(ctx);
+ if(token===s.token&&ctx.state.chartState.west===s&&ctx.state.system==='west'&&ctx.state.tab==='chart'){westernView(ctx);if(!s.error)ctx.onSelectTimeNode('west');}
 }
 function options(data,value){return Object.entries(data).map(([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${esc(label)}</option>`).join('');}
 export const astroHouse=()=>cfg().house;

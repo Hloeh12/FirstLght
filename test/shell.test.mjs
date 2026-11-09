@@ -252,8 +252,10 @@ test('liquid navigation has one measured physical pill, inline editing, keyboard
  click('#inputSheet [data-close]');
  assert.equal(d.querySelectorAll('#tabLiquidPill').length,1);assert.equal(d.querySelectorAll('#bottomNav [data-tab]').length,4);
  assert(!$('#btnEditProfile').closest('button button'));assert.equal($('#btnEditProfile').parentElement.id,'activeProfile');
+ $('#bottomNav').getBoundingClientRect=()=>({left:0,width:336});
+ [...d.querySelectorAll('#bottomNav .nav-tab-item')].forEach((item,i)=>{item.getBoundingClientRect=()=>({left:8+i*80,width:80});});
  for(const [i,tab] of ['cases','chart','insights','me'].entries()){
-  click('[data-tab="'+tab+'"]');assert.equal($('#tabLiquidPill').style.transform,`translateX(${i*100}%)`);
+  click('[data-tab="'+tab+'"]');assert.equal($('#tabLiquidPill').style.transform,`translateX(${8+i*80}px)`);assert.equal($('#tabLiquidPill').style.width,'72px');
  }
  click('[data-diagnostics]');assert($('#toolSheet .scroll-clearance'));
  const key='quota-test',value='x'.repeat(2100000);w.localStorage.setItem(key,value);

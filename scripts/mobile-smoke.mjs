@@ -139,11 +139,18 @@ try{
   await page.locator('[data-vedic-action=states]').click();
   assert(await page.locator('[data-vedic-states] .term').count()>0);
   await page.locator('[data-layout=south]').click();assert.equal(await page.locator('[data-vedic-house]').count(),12);await page.locator('[data-varga="60"]').click();assert((await page.locator('#vedic h2').first().textContent()).includes('D60'));assert.equal(await page.locator('.vedic-dasha').count(),4);await page.locator('[data-dasha]').last().click();
+  const south=await page.locator('.south-chart').evaluate(n=>({chart:n.getBoundingClientRect().toJSON(),houses:[...n.querySelectorAll('.south-house')].map(h=>({box:h.getBoundingClientRect().toJSON(),scroll:h.scrollWidth,client:h.clientWidth}))}));
+  assert(south.houses.every(h=>h.box.left>=south.chart.left-1&&h.box.right<=south.chart.right+1&&h.scroll<=h.client+1),'south chart must contain every house');
   assert((await page.locator('[data-dasha-detail]').textContent()).includes('大运'));
+  const vedicPeriod=await page.locator('[data-dynamic-insight]').textContent();await page.locator('[data-v-time="1"]').click();await page.waitForFunction(previous=>document.querySelector('[data-dynamic-insight]')?.textContent!==previous,vedicPeriod);
   await page.screenshot({path:'build/mobile-'+engine+'-vedic-'+width+'.png'});
   await shareSnapshot('vedic');
   await useSystem('west','西洋盘');
   await page.locator('#westernChart').waitFor();
+  await page.locator('[data-mode=transit]').click();await page.waitForFunction(()=>document.querySelector('[data-dynamic-insight]')?.textContent.includes('西洋'));
+  const westPeriod=await page.locator('[data-dynamic-insight]').textContent();await page.locator('[data-unit=month][data-step="1"]').click();await page.waitForFunction(previous=>document.querySelector('[data-dynamic-insight]')?.textContent!==previous,westPeriod);
+  await page.locator('[data-tab=insights]').click();assert((await page.locator('#insightContent').textContent()).includes('西洋'));
+  await page.locator('[data-tab=chart]').click();
   assert(await page.getByRole('meter').count()>0);
   assert((await page.locator('.energy-fill').first().evaluate(n=>getComputedStyle(n).backgroundImage)).includes('255, 119, 170'));
   await page.screenshot({path:'build/mobile-'+engine+'-western-'+width+'.png'});
@@ -162,6 +169,8 @@ try{
   const internal=await page.locator('#toolSheet .sheet-body').evaluate(n=>({height:n.clientHeight,content:n.scrollHeight}));
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
+  await page.locator('#instantChartButton').click();await page.locator('#restoreOriginalButton:not([hidden])').waitFor();await page.locator('#restoreOriginalButton').click();assert.equal(await page.locator('#restoreOriginalButton').isHidden(),true);
+  await page.locator('#mainScrollView').evaluate(n=>n.scrollTop=500);await page.locator('#appTopBar').click({position:{x:130,y:2}});await page.waitForFunction(()=>document.querySelector('#mainScrollView').scrollTop<5);
   await page.locator('[data-tab=cases]').click();await page.waitForTimeout(400);
   const samples=await page.evaluate(async()=>{
    const nav=document.querySelector('#bottomNav'),pill=document.querySelector('#tabLiquidPill'),button=nav.querySelector('[data-tab=me]');

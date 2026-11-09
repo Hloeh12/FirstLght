@@ -23,6 +23,7 @@ export function vedicView(ctx){
  const selected=chosen.at(-1),lord=d.planets.find(p=>p.name===selected.lord),aspects=lord?[7,...(lord.key==='mars'?[4,8]:lord.key==='jupiter'?[5,9]:lord.key==='saturn'?[3,10]:[])].map(n=>(lord.house+n-2)%12+1):[];
 
  d.highlight=lord?[lord.house,...aspects]:[];
+ s.activePeriod={date:(s.at||base.at).slice(0,10),lords:chosen.map(p=>p.lord),lord:selected.lord,house:lord?.house,aspects,varga:s.n};
  ctx.root.innerHTML=`<section id="vedic"><h1>印度占星 · Jyotish</h1><p class="thin">Lahiri 恒星黄道 · 整宫制 · 平交点</p>
  <div class="rail">${[1,9,10,7,2,60].map(n=>btn('D'+n+' '+VARGAS[n],`data-varga="${n}" aria-pressed="${s.n===n}"`)).join('')}</div><label>完整分盘<select data-varga-select>${Array.from({length:60},(_,i)=>`<option value="${i+1}" ${s.n===i+1?'selected':''}>D${i+1} ${VARGAS[i+1]||'谐波映射（非经典列示）'}</option>`).join('')}</select></label><div class="rail">${btn('北印菱形盘',`data-layout="north" aria-pressed="${s.layout==='north'}"`)}${btn('南印方格盘',`data-layout="south" aria-pressed="${s.layout==='south'}"`)}</div>
  <article class="card liquid-glass"><h2>${s.layout==='north'?'北印菱形盘':'南印方格盘'} · D${s.n}</h2>${s.layout==='north'?northIndianChart(d):southIndianChart(d)}<p>D${s.n} ${VARGAS[s.n]||'谐波'}：上升${esc(d.lagna)}，主运星${esc(selected.lord)}落第${lord?.house||'—'}宫；专项观察${esc(VARGAS[s.n]||'对应分盘')}中的职责与资源。${esc(d.method)}</p><p class="thin">上升 ${esc(d.lagna)} · 岁差 ${d.ayanamsa.toFixed(6)}° · 出生UT ${esc(d.utc.slice(0,19).replace('T',' '))}</p></article>
@@ -34,18 +35,18 @@ export function vedicView(ctx){
  <p>四级执政：${chosen.map(p=>esc(p.lord)).join(' → ')} · 照拂宫位 ${aspects.join('、')}（传统照宫规则）</p>
  <div data-dasha-detail aria-live="polite"><h3>${esc(selected.lord)}大运${selected.active?' · 当前':''}</h3><p>${esc(selected.start.slice(0,19).replace('T',' '))} 至 ${esc(selected.end.slice(0,19).replace('T',' '))}（UT）</p><p>此阶段可结合${term(selected.lord+'所在第'+d.planets.find(p=>p.name===selected.lord)?.house+'宫',selected.lord+'是此段大运主星，传统上将其本命所在宫位作为阶段观察主题。大运不等于事件保证。')}与当下行运观察。</p></div>
  <small>顺序：${esc(d.sequence.join(' → '))}；从月亮出生星宿的宿主起排。</small></article><p class="thin">${esc(d.method)}</p></section>`;
- for(const b of ctx.root.querySelectorAll('[data-varga]'))b.onclick=()=>{s.n=+b.dataset.varga;vedicView(ctx);};
- $('[data-varga-select]',ctx.root).onchange=e=>{s.n=+e.target.value;vedicView(ctx);};
- for(const b of ctx.root.querySelectorAll('[data-layout]'))b.onclick=()=>{s.layout=b.dataset.layout;vedicView(ctx);};
- for(const b of ctx.root.querySelectorAll('[data-v-time]'))b.onclick=async()=>{const at=new Date(s.at||base.at);at.setUTCMonth(at.getUTCMonth()+Number(b.dataset.vTime));s.at=at.toISOString();const token=s.timeToken=(s.timeToken||0)+1;const result=await ctx.request('/api/console/vedic',{birth:ctx.birth,at:s.at});if(token!==s.timeToken)return;s.data=result;s.path=[];vedicView(ctx);};
- for(const b of ctx.root.querySelectorAll('[data-dasha]'))b.onclick=()=>{const scroll=$('.vedic-dasha',ctx.root).scrollLeft;const depth=+b.dataset.depth;s.path=s.path.slice(0,depth);s.path[depth]=+b.dataset.dasha;vedicView(ctx);$('.vedic-dasha',ctx.root).scrollLeft=scroll;};
+ for(const b of ctx.root.querySelectorAll('[data-varga]'))b.onclick=()=>{s.n=+b.dataset.varga;vedicView(ctx);ctx.onSelectTimeNode('vedic');};
+ $('[data-varga-select]',ctx.root).onchange=e=>{s.n=+e.target.value;vedicView(ctx);ctx.onSelectTimeNode('vedic');};
+ for(const b of ctx.root.querySelectorAll('[data-layout]'))b.onclick=()=>{s.layout=b.dataset.layout;vedicView(ctx);ctx.onSelectTimeNode('vedic');};
+ for(const b of ctx.root.querySelectorAll('[data-v-time]'))b.onclick=async()=>{const at=new Date(s.at||base.at);at.setUTCMonth(at.getUTCMonth()+Number(b.dataset.vTime));s.at=at.toISOString();const token=s.timeToken=(s.timeToken||0)+1;const result=await ctx.request('/api/console/vedic',{birth:ctx.birth,at:s.at});if(token!==s.timeToken)return;s.data=result;s.path=[];vedicView(ctx);ctx.onSelectTimeNode('vedic');};
+ for(const b of ctx.root.querySelectorAll('[data-dasha]'))b.onclick=()=>{const scroll=$('.vedic-dasha',ctx.root).scrollLeft;const depth=+b.dataset.depth;s.path=s.path.slice(0,depth);s.path[depth]=+b.dataset.dasha;vedicView(ctx);$('.vedic-dasha',ctx.root).scrollLeft=scroll;ctx.onSelectTimeNode('vedic');};
  const show=house=>{const stars=d.planets.filter(p=>p.house===house);ctx.explain('第'+house+'宫 · '+d.houseSigns[house-1],stars.map(p=>p.name+' · '+(nakNames[p.nakIndex]||p.nakshatra)+' '+p.nakDegree.toFixed(4)+'° · '+p.nakLord+'主宿').join('；')||'本宫无本命九曜，可结合宫主星所在宫位观察。');};
  for(const g of ctx.root.querySelectorAll('[data-vedic-house]')){g.onclick=()=>show(+g.dataset.vedicHouse);g.onkeydown=e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();show(+g.dataset.vedicHouse);}};}
 }
 
 export function southIndianChart(d){
  const cells=[[1,0],[2,0],[3,0],[3,1],[3,2],[3,3],[2,3],[1,3],[0,3],[0,2],[0,1],[0,0]];
- return `<svg class="vedic-chart" viewBox="0 0 400 400" aria-label="南印方格盘，星座位置固定">${cells.map(([x,y],sign)=>{const h=(sign-d.lagnaIndex+12)%12+1,stars=d.planets.filter(p=>p.signIndex===sign);return `<g data-vedic-house="${h}" role="button" tabindex="0"><rect class="vedic-house" x="${x*100}" y="${y*100}" width="100" height="100" data-current="${h===1}" data-dasha-lit="${d.highlight?.includes(h)||false}"/><text x="${x*100+50}" y="${y*100+18}" text-anchor="middle" class="vedic-house-label">${sign+1} · ${h===1?'ASC':h+'宫'}</text>${stars.slice(0,4).map((p,i)=>`<text class="vedic-planet" x="${x*100+50}" y="${y*100+35+i*13}" text-anchor="middle">${esc(p.name)}</text>`).join('')}</g>`;}).join('')}</svg>`;
+ return `<div class="south-chart" role="group" aria-label="南印方格盘，星座位置固定">${cells.map(([x,y],sign)=>{const h=(sign-d.lagnaIndex+12)%12+1,stars=d.planets.filter(p=>p.signIndex===sign);return `<button type="button" class="south-house" style="grid-column:${x+1};grid-row:${y+1}" data-vedic-house="${h}" data-current="${h===1}" data-dasha-lit="${d.highlight?.includes(h)||false}" aria-label="第${h}宫 ${esc(d.houseSigns[h-1])} ${esc(stars.map(p=>p.name).join('、'))}"><span class="south-house-label">${sign+1} · ${h===1?'ASC':h+'宫'}</span><span class="south-planets">${stars.map(p=>`<span title="${esc(p.name)}">${esc(p.name.slice(0,2))}</span>`).join('')||'·'}</span></button>`;}).join('')}<div class="south-center" aria-hidden="true">南印盘 · D${d.varga||1}</div></div>`;
 }
 
 export function vedicTools(ctx,host){

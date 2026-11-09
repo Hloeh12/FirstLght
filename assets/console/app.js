@@ -461,6 +461,10 @@ function caseDrawer(){
 }
 
 function restoreInstant(){if(state.instantSnapshot){Object.assign(state,state.instantSnapshot);state.instantSnapshot=null;}}
+function restoreOriginal(){
+ if(!state.instantSnapshot)return;
+ restoreInstant();state.pending=false;state.error='';render();
+}
 async function instantChart(){
  const at=new Date(),system=['bazi','ziwei','vedic','west'].includes(state.system)?state.system:'ziwei',token=++generation;flight?.abort();
  for(const d of document.querySelectorAll('dialog'))close(d);
@@ -487,6 +491,8 @@ function profileTitle(){
  $('#activeProfile').dataset.showRule=String(Boolean(p&&state.tab==='chart'&&state.system==='ziwei'));
  rule.textContent=school.label;rule.title=school.description;rule.hidden=!p||state.tab!=='chart'||state.system!=='ziwei';
  $('[data-profile-edit]').textContent=p?'✏️ 改生辰':'＋ 起盘';
+ $('#instantChartButton').hidden=Boolean(state.instantSnapshot);
+ $('#restoreOriginalButton').hidden=!state.instantSnapshot;
  $('#activeProfile').setAttribute('aria-label',p?label+'，编辑出生资料':label);
 
 }
@@ -499,9 +505,12 @@ function resonanceCard(){
  ${result.chains.slice(0,6).map(c=>`<div class="resonance-evidence"><b>${esc(c.topic+' · '+c.direction)} · ${c.coverage}/3 体系</b><div class="energy-track" role="meter" aria-label="证据覆盖体系数" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${c.coverage}"><span class="energy-fill" style="width:${c.coverage/3*100}%"></span></div>${c.items.slice(0,6).map(e=>`<p><small>${esc(e.system)}</small> ${esc(e.text)}</p>`).join('')}</div>`).join('')}<small>${esc(result.method)}</small></article>`;
 }
 function selectedPeriodCard(){
- const b=state.activeTimeSystem==='bazi'?state.chartState.bazi?.data?.guidance:null;
- const z=state.activeTimeSystem==='ziwei'?state.chartState.ziwei?.flow:null;
- if(!b&&!z)return '<article class="card liquid-glass"><h2>当前时空点</h2><p>当前为本命视角。选择时间滑轨后，这里展示对应的阶段线索。</p></article>';
+ const system=state.system;
+ const b=system==='bazi'?state.chartState.bazi?.data?.guidance:null;
+ const z=system==='ziwei'?state.chartState.ziwei?.flow:null;
+ const w=system==='west'?state.chartState.west:null;
+ const v=system==='vedic'?state.chartState.vedic:null;
+ if(!b&&!z&&!w?.result&&!v?.activePeriod)return '<article class="card liquid-glass"><h2>当前时空点</h2><p>当前为本命视角。选择时间滑轨后，这里展示对应的阶段线索。</p></article>';
  const parts=[];
  if(b)parts.push(`<h3>八字 · ${esc(b.title)}</h3><p>${esc(b.summary)}</p>${b.influences.map(x=>`<p>${esc(x.text)}</p>`).join('')}${b.advice.map(x=>`<p><b>${esc(x.topic)}</b> ${esc(x.text)}</p>`).join('')}`);
  if(z){
@@ -512,25 +521,40 @@ function selectedPeriodCard(){
   const changes=z.mutagens.map(m=>m.star+'化'+m.type+'入'+(chart?.palaces.find(p=>p.branch===m.branch)?.name||'待定位'));
   parts.push(`<h3>紫微 · ${esc(z.label+' '+z.ganZhi+' · '+z.date)}</h3><p>流命落 ${esc(palace?.name||'待定位')}，流官对应 ${esc(named('官禄'))}，流财对应 ${esc(named('财帛'))}。${esc(changes.join('、'))}。</p><p><b>职责与资源</b> 先核对流官宫的责任安排，以及流财宫的预算和兑现条件；化禄所在宫可观察资源，化忌所在宫宜预留反复余量。</p><p><b>当期格局</b> ${esc(risks.length?risks.map(p=>p.name+'落'+p.palace+'：'+p.text).join('；'):'未检出流忌冲禄或羊陀夹忌条件，不凭空添加凶断。')}</p>`);
  }
+ if(w?.result){
+  const result=w.result,relations=(result.cross||result.chart?.aspects||[]).slice().sort((a,b)=>a.orb-b.orb).slice(0,3);
+  const title={sky:'天象',transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',profection:'小限',natal:'本命'}[w.mode]||w.mode;
+  parts.push(`<h3>西洋 · ${esc(w.at.getFullYear()+'年'+(w.at.getMonth()+1)+'月')} ${esc(title)}推演</h3><p>所选时刻 ${esc(w.at.toISOString().slice(0,16).replace('T',' '))} UT；${result.outer?'外圈行运切入本命星位':'当前盘面'}。</p>${relations.map(a=>`<p><b>${esc(a.a+' '+a.type+' '+a.b)}</b> · Orb ${a.orb.toFixed(2)}°，${a.applying===true?'入相':a.applying===false?'出相':'阶段未定'}；${[90,180].includes(a.angle)?'优先核对现实压力与边界，暂缓过量承诺。':'可观察合作、表达或行动窗口，仍须结合具体落宫。'}</p>`).join('')||'<p>当前容许度内未检出关键相位，不额外编造事件。</p>'}`);
+ }
+ if(v?.activePeriod){
+  const p=v.activePeriod;
+  parts.push(`<h3>印度 · ${esc(p.date)} Vimshottari 四级运</h3><p>${esc(p.lords.join(' → '))}，微运主星 ${esc(p.lord)} 落所选 D${p.varga} 第 ${p.house||'—'} 宫，照拂第 ${esc(p.aspects.join('、')||'—')} 宫。</p><p><b>当期业力重心</b> 检视第 ${p.house||'—'} 宫所代表的职责与资源；副运改变时重新核对该主星及照宫，避免把本命固定叙述当作当期结论。</p>`);
+ }
  return `<article class="card liquid-glass period-guidance" aria-live="polite"><h2>当前时空点 · 专属推演</h2>${parts.join('')}<small>根据所选时间滑轨的本地盘面重算结果生成；传统术数仅作观察参考。</small></article>`;
 }
 function onSelectTimeNode(system){
  state.activeTimeSystem=system;
  const box=$('#insightContent');
  if(box)box.innerHTML=selectedPeriodCard();
+ if(state.tab==='chart'&&['west','vedic'].includes(system)){
+  const section=root.querySelector(system==='west'?'section[aria-label="西洋占星"]':'#vedic');
+  if(section){let host=section.querySelector('[data-dynamic-insight]');if(!host){host=document.createElement('div');host.dataset.dynamicInsight='';section.append(host);}host.innerHTML=selectedPeriodCard();}
+ }
 }
 function selectedTimeISO(){
- if(state.activeTimeSystem==='ziwei'){
+ if(state.system==='ziwei'&&state.activeTimeSystem==='ziwei'){
   const value=state.chartState.ziwei?.flow?.date;
   if(value&&/^\d{4}-\d{2}-\d{2}$/.test(value))return value+'T12:00:00Z';
  }
- if(state.activeTimeSystem==='bazi'){
+ if(state.system==='bazi'&&state.activeTimeSystem==='bazi'){
   const s=state.chartState.bazi;
   if(s?.pick?.day!=null){const value=s.data.days?.[s.pick.day]?.date;if(value)return value+'T12:00:00Z';}
   if(s?.pick?.month!=null){const value=s.data.months?.[s.pick.month]?.date;if(value&&!Number.isNaN(Date.parse(value)))return value;}
   if(s?.pick?.year!=null)return s.pick.year+'-07-01T12:00:00Z';
   if(s?.pick?.luck!=null){const year=s.data.cycles?.[s.pick.luck]?.startYear;if(year)return year+'-07-01T12:00:00Z';}
  }
+ if(state.system==='west'&&state.chartState.west?.at)return state.chartState.west.at.toISOString();
+ if(state.system==='vedic'&&state.chartState.vedic?.at)return state.chartState.vedic.at;
  return new Date().toISOString();
 }
 function insights(){
@@ -548,7 +572,7 @@ function insights(){
  }
  const {bazi,ziwei,western}=r;
  const active=ziwei.decades.map(d=>[d.ageRange.join('–')+' 岁',d.yearRange.join('–'),d.palaceName]);
- const periodActive=Boolean(state.activeTimeSystem==='bazi'&&state.chartState.bazi?.data?.guidance||state.activeTimeSystem==='ziwei'&&state.chartState.ziwei?.flow);
+ const periodActive=Boolean(state.system==='bazi'&&state.chartState.bazi?.data?.guidance||state.system==='ziwei'&&state.chartState.ziwei?.flow||state.system==='west'&&state.chartState.west?.result||state.system==='vedic'&&state.chartState.vedic?.activePeriod);
  root.innerHTML=`<section data-period-active="${periodActive}"><h1>洞见${periodActive?' · 当期推演':''}</h1><p class="muted">${esc(state.profile.name)} · 四体系合参</p>
  <div id="insightContent" aria-live="polite">${selectedPeriodCard()}</div>
  ${resonanceCard()}<article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
@@ -634,8 +658,8 @@ function render(){
  }
  if(state.system==='ziwei')ziweiView(ctx);
  else if(state.system==='bazi')baziView(ctx);
- else if(state.system==='west')westernView(ctx);
- else if(state.system==='vedic')vedicView(ctx);
+ else if(state.system==='west'){westernView(ctx);if(state.chartState.west?.result)onSelectTimeNode('west');}
+ else if(state.system==='vedic'){vedicView(ctx);onSelectTimeNode('vedic');}
  else extraView(ctx);
 }
 installFeedback();
@@ -648,6 +672,12 @@ $('#btnEditProfile').onclick=e=>{e.stopPropagation();state.instantSnapshot?birth
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
 $('#instantChartButton').onclick=instantChart;
+$('#restoreOriginalButton').onclick=restoreOriginal;
+$('#appTopBar').addEventListener('click',e=>{
+ if(e.target.closest('button,.topbar-btn'))return;
+ $('#mainScrollView').scrollTo?.({top:0,behavior:'smooth'});
+ window.triggerHaptic?.('light');
+});
 $('#bottomNav').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)switchNavTab(b.dataset.tab,[...b.parentNode.querySelectorAll('[data-tab]')].indexOf(b));};
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length)close(dialogs.at(-1));}

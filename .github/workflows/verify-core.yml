@@ -41,11 +41,15 @@ jobs:
           markers = (
               'BAZI_FLOW_RULES', 'ZIWEI_FLOW_RULES',
               'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES',
-              '甲木参天', '【冲去忌神·枯木逢春】', '【羊陀夹忌·动辄得咎】'
+              '甲木参天'
           )
           decoded = re.sub(r'\\u\{([0-9a-fA-F]+)\}|\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1) or m.group(2), 16)), source)
           for marker in markers:
               assert marker in source or marker in decoded, f'missing bundled knowledge marker: {marker}'
+          rules = Path('www/js/rules.js').read_text()
+          judgments = ('【冲去忌神·枯木逢春】', '【用神受制·惊涛骇浪】', '【双禄交驰·锦上添花】', '【禄逢冲破·吉处藏凶】', '【羊陀夹忌·动辄得咎】')
+          for judgment in judgments:
+              assert judgment in rules, f'missing exact judgment in offline corpus: {judgment}'
           html = Path('index.html').read_text()
           assert 'src="/js/console.js"' in html
           assert 'rules.js' not in html

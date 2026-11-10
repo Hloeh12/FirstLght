@@ -58,6 +58,13 @@ test('offline Ziwei report emits four layers and validates real pattern evidence
 });
 
 import {BAZI_FLOW_RULES,ZIWEI_FLOW_RULES} from '../www/js/rules.js';
+import {practicalZiwei} from '../src/ziwei-practical.mjs';
+
+test('Ziwei annual patterns are suppressed without a selected annual flow',()=>{
+ const chart={palaces:[{branch:0,name:'命宫',stars:[{name:'禄存'}]},{branch:4,name:'官禄宫',stars:[{name:'太阳',siHua:'禄'}]}]};
+ assert.deepEqual(practicalZiwei(chart,null),[]);
+});
+
 test('classical corpus uses the requested judgments and avoids corporate jargon',()=>{
  assert.equal(BAZI_FLOW_RULES.clash.caution,'【冲去忌神·枯木逢春】岁运犹如烈火熔金，将多年积压的旧有阻碍一扫而空，虽有环境剧烈变迁或身心动荡，实为打破僵局、凤凰涅槃之良机，大利开创新局');
  assert.equal(BAZI_FLOW_RULES.clash.useful,'【用神受制·惊涛骇浪】核心元气受伐，岁运浮沉，主心绪难宁、计划受阻。此时宜退守自保、以静制动，严防冲动投资与口舌官非');

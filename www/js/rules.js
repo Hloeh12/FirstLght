@@ -135,9 +135,8 @@ export function buildZiweiKnowledgeReport(chart,flow){
  const triad=(a,b)=>a===b||((a-b+12)%12===4)||((a-b+12)%12===8);
  const natalLuCun=palaces.filter(p=>(p.stars||[]).some(s=>s.name==='禄存'));
  const natalHuaLu=palaces.filter(p=>(p.stars||[]).some(s=>s.siHua==='禄'));
- const yearlyOpposition=Number.isInteger(flow?.yearlyLuCunBranch)&&luMoves.some(m=>(m.branch-flow.yearlyLuCunBranch+12)%12===6);
  const doubleLu=luMoves.some(m=>natalLuCun.some(p=>triad(m.branch,p.branch))||natalHuaLu.some(p=>triad(m.branch,p.branch)))||luMoves.some((a,i)=>luMoves.slice(i+1).some(b=>triad(a.branch,b.branch)));
- const luBroken=yearlyOpposition||luMoves.some(a=>jiMoves.some(b=>(a.branch+6)%12===b.branch))||jiMoves.some(m=>natalLuCun.some(p=>(m.branch+6)%12===p.branch)||natalHuaLu.some(p=>(m.branch+6)%12===p.branch));
+ const luBroken=luMoves.some(a=>jiMoves.some(b=>(a.branch+6)%12===b.branch))||jiMoves.some(m=>natalLuCun.some(p=>(m.branch+6)%12===p.branch)||natalHuaLu.some(p=>(m.branch+6)%12===p.branch));
  const sheep=new Set(palaces.filter(p=>(p.minorStars||[]).some(s=>s.name==='擎羊')).map(p=>p.branch));
  const tuo=new Set(palaces.filter(p=>(p.minorStars||[]).some(s=>s.name==='陀罗')).map(p=>p.branch));
  const clamped=jiMoves.some(m=>sheep.has((m.branch+11)%12)&&tuo.has((m.branch+1)%12)||sheep.has((m.branch+1)%12)&&tuo.has((m.branch+11)%12));

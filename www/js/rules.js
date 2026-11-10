@@ -117,7 +117,7 @@ export function buildBaziKnowledgeReport(data) {
   {title:'一、岁运势能定性',lines:['今择'+label+'，流年为'+(year.stem||'')+branch+'，天干'+(year.stemElement||'')+'透'+god+'。日主为'+stem+'。'+action[0]+' 流年干支与日主的生克关系，须兼察月令、通根、透藏与全局旺衰。','岁运扶助权重'+Number(s.support||0).toFixed(1)+'%，原局为'+Number(base.support||0).toFixed(1)+'%，变化'+(delta>=0?'+':'')+delta.toFixed(1)+'个百分点。'+(delta>2?'岁运扶身之势较显，可乘势进修拓展。':delta< -2?'岁运扶助转弱，宜养精蓄锐、固本培元。':'扶助变化不大，宜持中守正，随节气审势。'),BAZI_FLOW_RULES.dayMasters[stem]||'日主之性须结合月令与四柱气势细参。']},
   {title:'二、岁支刑冲合会与喜忌转化',lines:[roleLine,...palaceLines,'流年地支为'+branch+'，五行属'+(year.branchElement||'待考')+'；岁干五行属'+(year.stemElement||'待考')+'。刑冲合害须辨作用对象与喜忌，合不等于化，冲亦不必然为凶。']},
   {title:'三、四时生活指引',lines:['事业功名：'+action[0]+' '+advice[0],'财帛进退：'+action[1]+' '+advice[1],'婚姻人伦：'+action[2]+' '+(hasUseful?'喜用受冲之年，尤宜温言相待，避免把外在压力带入亲密关系。':hasCaution?'忌神受冲而局势松动，宜与伴侣商议调整生活安排，勿仓促决定。':advice[2]),'身心起居：'+advice[2]+' 五行取象仅供传统文化参考，不作诊断；身体不适应求医问诊。']},
-  {title:'四、流月与应期参看',['流月以节气交接为界，'+(data.months||[]).slice(0,4).map(m=>(m.label||'节气月')+' '+(m.stem||'')+(m.branch||'')+'，'+((m.links||[]).join('、')||'未见显著干支关系')).join('；')+'。','应期只作观察窗口，并非事情必然发生之日；若现实未见其应，不必牵强附会。']}
+  {title:'四、流月与应期参看',lines:['流月以节气交接为界，'+(data.months||[]).slice(0,4).map(m=>(m.label||'节气月')+' '+(m.stem||'')+(m.branch||'')+'，'+((m.links||[]).join('、')||'未见显著干支关系')).join('；')+'。','应期只作观察窗口，并非事情必然发生之日；若现实未见其应，不必牵强附会。']}
  ];
  return {title:g.title||('八字 · '+label+'岁运详参'),sections,characters:sections.reduce((n,x)=>n+x.title.length+x.lines.join('').length,0)};
 }

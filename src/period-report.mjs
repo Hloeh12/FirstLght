@@ -19,7 +19,7 @@ export function buildPeriodReport(data,current,influences,months=[]) {
  ];
  const layer1=[
   '今择'+periodName(selected)+'，当期干支'+current.stem+current.branch+'，天干透出'+current.tenGod+'。日主为'+dayStem+'（'+dayElement+'），原局扶助权重'+Number(natalStrength.support).toFixed(1)+'%，岁运加入后为'+Number(strength.support).toFixed(1)+'%，变化'+(difference>0?'+':'')+difference.toFixed(1)+'个百分点。此为本机五行模型之相对参考，古法仍以月令、通根、透干、藏干与全局寒暖燥湿为纲。',
-  '月令提纲为'+(pillars.find(p=>p.name==='月柱')?.stem??'未明')+(pillars.find(p=>p.name==='月柱')?.branch??'未明')+'。'+(commander?'当前司令'+commander.stem+'，交'+commander.term.name+'后'+Number(commander.elapsedDays).toFixed(1)+'日。':'排盘未载司令分段，不妄断当权藏干。')+'岁运透干'+current.tenGod+'，须辨得令与否、有根无根、制化有情与否。',
+  '月令提纲为'+(pillars.find(p=>p.name==='月柱')?.stem??'未明')+(pillars.find(p=>p.name==='月柱')?.branch??'未明')+'。'+(commander?'当前司令'+commander.stem+'，交'+commander.term.name+'后'+Number(commander.elapsedDays).toFixed(1)+'日。':'排盘未载司令分段，不妄断当权藏干。')+'岁运透干'+current.tenGod+'，须辨得令与否、有根无根、制化有情与否。'+(current.stem+current.branch+'之气须与原局月令相参，不能只凭十神名称定吉凶。'),
   '扶助较原局增加'+(difference>0?Number(difference).toFixed(1):'0.0')+'个百分点。'+(useful?'原局喜用亦受触动，宜先固本培元，守住可贵根基。':caution?'忌神受冲有去旧更新之机，宜辨明方向，徐徐开新。':'喜忌尚无单一明确信号，宜持中守正，随月令变化再作判断。')
  ];
  const clashes=influences.filter(x=>x.type==='六冲');
@@ -35,13 +35,13 @@ export function buildPeriodReport(data,current,influences,months=[]) {
   '原局与岁运关系：'+(relationText.join('；')||'本次未见直接刑冲合会。'),
   clashLine,
   ...(clashes.length?[...new Set(clashes.flatMap(x=>x.locations||[]))].map(location=>location+'受岁支引动，须结合本柱所主之事观察，不可仅凭冲象断祸福。'):['本期没有柱位遭六冲，不逐柱铺陈无关应事。']),
-  '冲合须审月令、化神、根气与全局制化；合不等于化，冲亦不必然为凶。'
+  '冲合须审月令、化神、根气与全局制化；合不等于化，冲亦不必然为凶。'+(pillars.find(p=>p.name==='月柱')?.branch||'月令')+'为全局提纲，若岁支与其相涉，更须察司令深浅及有无通关。'
  ];
  const layer3=[
   '功名事业：'+ten[0]+' 宜择所长而深耕，亲近良师益友；进退之际先看时势与自身根基，不因一时荣枯轻弃长远志业。',
   '财帛进退（财务资金流）：'+ten[1]+' 正财贵在勤俭积累，偏财贵在审慎辨机；投资置业与借贷皆须量力，不以命盘财星代替现实判断。',
   '婚姻人伦：'+ten[2]+' 日支受触，宜体察伴侣心意，家计、居处、照顾与相处之道皆以诚恳商量为上；不可单凭冲合断离合。',
-  '身心养护：五行旺衰只作传统生活节律参考，不可据此诊病。宜顺时作息、适度运动、饮食有节；身体不适应由合格医者诊察。'
+  '身心养护：五行旺衰只作传统生活节律参考，不可据此诊病。宜顺时作息、适度运动、饮食有节；身体不适应由合格医者诊察。岁干'+current.stem+'属当年'+(current.stemElement||'')+'气，起居宜随四时调摄，不可拘泥单一五行。'
  ];
  const layer4=[
   '流月以节气交接为界，并非公历每月初一换月。寅卯辰木气渐舒，巳午未火土渐盛，申酉戌金气渐肃，亥子丑水气渐旺；具体须以当年节气时刻为准。',

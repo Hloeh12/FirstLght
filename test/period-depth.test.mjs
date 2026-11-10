@@ -36,7 +36,7 @@ test('annual Lu Cun and Hua Lu recognize meeting, opposition and natal Lu Cun',a
  const chart={palaces:Array.from({length:12},(_,branch)=>({branch,name:'宫'+branch,stars:branch===4?[{name:'禄存'}]:[]}))};
  const annual=(branch,yearlyLuCunBranch)=>({scope:'yearly',yearlyLuCunBranch,mutagens:[{type:'禄',branch}]});
  assert(practicalZiwei(chart,annual(2,2)).some(item=>item.name==='双禄交驰'));
- assert(practicalZiwei(chart,annual(8,2)).some(item=>item.name==='禄逢冲破'));
+ assert(practicalZiwei({...chart,palaces:chart.palaces.map(p=>p.branch===2?{...p,stars:[{name:'禄存'}]}:p)}, {scope:'yearly',mutagens:[{type:'忌',branch:8}]}).some(item=>item.name==='禄逢冲破'));
  assert(practicalZiwei(chart,annual(4,3)).some(item=>item.name==='双禄交驰'));
  assert(!practicalZiwei(chart,annual(3,2)).some(item=>item.name==='双禄交驰'));
 });

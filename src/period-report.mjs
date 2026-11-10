@@ -22,12 +22,20 @@ export function buildPeriodReport(data,current,influences,months=[]) {
   '月令提纲为'+(pillars.find(p=>p.name==='月柱')?.stem??'未明')+(pillars.find(p=>p.name==='月柱')?.branch??'未明')+'。'+(commander?'当前司令'+commander.stem+'，交'+commander.term.name+'后'+Number(commander.elapsedDays).toFixed(1)+'日。':'排盘未载司令分段，不妄断当权藏干。')+'岁运透干'+current.tenGod+'，须辨得令与否、有根无根、制化有情与否。',
   '扶助较原局增加'+(difference>0?Number(difference).toFixed(1):'0.0')+'个百分点。'+(useful?'原局喜用亦受触动，宜先固本培元，守住可贵根基。':caution?'忌神受冲有去旧更新之机，宜辨明方向，徐徐开新。':'喜忌尚无单一明确信号，宜持中守正，随月令变化再作判断。')
  ];
+ const clashes=influences.filter(x=>x.type==='六冲');
+ const harmonies=influences.filter(x=>['六合','三合局','三会方'].includes(x.type));
+ const hits=clashes.flatMap(x=>(x.affected||[]).map(y=>({...y,pattern:x.pattern})));
+ const usefulHit=hits.some(x=>x.role==='useful'),cautionHit=hits.some(x=>x.role==='caution');
+ const clashLine=usefulHit?'【用神受制·惊涛骇浪】'+hits.filter(x=>x.role==='useful').map(x=>x.pillar+x.branch).join('、')+'为原局喜用而受冲，核心元气受伐，岁运浮沉，主心绪难宁、计划受阻。此时宜退守自保、以静制动，严防冲动投资与口舌官非。':
+  cautionHit?'【冲去忌神·破局发越】'+hits.filter(x=>x.role==='caution').map(x=>x.pillar+x.branch).join('、')+'为原局忌神而受冲，旧有阻滞有望松动；虽有环境变迁，亦可借势更新，宜审慎开创新局。':
+  clashes.length?'岁支与原局成六冲，牵动'+hits.map(x=>x.pillar+x.branch).join('、')+'；喜忌未明，须参月令与通根，不妄断吉凶。':
+  harmonies.length?'岁运逢合·聚力结盟：流年与原局'+harmonies.map(x=>x.pattern+x.type).join('、')+'，资源与人缘易相牵引；合而未必化，宜明辨界限。':
+  '岁运安和·稳健深耕：本期未见直接六冲、六合、三合或三会，不强套刑冲断语，宜稳步积累。';
  const layer2=[
-  '原局与岁运关系共'+influences.length+'项：'+(relationText.join('；')||'本次未见直接刑冲合会，不强立吉凶之名。')+'。合不等于化，冲亦不必然为凶；须察月令、化神、根气、喜忌与柱位。',
-  rules.clash.caution,
-  rules.clash.useful,
-  '年柱观祖荫长辈，月柱观父母师友与事业环境，日柱观自身与配偶，时柱观子息门生与晚景。柱位只示应事范围，须与现实相参，不可凭一处刑冲妄断家运、婚姻或寿夭。',
-  '若一支兼逢刑冲合害，须分清作用先后与力量轻重；有合解未必尽解，有冲开亦可能伤及喜神。论命贵在全局制化，不可断章取义。'
+  '原局与岁运关系：'+(relationText.join('；')||'本次未见直接刑冲合会。'),
+  clashLine,
+  ...(clashes.length?[...new Set(clashes.flatMap(x=>x.locations||[]))].map(location=>location+'受岁支引动，须结合本柱所主之事观察，不可仅凭冲象断祸福。'):['本期没有柱位遭六冲，不逐柱铺陈无关应事。']),
+  '冲合须审月令、化神、根气与全局制化；合不等于化，冲亦不必然为凶。'
  ];
  const layer3=[
   '功名事业：'+ten[0]+' 宜择所长而深耕，亲近良师益友；进退之际先看时势与自身根基，不因一时荣枯轻弃长远志业。',

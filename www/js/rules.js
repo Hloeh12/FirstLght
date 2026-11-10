@@ -94,39 +94,30 @@ export const ZIWEI_FLOW_RULES = {
 export function buildBaziKnowledgeReport(data) {
  const g=data?.guidance||{},s=data?.strength||{},base=data?.natalStrength||s,dm=data?.dayMaster||{};
  const selected=data?.selected||[],links=data?.relationships||[],pillars=data?.pillars||[];
+ const year=[...selected].reverse().find(p=>p.name==='流年')||selected.at(-1)||{};
  const stem=dm.stem||pillars.find(p=>p.name==='日柱')?.stem||'日主';
  const label=selected.map(p=>(p.stem||'')+(p.branch||'')).join('、')||'本命原局';
- const god=g.tenGod||'岁运透干';
+ const god=year.tenGod||g.tenGod||'岁运透干';
  const action=BAZI_FLOW_RULES.tenGods[god]||['岁运之气已动，宜察时度势、修德进业。','财帛之事贵在知足守分，量入为出。','待人以诚，言语有度，家和为贵。'];
  const delta=Number(s.support||0)-Number(base.support||0);
- const relationText=links.length?links.map(x=>x.pattern+' '+x.type+'：'+(x.meaning||'须参详全局')).join('；'):'本次未见明确刑冲合会，仍以月令旺衰为纲。';
- const affected=links.some(x=>(x.ids||[]).some(i=>pillars[i]?.branchElement&&base.useful?.includes(pillars[i].branchElement)));
+ const branch=year.branch||'',element=year.stemElement||'';
+ const elementAdvice={木:['木气舒展，宜立志开新、研习新知，给计划留出生长余地。','木主生发，宜循序拓展人脉与才艺，忌枝蔓过多、事事兼顾。','木旺之时重在舒肝畅意、亲近自然，作息有常，避免急躁。'],火:['火气明朗，宜展现才华、主动表达，以作品与行动赢得认可。','火主礼与显扬，财物往来宜明晰节度，避免一时热情而过度支出。','火气偏盛宜缓言和气，留意休息与情绪调节。'],土:['土气厚重，宜夯实根基、整理所学，承担长期而有积累之事。','土主承载，宜稳守家计、量入为出，不贪多求快。','土重宜舒展筋骨、规律饮食，勿因责任过多而郁结。'],金:['金气肃清，宜删繁就简、精研技艺、立定准则，果断去芜存菁。','金主收敛与裁断，宜审慎盘点得失，守信守约，不逞强争胜。','金气宜清静养息，沟通直率而不刻薄，避免言语伤人。'],水:['水气流行，宜广学深思、谋定后动，借交流与远行开阔眼界。','水主流通，财物宜留有余地，防反复变动与情绪性决策。','水旺宜安神定志、规律作息，勿让忧思积久成劳。']};
+ const advice=elementAdvice[element]||elementAdvice[branch==='午'||branch==='巳'?'火':branch==='申'||branch==='酉'?'金':branch==='亥'||branch==='子'?'水':branch==='寅'||branch==='卯'?'木':'土'];
+ const clashes=links.filter(x=>x.type==='六冲'&&(x.ids||[]).some(i=>i<4)&&(x.ids||[]).some(i=>i>=4));
+ const harmonies=links.filter(x=>['六合','三合局','三会方'].includes(x.type)&&(x.ids||[]).some(i=>i<4)&&(x.ids||[]).some(i=>i>=4));
+ const hitRoles=clashes.flatMap(x=>(x.ids||[]).filter(i=>i<4).map(i=>({index:i,pillar:pillars[i],role:base.useful?.includes(pillars[i]?.branchElement)?'useful':base.caution?.includes(pillars[i]?.branchElement)?'caution':'neutral'})));
+ const hasUseful=hitRoles.some(x=>x.role==='useful'),hasCaution=hitRoles.some(x=>x.role==='caution');
+ const roleLine=hasCaution?'【冲去忌神·破局发越】岁运冲动原局忌神，旧有壅滞有望松解。此冲牵动'+hitRoles.filter(x=>x.role==='caution').map(x=>x.pillar.name).join('、')+'；'+BAZI_FLOW_RULES.clash.caution+'。宜辨明变化方向，稳步开新。':
+  hasUseful?'【用神受制·惊涛骇浪】岁运冲及原局喜用，气机有所摇动。此冲牵动'+hitRoles.filter(x=>x.role==='useful').map(x=>x.pillar.name).join('、')+'；'+BAZI_FLOW_RULES.clash.useful+'。宜退守自保、以静制动。':
+  clashes.length?'【岁支逢冲·审势而行】流年地支'+branch+'与原局'+clashes.map(x=>x.pattern).join('、')+'成六冲，牵动'+[...new Set(hitRoles.map(x=>x.pillar.name))].join('、')+'；喜忌尚不明朗，须合月令、通根与全局制化，不可遽断吉凶。':
+  harmonies.length?'【岁运逢合·聚力结盟】流年地支'+branch+'与原局'+harmonies.map(x=>x.pattern).join('、')+'成'+harmonies.map(x=>x.type).join('、')+'，所涉柱位为'+[...new Set(harmonies.flatMap(x=>x.ids.filter(i=>i<4).map(i=>pillars[i].name)))].join('、')+'。人缘、合作与资源易相牵引；合而未必化，宜明辨情义与界限。':
+  '【岁运安和·稳健深耕】流年地支'+branch+'未与原局构成六冲、六合、三合或三会之局。本年不宜强套冲克之辞，宜循'+element+'气所主之势，稳扎稳打，积累可持续之功。';
+ const palaceLines=clashes.length? [...new Set(clashes.flatMap(x=>x.ids.filter(i=>i<4)))].map(i=>({年柱:'年柱关乎家门长辈与远方缘分，宜关照家人、审慎处理居处往来。',月柱:'月柱为提纲，关乎师友与事业环境，宜审时度势，留意工作节奏与团队关系。',日柱:'日柱关乎自身与伴侣，宜坦诚沟通，体察彼此需要，不以冲象妄断离合。',时柱:'时柱关乎子息晚辈与长远志业，宜耐心培育，循序规划。'}[pillars[i].name])).filter(Boolean):['本年未见原局柱位被六冲直接引动，不逐柱罗列家宅、婚姻与子息之象。'];
  const sections=[
-  {title:'一、原局格局与岁运提纲',lines:[
-   '今观'+label+'，日主为'+stem+'。论命先察月令，次看通根、透干、藏干、寒暖燥湿与全局流通，不可以一神一字定旺衰。当前扶助权重'+Number(s.support||0).toFixed(1)+'%，原局为'+Number(base.support||0).toFixed(1)+'%，较原局'+(delta>=0?'增':'减')+Math.abs(delta).toFixed(1)+'个百分点。此为本机五行模型之相对参考，古法仍重月令提纲与全局气势。',
-   BAZI_FLOW_RULES.dayMasters[stem]||'日主之性须结合月令、根气与四柱气势细参，不可执一端而论。',
-   '岁运天干透出'+god+'。'+action[0]+' 十神乃日主与岁运之生克关系，须辨其得令、通根、透藏、制化与喜忌；同一十神在不同命局，吉凶深浅并不相同。',
-   delta>2?'岁运扶助较原局有所增加，可乘势修习本领、拓展眼界，但仍须守中持正。':delta< -2?'岁运扶助较原局有所减弱，宜养精蓄锐、固本培元，缓作重大抉择。':'岁运扶助变化不大，宜循原有节奏，待月令与流月再现端倪。'
-  ]},
-  {title:'二、刑冲合害与喜忌转化',lines:[
-   '原局与岁运关系：'+relationText+'。六冲主迁动，相刑主纠结，相害主暗损，相破主松动；合则牵系，未必化气。须查参与之支、月令、化神、根气及争合，方可辨其成败。',
-   BAZI_FLOW_RULES.clash.caution,
-   BAZI_FLOW_RULES.clash.useful,
-   ...BAZI_FLOW_RULES.palaces.map((x,i)=>['年柱','月柱','日柱','时柱'][i]+'：'+x),
-   '若喜忌交杂，须分事而论：一处冲开壅滞，未必不伤另一处根基；一处合来助力，也可能牵绊原有用神。古法重制化有情，论断宜留余地，不作绝对祸福之言。'
-  ]},
-  {title:'三、事业财帛、情缘与日用趋避',lines:[
-   '事业功名：'+action[0]+' 宜择其所长，精进学艺，亲近贤达；有转职、创业、求名之念，先察时势与自身根基，不因一时得意而轻弃旧业。',
-   '财帛进退（财务资金流）：'+action[1]+' 正财宜勤俭积累，偏财宜审慎辨机；置产、借贷与投资皆当量力，不以命盘财星代替现实判断，更不可孤注一掷。',
-   '婚姻人伦：'+action[2]+' 日支受冲合，宜多体察伴侣心意，凡家计、居处、照顾与相处之道，皆以诚恳商量为上；星曜干支只是观察角度，不可代替当事人意愿。',
-   '身心养护：五行旺衰可作起居节律之传统参考，不可据此诊病。宜顺时作息、适度运动、饮食有节；若有身体不适，应由合格医者诊察。',
-   '行事总诀：得势不骄，失势不馁；顺境修德，逆境养心。凡重大决定，仍须参看现实条件、家人意愿与专业意见。'
-  ]},
-  {title:'四、流月气运与应期参看',lines:[
-   '流月以节气交接为界，并非公历每月初一。寅卯辰月木气渐舒，巳午未月火土渐盛，申酉戌月金气渐肃，亥子丑月水气渐旺；具体仍以当年节气时刻与出生地时区为准。',
-   ...(data.months||[]).slice(0,3).map(m=>(m.label||'节气月')+' '+(m.stem||'')+(m.branch||'')+'：'+((m.links||[]).join('、')||'未见显著刑冲合会')+'。须合本命喜忌观之，不可单凭月名断事。'),
-   '应期只可作为观察窗口，不是事情必然发生之日。若流月再度引动同一柱位，可留心事业、财帛、家宅或情缘相应主题；若现实未见其应，不必牵强附会。'
-  ]}
+  {title:'一、岁运势能定性',lines:['今择'+label+'，流年为'+(year.stem||'')+branch+'，天干'+(year.stemElement||'')+'透'+god+'。日主为'+stem+'。'+action[0]+' 流年干支与日主的生克关系，须兼察月令、通根、透藏与全局旺衰。','岁运扶助权重'+Number(s.support||0).toFixed(1)+'%，原局为'+Number(base.support||0).toFixed(1)+'%，变化'+(delta>=0?'+':'')+delta.toFixed(1)+'个百分点。'+(delta>2?'岁运扶身之势较显，可乘势进修拓展。':delta< -2?'岁运扶助转弱，宜养精蓄锐、固本培元。':'扶助变化不大，宜持中守正，随节气审势。'),BAZI_FLOW_RULES.dayMasters[stem]||'日主之性须结合月令与四柱气势细参。']},
+  {title:'二、岁支刑冲合会与喜忌转化',lines:[roleLine,...palaceLines,'流年地支为'+branch+'，五行属'+(year.branchElement||'待考')+'；岁干五行属'+(year.stemElement||'待考')+'。刑冲合害须辨作用对象与喜忌，合不等于化，冲亦不必然为凶。']},
+  {title:'三、四时生活指引',lines:['事业功名：'+action[0]+' '+advice[0],'财帛进退：'+action[1]+' '+advice[1],'婚姻人伦：'+action[2]+' '+(hasUseful?'喜用受冲之年，尤宜温言相待，避免把外在压力带入亲密关系。':hasCaution?'忌神受冲而局势松动，宜与伴侣商议调整生活安排，勿仓促决定。':advice[2]),'身心起居：'+advice[2]+' 五行取象仅供传统文化参考，不作诊断；身体不适应求医问诊。']},
+  {title:'四、流月与应期参看',['流月以节气交接为界，'+(data.months||[]).slice(0,4).map(m=>(m.label||'节气月')+' '+(m.stem||'')+(m.branch||'')+'，'+((m.links||[]).join('、')||'未见显著干支关系')).join('；')+'。','应期只作观察窗口，并非事情必然发生之日；若现实未见其应，不必牵强附会。']}
  ];
  return {title:g.title||('八字 · '+label+'岁运详参'),sections,characters:sections.reduce((n,x)=>n+x.title.length+x.lines.join('').length,0)};
 }

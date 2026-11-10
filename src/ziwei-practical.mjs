@@ -5,7 +5,7 @@ export function practicalZiwei(chart,flow){
  const natalLuCun=palaces.flatMap(p=>(p.stars||[]).filter(s=>s.name==='禄存').map(s=>({branch:p.branch,palace:p,star:s})));
  const natalHuaLu=palaces.flatMap(p=>(p.stars||[]).filter(s=>s.siHua==='禄').map(s=>({branch:p.branch,palace:p,star:s})));
  const seen=new Set();
- for(const lu of natalLuCun)for(const hua of natalHuaLu){
+ if(flow)for(const lu of natalLuCun)for(const hua of natalHuaLu){
   const delta=(hua.branch-lu.branch+12)%12;
   if([0,4,8].includes(delta)){
    const key=[lu.branch,hua.branch].join(':');
@@ -19,8 +19,6 @@ export function practicalZiwei(chart,flow){
   const natalLu=palace?.stars?.some(star=>star.name==='禄存');
   if(palace&&([0,4,8].includes(delta)||natalLu)){
    results.push({name:'双禄交驰',palace:palace.name,branch:palace.branch,text:ZIWEI_FLOW_RULES.patterns.双禄交驰});
-  }else if(palace&&delta===6){
-   results.push({name:'禄逢冲破',palace:palace.name,branch:palace.branch,text:ZIWEI_FLOW_RULES.patterns.禄逢冲破});
   }
  }
  for(const m of flow?.mutagens||[]){

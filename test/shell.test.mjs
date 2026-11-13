@@ -38,11 +38,12 @@ test('bundled console creates fresh charts and progresses them without any netwo
  for(const [k,v] of Object.entries({name:'测试案例',date:'1998-11-21',clock:'00:02',lat:'30.361448',lon:'109.492552',tz:'8'}))form.elements[k].value=v;
  assert.equal(form.elements.city.required,false);
  click('#birthForm [type=submit]');
+ // The particle burst is intentionally short-lived; assert it before async charting.
+ assert.equal(many('.touch-burst i').length,7);
  await until(()=>Boolean($('.zi-board')),'first chart');
  assert(!$('#inputSheet').open);
  assert.deepEqual(pitches.slice(0,4),[1100,700,1318,1975]);
  assert.deepEqual(haptics.slice(0,2),['tap','success']);
- assert.equal(many('.touch-burst i').length,7);
  assert.equal(many('[data-palace]').length,12);
  assert($('#activeProfile').textContent.includes('测试案例'));
  assert.equal($('[data-profile-edit]').textContent,'✏️ 改生辰');

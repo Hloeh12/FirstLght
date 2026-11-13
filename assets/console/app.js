@@ -622,16 +622,24 @@ function forceRefreshAllInsights(){
 // FINAL_INSIGHT_REPORT_BUNDLE_CHECK: the report dictionaries are imported by this entry and bundled into js/console.js.
 function insights(){
  const r=state.reading;
- if(!r){root.innerHTML='<p class="empty">激活案例后查看八字、紫微与西洋占星的综合报告。</p>';return;}
- const {bazi,ziwei,western}=r;
- const active=ziwei.decades.map(d=>[d.ageRange.join('–')+' 岁',d.yearRange.join('–'),d.palaceName]);
- const periodActive=Boolean(state.system==='bazi'&&state.chartState.bazi?.data?.guidance||state.system==='ziwei'&&state.chartState.ziwei?.flow||state.system==='west'&&state.chartState.west?.result||state.system==='vedic'&&state.chartState.vedic?.activePeriod);
- root.innerHTML=`<section data-period-active="${periodActive}"><h1>洞见${periodActive?' · 当期推演':''}</h1><p class="muted">${esc(state.profile.name)} · 四体系合参</p>
- <p class="analysis-basis" data-analysis-basis></p><div data-resonance-host></div><div id="insightContent" aria-live="polite"></div><article class="card liquid-glass"><h2>性格与行动</h2><p>八字 ${esc(bazi.dayMaster.stem+bazi.dayMaster.element)}日主，扶助 ${bazi.strength.support.toFixed(1)}%，${bazi.strength.kind}；西方太阳 ${esc(western.planets[0].sign)}，第 ${western.planets[0].house} 宫；紫微命宫 ${esc(state.profile.summary.ziwei)}。</p><p>先用太阳落宫观察主要投入领域，再用八字扶助比例辨认资源需求。紫微命宫提供另一条处事风格线索。</p></article>
- <article class="card liquid-glass"><h2>职责、资源与人际</h2><p>官禄与财帛可分别观察职责和资源，西方天顶 ${esc(western.mc.sign)} 可对照事业表达，印度上升 ${esc(r.vedic.lagna)} 采用恒星黄道。</p><p>${esc(bazi.relationships.map(l=>l.pattern+l.type).join('、')||'本命未触发当前规则表中的干支关系')}</p></article>
- <article class="card liquid-glass"><h2>印度占星 · 星宿与大运</h2><p>Lahiri上升 ${esc(r.vedic.lagna)}；月亮 ${esc(r.vedic.planets.find(p=>p.key==='moon').nakshatra)}，宿度 ${r.vedic.planets.find(p=>p.key==='moon').nakDegree.toFixed(4)}°。</p><p>当前 Vimshottari 大运：${esc(r.vedic.active?.lord||'未落在当前所列区间')}。可对照该星本命宫位与前三体系的阶段线索。</p></article>
- <article class="card liquid-glass"><h2>全生命周期 · 紫微大限</h2>${table(['虚岁','年份','大限宫'],active)}</article>
- <details class="card liquid-glass" data-natal-background><summary>展开本命背景报告（与当前流限分开阅读）</summary>${Object.entries(r.report?.sections||{}).map(([name,lines])=>`<section><h2>${esc(reportTitle(name))}</h2>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}</section>`).join('')}</details></section>`;
+ if(!r){root.innerHTML='<p class="empty">激活案例后查看专属本命与岁运报告。</p>';return;}
+ const current=state.system;
+ const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星'};
+ const nav=['bazi','ziwei','west','vedic'].map(k=>btn(names[k],`data-insight-system="${k}" aria-pressed="${current===k}"`)).join('');
+ let natal='';
+ if(current==='bazi'){
+  const b=r.bazi; natal=`<article class="card liquid-glass"><h2>八字本命报告</h2><p>日主 ${esc(b.dayMaster.stem+b.dayMaster.element)}，扶助 ${b.strength.support.toFixed(1)}%，${esc(b.strength.kind)}。以月令、通根、透干与真实干支关系作为判断证据。</p><p>喜用参考：${esc(b.strength.useful.join('、')||'五行较均衡')}；忌偏参考：${esc(b.strength.caution.join('、')||'不单列')}。</p><p>本命关系：${esc(b.relationships.map(x=>x.pattern+x.type).join('、')||'当前规则表未触发显著关系')}。</p></article>`;
+ }else if(current==='ziwei'){
+  const z=r.ziwei,life=z.palaces.find(p=>p.name==='命宫'); natal=`<article class="card liquid-glass"><h2>紫微本命报告</h2><p>命宫在 ${esc(life?.earthlyBranch||'待定位')}，主星 ${esc((life?.majorStars||life?.borrowedStars||[]).map(x=>x.name).join('、')||'空宫借对宫待参')}。</p><p>本命解读独立保存于此；流年、流月、流日仅在选择对应节点后显示当前应期，不再与本命长报告混排。</p></article>`;
+ }else if(current==='vedic'){
+  const v=r.vedic,moon=v.planets.find(p=>p.key==='moon'),sun=v.planets.find(p=>p.key==='sun'); natal=`<article class="card liquid-glass"><h2>印度占星本命报告</h2><div class="vedic-detail-grid"><article class="card"><h3>命宫与月亮</h3><p>Lahiri 上升：${esc(v.lagna)}。月亮：${esc(moon?.sign||'待计算')} · ${esc(moon?.nakshatra||'待计算')} 第 ${esc(String(moon?.pada||'—'))} 足。</p></article><article class="card"><h3>大运</h3><p>Vimshottari 当前主运：${esc(v.active?.lord||'待定位')}。应结合主星落宫、星宿主与分盘交叉观察。</p></article><article class="card"><h3>行星状态</h3><p>${esc(v.planets.filter(x=>x.retrograde||x.combust||x.exalted||x.debilitated).map(x=>x.name+' '+[x.retrograde?'逆行':'',x.combust?'燃烧':'',x.exalted?'旺':'',x.debilitated?'陷':''].filter(Boolean).join('·')).join('；')||'当前没有额外行星状态标记。')}</p></article><article class="card"><h3>分盘阅读</h3><p>以 D1 看本命结构，D9 看关系与成熟度，D10 看事业表达；分盘必须与本命和当前 Dasha 一并读取。</p></article></div></article>`;
+ }else{
+  const w=r.western,sun=w.planets.find(p=>p.key==='sun');natal=`<article class="card liquid-glass"><h2>西洋占星本命报告</h2><p>太阳 ${esc(sun?.sign||'待计算')} · 第 ${esc(String(sun?.house||'—'))} 宫；天顶 ${esc(w.mc.sign)}。本命性格、事业与关系主题只在本命报告阅读。</p></article>`;
+ }
+ root.innerHTML=`<section><h1>洞见</h1><p class="muted">${esc(state.profile.name)} · ${esc(names[current])} 专属报告</p><div class="insight-system-tabs">${nav}</div><div class="report-export-row">${btn('导出当前报告长图','data-share-current')}</div><p class="analysis-basis" data-analysis-basis></p><div id="insightContent" aria-live="polite"></div><section data-natal-report>${natal}</section><div data-resonance-host></div></section>`;
+ for(const b of root.querySelectorAll('[data-insight-system]'))b.onclick=()=>{state.system=b.dataset.insightSystem;render();};
+ const exportButton=root.querySelector('[data-share-current]');
+ if(exportButton)exportButton.onclick=async()=>{exportButton.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前体系报告已生成，可从系统分享面板导出。');}catch(error){tell('导出失败：'+error.message);}finally{exportButton.disabled=false;}};
  forceRefreshAllInsights();
 }
 function reportTitle(key){

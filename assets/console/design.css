@@ -1,11 +1,13 @@
-:root{color-scheme:light;--brand:#ff4f8b;--blush:#ff77aa;--ink:#642448;--muted:#834667;--line:#f3cadd;--paper:#f7f7fb;--accent:#a8285d;--rose:#ffdfed;--wood:#a44a86;--fire:#bd2d63;--earth:#92602d;--metal:#a04469;--water:#8c4d91;--glass:linear-gradient(135deg,rgba(255,255,255,.88),rgba(255,240,246,.75));--spring:cubic-bezier(.34,1.56,.64,1);font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif}
-*{box-sizing:border-box}body{margin:0;color:var(--ink);background:radial-gradient(ellipse at 13% 12%,#ffd1e6b3 0,transparent 44%),radial-gradient(ellipse at 92% 42%,#ffe5ef 0,transparent 48%),var(--paper);background-attachment:fixed}button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;touch-action:manipulation;background:#fff;border:1px solid var(--line);border-radius:12px;padding:.48rem .72rem}button:disabled{cursor:wait;opacity:.65}button:focus-visible,a:focus-visible{outline:2px solid #975fba;outline-offset:2px}button[aria-pressed=true],button[aria-current=page]{background:var(--rose);color:var(--accent);font-weight:750}input,select,textarea{padding:.55rem .65rem;border:1px solid var(--line);border-radius:10px;background:#fff;width:100%;min-width:0}input[type=checkbox]{width:auto}label{display:grid;gap:4px;min-width:0}h1,h2,h3,p{margin:0 0 .55rem}h1{font-size:1.55rem}h2{font-size:1.2rem}h3{font-size:1rem}small,.muted{color:var(--muted)}[hidden]{display:none!important}.liquid-glass,.card{
- background:var(--glass)!important;
- backdrop-filter:blur(28px) saturate(190%)!important;
- -webkit-backdrop-filter:blur(28px) saturate(190%)!important;
- border:1px solid rgba(255,255,255,.95)!important;
- box-shadow:0 12px 36px rgba(255,79,139,.12),inset 0 1.5px 2px rgba(255,255,255,.95),inset 0 -1.5px 2px rgba(255,79,139,.15)!important;
- border-radius:24px;
+:root{color-scheme:light;--paper:#faf8fb;--ink:#1c171a;--ink-secondary:#4a3e45;--muted:#8c7d86;--brand:#ff4f8b;--blush:#ffa3c7;--line:rgba(255,182,206,.35);--accent:#a8285d;--rose:#ffdfed;--wood:#a44a86;--fire:#bd2d63;--earth:#92602d;--metal:#a04469;--water:#8c4d91;--liquid-card-bg:linear-gradient(135deg,rgba(255,255,255,.90) 0%,rgba(255,245,249,.75) 100%);--liquid-border:1px solid rgba(255,255,255,.65);--liquid-shadow:0 12px 32px -4px rgba(255,79,139,.09),0 4px 12px -2px rgba(0,0,0,.02);--spring:cubic-bezier(.34,1.56,.64,1);font:15px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);background:radial-gradient(ellipse at 13% 12%,#ffd1e660 0,transparent 44%),radial-gradient(ellipse at 92% 42%,#ffe5ef50 0,transparent 48%),var(--paper);background-attachment:fixed}button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;touch-action:manipulation;background:#fff;border:1px solid var(--line);border-radius:12px;padding:.48rem .72rem}button:disabled{cursor:wait;opacity:.65}button:focus-visible,a:focus-visible{outline:2px solid #ff4f8b;outline-offset:2px}button[aria-pressed=true],button[aria-current=page]{background:var(--rose);color:var(--accent);font-weight:750}input,select,textarea{padding:.55rem .65rem;border:1px solid var(--line);border-radius:10px;background:#fff;width:100%;min-width:0}input[type=checkbox]{width:auto}label{display:grid;gap:4px;min-width:0}h1,h2,h3,p{margin:0 0 .65rem}h1{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;color:var(--ink)}h2{font-size:1.18rem;font-weight:750;letter-spacing:-.015em;color:var(--ink)}h3{font-size:.95rem;font-weight:700;color:var(--ink)}p{line-height:1.68;font-size:.92rem;color:var(--ink-secondary)}small,.muted{color:var(--muted)}[hidden]{display:none!important}.liquid-glass,.card{
+ background:var(--liquid-card-bg)!important;
+ backdrop-filter:blur(28px) saturate(200%)!important;
+ -webkit-backdrop-filter:blur(28px) saturate(200%)!important;
+ border:var(--liquid-border)!important;
+ box-shadow:var(--liquid-shadow)!important;
+ border-radius:22px!important;
+ padding:16px 18px!important;
+ margin-bottom:14px!important;
 }
 *{accent-color:#ff4f8b!important;-webkit-tap-highlight-color:transparent!important}
 input:focus,select:focus,textarea:focus{outline:2px solid #ff77aa!important;outline-offset:0;box-shadow:0 0 0 3px rgba(255,79,139,.13)!important;border-color:#ff4f8b!important}
@@ -273,7 +275,7 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .modal-open #mainScrollView{overflow:hidden!important;touch-action:none}
 .modal-open dialog[open]{touch-action:pan-y}
 .case-actions,.confirm-actions,.panel-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;position:static}
-.sheet.liquid-glass,.drawer.liquid-glass{background:linear-gradient(135deg,rgba(255,255,255,.83),rgba(255,233,245,.72))!important;backdrop-filter:blur(32px) saturate(190%)!important;-webkit-backdrop-filter:blur(32px) saturate(190%)!important;box-shadow:0 -14px 45px #ff4f8b26,inset 0 2px 3px #fff,inset 0 -2px 3px #ff77aa30!important}
+.sheet.liquid-glass,.drawer.liquid-glass{background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,242,247,.82))!important;backdrop-filter:blur(32px) saturate(210%)!important;-webkit-backdrop-filter:blur(32px) saturate(210%)!important;border:1px solid rgba(255,255,255,.75)!important;box-shadow:0 -14px 45px rgba(255,79,139,.15),inset 0 1.5px 2px #fff,inset 0 -1.5px 2px rgba(255,79,139,.18)!important}
 #inputSheet .sheet-body{padding-inline:2px;scroll-padding-bottom:100px}
 #birthForm{min-width:0;align-items:start;gap:12px 14px}
 #birthForm>label{min-width:0;max-width:100%;overflow:hidden}

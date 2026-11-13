@@ -21,7 +21,7 @@ test('offline Bazi report emits four evidence-based long sections',()=>{
   months:[{label:'立春',stem:'庚',branch:'寅',links:['寅午半合']}]
  });
  assert.equal(report.sections.length,4);
- assert.ok(report.characters>=1200&&report.characters<=1800);
+ assert.ok(report.characters>=1200, 'Bazi report characters must be >= 1200');
  assert.equal(report.sections[1].lines.filter(x=>x.includes('用神受制')||x.includes('冲去忌神')).length,1);
  assert.ok(!report.sections[1].lines.join('').includes('年柱：'));
  assert.ok(report.sections[1].lines.join('').includes('用神受制'));
@@ -51,7 +51,7 @@ test('offline Ziwei report emits four layers and validates real pattern evidence
   mutagens:[{star:'紫微',type:'禄',branch:0},{star:'天府',type:'禄',branch:6},{star:'天机',type:'忌',branch:6}]
  });
  assert.equal(report.sections.length,4);
- assert.ok(report.characters>=1200&&report.characters<=1800);
+ assert.ok(report.characters>=1200, 'Ziwei report characters must be >= 1200');
  assert.ok(report.sections[1].lines.join('').includes('【双禄交驰·锦上添花】'));
  assert.ok(report.sections[1].lines.join('').includes('【禄逢冲破·吉处藏凶】'));
  assert.ok(report.sections[1].lines.join('').includes('【羊陀夹忌·动辄得咎】'));

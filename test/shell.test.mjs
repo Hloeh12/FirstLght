@@ -25,7 +25,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  const w=dom.window,doc=w.document;
  const script=doc.createElement('script');script.textContent=js;doc.body.append(script);
  const $=s=>doc.querySelector(s),many=s=>[...doc.querySelectorAll(s)];
- const click=s=>{const b=$(s);assert(b,s);b.click();};
+ const click=s=>{const b=$(s);assert(b,s);b.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true,detail:1,clientX:100,clientY:100}));};
  const until=async(predicate,label)=>{
   for(let i=0;i<150&&!predicate();i++)await new Promise(r=>setTimeout(r,60));
   assert(predicate(),label+' | '+($('#birthStatus')?.textContent||'')+' | '+($('#screen')?.textContent||'').slice(0,180));

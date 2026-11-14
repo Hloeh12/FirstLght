@@ -622,24 +622,31 @@ function forceRefreshAllInsights(){
 // FINAL_INSIGHT_REPORT_BUNDLE_CHECK: the report dictionaries are imported by this entry and bundled into js/console.js.
 function insights(){
  const r=state.reading;
- if(!r){root.innerHTML='<p class="empty">激活案例后查看专属本命与岁运报告。</p>';return;}
- const current=state.system;
- const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星'};
+ if(!r){root.innerHTML='<p class="empty">激活案例后查看专属报告。</p>';return;}
+ const current=state.system,names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星'};
  const nav=['bazi','ziwei','west','vedic'].map(k=>btn(names[k],`data-insight-system="${k}" aria-pressed="${current===k}"`)).join('');
- let natal='';
+ const b=r.bazi,z=r.ziwei,w=r.western,v=r.vedic;
+ let natal='', lifecycle='';
  if(current==='bazi'){
-  const b=r.bazi; natal=`<article class="card liquid-glass"><h2>八字本命报告</h2><p>日主 ${esc(b.dayMaster.stem+b.dayMaster.element)}，扶助 ${b.strength.support.toFixed(1)}%，${esc(b.strength.kind)}。以月令、通根、透干与真实干支关系作为判断证据。</p><p>喜用参考：${esc(b.strength.useful.join('、')||'五行较均衡')}；忌偏参考：${esc(b.strength.caution.join('、')||'不单列')}。</p><p>本命关系：${esc(b.relationships.map(x=>x.pattern+x.type).join('、')||'当前规则表未触发显著关系')}。</p></article>`;
+  natal=`<article class="card liquid-glass"><h2>八字本命专属报告</h2><p>日主 ${esc(b.dayMaster.stem+b.dayMaster.element)}，${esc(b.strength.kind)}，扶助 ${b.strength.support.toFixed(1)}%。</p><p>月令提纲：${esc(b.pillars[1].stem+b.pillars[1].branch)}；通根：${esc(b.roots.map(x=>x.pillar+x.branch+'藏'+x.stem).join('、')||'未见')}；透干：${esc(b.revealed.map(x=>x.stem+'透'+x.visibleAt).join('、')||'未见')}。</p><p>本命刑冲合害：${esc(b.relationships.map(x=>x.pattern+' '+x.type+'（'+x.meaning+'）').join('；')||'未触发当前规则表关系')}。</p><p>喜用参考 ${esc(b.strength.useful.join('、')||'未单列')}，忌偏参考 ${esc(b.strength.caution.join('、')||'未单列')}。本段只讲本命，不混入流年流月。</p></article>`;
+  lifecycle=`<article class="card liquid-glass"><h2>八字大运生命周期</h2><p>起运：${esc(b.info.startAge||b.entry?.local||'以出生资料计算')}；${esc(b.info.forward?'顺行':'逆行')}。以下为大运顺序，点击排盘页时间轴可查看对应岁运专属报告。</p>${table(['阶段','干支','起止','十神'],b.cycles.map(x=>[x.age+'岁',x.stem+x.branch,x.startYear+'–'+x.endYear,x.tenGod]))}</article>`;
  }else if(current==='ziwei'){
-  const z=r.ziwei,life=z.palaces.find(p=>p.name==='命宫'); natal=`<article class="card liquid-glass"><h2>紫微本命报告</h2><p>命宫在 ${esc(life?.earthlyBranch||'待定位')}，主星 ${esc((life?.majorStars||life?.borrowedStars||[]).map(x=>x.name).join('、')||'空宫借对宫待参')}。</p><p>本命解读独立保存于此；流年、流月、流日仅在选择对应节点后显示当前应期，不再与本命长报告混排。</p></article>`;
+  const life=z.palaces.find(x=>x.name==='命宫'), stars=life?.majorStars?.length?life.majorStars:life?.borrowedStars||[];
+  natal=`<article class="card liquid-glass"><h2>紫微本命专属报告</h2><p>命宫在 ${esc(life?.earthlyBranch||'待定位')}，${stars.length?'主星为 '+esc(stars.map(x=>x.name).join('、')):'空宫，借对宫主星并参看三方四正'}。</p><p>${esc(stars.map(x=>x.name+'：'+(x.brightness||'本宫星曜')).join('；')||'命宫主星待定位')}。本命四化：${esc(z.sihua.map(x=>x.type+'入'+x.palace).join('、')||'待定位')}。</p><p>本命报告只解释十二宫、主星、庙旺、四化和三方四正；流年、流月、流日另列在下方当前时空报告。</p></article>`;
+  lifecycle=`<article class="card liquid-glass"><h2>紫微全生命周期 · 大限</h2><p>每十年以大限宫为阶段主题，点击排盘页“大限/流年/流月/流日”后，下方当前报告会同步替换。</p>${table(['虚岁','年份','大限宫'],z.decades.map(x=>[x.ageRange.join('–')+'岁',x.yearRange.join('–'),x.palaceName]))}</article>`;
  }else if(current==='vedic'){
-  const v=r.vedic,moon=v.planets.find(p=>p.key==='moon'),sun=v.planets.find(p=>p.key==='sun'); natal=`<article class="card liquid-glass"><h2>印度占星本命报告</h2><div class="vedic-detail-grid"><article class="card"><h3>命宫与月亮</h3><p>Lahiri 上升：${esc(v.lagna)}。月亮：${esc(moon?.sign||'待计算')} · ${esc(moon?.nakshatra||'待计算')} 第 ${esc(String(moon?.pada||'—'))} 足。</p></article><article class="card"><h3>大运</h3><p>Vimshottari 当前主运：${esc(v.active?.lord||'待定位')}。应结合主星落宫、星宿主与分盘交叉观察。</p></article><article class="card"><h3>行星状态</h3><p>${esc(v.planets.filter(x=>x.retrograde||x.combust||x.exalted||x.debilitated).map(x=>x.name+' '+[x.retrograde?'逆行':'',x.combust?'燃烧':'',x.exalted?'旺':'',x.debilitated?'陷':''].filter(Boolean).join('·')).join('；')||'当前没有额外行星状态标记。')}</p></article><article class="card"><h3>分盘阅读</h3><p>以 D1 看本命结构，D9 看关系与成熟度，D10 看事业表达；分盘必须与本命和当前 Dasha 一并读取。</p></article></div></article>`;
+  const moon=v.planets.find(x=>x.key==='moon'),sun=v.planets.find(x=>x.key==='sun');
+  const planetLines=v.planets.map(x=>x.name+'：'+x.sign+'，第'+x.house+'宫，'+x.nakshatra+' Pada '+x.pada+(x.retro?'，逆行':'')).join('；');
+  natal=`<article class="card liquid-glass"><h2>印度占星本命专属报告</h2><p>Lahiri 恒星黄道、整宫制。上升 ${esc(v.lagna)}；太阳 ${esc(sun?.sign||'—')} 第${sun?.house||'—'}宫；月亮 ${esc(moon?.sign||'—')} 第${moon?.house||'—'}宫，${esc(moon?.nakshatra||'—')} Pada ${moon?.pada||'—'}。</p><h3>九曜落宫与星宿</h3><p>${esc(planetLines)}</p><h3>本命判读</h3><p>先以 D1 判断上升、月亮、太阳及宫主星，再以星宿主与相位确认主题；D9 用于关系成熟度，D10 用于事业表达，不能脱离 D1 单独断事。</p></article>`;
+  lifecycle=`<article class="card liquid-glass"><h2>印度 Vimshottari 全生命周期</h2>${table(['主运','起始','结束','状态'],v.dashas.map(x=>[x.lord,x.start.slice(0,10),x.end.slice(0,10),x.current?'当前':'—']))}<p>点击印度排盘页四级 Dasha 行，可查看 Maha、Antar、Pratyantar、Sookshma 的当前专属分析。</p></article>`;
  }else{
-  const w=r.western,sun=w.planets.find(p=>p.key==='sun');natal=`<article class="card liquid-glass"><h2>西洋占星本命报告</h2><p>太阳 ${esc(sun?.sign||'待计算')} · 第 ${esc(String(sun?.house||'—'))} 宫；天顶 ${esc(w.mc.sign)}。本命性格、事业与关系主题只在本命报告阅读。</p></article>`;
+  const sun=w.planets.find(x=>x.key==='sun'),moon=w.planets.find(x=>x.key==='moon');
+  natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p>太阳 ${esc(sun?.sign||'—')} 第${sun?.house||'—'}宫，月亮 ${esc(moon?.sign||'—')} 第${moon?.house||'—'}宫，上升 ${esc(w.asc.sign)}，天顶 ${esc(w.mc.sign)}。</p><p>本命报告按行星落座、落宫、四轴、主相位和尊贵状态解释；行运、次限、日返另列为当前时空报告。</p></article>`;
+  lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
  }
- root.innerHTML=`<section><h1>洞见</h1><p class="muted">${esc(state.profile.name)} · ${esc(names[current])} 专属报告</p><div class="insight-system-tabs">${nav}</div><div class="report-export-row">${btn('导出当前报告长图','data-share-current')}</div><p class="analysis-basis" data-analysis-basis></p><div id="insightContent" aria-live="polite"></div><details class="card liquid-glass" data-natal-background><summary>本命背景报告 · ${esc(names[current])}</summary><section data-natal-report>${natal}<article class="card liquid-glass"><h2>全生命周期</h2><p>生命周期报告按当前体系独立阅读；切换八字、紫微、西洋或印度标签后，内容只随当前体系更新，不混入其他盘的报告。</p></article></section></details><div data-resonance-host></div></section>`;
- for(const b of root.querySelectorAll('[data-insight-system]'))b.onclick=()=>{state.system=b.dataset.insightSystem;render();};
- const exportButton=root.querySelector('[data-share-current]');
- if(exportButton)exportButton.onclick=async()=>{exportButton.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前体系报告已生成，可从系统分享面板导出。');}catch(error){tell('导出失败：'+error.message);}finally{exportButton.disabled=false;}};
+ root.innerHTML=`<section><h1>洞见</h1><p class="muted">${esc(state.profile.name)} · ${esc(names[current])}</p><div class="insight-system-tabs">${nav}</div><div class="report-export-row">${btn('导出本页报告长图','data-share-current')}</div><details class="card liquid-glass" open><summary>本命专属报告 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期报告 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="current-period-report"><h2>当前专属时空报告</h2><p class="thin" data-analysis-basis>选择排盘页的时间节点后，这里只显示对应的大限、流年、流月或流日分析。</p><div id="insightContent" aria-live="polite"></div></section><div data-resonance-host></div></section>`;
+ for(const x of root.querySelectorAll('[data-insight-system]'))x.onclick=()=>{state.system=x.dataset.insightSystem;render();};
+ const ex=root.querySelector('[data-share-current]');if(ex)ex.onclick=async()=>{ex.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前报告已生成，可在系统分享面板保存。');}catch(e){tell('导出失败：'+e.message);}finally{ex.disabled=false;}};
  forceRefreshAllInsights();
 }
 function reportTitle(key){

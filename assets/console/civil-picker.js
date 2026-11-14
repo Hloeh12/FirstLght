@@ -20,7 +20,9 @@ export function installCivilPickers(sheet) {
   const outputs=new Map();
   for(const input of [date,clock].filter(Boolean)){
    const output=document.createElement('output');
-   input.after(output);outputs.set(input,output);input.type='hidden';
+   input.after(output);outputs.set(input,output);
+   input.classList.add('native-civil-input');
+   input.removeAttribute('hidden');
   }
   const read=()=>{
    const now=localNowParams();

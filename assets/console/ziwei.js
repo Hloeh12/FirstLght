@@ -220,7 +220,7 @@ function detail(s){
   const t=palace(z,m.branch),[a,b,o]=t.relatedBranches.slice(1).map(id=>palace(z,id).name);
   return [m.star+' 化'+m.type,t.name+(t===p?' · 自化':''),a+'、'+b,o];
  })):'';
- return `<article class="card liquid-glass zi-detail" aria-live="polite"><h2>${esc(heading)}</h2>${[...description,...ziweiPeriodEvidence(z,flow)].filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')}${flying?'<h3>四化飞星明细</h3>'+grid:''}<small>${esc(weight)} · 传统术数观察 · 借星按借入宫重查亮度，并以 0.6 系数计入参考。</small></article>`;
+ return `<article class="card liquid-glass zi-detail" aria-live="polite" data-period-guidance><h2>${esc(heading)}</h2>${[...description,...ziweiPeriodEvidence(z,flow)].filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')}${flying?'<h3>四化飞星明细</h3>'+grid:''}<small>${esc(weight)} · 传统术数观察 · 借星按借入宫重查亮度，并以 0.6 系数计入参考。</small></article>`;
 }
 let observer;
 export function ziweiView(ctx,arrival=false){

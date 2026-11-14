@@ -37,7 +37,7 @@ function details(d){
  return `<article class="card liquid-glass"><div class="spread"><h2>五行力量</h2><b>${d.strength.kind} · ${d.strength.support.toFixed(1)}%</b></div>
  ${bars(d.strength.percentages)}<p class="thin">喜用参考 ${d.strength.useful.join('、')||'五行扶助较均衡'} · 忌偏参考 ${d.strength.caution.join('、')||'不单列'}</p><small>${esc(d.strength.method)}</small></article>
  <article class="card"><h2>干支关系</h2>${relationships(d)}<p class="thin">日主通根 ${esc(d.roots.map(r=>r.pillar+r.branch+'藏'+r.stem).join('、')||'未见')} · 透干 ${esc(d.revealed.map(r=>r.rootAt+'藏'+r.stem+'透'+r.visibleAt).join('、')||'未见')} · 旬空 ${esc(d.voidBranches.join('、'))}</p></article>
- ${d.guidance?`<article class="card period-guidance" aria-live="polite"><h2>${esc(d.guidance.title)}</h2><p>${esc(d.guidance.summary)}</p>
+ ${d.guidance?`<article class="card period-guidance" aria-live="polite" data-period-guidance><h2>${esc(d.guidance.title)}</h2><p>${esc(d.guidance.summary)}</p>
  ${periodSections(d.guidance)}<small>传统干支规则与权重模型提供的观察参考。</small></article>`:''}
 
  ${d.selected.length?`<article class="card"><h2>当前运程</h2>${d.selected.map(p=>`<p>${esc(p.name+' '+p.stem+p.branch)} · ${term(p.tenGod)} · ${term(p.changsheng,stages[p.changsheng])} · ${term(p.nayin,'六十甲子的纳音分类。')}</p>`).join('')}</article>`:''}`;

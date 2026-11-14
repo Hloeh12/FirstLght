@@ -231,11 +231,11 @@ export function ziweiView(ctx,arrival=false){
  panel.innerHTML=`<section aria-label="紫微斗数">${board(ctx,s)}<article class="card" data-zi-practical>${practicalZiwei(s.chart,s.flow).map(x=>`<p><b>${esc(x.name+' · '+x.palace)}</b> ${esc(x.text)}</p>`).join('')||'<small>当前未触发双禄、禄冲或羊陀夹忌条件。</small>'}</article>
  <div class="segments liquid-glass" aria-label="紫微模式">${mode.map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${id===s.mode}"`)).join('')}</div>
  ${s.mode==='transform'?'<div class="rail" aria-label="四化分析">'+[['natal','生年四化'],['self','自化分析'],['track','飞星轨迹']].map(([id,label])=>btn(label,`data-filter="${id}" aria-pressed="${s.filter===id}"`)).join('')+'</div>':''}
- <div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),d.yearRange[0])}
+ <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大限与流限</h2><p>选择后仅刷新下方当前大限、流年、流月或流日的专属分析。</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),d.yearRange[0])}
  ${row('流年',[['natal','本命'],...years.map(y=>[y,yearName(y)])],flow?.scope==='decadal'?undefined:flow?.year??'natal')}
  ${row('流月',flow&&flow.scope!=='decadal'?flow.months.map(m=>[m.month,monthName(m.month)]):[],flow?.month)}
- ${row('流日',flow?.days.map(x=>[x.day,x.day+'日 '+x.ganZhi])||[],flow?.day)}</div>
- <p id="ziStatus" role="status" class="muted">${esc(s.error)}</p>${detail(s)}</section>`;
+ ${row('流日',flow?.days.map(x=>[x.day,x.day+'日 '+x.ganZhi])||[],flow?.day)}</div></section>
+ <p id="ziStatus" role="status" class="muted">${esc(s.error)}</p><section class="period-result">${detail(s)}</section></section>`;
  overlay(panel,s,arrival);
  if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>{if($('.zi-board',panel))overlay(panel,s);});observer.observe($('.zi-board',panel));}
  selectedRails(panel);

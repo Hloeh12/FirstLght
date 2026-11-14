@@ -18,8 +18,8 @@ export function bars(values){
  }).join('');
 }
 export function row(label,items,active){
- const reset=label==='大运'?btn('恢复本命','class="period-reset" data-reset-period'):'';
- return `<div class="time-row ${reset?'has-period-reset':''}"><strong>${esc(label)}</strong>${reset}<div class="rail" role="group" aria-label="${esc(label)}">${items.map(([key,name])=>btn(name,`data-pick="${esc(key)}" data-rail="${esc(label)}" aria-pressed="${String(key===active)}"`)).join('')||'<small>　选择上一级后展开</small>'}</div></div>`;
+ const reset='';
+ return `<div class="time-row ${reset?'has-period-reset':''}"><strong>${esc(label)}</strong><div class="rail-tools">${reset}</div><div class="rail" role="group" aria-label="${esc(label)}">${items.map(([key,name])=>btn(name,`data-pick="${esc(key)}" data-rail="${esc(label)}" aria-pressed="${String(key===active)}"`)).join('')||'<small>　选择上一级后展开</small>'}</div></div>`;
 }
 export function selectedRails(root){
  for(const rail of root.querySelectorAll('.rail')){

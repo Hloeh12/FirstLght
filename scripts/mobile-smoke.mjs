@@ -138,6 +138,8 @@ try{
    assert(Number(await insightReport.getAttribute('data-report-characters'))>=1050);
    assert((await insightReport.textContent()).includes('事业功名'));
   assert(await page.locator('[data-natal-background]').count()===1);
+  assert(await page.locator('[data-lifecycle-report]').count()===1);
+  assert(await page.locator('.current-period-report').count()===1);
   await page.locator('[data-tab=chart]').click();
   await page.locator('[data-bazi-rails] [data-rail="流年"]').nth(1).click();
   await page.waitForFunction(previous=>document.querySelector('.period-guidance:not(.knowledge-report)')?.textContent!==previous,firstPeriod);

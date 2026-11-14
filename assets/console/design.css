@@ -337,6 +337,7 @@ input,textarea{user-select:text;-webkit-user-select:text}
 
 /* Civil pickers stay in the sheet so WebKit never presents a system calendar. */
 .civil-picker{min-width:0}
+.native-civil-input{display:block!important;width:100%;min-height:42px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.78);color:var(--ink);font-variant-numeric:tabular-nums}
 .civil-picker details{margin-top:4px}
 .civil-picker summary{width:max-content;padding:4px 8px;border-radius:12px;color:var(--accent);font-size:.8rem;cursor:pointer}
 .civil-calendar{padding:8px;border:1px solid var(--line);border-radius:14px;background:#fff4fa}

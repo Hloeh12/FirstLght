@@ -68,7 +68,9 @@ try{
    }
    await picker.locator('[data-wheel-apply]').click();
   }
-  assert.equal(await page.locator('#inputSheet input[type=date],#inputSheet input[type=time]').count(),0);
+  assert.equal(await page.locator('#inputSheet input[type=date],#inputSheet input[type=time]').count(),2);
+  assert(await page.locator('#inputSheet input[type=date]').isVisible());
+  assert(await page.locator('#inputSheet input[type=time]').isVisible());
   await chooseBirthTime(1998,11,21,2);
   assert.equal(await page.locator('#birthForm [name=date]').inputValue(),'1998-11-21');
   assert.equal(await page.locator('#birthForm [name=clock]').inputValue(),'00:02');

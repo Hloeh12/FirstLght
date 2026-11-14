@@ -560,8 +560,14 @@ function renderDynamicInsightBySystem(){
   parts.push(`<h3>西洋 · ${esc(w.at.getFullYear()+'年'+(w.at.getMonth()+1)+'月')} ${esc(title)}推演</h3><p>所选时刻 ${esc(localDisplayTime(w.at))} 本地；${cross?'推运星体对照本命星位':'当前盘面'}。</p>${relations.map(a=>`<p><b>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}</b> · Orb ${a.orb.toFixed(2)}°，${a.applying===true?'入相':a.applying===false?'出相':'阶段未定'}；${[90,180].includes(a.angle)?'优先核对现实压力与边界，暂缓过量承诺。':'可观察合作、表达或行动窗口，仍须结合具体落宫。'}</p>`).join('')||'<p>当前容许度内未检出关键相位，不额外编造事件。</p>'}`);
  }
  if(v?.activePeriod){
-  const p=v.activePeriod;
-  parts.push(`<h3>印度 · ${esc(p.date)} Vimshottari 四级运</h3><p>${esc(p.lords.join(' → '))}，微运主星 ${esc(p.lord)} 落所选 D${p.varga} 第 ${p.house||'—'} 宫，照拂第 ${esc(p.aspects.join('、')||'—')} 宫。</p><p><b>当期业力重心</b> 检视第 ${p.house||'—'} 宫所代表的职责与资源；副运改变时重新核对该主星及照宫，避免把本命固定叙述当作当期结论。</p>`);
+  const p=v.activePeriod,chart=v.data||state.reading.vedic,lord=chart?.planets?.find(x=>x.name===p.lord);
+  const houseThemes={1:'身体状态、自我定位与发起方式',2:'积蓄、饮食、家族资源与表达',3:'沟通、技能训练、手足与短途行动',4:'居所、内在安全、母系与基础教育',5:'创作、学习、子女与判断力',6:'日常工作、服务、债务管理与竞争',7:'合作、伴侣、契约与公开关系',8:'共同资源、研究、转化与风险管理',9:'高等学习、信念、导师与远行',10:'职业责任、公众角色与可见成果',11:'收益、人脉、长期愿望与社群',12:'休息、隐退、远方支出与内在整理'};
+  const house=p.house||lord?.house||0,theme=houseThemes[house]||'宫位主题待核';
+  const selectedVarga=state.chartState.vedic?.n||p.varga||1;
+  const vargaTitle=({1:'Rashi 本命',9:'Navamsha 关系',10:'Dashamsha 事业'})[selectedVarga]||'专项分盘';
+  const dashaPath=(p.lords||[]).join(' → ')||p.lord;
+  const planetContext=lord?`${lord.name}本命在${lord.sign}第${lord.house}宫，落${lord.nakshatra||'宿位待核'}宿，${lord.retro?'逆行，宜复核延迟与返工主题。':'以顺行节奏观察其主题推进。'}`:'当前缓存未含大运主星完整本命位置，故不补造星曜状态。';
+  parts.push(`<article class="card liquid-glass period-domain-report" data-vedic-period-report><h3>印度占星 · 当前专属时空报告</h3><p><b>所选时点</b> ${esc(p.date)} · D${selectedVarga} ${esc(vargaTitle)}</p><p><b>四级 Dasha</b> ${esc(dashaPath)}；本层微运主星 ${esc(p.lord)}。</p><p><b>主星落点</b> ${esc(planetContext)}</p><p><b>主运主题</b> 主星落第 ${house||'—'} 宫，主要核对${esc(theme)}。这是阶段重点，不表示事件必然发生。</p><p><b>传统照宫</b> 第 ${esc(p.aspects.join('、')||'—')} 宫；结合这些宫的本命行星、宫主与现实事项核查，不把照宫直接等同吉凶。</p><p><b>盘面联读</b> D1 确认本命根基；D${selectedVarga} 用于${esc(vargaTitle)}主题；副运切换时比较主星与副星是否同指一宫、是否重复触发同一星宿或宫主。只在可验证的宫位关系重合时增强判断，否则保留为分歧线索。</p><p><b>建议的现实核对</b> 在${esc(theme)}相关决策上记录期限、资源来源和可撤回选项；若本层主星与副运主星并不共同指向该领域，就不将其他体系的断语挪来补足。</p></article>`);
  }
  return `<article class="card liquid-glass period-guidance" aria-live="polite"><h2>当前时空点 · 专属推演</h2>${parts.join('')}<small>根据所选时间滑轨的本地盘面重算结果生成；传统术数仅作观察参考。</small></article>`;
 }

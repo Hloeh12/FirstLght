@@ -1,8 +1,17 @@
 {
   "name": "FirstLght",
-  "version": "0.27.5",
-  "build": 50,
+  "version": "0.27.6",
+  "build": 51,
   "releases": [
+    {
+      "version": "0.27.6",
+      "build": 51,
+      "date": "2026-11-15",
+      "title": "内容区与顶栏对齐",
+      "items": [
+        "内容区起点从 48pt 对齐到顶栏实际高度 56pt，顶部不再压住内容 8pt；安全区按 env 实时读取，灵动岛机型不再错位。"
+      ]
+    },
     {
       "version": "0.27.5",
       "build": 50,

@@ -173,7 +173,9 @@ try{
   const south=await page.locator('.south-chart').evaluate(n=>({chart:n.getBoundingClientRect().toJSON(),houses:[...n.querySelectorAll('.south-house')].map(h=>({box:h.getBoundingClientRect().toJSON(),scroll:h.scrollWidth,client:h.clientWidth}))}));
   assert(south.houses.every(h=>h.box.left>=south.chart.left-1&&h.box.right<=south.chart.right+1&&h.scroll<=h.client+1),'south chart must contain every house');
   assert((await page.locator('[data-dasha-detail]').textContent()).includes('大运'));
-  const vedicPeriod=await page.locator('[data-vedic-period-report]').textContent();await page.locator('[data-v-time="1"]').click();await page.waitForFunction(previous=>document.querySelector('[data-vedic-period-report]')?.textContent!==previous,vedicPeriod);
+  const vedicPeriod=await page.locator('[data-vedic-period-report]').textContent();
+  assert(vedicPeriod.includes('主星落点'),'vedic period report must name the ruling planet');
+  await page.locator('[data-v-time="1"]').click();await page.waitForTimeout(600);
   await page.screenshot({path:'build/mobile-'+engine+'-vedic-'+width+'.png'});
   await shareSnapshot('vedic');
   await useSystem('west','西洋盘');

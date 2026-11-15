@@ -95,7 +95,8 @@ export function baziView(ctx){
  <section class="period-result"><div class="bazi-crossfade"><div data-bazi-data>${details(d)}</div></div></section></section>`;
  $('[data-combine]',ctx.root).onclick=()=>update(ctx,s.pick,!s.combine);
  const rails=$('[data-bazi-rails]',ctx.root);
- rails.onclick=e=>{
+ const periodPanel=$('.period-control',ctx.root)||rails;
+ periodPanel.onclick=e=>{
   if(e.target.closest('[data-reset-period]')){update(ctx,{},s.combine);return;}
   const b=e.target.closest('[data-rail]');
   if(!b)return;

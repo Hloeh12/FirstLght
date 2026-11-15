@@ -24,7 +24,7 @@ function compass(sky){
 export function soulWidgets(){
  return `<article class="card soul-sky" data-today-sky><h2>今日即时星象</h2><p role="status">正在读取本地星历…</p></article>
  <article class="card soul-divination"><div><span class="kicker">DAILY INSPIRATION</span><h2>每日灵感占卜</h2><p>结合活跃命主日主与今日干支时辰，抽取专属指引。</p></div>
- <button type="button" data-draw-guide class="crystal-button" aria-label="点亮水晶球，抽取今日灵性指引"><span aria-hidden="true">✦</span><small>点亮水晶球</small></button>
+ <button type="button" data-draw-guide class="crystal-button" aria-label="点亮水晶球，抽取今日灵性指引"><span class="crystal-mark" aria-hidden="true"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"><path d="M10 2.6l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4L2.2 8.3l5.4-.8z"/></svg></span><small>点亮水晶球</small></button>
  <div data-guidance class="guidance" aria-live="polite"></div></article>`;
 }
 export function wireSoul(ctx){

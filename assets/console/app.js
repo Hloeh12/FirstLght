@@ -65,7 +65,7 @@ for(const d of document.querySelectorAll('dialog')){
  d.addEventListener('cancel',e=>{e.preventDefault();close(d);});
 }
 function sheet(id,title,body){
- const d=$('#'+id),prefix={inputSheet:'birth',caseDrawer:'drawer',toolSheet:'tool',termSheet:'term'}[id];
+ const d=$('#'+id),prefix={inputSheet:'birth',caseDrawer:'drawer',toolSheet:'tool',termSheet:'term',configSheet:'config',moduleSheet:'module'}[id];
  d.innerHTML=`<div class="dialog-content"><div class="sheet-grip" aria-hidden="true"></div><header class="sheet-head">
  <h2 id="${prefix}Title">${esc(title)}</h2>${btn('×','class="icon" aria-label="关闭" data-close')}</header><div class="sheet-body">${body}<div class="scroll-clearance" aria-hidden="true"></div></div></div>`;
  installCivilPickers(d);
@@ -79,6 +79,10 @@ function switchTab(tab,system=state.system){
  state.tab=tab;state.system=system;
  render();
  $('#mainScrollView').scrollTo?.(0,0);
+ const screenEl=$('#screen');
+ if(screenEl){screenEl.classList.remove('fl-swap');void screenEl.offsetWidth;screenEl.classList.add('fl-swap');}
+ const rail=$('#chartSystemSwitch'),active=rail&&rail.querySelector('[data-system-switch][aria-pressed=true]');
+ active?.scrollIntoView?.({block:'nearest',inline:'center',behavior:'smooth'});
 }
 function switchNavTab(tabName,index){
  if(!['cases','chart','insights','me'].includes(tabName))return;
@@ -450,7 +454,7 @@ function caseDrawer(){
  ].map(([title,sections])=>`<details><summary>${title}</summary><div>${sections.map(([name,items])=>`<details><summary>${name}</summary><div class="tool-grid">${items.map(id=>btn(labels[id]||{transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',galaxy:'关系图谱'}[id],`data-destination="${id}"`)).join('')}</div></details>`).join('')}</div></details>`).join('')}
  ${state.reading?`<details><summary>盘面工具</summary><div class="tool-grid">${btn('快捷八字','data-quick-bazi')}${state.system==='ziwei'&&state.tab==='chart'?btn('格局神煞','data-ziwei-patterns'):''}${state.tab==='chart'?btn('分享长图','data-share-chart'):''}</div></details>`:''}
  <details><summary>⚙️ 命理口径与算法配置</summary><div>${settingsForm()}<p class="thin" role="status" data-pref-status></p></div></details></div>
- <div class="tool-grid">${btn('＋ 新建案例','class="primary" data-fresh')}${btn('🛠️ 运行诊断与日志','data-diagnostics')}</div>`);
+ <div class="tool-grid">${btn('＋ 新建案例','class="primary" data-fresh')}${btn('运行诊断与日志','data-diagnostics')}</div>`);
  $('[data-diagnostics]',d).onclick=()=>{close(d);diagnosticsPanel(ctx);};
  $('#prefs',d).onsubmit=savePreferences;
  const quick=$('[data-quick-bazi]',d),share=$('[data-share-chart]',d);
@@ -486,21 +490,30 @@ async function instantChart(){
   state.instantAt=at.toISOString();state.tab='chart';state.system=system;render();
  }catch(error){tell(error.message);}
 }
+const PAGE_TITLES={cases:'案例库',chart:'排盘',insights:'洞见',me:'我的'};
+const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',calendar:'历法'};
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
+ const pageTitle=$('#pageTitle');if(pageTitle)pageTitle.textContent=PAGE_TITLES[state.tab]||'排盘';
+ const mark=$('#avatarMark');
+ if(mark){const nm=state.profile?.name?[...state.profile.name][0]:'星';if(mark.textContent!==nm)mark.textContent=nm;}
+ const screenEl=$('#screen');if(screenEl)screenEl.dataset.screenTab=state.tab;
  const late=(info?.effectiveHour??Number(p?.fields?.h??p?.fields?.timeStr?.split(':')[0]))===23;
  const dst=info?.timeCorrection?.dstApplied?' · [夏令时-1h]':'';
  const badge=late?' · 晚子时'+((info?.lateZishi||p.fields.lateZishi)==='current-day'?'归当日':'归次日'):'';
  const instant=state.tab==='chart'&&state.system==='west'&&state.chartState.west?.instant;
- const label=state.instantSnapshot?'⏱ 即刻天象':p?'🌸 '+p.name+badge+dst:instant?'即刻':'🌸 开始排盘';
- $('[data-profile-name]').textContent=label;
+ const ICON_CLOCK='<svg viewBox="0 0 16 16" aria-hidden="true" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="5.6"/><path d="M8 4.9V8l2.2 1.4"/></svg>';
+const ICON_PENCIL='<svg viewBox="0 0 16 16" aria-hidden="true" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 2.9l2.5 2.5-7.3 7.3-3.2.7.7-3.2z"/><path d="M9.2 4.3l2.5 2.5"/></svg>';
+const label=state.instantSnapshot?ICON_CLOCK+' 即刻天象':p?p.name+badge+dst:instant?ICON_CLOCK+' 即刻':'开始排盘';
+ const nameEl=$('[data-profile-name]');
+ if(nameEl){if(label.includes('<svg'))nameEl.innerHTML=label;else nameEl.textContent=label;}
  const dstChip=$('[data-profile-dst]');dstChip.textContent=dst?'夏令时-1h':'';dstChip.hidden=!dst;
  dstChip.title=info?.timeCorrection?.warning||'中国历史夏令时校正';
  const rule=$('[data-profile-rule]'),school=ZIWEI_SCHOOLS[state.settings.ziweiSchool||'quanshu'];
  $('#activeProfile').dataset.showRule=String(Boolean(p&&state.tab==='chart'&&state.system==='ziwei'));
  rule.textContent=school.label;rule.title=school.description;rule.hidden=!p||state.tab!=='chart'||state.system!=='ziwei';
- $('[data-profile-edit]').textContent=p?'✏️':'＋';
- $('#activeProfile').setAttribute('aria-label',p?label+'，编辑出生资料':label);
+ const editBtn=$('[data-profile-edit]');if(editBtn){editBtn.innerHTML=p?ICON_PENCIL:'＋';editBtn.dataset.hasIcon=p?'1':'0';}
+ $('#activeProfile').setAttribute('aria-label',p?(p.name+'，编辑出生资料'):'选择出生资料');
 
 }
 function resonanceCard(){
@@ -509,7 +522,7 @@ function resonanceCard(){
  if(result.error)return `<article class="card" data-resonance><h2>三盘共振证据链</h2><p>${esc(result.error)}</p></article>`;
  return `<article class="card liquid-glass" data-resonance><h2>三盘共振证据链</h2><p class="thin">核对时刻 ${esc(localDisplayTime(result.at))}</p>
  <p>${result.consensus.length?'检出 '+result.consensus.length+' 组同主题、同向的三体系线索。':'当前没有三体系同主题同向共振，不强行拼接结论。'}</p>
- ${result.chains.slice(0,6).map(c=>`<div class="resonance-evidence"><b>${esc(c.topic+' · '+c.direction)} · ${c.coverage}/3 体系</b><div class="energy-track" role="meter" aria-label="证据覆盖体系数" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${c.coverage}"><span class="energy-fill" style="width:${c.coverage/3*100}%"></span></div>${c.items.slice(0,6).map(e=>`<p><small>${esc(e.system)}</small> ${esc(e.text)}</p>`).join('')}</div>`).join('')}<small>${esc(result.method)}</small></article>`;
+ ${result.chains.slice(0,6).map((c,i)=>`<details class="res-ev"${i===0?' open':''}><summary><b>${esc(c.topic)}</b><span class="res-dir">${esc(c.direction)}</span><span class="res-dots" aria-label="${c.coverage}/3 体系" role="img">${[0,1,2].map(k=>`<i class="${k<c.coverage?'on':''}"></i>`).join('')}<em>${c.coverage}/3</em></span></summary><div class="res-body">${c.items.slice(0,6).map(e=>`<p><small>${esc(e.system)}</small>${esc(e.text)}</p>`).join('')}</div></details>`).join('')}<small>${esc(result.method)}</small></article>`;
 }
 function renderDynamicInsightBySystem(){
  const system=state.system;
@@ -653,7 +666,7 @@ function preferences(){
  <article class="card"><h2>交互反馈</h2><label class="feedback-setting"><span>交互音效与震动</span><input type="checkbox" role="switch" data-feedback ${feedbackEnabled()?'checked':''}></label></article>
  <details class="card liquid-glass maintenance-center" data-maintenance><summary>⚙️ 数据中枢与运维诊断</summary><div class="maintenance-content">
  ${versionCard()}<section><h3>案例备份</h3><div class="tool-grid">${btn('导出全量 JSON','data-export')}${btn('导入 JSON','data-import')}</div><input type="file" accept="application/json" id="importBackup" hidden></section>
- <section><h3>运行维护</h3><div class="tool-grid">${btn('🛠️ 运行诊断与日志','data-diagnostics')}${btn('清除排盘缓存','data-maintenance-cache')}</div><p class="thin" data-maintenance-status role="status"></p></section></div></details>
+ <section><h3>运行维护</h3><div class="tool-grid">${btn('运行诊断与日志','data-diagnostics')}${btn('清除排盘缓存','data-maintenance-cache')}</div><p class="thin" data-maintenance-status role="status"></p></section></div></details>
  <footer class="soul-footer"><p>缘分不过天时地利 承诺不过逝水轻浅</p><a href="/assets/console/credits.html">来源与许可</a></footer></section>`;
  wireSoul(ctx);
  $('[data-release-history]',root).onclick=()=>releaseHistory(ctx);
@@ -691,6 +704,95 @@ function download(text,name,type){
  const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
 const chartTools={ziwei:ziweiTools,bazi:baziTools,west:westernTools,vedic:vedicTools};
+/* ===== 配置面板：分组行式，右对齐取值 + 尖角 ===== */
+function configRow(id,label,value,danger){
+ return `<button type="button" class="cfg-row${danger?' cfg-danger':''}" data-config="${id}"><span class="cfg-label">${esc(label)}</span><span class="cfg-side"><span class="cfg-value">${esc(value||'')}</span><svg class="cfg-chev" viewBox="0 0 8 12" aria-hidden="true" width="7" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 1.6 6 6l-4.4 4.4"/></svg></span></button>`;
+}
+function cfgSection(title,rows){
+ const body=rows.filter(Boolean).join('');
+ return body?`<section class="cfg-group"><h4>${esc(title)}</h4><div class="cfg-card">${body}</div></section>`:'';
+}
+function configPanel(){
+ const p=state.profile,b=p?normalized(p):null;
+ const school=(ZIWEI_SCHOOLS[state.settings.ziweiSchool||'quanshu']||{}).label||'全书';
+ const pad=n=>String(n??0).padStart(2,'0');
+ const clock=b?`${b.Y}.${pad(b.M)}.${pad(b.D)} ${pad(b.h)}:${pad(b.mi)}`:'未设定';
+ const place=b?.city?.label||p?.fields?.city?.label||'—';
+ const html=[
+  cfgSection('档案',[
+   configRow('edit','当前命主',p?p.name:'未选择'),
+   configRow('edit','出生信息',clock),
+   configRow('edit','出生地',place)
+  ]),
+  cfgSection('排盘',[
+   configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),
+   configRow('system','排盘体系',SYSTEM_NAMES[state.system]||state.system),
+   configRow('school','紫微四化口径',school),
+   configRow('solar','真太阳时',state.settings.useSolarTime?'开':'关')
+  ]),
+  cfgSection('显示',[
+   configRow('feedback','交互音效与震动',feedbackEnabled()?'开':'关'),
+   configRow('tools','当前页功能',state.tab==='chart'?'打开':'仅排盘页')
+  ]),
+  cfgSection('系统',[
+   configRow('share','分享当前长图','生成'),
+   configRow('diagnostics','运行诊断与日志',''),
+   configRow('about','关于与版本',''),
+   configRow('reset','回到排盘首页','',true)
+  ])
+ ].join('');
+ const d=sheet('configSheet','配置',html);
+ for(const row of d.querySelectorAll('[data-config]')){
+  row.onclick=()=>{
+   const id=row.dataset.config;
+   if(id==='edit'){close(d);birthSheet(state.instantSnapshot?null:state.profile,state.instantSnapshot?state.profile.fields:undefined);return;}
+   if(id==='basis'){close(d);if(state.instantSnapshot)restoreOriginal();else instantChart();return;}
+   if(id==='system'){const order=['bazi','ziwei','west','vedic'],next=order[(order.indexOf(state.system)+1)%order.length];close(d);switchTab('chart',next);return;}
+   if(id==='school'){const ids=Object.keys(ZIWEI_SCHOOLS),next=ids[(ids.indexOf(state.settings.ziweiSchool||'quanshu')+1)%ids.length];state.settings={...state.settings,ziweiSchool:next};save(SETTINGS,state.settings);profileMachine.clear();render();configPanel();return;}
+   if(id==='solar'){const next=!state.settings.useSolarTime;state.settings={...state.settings,useSolarTime:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,useSolarTime:next}},false);configPanel();return;}
+   if(id==='feedback'){setFeedback(!feedbackEnabled());configPanel();return;}
+   if(id==='tools'||id==='share'){close(d);toolPanel();return;}
+   if(id==='diagnostics'){close(d);diagnosticsPanel(ctx);return;}
+   if(id==='about'){close(d);const about=sheet('termSheet','关于与版本',versionCard());about.querySelector('[data-release-history]').onclick=()=>releaseHistory(ctx);return;}
+   if(id==='reset'){close(d);switchTab('chart');$('#mainScrollView').scrollTo?.({top:0,behavior:'smooth'});tell('已回到排盘首页。');}
+  };
+ }
+ return d;
+}
+/* ===== 模块面板：4 列宫格，按排盘体系 / 查阅 / 工具分区 ===== */
+const MODULE_ICONS={
+ bazi:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 4.6h12M4 10h12M4 15.4h12"/><circle cx="7.6" cy="4.6" r="1.5" fill="currentColor" stroke="none"/><circle cx="12.4" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="15.4" r="1.5" fill="currentColor" stroke="none"/></svg>',
+ ziwei:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="10" cy="10" r="6.6"/><path d="M10 3.4v13.2M3.4 10h13.2"/><circle cx="10" cy="10" r="1.7" fill="currentColor" stroke="none"/></svg>',
+ west:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="10" cy="10" r="6.6"/><path d="M10 6.4l1.1 2.5 2.5 1.1-2.5 1.1L10 13.6 8.9 11.1 6.4 10l2.5-1.1z"/></svg>',
+ vedic:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="3.6" y="3.6" width="12.8" height="12.8" rx="1.6"/><path d="M3.6 3.6l12.8 12.8M16.4 3.6L3.6 16.4"/></svg>',
+ cases:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="3" y="5.4" width="14" height="10.4" rx="2.4"/><path d="M6 3h8"/></svg>',
+ insights:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2.4 10S5.1 5.4 10 5.4 17.6 10 17.6 10 14.9 14.6 10 14.6 2.4 10 2.4 10z"/><circle cx="10" cy="10" r="2.2"/></svg>',
+ me:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="10" cy="7.3" r="3"/><path d="M4.4 16.6c.6-2.9 2.8-4.4 5.6-4.4s5 1.5 5.6 4.4"/></svg>',
+ birth:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="3.4" y="4.6" width="13.2" height="12" rx="2.4"/><path d="M3.4 8.4h13.2M7.3 2.8v3M12.7 2.8v3"/></svg>',
+ share:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.6V3.6M6.6 6.8 10 3.4l3.4 3.4"/><path d="M4.2 11.4v3.8a1.6 1.6 0 0 0 1.6 1.6h8.4a1.6 1.6 0 0 0 1.6-1.6v-3.8"/></svg>',
+ diagnostics:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 10h3.2l1.8-4.2 3 8.4 1.8-4.2h4.9"/></svg>',
+ about:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="10" cy="10" r="6.8"/><path d="M10 8.8v4.4"/><circle cx="10" cy="6.5" r=".9" fill="currentColor" stroke="none"/></svg>'
+};
+function modulePanel(){
+ const sys=['bazi','ziwei','west','vedic'].map(id=>[id,SYSTEM_NAMES[id],MODULE_ICONS[id],state.system===id&&state.tab==='chart']);
+ const tabs=[['cases','案例库',MODULE_ICONS.cases,state.tab==='cases'],['insights','洞见',MODULE_ICONS.insights,state.tab==='insights'],['me','我的',MODULE_ICONS.me,state.tab==='me'],['birth','出生资料',MODULE_ICONS.birth,false]];
+ const tools=[['share','分享长图',MODULE_ICONS.share,false],['diagnostics','运行诊断',MODULE_ICONS.diagnostics,false],['about','版本',MODULE_ICONS.about,false],['reset','回到首页',MODULE_ICONS.ziwei,false]];
+ const group=(title,items)=>`<section class="mod-group"><h4>${esc(title)}</h4><div class="mod-grid">${items.map(([id,label,icon,on])=>`<button type="button" class="mod-item" data-module="${id}" aria-pressed="${on?'true':'false'}"><span class="mod-ico">${icon}</span><span class="mod-name">${esc(label)}</span></button>`).join('')}</div></section>`;
+ const d=sheet('moduleSheet','全部模块',group('排盘体系',sys)+group('查阅',tabs)+group('工具',tools)+'<p class="mod-hint">底部轨道只放常用的排盘体系，其余功能都收在这里。</p>');
+ for(const item of d.querySelectorAll('[data-module]')){
+  item.onclick=()=>{
+   const id=item.dataset.module;close(d);
+   if(['bazi','ziwei','west','vedic'].includes(id)){switchTab('chart',id);return;}
+   if(['cases','insights','me'].includes(id)){switchTab(id);return;}
+   if(id==='birth'){birthSheet(state.profile);return;}
+   if(id==='share'){toolPanel();return;}
+   if(id==='diagnostics'){diagnosticsPanel(ctx);return;}
+   if(id==='about'){const about=sheet('termSheet','关于与版本',versionCard());about.querySelector('[data-release-history]').onclick=()=>releaseHistory(ctx);return;}
+   if(id==='reset'){switchTab('chart');$('#mainScrollView').scrollTo?.({top:0,behavior:'smooth'});}
+  };
+ }
+ return d;
+}
 function toolPanel(){
  const tool=chartTools[state.system];
  if(state.tab!=='chart'||(!state.reading&&!state.chartState.west?.birthOverride))return;
@@ -724,7 +826,7 @@ function render(){
    b.setAttribute('aria-selected',String(active));
   }
  }
- $('#toolsButton').hidden=!(state.tab==='chart'&&(state.reading||state.system==='west'&&state.chartState.west?.birthOverride));
+ $('#toolsButton').hidden=true; /* Build 56: 入口统一到右上角配置，这里只保留程序化调用 */
  updateLiquidPill(state.tab);
  for(const b of $('#bottomNav').querySelectorAll('[data-tab]')){const active=b.dataset.tab===state.tab;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
  if(state.tab==='cases'){renderCases();return;}
@@ -753,6 +855,8 @@ $('#activeProfile').onclick=()=>state.instantSnapshot?birthSheet(null,state.prof
 $('#btnEditProfile').onclick=e=>{e.stopPropagation();state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);};
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
+$('#configButton').onclick=configPanel;
+$('#moduleButton').onclick=modulePanel;
 $('#instantToggle').onclick=()=>$('#instantToggle').dataset.chartAction==='restore'?restoreOriginal():instantChart();
 $('#chartSystemSwitch').onclick=e=>{
  const b=e.target.closest('[data-system-switch]');

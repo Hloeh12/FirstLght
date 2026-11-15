@@ -43,14 +43,18 @@ function center(ctx,s){
  const precision=c.corrected?`<p class="muted thin" title="真太阳时校准">${esc(b.clock)} → 经度 ${signed(c.longitudeCorrectionMinutes)} → 均时差 ${signed(c.equationOfTimeMinutes)} → ${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')} ${b.hourBranch}时</p>`:'';
  return `<div class="zi-center ${s.mode==='triad'?'glow':''}">
   <span class="kicker">FIRST LIGHT · ${names[z.astroType]}</span>
-  <strong>${esc(p.name)} · ${esc(b.gender)} · ${esc(z.fiveElementsClass)}</strong>
-  <p>公历 ${esc(b.solar)} ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时-1h':''}</p><p>农历 ${esc(b.lunar)}</p>
-  <p><b>${esc(p.summary.pillars)}</b></p>
-  <p class="muted thin">闰月：${esc(z.leapLabel)}</p>
+  <strong class="zc-name">${esc(p.name)}</strong>
+  <span class="zc-sub">${esc(b.gender)} · ${esc(z.fiveElementsClass)}</span>
+  <div class="zc-meta">
+   <div class="zc-meta-row"><span>公历</span><b>${esc(b.solar)} ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时-1h':''}</b></div>
+   <div class="zc-meta-row"><span>农历</span><b>${esc(b.lunar)}</b></div>
+  </div>
+  <p class="zc-pillars"><b>${esc(p.summary.pillars)}</b></p>
+  <p class="muted thin zc-leap">闰月：${esc(z.leapLabel)}</p>
   <div class="chips">${practicalZiwei(z,s.flow).map(x=>`<span class="chip" title="${esc(x.text)}">${esc(x.name+' · '+x.palace)}</span>`).join('')}</div>
-  <p>命主 ${esc(z.soul)}　身主 ${esc(z.body)}</p>
-  <p>${z.decades[0].ageRange[0]} 岁起限 · ${esc(s.flow?timeLabels[s.flow.scope]+' '+s.flow.ganZhi:'本命总览')}</p>
-  <p class="muted thin">${esc(s.flow?.date||(ctx.state.instantSnapshot?'即刻 '+formatLocalDisplayTime(p.fields):'本命 '+b.solar+' '+b.clock))}</p>
+  <div class="zc-stats"><div><span>命主</span><b>${esc(z.soul)}</b></div><div><span>身主</span><b>${esc(z.body)}</b></div><div><span>起限</span><b>${z.decades[0].ageRange[0]} 岁</b></div></div>
+  <p class="zc-now">${esc(s.flow?timeLabels[s.flow.scope]+' '+s.flow.ganZhi:'本命总览')}</p>
+  <p class="muted thin zc-stamp">${esc(s.flow?.date||(ctx.state.instantSnapshot?'即刻 '+formatLocalDisplayTime(p.fields):'本命 '+b.solar+' '+b.clock))}</p>
   <div class="chips">${z.sihua.map(m=>badge(m.type,m.type,palace(z,z.palaces.find(p=>p.name===m.palace)?.branch)?.branch,'natal')).join('')}</div>${precision}</div>`;
 }
 const coreAssist=new Set(['左辅','右弼','文昌','文曲','天魁','天钺','擎羊','陀罗','火星','铃星','地空','地劫']);

@@ -118,7 +118,8 @@ try{
     window.__sharedChart=null;
     Object.defineProperty(window,'webkit',{configurable:true,value:{messageHandlers:{shareChart:{postMessage:data=>{window.__sharedChart=data;}}}}});
    });
-   await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
+   await page.getByRole('button',{name:'配置',exact:true}).click();
+   await page.locator('#configSheet [data-config=share]').click();
    await page.locator('[data-share-current]').click();
    try{await page.waitForFunction(()=>typeof window.__sharedChart==='string',null,{timeout:15000});}catch(error){throw Error(kind+' share: '+await page.locator('[data-share-status]').textContent()+' | '+error.message);}
    const data=Buffer.from((await page.evaluate(()=>window.__sharedChart)).split(',')[1],'base64');
@@ -149,7 +150,8 @@ try{
   assert.equal(await page.locator('.bazi-ghost').count(),0);
   await page.locator('[data-bazi-data]').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));
   await page.screenshot({path:'build/mobile-'+engine+'-bazi-'+width+'.png'});
-  await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
+  await page.getByRole('button',{name:'配置',exact:true}).click();
+  await page.locator('#configSheet [data-config=tools]').click();
   await checkSheet();
   assert.equal(await page.locator('#toolSheet [data-bazi-tool]').count(),5);
   await page.locator('#toolSheet [data-close]').click();
@@ -165,7 +167,8 @@ try{
   await page.locator('[data-tab=chart]').click();
   await useSystem('vedic','印度盘');
   await page.locator('.vedic-chart').waitFor();assert.equal(await page.locator('[data-vedic-house]').count(),12);
-  await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
+  await page.getByRole('button',{name:'配置',exact:true}).click();
+  await page.locator('#configSheet [data-config=tools]').click();
   assert.equal(await page.locator('[data-vedic-action]').count(),5);
   await page.locator('[data-vedic-action=states]').click();
   assert(await page.locator('[data-vedic-states] .term').count()>0);
@@ -201,7 +204,8 @@ try{
   await page.locator('[data-aspect-toggle]').click();assert(await page.locator('.aspect-detail').count()<=12);
   await page.locator('[data-aspect-filter=tight]').click();
   await page.locator('[data-aspect-filter=main]').click();
-  await page.getByRole('button',{name:'当前页面功能',exact:true}).click();
+  await page.getByRole('button',{name:'配置',exact:true}).click();
+  await page.locator('#configSheet [data-config=tools]').click();
   await page.locator('[data-astro-config]').click();
   await checkSheet();
   const internal=await page.locator('#toolSheet .sheet-body').evaluate(n=>({height:n.clientHeight,content:n.scrollHeight}));

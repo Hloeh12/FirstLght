@@ -46,7 +46,8 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert.deepEqual(haptics.slice(0,2),['tap','success']);
  assert.equal(many('[data-palace]').length,12);
  assert($('#activeProfile').textContent.includes('测试案例'));
- assert.equal($('[data-profile-edit]').textContent,'✏️');
+ assert.ok($('[data-profile-edit]').querySelector('svg'),'编辑按钮改为线性图标');
+ assert.equal($('[data-profile-edit]').dataset.hasIcon,'1');
  assert.equal($('[data-profile-edit]').getAttribute('aria-label'),'编辑出生资料');
  click('#activeProfile');assert($('#inputSheet').open);click('#inputSheet [data-close]');
  assert.equal(JSON.parse(w.localStorage.getItem('xy_active_profile')).name,'测试案例');

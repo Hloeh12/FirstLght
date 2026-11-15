@@ -95,7 +95,7 @@ export function storageUsage(storage=localStorage){
  return {kb:bytes/1024,limitKb:5000,warning:bytes>4*1024*1024};
 }
 export function diagnosticsPanel(ctx){
- const d=ctx.sheet('toolSheet','🛠️ 运行诊断与日志',`<div class="tool-grid diagnostics-actions">
+ const d=ctx.sheet('toolSheet','运行诊断与日志',`<div class="tool-grid diagnostics-actions">
  ${btn('一键全机自检','data-check-device')}${btn('复制诊断包','data-copy-logs')}${btn('重置缓存','data-reset-cache')}</div>
  <p class="thin">自检使用示例资料，在本机运行。缓存重置保留案例、偏好与日志。</p>
  <article class="card" data-storage-monitor><h3>本地存储配额</h3><p data-storage-text></p><div class="energy-track" role="meter" aria-label="本地存储估算" aria-valuemin="0" aria-valuemax="5000"><span class="energy-fill" data-storage-fill></span></div><p class="thin">按键名和内容 UTF-16 字节估算，5000KB 为保守参考额度；实际配额由设备决定。</p><p class="storage-warning" data-storage-warning hidden>存储已超过 4MB。先备份案例，再导出并清空旧日志。</p>${btn('导出并清空旧日志','data-export-clear-logs')}</article>

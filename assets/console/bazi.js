@@ -16,7 +16,7 @@ function pillar(p,voids,index){
  return `<div class="pillar" data-pillar="${index}">
  ${btn(p.name,'class="pillar-select" aria-pressed="false"')}<span class="element" data-e="${p.stemElement}">${term(p.tenGod)}</span>
  <strong class="element" data-e="${p.stemElement}" data-pillar-anchor="stem">${term(p.stem,p.name+'天干 '+p.stem+'属'+p.stemElement+'。')}</strong><strong class="element" data-e="${p.branchElement}" data-pillar-anchor="branch">${term(p.branch,p.name+'地支 '+p.branch+'属'+p.branchElement+'。')}</strong>
- <div>${p.hidden.map(h=>`<div class="element ${h.commanding?'commanding':''}" data-e="${h.element}">${h.commanding?'<small class="command-badge">司令</small>':''}${term(h.stem+' '+h.god,h.rank+'藏干 '+h.stem+'，属'+h.element+'，相对于日主为'+h.god+'。')}</div>`).join('')}</div>
+ <div class="hidden-stems">${p.hidden.map(h=>`<div class="hz ${h.commanding?'commanding':''}" data-e="${h.element}">${h.commanding?'<small class="command-badge">令</small>':''}${term(h.stem,h.rank+'藏干 '+h.stem+'，属'+h.element+'，相对于日主为'+h.god+'。')}<span class="hz-lead"></span><span class="hz-god">${esc(h.god)}</span></div>`).join('')}</div>
  ${p.commander?`<span class="command-note">当令 ${esc(p.commander.stem)} · 交${esc(p.commander.term.name)}后 ${p.commander.elapsedDays.toFixed(2)}日</span>`:''}
  <span>${term(p.changsheng,stages[p.changsheng]+'。这是十二长生阶段，不表示寿命。')}</span>
  <span>${term(p.nayin,p.stem+p.branch+'的纳音为'+p.nayin+'。纳音是六十甲子的分类，可与实际五行强弱分别阅读。')}</span>

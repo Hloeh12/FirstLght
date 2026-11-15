@@ -492,7 +492,7 @@ function profileTitle(){
  const dst=info?.timeCorrection?.dstApplied?' · [夏令时-1h]':'';
  const badge=late?' · 晚子时'+((info?.lateZishi||p.fields.lateZishi)==='current-day'?'归当日':'归次日'):'';
  const instant=state.tab==='chart'&&state.system==='west'&&state.chartState.west?.instant;
- const label=state.instantSnapshot?'⏱ 即刻天象 · '+formatLocalDisplayTime(p.fields):p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge+dst:instant?'⏱ 即刻天象':'🌸 开始排盘';
+ const label=state.instantSnapshot?'⏱ 即刻天象 · '+formatLocalDisplayTime(p.fields):p?'🌸 '+[p.name,p.summary?.yearDay?.split(' ')[0]].filter(Boolean).join(' · ')+badge+dst:instant?'即刻':'🌸 开始排盘';
  $('[data-profile-name]').textContent=label.replace(dst,'');
  const dstChip=$('[data-profile-dst]');dstChip.textContent=dst?'夏令时-1h':'';dstChip.hidden=!dst;
  dstChip.title=info?.timeCorrection?.warning||'中国历史夏令时校正';
@@ -500,8 +500,6 @@ function profileTitle(){
  $('#activeProfile').dataset.showRule=String(Boolean(p&&state.tab==='chart'&&state.system==='ziwei'));
  rule.textContent=school.label;rule.title=school.description;rule.hidden=!p||state.tab!=='chart'||state.system!=='ziwei';
  $('[data-profile-edit]').textContent=p?'✏️ 改生辰':'＋ 起盘';
- $('#instantChartButton').hidden=Boolean(state.instantSnapshot);
- $('#restoreOriginalButton').hidden=!state.instantSnapshot;
  $('#activeProfile').setAttribute('aria-label',p?label+'，编辑出生资料':label);
 
 }
@@ -577,7 +575,8 @@ function onSelectTimeNode(system){
  forceRefreshAllInsights();
  if(state.tab==='chart'&&['west','vedic'].includes(system)){
   const section=root.querySelector(system==='west'?'section[aria-label="西洋占星"]':'#vedic');
-  if(section){let host=section.querySelector('[data-dynamic-insight]');if(!host){host=document.createElement('div');host.dataset.dynamicInsight='';section.append(host);}host.innerHTML=selectedPeriodCard();}
+  const host=section?.querySelector('[data-period-resonance]');
+  if(host)host.innerHTML=resonanceCard();
  }
 }
 function selectedTimeISO(){
@@ -600,20 +599,9 @@ function selectedTimeISO(){
 let insightGeneration=0;
 function forceRefreshAllInsights(){
  const revision=++insightGeneration;
- const box=$('#insightContent');
- if(state.tab!=='insights'||!box||!state.reading||!state.profile)return;
- const {bazi,ziwei,west,vedic}=state.chartState;
- const b=bazi?.data?.guidance;
- const z=ziwei?.flow;
- const current={bazi:b&&[b.year,b.title,b.month].filter(Boolean).join(' '),ziwei:z&&[z.year,z.ganZhi+z.label,z.month!=null?z.month+'月':'',z.day!=null?z.day+'日':''].filter(Boolean).join(' '),
-  west:west?.mode!=='natal'&&west?.at?localDisplayTime(west.at):null,vedic:vedic?.activePeriod?.date};
- const basis=$('[data-analysis-basis]');
- const clock=formatLocalDisplayTime(normalized(state.profile));
- basis.textContent='🌸 当前分析基准：'+state.profile.name+' · '+(current[state.system]||(state.instantSnapshot?'即刻 '+clock:'本命 '+clock))+'（'+(labels[state.system]||'综合')+'）';
- box.innerHTML=selectedPeriodCard();
- const host=$('[data-resonance-host]');
+ if(state.tab!=='chart'||!['west','vedic'].includes(state.system)||!state.reading||!state.profile)return;
+ const host=$('#screen [data-period-resonance]');
  if(!host)return;
- if(!current[state.system]&&!state.instantSnapshot){host.replaceChildren();return;}
  state.resonance=null;
  host.innerHTML=resonanceCard();
  const at=selectedTimeISO(),config=stored('xy_astro_config',{});
@@ -634,11 +622,11 @@ function insights(){
  const b=r.bazi,z=r.ziwei,w=r.western,v=r.vedic;
  let natal='', lifecycle='';
  if(current==='bazi'){
-  natal=`<article class="card liquid-glass"><h2>八字本命专属报告</h2><p>日主 ${esc(b.dayMaster.stem+b.dayMaster.element)}，${esc(b.strength.kind)}，扶助 ${b.strength.support.toFixed(1)}%。</p><p>月令提纲：${esc(b.pillars[1].stem+b.pillars[1].branch)}；通根：${esc(b.roots.map(x=>x.pillar+x.branch+'藏'+x.stem).join('、')||'未见')}；透干：${esc(b.revealed.map(x=>x.stem+'透'+x.visibleAt).join('、')||'未见')}。</p><p>本命刑冲合害：${esc(b.relationships.map(x=>x.pattern+' '+x.type+'（'+x.meaning+'）').join('；')||'未触发当前规则表关系')}。</p><p>喜用参考 ${esc(b.strength.useful.join('、')||'未单列')}，忌偏参考 ${esc(b.strength.caution.join('、')||'未单列')}。本段只讲本命，不混入流年流月。</p></article>`;
+  natal=`<article class="card liquid-glass"><h2>八字本命专属报告</h2><p><b>日主与承载：</b>${esc(b.dayMaster.stem+b.dayMaster.element)}，${esc(b.strength.kind)}，扶助${b.strength.support.toFixed(1)}%。月令提纲${esc(b.pillars[1].stem+b.pillars[1].branch)}，通根${esc(b.roots.map(x=>x.pillar+x.branch+'藏'+x.stem).join('、')||'未见')}，透干${esc(b.revealed.map(x=>x.stem+'透'+x.visibleAt).join('、')||'未见')}。</p><p><b>结构与取用：</b>${esc(b.strength.method)}；喜用参考${esc(b.strength.useful.join('、')||'未单列')}，忌偏参考${esc(b.strength.caution.join('、')||'未单列')}。这些是盘面权重参考，不用单一百分比替代月令、根气、寒暖燥湿。</p><p><b>实际关系：</b>${esc(b.relationships.map(x=>x.pattern+' '+x.type+'（'+x.meaning+'）').join('；')||'未触发当前规则表内关系')}。应核实具体参与柱位，合冲不自动等于吉凶。</p><p><b>总体运势：</b>宜先选择能长期积累的专长，重大合作把权责和退出条件写清；财务安排以现金流与现实风险为准。此为本命总体观察，不夹带当前流年流月。</p></article>`;
   lifecycle=`<article class="card liquid-glass"><h2>八字大运生命周期</h2><p>起运：${esc(b.info.startAge||b.entry?.local||'以出生资料计算')}；${esc(b.info.forward?'顺行':'逆行')}。以下为大运顺序，点击排盘页时间轴可查看对应岁运专属报告。</p>${table(['阶段','干支','起止','十神'],b.cycles.map(x=>[x.age+'岁',x.stem+x.branch,x.startYear+'–'+x.endYear,x.tenGod]))}</article>`;
  }else if(current==='ziwei'){
-  const life=z.palaces.find(x=>x.name==='命宫'), stars=life?.majorStars?.length?life.majorStars:life?.borrowedStars||[];
-  natal=`<article class="card liquid-glass"><h2>紫微本命专属报告</h2><p>命宫在 ${esc(life?.earthlyBranch||'待定位')}，${stars.length?'主星为 '+esc(stars.map(x=>x.name).join('、')):'空宫，借对宫主星并参看三方四正'}。</p><p>${esc(stars.map(x=>x.name+'：'+(x.brightness||'本宫星曜')).join('；')||'命宫主星待定位')}。本命四化：${esc(z.sihua.map(x=>x.type+'入'+x.palace).join('、')||'待定位')}。</p><p>本命报告只解释十二宫、主星、庙旺、四化和三方四正；流年、流月、流日另列在下方当前时空报告。</p></article>`;
+  const life=z.palaces.find(x=>x.name==='命宫'), stars=life?.majorStars?.length?life.majorStars:life?.borrowedStars||[],triad=life?z.palaces.filter(x=>life.relatedBranches?.includes(x.branch)):[];
+  natal=`<article class="card liquid-glass"><h2>紫微本命专属报告</h2><p><b>命宫主轴：</b>命宫在${esc(life?.earthlyBranch||'待定位')}，${stars.length?'主星为 '+esc(stars.map(x=>x.name).join('、')):'空宫，借对宫主星并参看三方四正'}；${esc(stars.map(x=>x.name+'：'+(x.brightness||'本宫星曜')).join('；')||'星曜待定位')}。</p><p><b>三方四正：</b>${esc(triad.map(x=>x.name+'（'+x.majorStars.map(y=>y.name).join('、')+'）').join('；')||'当前结构未能定位完整三方')}。先看命宫主星如何与事业、资源、迁移互证，不以单星断终身。</p><p><b>本命四化：</b>${esc(z.sihua.map(x=>x.type+'入'+x.palace).join('、')||'待定位')}。化禄看资源入口，化权看责任，化科看名誉与文书，化忌看牵挂与反复；实际作用要看落宫、对宫及会照星。</p><p><b>总体运势：</b>先发挥命宫星曜的组织/思考/执行特质，再以官禄和财帛三方核对适合承担的角色。遇到关系或职业抉择，要比较双方责任与资源，不用一颗化忌替代现实判断。</p></article>`;
   lifecycle=`<article class="card liquid-glass"><h2>紫微全生命周期 · 大限</h2><p>每十年以大限宫为阶段主题，点击排盘页“大限/流年/流月/流日”后，下方当前报告会同步替换。</p>${table(['虚岁','年份','大限宫'],z.decades.map(x=>[x.ageRange.join('–')+'岁',x.yearRange.join('–'),x.palaceName]))}</article>`;
  }else if(current==='vedic'){
   const moon=v.planets.find(x=>x.key==='moon'),sun=v.planets.find(x=>x.key==='sun');
@@ -647,7 +635,8 @@ function insights(){
   lifecycle=`<article class="card liquid-glass"><h2>印度 Vimshottari 全生命周期</h2>${table(['主运','起始','结束','状态'],v.dashas.map(x=>[x.lord,x.start.slice(0,10),x.end.slice(0,10),x.current?'当前':'—']))}<p>点击印度排盘页四级 Dasha 行，可查看 Maha、Antar、Pratyantar、Sookshma 的当前专属分析。</p></article>`;
  }else{
   const sun=w.planets.find(x=>x.key==='sun'),moon=w.planets.find(x=>x.key==='moon');
-  natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p>太阳 ${esc(sun?.sign||'—')} 第${sun?.house||'—'}宫，月亮 ${esc(moon?.sign||'—')} 第${moon?.house||'—'}宫，上升 ${esc(w.asc.sign)}，天顶 ${esc(w.mc.sign)}。</p><p>本命报告按行星落座、落宫、四轴、主相位和尊贵状态解释；行运、次限、日返另列为当前时空报告。</p></article>`;
+  const sunAspects=w.aspects.filter(a=>a.aKey==='sun'||a.bKey==='sun').slice(0,4).map(a=>a.a+' '+a.type+' '+a.b+'（'+a.orb.toFixed(1)+'°）').join('、');
+  natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p></article>`;
   lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
  }
  root.innerHTML=`<section><h1>洞见</h1><p class="muted">${esc(state.profile.name)} · ${esc(names[current])} · 总体运势</p><div class="insight-system-tabs">${nav}</div><div class="report-export-row">${btn('导出总体报告长图','data-share-current')}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><article class="card liquid-glass insight-boundary"><h2>应期分析在哪里？</h2><p>流年、流月、流日和大运的专属分析只显示在对应排盘页的时间轴下方；洞见页不混入短期应期。</p></article></section>`;
@@ -719,9 +708,13 @@ const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,swit
 };
 function render(){
  profileTitle();
- const chartClock=$('#chartBasisTime');
- chartClock.hidden=state.tab!=='chart'||!state.profile||!state.reading;
+ 
+ const chartClock=$('#chartBasisTime'),chartRow=$('#chartBasisRow'),chartToggle=$('#instantToggle');
+ const showBasis=state.tab==='chart';
+ if(chartRow)chartRow.hidden=!showBasis;
+ chartClock.hidden=!showBasis||!state.profile||!state.reading;
  if(!chartClock.hidden)chartClock.textContent=(state.instantSnapshot?'即刻天象':'本命基准')+' · '+formatLocalDisplayTime(normalized(state.profile));
+ if(chartToggle){chartToggle.hidden=!showBasis;const restore=Boolean(state.instantSnapshot);chartToggle.dataset.chartAction=restore?'restore':'instant';chartToggle.textContent=restore?'⟲ 恢复本命':'⏱ 即刻天象';chartToggle.setAttribute('aria-label',chartToggle.textContent);}
  $('#toolsButton').hidden=!(state.tab==='chart'&&(state.reading||state.system==='west'&&state.chartState.west?.birthOverride));
  updateLiquidPill(state.tab);
  for(const b of $('#bottomNav').querySelectorAll('[data-tab]')){const active=b.dataset.tab===state.tab;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
@@ -742,6 +735,8 @@ function render(){
 }
 installFeedback();
 root.addEventListener('click',e=>{
+ const action=e.target.closest('[data-chart-action]');
+ if(action){if(action.dataset.chartAction==='instant')instantChart();else if(action.dataset.chartAction==='restore')restoreOriginal();return;}
  const b=e.target.closest('[data-term]');
  if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain,b.dataset.source);}
 });
@@ -749,8 +744,7 @@ $('#activeProfile').onclick=()=>state.instantSnapshot?birthSheet(null,state.prof
 $('#btnEditProfile').onclick=e=>{e.stopPropagation();state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);};
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
-$('#instantChartButton').onclick=instantChart;
-$('#restoreOriginalButton').onclick=event=>{event.stopPropagation();event.preventDefault();restoreOriginal();};
+$('#instantToggle').onclick=()=>$('#instantToggle').dataset.chartAction==='restore'?restoreOriginal():instantChart();
 $('#appTopBar').addEventListener('click',e=>{
  if(e.target!==e.currentTarget&&!e.target.closest('[data-scroll-top-title]'))return;
  $('#mainScrollView').scrollTo?.({top:0,behavior:'smooth'});

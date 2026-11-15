@@ -57,7 +57,8 @@ test('offline global cases, compact aspects, Vedic, composite and instant sky fo
  const before=w.localStorage.getItem('xy_active_profile');
  for(const [system,selector] of [['bazi','.bazi-board'],['ziwei','.zi-board'],['vedic','#vedic'],['west','#westernChart']]){
   click('#caseDrawerButton');click('[data-destination='+system+']');await until(()=>$(selector),'before instant '+system);
-  click('#instantChartButton');await until(()=>$(selector)&&$('#activeProfile').textContent.includes('即刻天象'),'instant '+system);
+  if($('#instantToggle').dataset.chartAction==='restore'){click('#instantToggle');await until(()=>$('#instantToggle').dataset.chartAction==='instant','back to natal '+system);}
+  click('#instantToggle');await until(()=>$(selector)&&$('#activeProfile').textContent.includes('即刻天象'),'instant '+system);
   assert.equal(w.localStorage.getItem('xy_active_profile'),before);assert(!$('#caseDrawer').open);
   if(system==='west')assert($('[data-mode=sky][aria-pressed=true]'));
   const todayLocal = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
@@ -72,7 +73,7 @@ test('instant sky works without a profile and never inserts an imaginary birth c
  const js=(await buildConsole(false)).outputFiles[0].text,errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
  const dom=new JSDOM(readFileSync('index.html','utf8'),{url:'https://offline.test',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){w.fetch=()=>{throw Error('offline');};}});t.after(()=>dom.window.close());
  const w=dom.window,doc=w.document,script=doc.createElement('script');script.textContent=js;doc.body.append(script);
- doc.querySelector('#inputSheet [data-close]').click();doc.querySelector('#instantChartButton').click();
+ doc.querySelector('#inputSheet [data-close]').click();doc.querySelector('#instantToggle').click();
  for(let i=0;i<100&&!doc.querySelector('.zi-board');i++)await new Promise(resolve=>setTimeout(resolve,30));
  assert(doc.querySelector('.zi-board'));assert(doc.querySelector('#activeProfile').textContent.includes('即刻天象')); 
  assert.equal(doc.querySelectorAll('[data-west-tool]').length,0);assert.equal(w.localStorage.getItem('xy_active_profile'),null);assert.equal(w.localStorage.getItem('xy:cases:v2'),'[]');

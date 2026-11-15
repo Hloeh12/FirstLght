@@ -125,6 +125,14 @@ function matrix(r){
  ${q.map((a,i)=>'<tr><th>'+esc(a.symbol+' '+a.name)+'</th>'+p.map((b,j)=>outer||j<i?cell(a,b):'<td></td>').join('')+'</tr>').join('')}</tbody></table></div>`;
 }
 function timeLabel(s){return localDisplayTime(s.at);}
+function periodAnalysis(r,s){
+ const cross=Boolean(r.outer);
+ const aspects=(cross?r.aspects:r.chart?.aspects)||[];
+ const tight=aspects.filter(a=>Number.isFinite(a.orb)&&a.orb<=3).slice(0,4);
+ const label=modes[r.mode]||'推运';
+ const evidence=tight.length?tight.map(a=>`<p>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}，容许度 ${a.orb.toFixed(2)}°，${a.applying===true?'入相':a.applying===false?'出相':'相位阶段待定'}；回到盘面核对这些星体的落宫与现实事项。</p>`).join(''):'<p>本次盘面在 3° 内没有主相位，不补造个人事件推断。</p>';
+ return `<div class="period-result"><article class="card liquid-glass period-guidance" data-period-guidance><h2>当前推运专属分析</h2><p><b>${esc(label)} · ${esc(timeLabel(s))} 本地</b>。本次以${cross?'外行星与本命星位的紧密主相位':'本盘星体之间的紧密主相位'}为证据，不把天象直接等同个人事件。</p>${evidence}</article><div data-period-resonance></div></div>`;
+}
 function shift(date,unit,n){
  const out=new Date(date);
  if(unit==='day'){out.setUTCDate(out.getUTCDate()+n);return out;}
@@ -177,7 +185,7 @@ export function westernView(ctx){
  ctx.root.innerHTML=`<section aria-label="西洋占星"><div class="spread"><h1>西洋占星</h1><small>${esc(display?houses[display.houseSystem]:'')}</small></div>
  <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).filter(([id])=>!s.birthOverride||id==='sky').map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
  ${s.instant?`<p class="thin" data-instant-caption>即刻 ${esc(s.instant.local||localDisplayTime(s.instant.at))} 本地 · ${esc(s.instant.place)}（${esc(s.instant.source)}）</p>`:''}<p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
- ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
+ ${display?`<article class="card liquid-glass">${periodAnalysis(r,s)}<div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
  <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(s.instant?.local||dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
  ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 本地</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
  ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}

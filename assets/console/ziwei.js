@@ -232,10 +232,10 @@ export function ziweiView(ctx,arrival=false){
  <div class="segments liquid-glass" aria-label="紫微模式">${mode.map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${id===s.mode}"`)).join('')}</div>
  ${s.mode==='transform'?'<div class="rail" aria-label="四化分析">'+[['natal','生年四化'],['self','自化分析'],['track','飞星轨迹']].map(([id,label])=>btn(label,`data-filter="${id}" aria-pressed="${s.filter===id}"`)).join('')+'</div>':''}
  <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大限与流限</h2><p>选择后仅刷新下方当前大限、流年、流月或流日的专属分析。</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),d.yearRange[0])}
- ${row('流年',[['natal','本命'],...years.map(y=>[y,yearName(y)])],flow?.scope==='decadal'?undefined:flow?.year??'natal')}
+ ${row('流年',[...years.map(y=>[y,yearName(y)])],flow?.scope==='decadal'?undefined:flow?.year)}
  ${row('流月',flow&&flow.scope!=='decadal'?flow.months.map(m=>[m.month,monthName(m.month)]):[],flow?.month)}
  ${row('流日',flow?.days.map(x=>[x.day,x.day+'日 '+x.ganZhi])||[],flow?.day)}</div></section>
- <p id="ziStatus" role="status" class="muted">${esc(s.error)}</p><section class="period-result">${detail(s)}</section></section>`;
+ <p id="ziStatus" role="status" class="muted">${esc(s.error)}</p><section class="period-result">${detail(s)}<div data-period-resonance></div></section></section>`;
  overlay(panel,s,arrival);
  if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>{if($('.zi-board',panel))overlay(panel,s);});observer.observe($('.zi-board',panel));}
  selectedRails(panel);
@@ -258,6 +258,7 @@ export function ziweiView(ctx,arrival=false){
  };
  const reset=()=>{s.token++;s.flow=null;s.badge=null;s.error='';ziweiView(ctx);ctx.onSelectTimeNode('ziwei');};
  for(const b of panel.querySelectorAll('[data-reset-period]'))b.onclick=reset;
+ for(const b of panel.querySelectorAll('[data-rail="大限"] [data-pick="natal"], [data-rail="流年"] [data-pick="natal"]'))b.onclick=reset;
  for(const b of panel.querySelectorAll('[data-rail]'))b.onclick=()=>{
   const v=b.dataset.pick;
   ctx.state.activeTimeSystem='ziwei';

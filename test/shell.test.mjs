@@ -67,7 +67,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert(many('.zi-cell.transform').length>0);
  click('[data-rail=大限]');
  await until(()=>$('#screen').textContent.includes('大限')&&Boolean($('.zi-flow')),'decadal');
- click('[data-rail=流年]:nth-child(2)');
+ const firstYear=$('[data-rail=流年][data-pick]');assert(firstYear);click('[data-rail=流年][data-pick="'+firstYear.dataset.pick+'"]');
  await until(()=>many('[data-rail=流月]').length>=12,'yearly');
  click('[data-rail=流月]');
  await until(()=>many('[data-rail=流日]').length>=29,'monthly');

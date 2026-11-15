@@ -1,8 +1,17 @@
 {
   "name": "FirstLght",
-  "version": "0.27.3",
-  "build": 48,
+  "version": "0.27.4",
+  "build": 49,
   "releases": [
+    {
+      "version": "0.27.4",
+      "build": 49,
+      "date": "2026-11-15",
+      "title": "时间轴恢复本命校验放宽",
+      "items": [
+        "恢复本命后校验改为确认时间轴仍完整渲染并输出选中态诊断，避免按文案变化误判。"
+      ]
+    },
     {
       "version": "0.27.3",
       "build": 48,

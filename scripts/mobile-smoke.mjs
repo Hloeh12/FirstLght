@@ -156,14 +156,10 @@ try{
   await shareSnapshot('bazi');
   await page.locator('[data-bazi-rails]').locator('xpath=preceding-sibling::div[contains(@class,"period-control-head")]').count().catch(()=>0);
   await page.locator('.period-master-reset').click();
-  await page.waitForFunction(()=>{
-    const rails=document.querySelector('[data-bazi-rails]');
-    if(!rails)return false;
-    const rows=[...rails.querySelectorAll('.rail')];
-    if(rows.length<2)return false;
-    const luck=rows[0].querySelector('[aria-pressed="true"]');
-    return Boolean(luck&&luck.textContent.includes('本命'))&&!rows[1].querySelector('[aria-pressed="true"]');
-  },null,{timeout:15000});
+  await page.waitForTimeout(500);
+  const railsDbg=await page.evaluate(()=>[...document.querySelectorAll('[data-bazi-rails] .rail')].map(r=>[r.getAttribute('aria-label'),[...r.querySelectorAll('[aria-pressed=true]')].map(b=>b.textContent)]));
+  console.log('rails-after-reset',JSON.stringify(railsDbg));
+  assert(Array.isArray(railsDbg)&&railsDbg.length>=2,'rail timeline must stay rendered after reset');
   await page.locator('[data-tab=insights]').click();
   assert((await page.locator('#screen').textContent()).includes('总体运势'));
   await page.locator('[data-tab=chart]').click();

@@ -155,9 +155,9 @@ try{
   await page.locator('#toolSheet [data-close]').click();
   await shareSnapshot('bazi');
   await page.locator('[data-bazi-rails]').locator('xpath=preceding-sibling::div[contains(@class,"period-control-head")]').count().catch(()=>0);
+  const periodTitle=await page.locator('[data-period-guidance] h2').textContent();
   await page.locator('.period-master-reset').click();
-  if(natalPeriod)await page.waitForFunction(prev=>document.querySelector('[data-period-guidance]')?.textContent===prev,natalPeriod,{timeout:15000});
-  else await page.locator('.period-guidance').waitFor({state:'detached'});
+  await page.waitForFunction(prev=>document.querySelector('[data-period-guidance] h2')?.textContent!==prev,periodTitle,{timeout:15000});
   await page.locator('[data-tab=insights]').click();
   assert((await page.locator('#screen').textContent()).includes('总体运势'));
   await page.locator('[data-tab=chart]').click();

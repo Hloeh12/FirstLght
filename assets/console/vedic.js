@@ -16,6 +16,46 @@ export function northIndianChart(data){
   return `<g role="button" tabindex="0" data-vedic-house="${i+1}" aria-label="第${i+1}宫 ${esc(data.houseSigns[i])} ${esc(stars.map(p=>p.name).join('、'))}"><polygon class="vedic-house" points="${points}" data-current="${i===0}" data-dasha-lit="${data.highlight?.includes(i+1)||false}"/><text x="${x}" y="${y}" text-anchor="middle" class="vedic-house-label">${i===0?'上升 · ':''}${i+1}宫 · ${(data.lagnaIndex+i)%12+1} ${esc(short(data.houseSigns[i]))}</text>${visible.map((p,j)=>`<text x="${x}" y="${y+18+j*11}" text-anchor="middle" class="vedic-planet">${esc(p.name)}${p.retro?'ᴿ':''}</text>`).join('')}${stars.length>3?`<text x="${x}" y="${y+51}" text-anchor="middle" font-size="7">另${stars.length-3}星 · 点宫</text>`:''}</g>`;
  }).join('')}</svg>`;
 }
+const SIGN_LORD=['火星','金星','水星','月亮','太阳','水星','金星','火星','木星','土星','土星','木星'];
+const SIGN_LIST=['白羊座','金牛座','双子座','巨蟹座','狮子座','处女座','天秤座','天蝎座','射手座','摩羯座','水瓶座','双鱼座'];
+const HOUSE_THEME={1:'自我与身体',2:'资源与表达',3:'行动与技能',4:'家宅与根基',5:'创造与子女',6:'竞争与服务',7:'关系与合作',8:'变动与共有资源',9:'信念与远行',10:'事业与公开身份',11:'收益与社群',12:'隐私与消耗'};
+function vargaReading(base,n){
+ const v=divisional(base,n),lordName=SIGN_LORD[SIGN_LIST.indexOf(v.lagna)]||'—';
+ const lord=v.planets.find(p=>p.name===lordName)||null;
+ const occupied=new Set(v.planets.map(p=>p.house));
+ return {n,label:VARGAS[n]||('D'+n),lagna:v.lagna,lordName,lordHouse:lord?.house??null,lordSign:lord?.sign??null,empty:12-occupied.size,planets:v.planets.length};
+}
+function vargaSentence(r){
+ if(!r.lordHouse)return `D${r.n} ${r.label}：上升${short(r.lagna)}，命主${r.lordName}不在本次计算的七曜范围内，只保留宫位映射，不给强弱结论。`;
+ const same=r.n===1?'':'';
+ return `D${r.n} ${r.label}：上升${short(r.lagna)}，命主${r.lordName}落第${r.lordHouse}宫（${HOUSE_THEME[r.lordHouse]}），十二宫中${r.empty}宫无星。${same}`;
+}
+function vedicOverview(base,d,chosen){
+ const moon=base.planets.find(p=>p.name==='月亮');
+ const ascLord=SIGN_LORD[SIGN_LIST.indexOf(d.lagna)]||'—';
+ const ascLordP=d.planets.find(p=>p.name===ascLord);
+ const counts=Array.from({length:12},(_,i)=>d.planets.filter(p=>p.house===i+1));
+ const empty=counts.map((c,i)=>c.length?null:i+1).filter(Boolean);
+ const pile=counts.map((c,i)=>[c,i+1]).filter(([c])=>c.length>=2).map(([c,h])=>`第${h}宫 ${c.map(p=>p.name).join('、')}`);
+ const vargas=[1,9,10,7,60].map(n=>vargaReading(base,n));
+ const d9=vargas[1];
+ return `<article class="card liquid-glass vedic-overview" data-vedic-overview>
+ <div class="card-head"><h2>整体印占分析</h2><span class="chip">D1 本命 · ${esc(d.lagna)}</span></div>
+ <div class="vr-grid">
+  <div class="vr-cell"><span class="k">上升 / 命主星</span><b>${esc(d.lagna)} · ${esc(ascLord)}${ascLordP?`（第${ascLordP.house}宫）`:''}</b></div>
+  <div class="vr-cell"><span class="k">月亮星宿</span><b>${esc(moon?.nakshatra||'—')} 第 ${moon?.pada||'—'} 步 · 落第${moon?.house||'—'}宫</b></div>
+  <div class="vr-cell"><span class="k">当前大运</span><b>${esc(chosen?.[0]?.lord||d.active?.lord||'—')}${chosen?.[1]?` / ${esc(chosen[1].lord)}`:''}</b></div>
+  <div class="vr-cell"><span class="k">星曜分布</span><b>${d.planets.length} 曜 · ${empty.length?`空宫 ${empty.slice(0,6).join('、')}${empty.length>6?'…':''}`:'无空宫'}</b></div>
+ </div>
+ <p class="vr-line"><b>本命结构：</b>命主${esc(ascLord)}${ascLordP?`落第${ascLordP.house}宫，${HOUSE_THEME[ascLordP.house]}是这张盘要持续兑现的主题；月亮在${esc(moon?.nakshatra||'—')}，情绪与安全感按该宿的宿主星节奏展开`:'未落在本次七曜计算范围内'}。</p>
+ ${pile.length?`<p class="vr-line"><b>星曜集中：</b>${pile.map(esc).join('；')}。同宫星多时主题互相牵制，先看其中能量最强的一颗，再谈吉凶。</p>`:''}
+ ${d9.lordHouse?`<p class="vr-line"><b>关系盘 D9：</b>上升${esc(short(d9.lagna))}，命主${esc(d9.lordName)}落第${d9.lordHouse}宫（${HOUSE_THEME[d9.lordHouse]}）。D9 与 D1 的命主不同宫时，说明对外表现与亲密关系里的自我不一致。</p>`:''}
+ <h3 class="vr-title">分盘结论</h3>
+ <ul class="vr-vargas">${vargas.map(r=>`<li><b>D${r.n} ${esc(r.label)}</b><span>${esc(vargaSentence(r))}</span></li>`).join('')}</ul>
+ <p class="thin muted vr-note">计算范围：宫位按整宫制，分盘由本命度数的整数分割得出；未计算 Shadbala、Ashtakavarga、Yogini 与 Jaimini 指标，因此这里只描述结构位置，不给分数和吉凶断言。</p>
+</article>`;
+}
+
 export function vedicView(ctx){
  const s=ctx.state.chartState.vedic??={data:ctx.state.reading.vedic,pick:null};s.n??=1;s.layout??='north';s.path??=[];const base=s.data,d=base?divisional(base,s.n):null;
  if(!d){ctx.root.innerHTML='<p class="empty">请先激活案例。</p>';return;}
@@ -29,7 +69,7 @@ export function vedicView(ctx){
  ctx.root.innerHTML=`<section id="vedic"><h1>印度占星 · Jyotish</h1><p class="thin">Lahiri 恒星黄道 · 整宫制 · 平交点</p>
  <div class="rail">${[1,9,10,7,2,60].map(n=>btn('D'+n+' '+VARGAS[n],`data-varga="${n}" aria-pressed="${s.n===n}"`)).join('')}</div><label>完整分盘<select data-varga-select>${Array.from({length:60},(_,i)=>`<option value="${i+1}" ${s.n===i+1?'selected':''}>D${i+1} ${VARGAS[i+1]||'谐波映射（非经典列示）'}</option>`).join('')}</select></label><div class="rail">${btn('北印菱形盘',`data-layout="north" aria-pressed="${s.layout==='north'}"`)}${btn('南印方格盘',`data-layout="south" aria-pressed="${s.layout==='south'}"`)}</div>
  <article class="card liquid-glass"><h2>${s.layout==='north'?'北印菱形盘':'南印方格盘'} · D${s.n}</h2>${s.layout==='north'?northIndianChart(d):southIndianChart(d,base)}<p>D${s.n} ${VARGAS[s.n]||'谐波'}：上升${esc(d.lagna)}，主运星${esc(selected.lord)}落第${lord?.house||'—'}宫；专项观察${esc(VARGAS[s.n]||'对应分盘')}中的职责与资源。${esc(d.method)}</p><p class="thin">上升 ${esc(d.lagna)} · 岁差 ${d.ayanamsa.toFixed(6)}° · 盘面基准 ${esc(ctx.state.instantSnapshot?formatLocalDisplayTime(ctx.state.profile.fields):localDisplayTime(d.utc))}</p></article>
- <article class="card" data-vedic-nakshatra><h2>27 星宿与宿度</h2><p class="thin">以下为 D1 出生恒星黄道；分盘只改变上方宫位映射。宿主落1/5/9宫侧重支持，落6/8/12宫侧重磨练，需合参宫主与相位。</p>${table(['星体','星座 / 宫位','精确度数','星宿 / 宿度','宿主 / 分足'],[{key:'lagna',name:'上升 Lagna',sid:base.ascSid,house:1,nakIndex:Math.floor(base.ascSid/(360/27)),nakshatra:nakNames[Math.floor(base.ascSid/(360/27))],nakDegree:base.ascSid%(360/27),nakLord:base.sequence[Math.floor(base.ascSid/(360/27))%9],pada:Math.floor(base.ascSid/(360/108))%4+1,sign:base.lagna,degree:{degrees:Math.floor(base.ascSid%30),minutes:Math.floor(base.ascSid%1*60),seconds:Math.floor(base.ascSid%1*3600)%60}},...base.planets].map(p=>[p.name+' '+planetStates(p,base.planets).join(' / '),p.sign+' · '+p.house+'宫',dms(p.degree),(nakNames[p.nakIndex]||p.nakshatra)+' '+p.nakDegree.toFixed(4)+'°',p.nakLord+' · Pada '+p.pada+'（本命宿主落'+(base.planets.find(q=>q.name===p.nakLord)?.house||1)+'宫）']))}</article>
+ </section>${vedicOverview(base,d,chosen)}<section class="vedic-rest"><article class="card" data-vedic-nakshatra><h2>27 星宿与宿度</h2><p class="thin">以下为 D1 出生恒星黄道；分盘只改变上方宫位映射。宿主落1/5/9宫侧重支持，落6/8/12宫侧重磨练，需合参宫主与相位。</p>${table(['星体','星座 / 宫位','精确度数','星宿 / 宿度','宿主 / 分足'],[{key:'lagna',name:'上升 Lagna',sid:base.ascSid,house:1,nakIndex:Math.floor(base.ascSid/(360/27)),nakshatra:nakNames[Math.floor(base.ascSid/(360/27))],nakDegree:base.ascSid%(360/27),nakLord:base.sequence[Math.floor(base.ascSid/(360/27))%9],pada:Math.floor(base.ascSid/(360/108))%4+1,sign:base.lagna,degree:{degrees:Math.floor(base.ascSid%30),minutes:Math.floor(base.ascSid%1*60),seconds:Math.floor(base.ascSid%1*3600)%60}},...base.planets].map(p=>[p.name+' '+planetStates(p,base.planets).join(' / '),p.sign+' · '+p.house+'宫',dms(p.degree),(nakNames[p.nakIndex]||p.nakshatra)+' '+p.nakDegree.toFixed(4)+'°',p.nakLord+' · Pada '+p.pada+'（本命宿主落'+(base.planets.find(q=>q.name===p.nakLord)?.house||1)+'宫）']))}</article>
  <article class="card liquid-glass" data-vedic-states><h2>行星状态检视</h2><div class="chips">${d.planets.map(p=>term(p.name+' · '+(planetStates(p,d.planets).join(' / ')||'平常'),p.name+'落'+p.sign+'第'+p.house+'宫。'+(planetStates(p,d.planets).join('、')||'本模型未检出特殊状态')+'；仅按所选分盘观察宫位。')).join('')}</div><small>逆行、燃烧、行星战与尊贵状态按当前本地模型计算，传统象意不等于事件保证。</small></article>
  <article class="card liquid-glass vedic-period"><h2>Vimshottari 大运</h2><p>当前大运：${esc(d.active?.lord||'不在所列运限')} · 出生大运余额 ${d.balanceYears.toFixed(4)} 年</p>
  <div class="rail">${btn('−1年','data-v-time="-12"')}${btn('−1月','data-v-time="-1"')}${btn('＋1月','data-v-time="1"')}${btn('＋1年','data-v-time="12"')}</div>

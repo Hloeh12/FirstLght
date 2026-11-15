@@ -34,7 +34,8 @@ const palace=(z,branch)=>z.palaces.find(p=>p.branch===branch);
 const starInfo=s=>s.name+'常用于观察'+(starThemes[s.name]||'其所在宫位的辅助主题')+'。'+(s.brightness?'本宫亮度 '+s.brightness+'。':'');
 const mutagenName=(flow,type)=>(flow?.scope==='monthly'?'月':flow?.scope==='daily'?'日':flow?.scope==='decadal'?'限':'流')+type;
 function badge(text,type,branch,kind){
- return btn(text,`class="badge" data-t="${type}" data-badge="${kind}" data-branch-target="${branch}" aria-label="${text}，${cues[type]}"`);
+ const glyph=String(text).slice(-1);
+ return btn(glyph,`class="badge" data-t="${type}" data-badge="${kind}" data-branch-target="${branch}" aria-label="${text}，${cues[type]}" title="${text}"`);
 }
 function center(ctx,s){
  const b=ctx.state.reading.bazi.info,z=s.chart,p=ctx.state.profile;
@@ -225,17 +226,18 @@ function detail(s){
 let observer;
 export function ziweiView(ctx,arrival=false){
  const s=current(ctx),z=s.chart,flow=s.flow,{decades,d,years}=railData(s);
+ const baseYear=flow?.year??d.yearRange[0],baseMonth=flow?.month??1;
  const panel=ctx.root;
  observer?.disconnect();
  const mode=[['flying','飞星模式'],['triad','三合模式'],['transform','四化模式']];
  panel.innerHTML=`<section aria-label="紫微斗数">${board(ctx,s)}<article class="card" data-zi-practical>${practicalZiwei(s.chart,s.flow).map(x=>`<p><b>${esc(x.name+' · '+x.palace)}</b> ${esc(x.text)}</p>`).join('')||'<small>当前未触发双禄、禄冲或羊陀夹忌条件。</small>'}</article>
  <div class="segments liquid-glass" aria-label="紫微模式">${mode.map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${id===s.mode}"`)).join('')}</div>
  ${s.mode==='transform'?'<div class="rail" aria-label="四化分析">'+[['natal','生年四化'],['self','自化分析'],['track','飞星轨迹']].map(([id,label])=>btn(label,`data-filter="${id}" aria-pressed="${s.filter===id}"`)).join('')+'</div>':''}
- <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大限与流限</h2><p>选择后仅刷新下方当前大限、流年、流月或流日的专属分析。</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),d.yearRange[0])}
- ${row('流年',[...years.map(y=>[y,yearName(y)])],flow?.scope==='decadal'?undefined:flow?.year)}
- ${row('流月',flow&&flow.scope!=='decadal'?flow.months.map(m=>[m.month,monthName(m.month)]):[],flow?.month)}
- ${row('流日',flow?.days.map(x=>[x.day,x.day+'日 '+x.ganZhi])||[],flow?.day)}</div></section>
- <p id="ziStatus" role="status" class="muted">${esc(s.error)}</p><section class="period-result">${detail(s)}<div data-period-resonance></div></section></section>`;
+ <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大限与流限</h2><p>点任一格即切换下方当前阶段的专属分析。</p></div>${btn('↺ 本命','class="period-master-reset" data-reset-period')}</div><div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),flow?.scope==='decadal'?flow?.year:d.yearRange[0])}
+ ${row('流年',[...years.map(y=>[y,yearName(y)])],flow?.scope==='decadal'?'':flow?.year)}
+ ${row('流月',Array.from({length:12},(_,i)=>[i+1,monthName(i+1)]),flow?.month)}
+ ${row('流日',flow?.days?.length?flow.days.map(x=>[x.day,x.day+'日 '+x.ganZhi]):Array.from({length:new Date(Date.UTC(baseYear,baseMonth,0)).getUTCDate()},(_,i)=>[i+1,(i+1)+'日']),flow?.day)}</div></section>
+ <p id="ziStatus" role="status" class="muted">${esc(s.error)}</p><section class="period-result">${detail(s)}</section></section>`;
  overlay(panel,s,arrival);
  if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>{if($('.zi-board',panel))overlay(panel,s);});observer.observe($('.zi-board',panel));}
  selectedRails(panel);
@@ -265,7 +267,7 @@ export function ziweiView(ctx,arrival=false){
   if(v==='natal'){reset();return;}
   const n=Number(v),key=b.dataset.rail;
   const p=key==='大限'?{scope:'decadal',year:n}:key==='流年'?{scope:'yearly',year:n}:
-   key==='流月'?{scope:'monthly',year:flow.year,month:n}:{scope:'daily',year:flow.year,month:flow.month,day:n};
+   key==='流月'?{scope:'monthly',year:baseYear,month:n}:{scope:'daily',year:baseYear,month:baseMonth,day:n};
   setPeriod(ctx,p);
  };
 }

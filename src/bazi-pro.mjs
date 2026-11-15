@@ -134,31 +134,39 @@ export function baziPro({birth,selection={},combine=false}){
  }
  const first=cycle?.startYear??Number(normal.Y),years=flowYears(first,10).map(p=>({...add({...p,name:'流年'}),age:p.year-normal.Y+1}));
  let months=[],days=[];
+ const termsOf=y=>[...solarTerms(y).filter(t=>t.lon!==285),...solarTerms(y+1).filter(t=>t.lon===285)].sort((a,b)=>a.date-b.date);
+ const nowYear=new Date().getUTCFullYear();
+ let flowYear=years.find(y=>y.year===nowYear)?.year??Number(years[0]?.year??normal.Y);
  if(selection.year!==undefined&&selection.year!==null){
   const y=Number(selection.year);
   if(!Number.isInteger(y)||y<1800||y>2330)throw Error('无效流年');
   selected.push(add({...flowYears(y,1)[0],name:'流年'}));
-  const terms=[...solarTerms(y).filter(t=>t.lon!==285),...solarTerms(y+1).filter(t=>t.lon===285)].sort((a,b)=>a.date-b.date);
-  months=terms.map((term,i)=>{
-   const at=new Date(+term.date+1),yp=yearPillar(at,at.getUTCFullYear()),mp=monthPillar(at,at.getUTCFullYear(),stems.indexOf(yp.stem));
-   return {...add({...mp,name:'流月'}),index:i,label:term.name,date:term.date.toISOString(),longitude:term.lon};
-  });
-  if(selection.month!==undefined&&selection.month!==null){
-   if(!months[selection.month])throw Error('无效流月');
-   selected.push(months[selection.month]);
-   const begin=terms[selection.month].date,next=terms[selection.month+1]?.date??solarTerms(y+1).find(t=>t.lon===315).date;
-   const offsetHours=Number(birth.city.tz??8),localDate=at=>new Date(+at+offsetHours*3600000).toISOString().slice(0,10);
-   const start=localDate(begin),end=localDate(next);
-   for(let date=start;date<end&&days.length<33;){
-    const [yr,mo,da]=date.split('-').map(Number),p=dayPillar({y:yr,m:mo,d:da,h:12});
-    days.push({...add({...p,name:'流日'}),index:days.length,date});
-    date=new Date(Date.parse(date+'T00:00:00Z')+86400000).toISOString().slice(0,10);
-   }
-   if(selection.day!==undefined&&selection.day!==null){
-    if(!Number.isInteger(selection.day)||!days[selection.day])throw Error('无效流日');
-    selected.push(days[selection.day]);
-   }
-  }
+  flowYear=y;
+ }
+ const terms=termsOf(flowYear);
+ months=terms.map((term,i)=>{
+  const at=new Date(+term.date+1),yp=yearPillar(at,at.getUTCFullYear()),mp=monthPillar(at,at.getUTCFullYear(),stems.indexOf(yp.stem));
+  return {...add({...mp,name:'流月'}),index:i,label:term.name,date:term.date.toISOString(),longitude:term.lon};
+ });
+ const nowIso=new Date().toISOString().slice(0,10);
+ let baseMonth=months.findIndex((m,i)=>m.date.slice(0,10)<=nowIso&&(months[i+1]?.date.slice(0,10)??'9999')>nowIso);
+ if(baseMonth<0)baseMonth=0;
+ if(selection.month!==undefined&&selection.month!==null){
+  if(!months[selection.month])throw Error('无效流月');
+  selected.push(months[selection.month]);
+  baseMonth=selection.month;
+ }
+ const offsetHours=Number(birth.city.tz??8),localDate=at=>new Date(+at+offsetHours*3600000).toISOString().slice(0,10);
+ const begin=terms[baseMonth].date,next=terms[baseMonth+1]?.date??solarTerms(flowYear+1).find(t=>t.lon===315).date;
+ const mStart=localDate(begin),mEnd=localDate(next);
+ for(let date=mStart;date<mEnd&&days.length<33;){
+  const [yr,mo,da]=date.split('-').map(Number),p=dayPillar({y:yr,m:mo,d:da,h:12});
+  days.push({...add({...p,name:'流日'}),index:days.length,date});
+  date=new Date(Date.parse(date+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+ }
+ if(selection.day!==undefined&&selection.day!==null){
+  if(!Number.isInteger(selection.day)||!days[selection.day])throw Error('无效流日');
+  selected.push(days[selection.day]);
  }
  const matrix=[...pillars,...selected],links=relations(matrix);
  const node=b.luck.edge;

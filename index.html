@@ -12,12 +12,13 @@
  <div id="app">
   <header id="appTopBar" class="chrome liquid-glass">
    <button type="button" class="icon" id="caseDrawerButton" aria-label="快捷案例">☰</button>
-   <div class="profile-pill profile-capsule" id="activeProfile"><button type="button" class="capsule-left" aria-haspopup="dialog"><span data-profile-name id="curName">🌸 开始排盘</span><span data-profile-dst hidden></span><span data-profile-rule id="curBaZi" hidden></span></button><button type="button" id="btnEditProfile" class="capsule-edit-btn" data-profile-edit aria-haspopup="dialog">＋ 起盘</button></div>
+   <div class="profile-pill profile-capsule" id="activeProfile"><button type="button" class="capsule-left" aria-haspopup="dialog"><span data-profile-name id="curName">🌸 开始排盘</span><span data-profile-dst hidden></span><span data-profile-rule id="curBaZi" hidden></span></button><button type="button" id="btnEditProfile" class="capsule-edit-btn" data-profile-edit aria-label="编辑出生资料" aria-haspopup="dialog">✏️</button></div>
 <button type="button" class="icon" id="toolsButton" aria-label="当前页面功能" aria-haspopup="dialog">•••</button>
   </header>
   <main id="mainScrollView" aria-label="主内容">
   <div id="notice" role="status" aria-live="polite" hidden></div>
   <div class="chart-basis-row" id="chartBasisRow" hidden><p id="chartBasisTime" class="chart-basis-time thin"></p><button type="button" class="chart-time-action" id="instantToggle" data-chart-action="instant">⏱ 即刻天象</button></div>
+  <div class="chart-system-switch" id="chartSystemSwitch" role="tablist" aria-label="排盘体系" hidden><button type="button" role="tab" data-system-switch="bazi" aria-pressed="false">八字</button><button type="button" role="tab" data-system-switch="ziwei" aria-pressed="false">紫微</button><button type="button" role="tab" data-system-switch="west" aria-pressed="false">西洋</button><button type="button" role="tab" data-system-switch="vedic" aria-pressed="false">印度</button></div>
   <div id="screen" tabindex="-1"></div>
   <div class="bottom-spacer" style="height:140px;width:100%;min-height:140px;flex-shrink:0;pointer-events:none" aria-hidden="true"></div>
   </main>

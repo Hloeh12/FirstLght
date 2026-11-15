@@ -208,7 +208,8 @@ try{
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
   await page.locator('#instantToggle').click();await page.locator('#instantToggle[data-chart-action=restore]').waitFor();const instantClock=(await page.locator('#chartBasisTime').textContent()).split(' · ')[1];
-  assert((await page.locator('[data-profile-name]').textContent()).includes(instantClock));
+  assert((await page.locator('#chartBasisTime').textContent()).includes(instantClock));
+  assert((await page.locator('[data-profile-name]').textContent()).includes('即刻天象'));
   assert((await page.locator('#chartBasisTime').textContent()).includes('即刻天象'));
   await page.locator('#instantToggle').click();
   await page.waitForFunction(() => document.querySelector('#chartBasisTime').textContent.includes('本命基准'), null, {timeout: 15000});

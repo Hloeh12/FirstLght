@@ -44,6 +44,16 @@ export function playSuccessSound(){
  tone(1975,1975,.22,.035);
  haptic('success');
 }
+// 星盘旋转的细密刻度音：短促、低音量，按角度节流调用，避免持续蜂鸣。
+let lastWheelTick=0;
+export function playWheelTick(){
+ if(!feedbackEnabled())return;
+ const now=performance.now();
+ if(now-lastWheelTick<45)return;
+ lastWheelTick=now;
+ unlockAudio();
+ tone(880,1240,.028,.022);
+}
 function particles(event,target){
  if(reducedMotion())return;
  const box=target.getBoundingClientRect(),host=target.closest('dialog[open]')||document.body;

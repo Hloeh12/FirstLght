@@ -1,5 +1,5 @@
 import {localDisplayTime} from './now.js';
-import {aspectBrowser,bindAspectBrowser} from './aspects.js';
+import {aspectBrowser,bindAspectBrowser,aspectMeaning} from './aspects.js';
 import {todaySky} from '../../src/today-sky.mjs';
 import {bindWheel} from './wheel-gesture.js';
 import {$,esc,btn,stored,save,table,bars,symbols,zodiacNames,selectedRails} from './ui.js';
@@ -87,8 +87,13 @@ export function wheel(r){
   const mid=lon+norm(a.cusps[(i+1)%12]-lon)/2;
   return line(xy(lon,162),xy(lon,0),'stroke="#e2c7d9" stroke-width=".65"')+label(mid,169,'第'+(i+1)+'宫','font-size="7.6" fill="#7e5372"');
  }).join('');
- const axes=Object.entries(a.axes).filter(([k])=>r.mode==='composite'||a.planets.some(p=>p.key===k)).map(([key,lon])=>
-  line(xy(lon,161),xy(lon,104),'stroke="#a15781" stroke-width="1.4"')+label(lon,157,({asc:'上升 ASC',dsc:'下降 DSC',mc:'天顶 MC',ic:'天底 IC'})[key],'font-size="7" font-weight="750" fill="#8b315e"')).join('');
+ const axisNames={asc:'上升 ASC',dsc:'下降 DSC',mc:'天顶 MC',ic:'天底 IC'};
+ const axes=Object.entries(a.axes).filter(([k])=>r.mode==='composite'||a.planets.some(p=>p.key===k)).map(([key,lon])=>{
+  const [ax,ay]=xy(lon,161),[bx,by]=xy(lon,104),[lx,ly]=xy(lon,157);
+  return line([ax,ay],[bx,by],'stroke="#a15781" stroke-width="1.4"')+
+   `<g class="wheel-body-glyph wheel-axis" role="button" tabindex="0" aria-pressed="false" data-wheel-focus="axis-${key}" aria-label="${axisNames[key]||key}"><circle class="wheel-star-hit" cx="${lx}" cy="${ly}" r="13" fill="transparent"/>`+
+   `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="750" fill="#8b315e">${axisNames[key]||key}</text></g>`;
+ }).join('');
  const placements=radialLayout(wheelBodies(a),b?wheelBodies(b):[],xy);
  const stars=placements.map(p=>{
   const anchor=p.outer?135:104,color=p.outer?'#a84575':'#8a4f91';
@@ -195,11 +200,39 @@ export function westernView(ctx){
  if(r){
   bindAspectBrowser(ctx.root,r,s.aspects);
   const stage=$('.wheel-stage',ctx.root),card=$('[data-wheel-card]',stage);
-  const lookup=new Map([['inner',r.chart],['outer',r.outer]].flatMap(([layer,data])=>(data?.planets||[]).map(p=>[layer+'-'+p.key,p])));
+  const layers=[['inner',r.chart],['outer',r.outer]];
+  const lookup=new Map(layers.flatMap(([layer,data])=>(data?.planets||[]).map(p=>[layer+'-'+p.key,p])));
+  // 四轴虚点：引擎把它们放在 axes（黄经数值）而非 planets，补成可点击的伪行星对象。
+  const axisNames={asc:'上升 ASC',dsc:'下降 DSC',mc:'天顶 MC',ic:'天底 IC'};
+  const axisSymbols={asc:'Asc',dsc:'Desc',mc:'MC',ic:'IC'};
+  for(const [layer,data] of layers){
+   if(!data?.axes)continue;
+   for(const [key,lon] of Object.entries(data.axes)){
+    if(!axisNames[key])continue;
+    const deg=norm(lon),sign=zodiacNames[Math.floor(deg/30)],d={degrees:Math.floor(deg%30),minutes:Math.floor(deg%1*60),seconds:Math.floor(deg%1*3600)%60};
+    lookup.set(layer+'-axis-'+key,{key:'axis-'+key,name:axisNames[key],symbol:axisSymbols[key],sign,degree:d,house:'轴线',dignity:null});
+   }
+  }
+  // 相位列表：本命双盘相位 + 行运跨盘相位；按容许度排序，取最紧密的若干条展示在中宫卡片。
+  const aspectPool=[...(r.chart?.aspects||[]),...(r.cross||[])];
   bindWheel(stage,s,key=>{
    const p=lookup.get(key);
    card.hidden=!p;
-   card.innerHTML=p?`<b>${esc(p.symbol+' '+p.name)}${key.startsWith('outer-')?' · 行运':''}</b><span>${esc(p.sign+' '+dms(p.degree))}</span><span>第 ${p.house} 宫 · ${dignityLabels[p.dignity]||'无庙旺陷落'}</span>`:'';
+   if(!p){card.innerHTML='';return;}
+   const layer=key.split('-')[0];
+   const related=aspectPool.filter(x=>x.aKey===p.key||x.bKey===p.key)
+    .sort((a,b)=>a.orb-b.orb).slice(0,3);
+   const nameOf=k=>k==='asc'||k==='mc'||k==='dsc'||k==='ic'
+    ? ({asc:'上升',mc:'天顶',dsc:'下降',ic:'天底'}[k]||k)
+    : (lookup.get(layer+'-'+k)?.name||k);
+   const aspectLines=related.length?`<div class="wheel-card-aspects"><span class="wca-title">主要相位</span>${related.map(x=>{
+     const other=nameOf(x.aKey===p.key?x.bKey:x.aKey),m=aspectMeaning(x.angle);
+     return `<span class="wca-row">${esc(x.symbol||orbLabels[x.angle]||'相位')} ${esc(other)} <em>${esc(m.tag)}</em></span>`;
+    }).join('')}</div>`:'';
+   const isAxis=String(p.key).startsWith('axis-');
+   const houseLine=isAxis?`<span>轴点 · ${esc(p.sign)}</span>`:`<span>第 ${esc(p.house)} 宫 · ${dignityLabels[p.dignity]||'无庙旺陷落'}</span>`;
+   const axisHint=isAxis?`<span class="wca-title">上升定宫 · 天顶定事业，为整张盘的定位锚点</span>`:'';
+   card.innerHTML=`<b>${esc(p.symbol+' '+p.name)}${layer==='outer'?' · 行运':''}</b><span>${esc(p.sign+' '+dms(p.degree))}</span>${houseLine}${axisHint}${aspectLines}`;
   });
  }
  selectedRails(ctx.root);

@@ -108,6 +108,7 @@ export function vedicTools(ctx,host){
   const id=b.dataset.vedicAction;
   ctx.close(document.querySelector('#toolSheet'));
   const target={varga:'[data-varga-select]',dasha:'.vedic-period',nakshatra:'[data-vedic-nakshatra]',states:'[data-vedic-states]'}[id];
-  document.querySelector('#vedic '+target)?.scrollIntoView({behavior:'smooth',block:'start'});
+  // 这些区块是 #vedic 的兄弟节点（位于 section.vedic-rest 内），不能在 #vedic 内查找，否则永远匹配不到。
+  (ctx.root.querySelector(target)||document.querySelector(target))?.scrollIntoView({behavior:'smooth',block:'start'});
  };
 }

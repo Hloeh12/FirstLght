@@ -1,15 +1,20 @@
-import {reducedMotion,starFeedback} from './feedback.js';
+import {reducedMotion,starFeedback,playWheelTick} from './feedback.js';
 
 export const angularStep=(to,from)=>((to-from+180)%360+360)%360-180;
 const deadZone=18;
 export function bindWheel(host,state,showFocus){
  const svg=host.querySelector('#westernChart'),ring=svg.querySelector('.wheel-ring');
  const stars=[...ring.querySelectorAll('[data-wheel-focus]')],lines=[...ring.querySelectorAll('[data-aspect-from]')];
- let frame=0,gesture,blockClickUntil=0;
+ let frame=0,gesture,blockClickUntil=0,tickAccum=0;
  const draw=value=>{
   state.rotation=value;
   ring.setAttribute('transform','rotate('+value+' 220 220)');
   ring.style.setProperty('--counter-rotation',-value+'deg');
+ };
+ // 每转过约 9° 触发一次轻刻度音，旋转有听感反馈又不至于连续蜂鸣。
+ const rotationTick=delta=>{
+  tickAccum+=Math.abs(delta);
+  if(tickAccum>=9){tickAccum=0;playWheelTick();}
  };
  const polar=(x,y)=>{
   const b=svg.getBoundingClientRect(),dx=x-b.left-b.width/2,dy=y-b.top-b.height/2;
@@ -24,11 +29,12 @@ export function bindWheel(host,state,showFocus){
  const move=(x,y,time)=>{
   if(!gesture)return false;
   const p=polar(x,y),g=gesture;
-  if(Math.hypot(x-g.x,y-g.y)>6)g.dragged=true;
+  if(Math.hypot(x-g.x,y-g.y)>10)g.dragged=true;
   if(!g.dragged)return false;
   if(p.radius<deadZone){g.angle=null;g.velocity=0;return true;}
   if(g.angle!==null){
    const change=angularStep(p.angle,g.angle);
+   rotationTick(change);
    draw(state.rotation+change);
    const dt=Math.max(8,time-g.time);
    g.velocity=.5*g.velocity+.5*Math.max(-1.4,Math.min(1.4,change/dt));
@@ -40,7 +46,8 @@ export function bindWheel(host,state,showFocus){
   if(!gesture)return;
   const g=gesture;gesture=null;
   if(!g.dragged)return;
-  blockClickUntil=performance.now()+330;
+  // 只屏蔽拖拽结束瞬间由松手合成的 click（约 60ms）；不再连带吞掉之后手指主动点选行星。
+  blockClickUntil=performance.now()+60;
   if(cancelled||reducedMotion()||time-g.time>85)return;
   let speed=g.velocity,last=performance.now();
   const coast=now=>{
@@ -48,6 +55,7 @@ export function bindWheel(host,state,showFocus){
    const dt=Math.min(32,now-last);last=now;
    speed*=Math.exp(-dt/135);
    if(Math.abs(speed)<.014){draw(angularStep(state.rotation,0));frame=0;return;}
+   rotationTick(speed*dt);
    draw(state.rotation+speed*dt);
    frame=requestAnimationFrame(coast);
   };

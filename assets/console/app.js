@@ -599,8 +599,8 @@ function onSelectTimeNode(system){
  state.activeTimeSystem=system;
  forceRefreshAllInsights();
  if(state.tab==='chart'&&['west','vedic'].includes(system)){
-  const section=root.querySelector(system==='west'?'section[aria-label="西洋占星"]':'#vedic');
-  const host=section?.querySelector('[data-period-resonance]');
+  // 排盘页的共振宿主在体系容器内（西洋/印占均如此），直接从 root 找，避免作用域过窄漏掉。
+  const host=root.querySelector('[data-period-resonance]');
   if(host)host.innerHTML=resonanceCard();
  }
 }
@@ -644,7 +644,8 @@ function forceRefreshAllInsights(){
 }
 // 生成成篇深度报告：复活四层知识库，做成可生成/可导出/可复制的产品功能。
 function openFullReport(){
- if(!state.reading){tell('请先排盘，再生成报告。');return;}
+ const synReady=state.system==='synastry'&&state.chartState.synastry?.result;
+ if(!state.reading&&!synReady){tell('请先排盘，再生成报告。');return;}
  const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'};
  const d=document.getElementById('reportSheet');
  const report=composeFullReport(state,names);

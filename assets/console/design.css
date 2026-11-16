@@ -1694,14 +1694,129 @@ dialog#termSheet .sheet-body{overflow-y:auto;overscroll-behavior:contain;-webkit
 dialog#termSheet .sheet-body::-webkit-scrollbar{width:3px}
 dialog#termSheet .sheet-body::-webkit-scrollbar-thumb{background:rgba(190,120,155,.4);border-radius:3px}
 
-/* 本盘解读：置顶强调 */
-.term-card .tc-own{background:linear-gradient(135deg,rgba(255,225,239,.78),rgba(255,244,249,.62));border:1px solid rgba(255,160,198,.42)}
-.term-card .tc-own h4{color:#a8235c}
-.term-card .tc-own p{font-size:13px;line-height:1.78;color:#3a2029}
-.bg-name .term{font-size:11px!important;letter-spacing:.1em;color:rgba(90,44,66,.55)!important;border-bottom:1px dashed rgba(160,90,125,.35)}
+/* ==========================================================================
+   DESIGN SYSTEM v2 · 单一权威层 (Authoritative Override Layer)
+   --------------------------------------------------------------------------
+   本层收口以上 13 轮 Build 历史补丁。今后所有视觉调整只改这里。
+   目标：在 WKWebView(WebKit) 能力上限内，逼近 iOS 原生液态玻璃观感。
+   手法：降模糊 · 降饱和 · 四层光效 · 统一字阶 · 安全区修正
+   注意：WebKit 不支持 backdrop-filter: url(SVG滤镜)，真折射必须走原生
+        UIGlassEffect；本层做到的是"通透磨砂 + 边缘聚光"的最佳近似。
+   ========================================================================== */
+:root{
+  /* 色彩令牌 */
+  --ds-paper:#f7f6fb;
+  --ds-ink:#17131a;
+  --ds-ink-2:#4c444f;
+  --ds-muted:#6b6470;
+  --ds-brand:#e8467f;
+  --ds-accent:#b32657;
+  --ds-line:rgba(24,14,22,.09);
+  /* 材质令牌：blur 从历史 28~42px 降至 16px（关键改动） */
+  --ds-blur:16px;
+  --ds-sat:145%;
+  --ds-radius:20px;
+  /* 间距令牌：4px 基准 */
+  --ds-s1:4px; --ds-s2:8px; --ds-s3:12px; --ds-s4:16px; --ds-s5:20px; --ds-s6:24px;
+  /* 字阶令牌：杜绝 7~9px 蚊字 */
+  --ds-fs-cap:11px;
+  --ds-fs-body:13px;
+  --ds-fs-sub:15px;
+  --ds-fs-title:17px;
+  --ds-fs-h1:22px;
+  /* 覆盖历史变量，确保下游组件取到统一值 */
+  --paper:var(--ds-paper);
+  --ink:var(--ds-ink);
+  --ink-secondary:var(--ds-ink-2);
+  --muted:var(--ds-muted);
+  --accent:var(--ds-accent);
+  --line:var(--ds-line);
+  --fl-glass:linear-gradient(155deg,rgba(255,255,255,.72),rgba(255,246,250,.54));
+  --fl-line:1px solid rgba(255,255,255,.84);
+  --fl-radius:var(--ds-radius);
+}
 
-/* 大运与应期：让时间轨完整露出、可点 */
-#mainScrollView,.main-scroll-view{padding-bottom:132px!important}
-.period-control{padding-bottom:10px!important;scroll-margin-bottom:130px}
-.timeline,.rails{scroll-padding-inline:16px}
-.pc-current{margin:2px 0 0!important;font-size:11.5px!important;color:#a03a6c!important;letter-spacing:.01em}
+/* ---- 1. 材质：四层光效（柔光 + 反光 + 硬高光 + 投影） ---- */
+.liquid-glass,
+.card,
+.card.liquid-glass,
+.liquid-glass.card,
+.period-control{
+  background:
+    radial-gradient(135% 92% at 8% -6%,rgba(255,255,255,.96) 0%,rgba(255,255,255,0) 58%),
+    radial-gradient(115% 85% at 102% 108%,rgba(255,152,192,.13) 0%,rgba(255,255,255,0) 60%),
+    linear-gradient(155deg,rgba(255,255,255,.72) 0%,rgba(255,246,250,.54) 100%)!important;
+  backdrop-filter:blur(var(--ds-blur)) saturate(var(--ds-sat))!important;
+  -webkit-backdrop-filter:blur(var(--ds-blur)) saturate(var(--ds-sat))!important;
+  border:1px solid rgba(255,255,255,.84)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.98),
+    inset 1px 0 0 rgba(255,255,255,.42),
+    inset 0 -1px 0 rgba(255,120,170,.12),
+    0 10px 28px -20px rgba(88,36,62,.34)!important;
+  border-radius:var(--ds-radius)!important;
+}
+
+/* 弹层/抽屉：同样降糊，避免 42px 糊成一片 */
+.sheet.liquid-glass,.drawer.liquid-glass,dialog#termSheet{
+  background:linear-gradient(160deg,rgba(255,255,255,.84),rgba(255,243,249,.74))!important;
+  backdrop-filter:blur(20px) saturate(150%)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(150%)!important;
+}
+
+/* 图表容器：统一模糊强度 */
+.zi-board,.bazi-board,.wheel-focus-card{
+  backdrop-filter:blur(var(--ds-blur)) saturate(var(--ds-sat))!important;
+  -webkit-backdrop-filter:blur(var(--ds-blur)) saturate(var(--ds-sat))!important;
+}
+
+/* 顶栏：最需要通透感的位置 */
+#appTopBar{
+  background:linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,242,248,.66))!important;
+  backdrop-filter:blur(18px) saturate(150%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(150%)!important;
+  /* 修正历史 bug：fallback 44px 会把非灵动岛机型顶飞 */
+  height:calc(56px + env(safe-area-inset-top,0px))!important;
+  padding:env(safe-area-inset-top,0px) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px))!important;
+}
+
+/* 嵌套卡片去材质（保持历史意图：防止层层玻璃叠加掉帧） */
+#screen .card .card:not(.res-ev):not(.stat-card){
+  background:none!important;border:0!important;box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  padding:0!important;border-radius:0!important;
+}
+
+/* ---- 2. 排版：统一字阶与对比度 ---- */
+#screen p,#screen .spread p,#screen .card section>p,
+.tc-nature,.tc-block p,.tc-facts p{
+  font-size:var(--ds-fs-body)!important;line-height:1.72!important;
+}
+#screen .card .thin,#screen .card .muted,#screen .card small,
+.tc-disclaimer,.time-unknown-label,.tc-kicker,.tc-block h4,
+#screen .card .kicker,#screen .kicker{
+  font-size:var(--ds-fs-cap)!important;color:var(--ds-muted)!important;
+}
+/* 盘面密集区：提升到 10px（格子窄，11px 会溢出）并提高对比度 */
+.bazi-grid .bg-label,.bazi-grid .bg-dash,.bazi-grid .hz-note,
+.bazi-grid .bg-shensha .term,.bazi-grid .hz2 i{
+  font-size:10px!important;color:rgba(90,44,66,.58)!important;
+}
+.bazi-grid .hz2 .term{font-size:11px!important}
+.bazi-grid .bg-head b,.bazi-grid .bg-stage .term,.bazi-grid .bg-nayin .term{font-size:11px!important}
+/* 四化徽标保持"颜色 + 汉字"双编码，字号达标 */
+.chip,#screen .card .chip,#screen .card .chips .term{font-size:11px!important}
+/* 数字统一等宽对齐 */
+.grid-table,.time-row strong,.bg-cell,.chip{font-variant-numeric:tabular-nums}
+
+/* ---- 3. 安全区：所有 fixed 层统一兜底 ----
+   注意：#mainScrollView 的底部间距由 index.html 的 .bottom-spacer(190px inline)
+   与原有 padding 共同承担，当前工作正常，此处不重复叠加，避免多余空白。 */
+.sheet{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px)!important}
+
+/* ---- 4. 交互反馈 ---- */
+button,.segments button,.rail button,.dock-rail button{
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .14s var(--spring, cubic-bezier(.34,1.4,.64,1)),background .18s ease;
+}
+button:active,.segments button:active,.rail button:active{transform:scale(.965)}

@@ -288,7 +288,8 @@ try{
   await page.getByText('5/5 项通过',{exact:true}).waitFor();
   console.log(engine+' '+width+'×'+height+' 离线自检：'+(await page.locator('[data-diagnostic-checks] li').allTextContents()).join(' | '));
   await page.locator('#toolSheet [data-close]').click();
-  await page.locator('#activeProfile').click();
+  await page.locator('#configButton').click();
+  await page.locator('#configSheet [data-config=edit]').first().click();
   await checkSheet();
   await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('70');
   await page.getByRole('button',{name:'生成命盘',exact:true}).click();

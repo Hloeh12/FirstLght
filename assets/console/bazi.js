@@ -12,21 +12,34 @@ function correction(b){
  const dst=b.timeCorrection?.dstApplied?'（夏令时-1h，标准时 '+[b.timeCorrection.standard.h,b.timeCorrection.standard.mi].map(n=>String(n).padStart(2,'0')).join(':')+'）':'';
  return c.corrected?`钟表 ${b.clock}${dst} → 经度差 ${format(c.longitudeCorrectionMinutes)} → 均时差 ${format(c.equationOfTimeMinutes)} → 真太阳时 ${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')}（${b.hourBranch}时${c.dayOffset?'，跨 '+c.dayOffset+' 日':''}）`:'钟表时 '+b.clock+dst;
 }
-function pillarHead(p,index){
- return `<div class="bg-head" data-pillar="${index}" role="button" tabindex="0" aria-pressed="false" aria-label="${esc(p.name)}柱，点击可与其他柱对比合冲"><b>${esc(p.name)}</b><span class="bg-god" data-e="${p.stemElement}">${term(p.tenGod)}</span></div>`;
+function pillarHead(p,index,chart){
+ return `<div class="bg-head" data-pillar="${index}" role="button" tabindex="0" aria-pressed="false" aria-label="${esc(p.name)}柱，点击可与其他柱对比合冲"><b class="bg-name">${p.unknown?esc(p.name):term(p.name,`${chart} 这一柱是${p.stem}${p.branch}：天干${p.stem}为${p.tenGod}，地支${p.branch}藏${p.hidden.map(h=>h.stem).join('、')}。`)}</b><span class="bg-god" data-e="${p.stemElement}">${term(p.tenGod,`${chart} 你在${p.name}天干见${p.tenGod}。`)}</span></div>`;
+}
+function pickLine(p){
+ const p2=p||{};const parts=[];
+ if(p2.luck!=null)parts.push('第'+(Number(p2.luck)+1)+'步大运');
+ if(p2.year!=null)parts.push(p2.year+'年');
+ if(p2.month!=null)parts.push('第'+(Number(p2.month)+1)+'个月');
+ if(p2.day!=null)parts.push('第'+(Number(p2.day)+1)+'天');
+ return parts.length?'正在看：'+parts.join(' · ')+' —— 下方分析已随之更新':'正在看：本命原局（点下面任一时点可切换）';
+}
+function chartLine(d){
+ const dm=d.dayMaster||{},st=d.strength||{},m=d.pillars[1]||{},y=d.pillars[0]||{};
+ const use=(st.useful||[]).join('、');
+ return `本命${dm.stem||''}${dm.element||''}日主，生于${m.branch||''}月，${st.kind||'强弱待定'}${use?'，喜用'+use:''}；年柱${y.stem||''}${y.branch||''}。`;
 }
 function baziGrid(d){
- const ps=d.pillars,voids=d.voidBranches||[];
+ const ps=d.pillars,voids=d.voidBranches||[];const cl=chartLine(d);
  const cell=(cls,i,content,attrs='')=>`<div class="bg-cell ${cls}" data-pillar-index="${i}" ${attrs}>${content}</div>`;
  const dash='<span class="bg-unknown">待补</span>';
  const line=(label,cls,cells)=>`<div class="bg-row"><span class="bg-label">${label}</span>${cells}</div>`;
- const head=`<div class="bg-row bg-row-head"><span class="bg-label"></span>${ps.map((p,i)=>cell('bg-cell-head',i,pillarHead(p,i))).join('')}</div>`;
- const stems=line('天干','bg-roles',ps.map((p,i)=>cell('bg-char',i,p.unknown?dash:term(p.stem,p.name+'天干 '+p.stem+'，属'+p.stemElement+'。'),`data-e="${p.stemElement||''}" data-pillar-anchor="stem"`)).join(''));
- const branches=line('地支','bg-roles',ps.map((p,i)=>cell('bg-char',i,p.unknown?dash:term(p.branch,p.name+'地支 '+p.branch+'，属'+p.branchElement+'。'),`data-e="${p.branchElement||''}" data-pillar-anchor="branch"`)).join(''));
- const hidden=line('藏干','bg-roles',ps.map((p,i)=>cell('bg-hidden',i,p.unknown?dash:p.hidden.map(h=>`<span class="hz2${h.commanding?' on':''}">${term(h.stem,h.rank+'藏干 '+h.stem+'，属'+h.element+'，对日主为'+h.god+'。')}<i data-e="${h.element}">${esc(h.god)}</i></span>`).join('')+(p.commander?`<span class="hz-note">令 · ${esc(p.commander.stem)}</span>`:''))).join(''));
- const stage=line('星运','bg-roles',ps.map((p,i)=>cell('bg-stage',i,p.unknown?dash:term(p.changsheng,stages[p.changsheng]+'。十二长生描述的是阶段强弱，不表示寿命。'))).join(''));
- const shen=line('神煞','bg-roles',ps.map((p,i)=>cell('bg-shensha',i,(p.shensha.map(x=>term(x)).join('')||'<span class="bg-dash">—</span>')+(voids.includes(p.branch)?term('空亡'):''))).join(''));
- const nayin=line('纳音','bg-roles',ps.map((p,i)=>cell('bg-nayin',i,p.unknown?dash:term(p.nayin,p.stem+p.branch+'的纳音为'+p.nayin+'。纳音是六十甲子的分类，可与实际五行强弱分别阅读。'))).join(''));
+ const head=`<div class="bg-row bg-row-head"><span class="bg-label"></span>${ps.map((p,i)=>cell('bg-cell-head',i,pillarHead(p,i,cl))).join('')}</div>`;
+ const stems=line('天干','bg-roles',ps.map((p,i)=>cell('bg-char',i,p.unknown?dash:term(p.stem,`${cl} 你在${p.name}天干见${p.stem}，属${p.stemElement}，对日主为${p.tenGod}。`),`data-e="${p.stemElement||''}" data-pillar-anchor="stem"`)).join(''));
+ const branches=line('地支','bg-roles',ps.map((p,i)=>cell('bg-char',i,p.unknown?dash:term(p.branch,`${cl} 你在${p.name}地支见${p.branch}，属${p.branchElement}，与日主的关系看藏干与合冲。`),`data-e="${p.branchElement||''}" data-pillar-anchor="branch"`)).join(''));
+ const hidden=line('藏干','bg-roles',ps.map((p,i)=>cell('bg-hidden',i,p.unknown?dash:p.hidden.map(h=>`<span class="hz2${h.commanding?' on':''}">${term(h.stem,`${cl} ${p.name}${p.branch}藏${h.stem}（${h.rank}），属${h.element}，对你是${h.god}。`)}<i data-e="${h.element}">${esc(h.god)}</i></span>`).join('')+(p.commander?`<span class="hz-note">令 · ${esc(p.commander.stem)}</span>`:''))).join(''));
+ const stage=line('星运','bg-roles',ps.map((p,i)=>cell('bg-stage',i,p.unknown?dash:term(p.changsheng,`${cl} 你的日主行至${p.name}为${p.changsheng}：${stages[p.changsheng]}。十二长生描述阶段强弱，不表示寿命。`))).join(''));
+ const shen=line('神煞','bg-roles',ps.map((p,i)=>cell('bg-shensha',i,(p.shensha.map(x=>term(x,`${cl} 这颗神煞落在你的${p.name}${p.branch}上，吉凶要看它是否被冲、被合，以及所临十神。`)).join('')||'<span class="bg-dash">—</span>')+(voids.includes(p.branch)?term('空亡',`${cl} 你的${p.name}${p.branch}落空亡，落在哪一柱，哪一柱的事情就更需要后天的实做来补。`):''))).join(''));
+ const nayin=line('纳音','bg-roles',ps.map((p,i)=>cell('bg-nayin',i,p.unknown?dash:term(p.nayin,`${cl} ${p.name}${p.stem}${p.branch}的纳音为${p.nayin}。纳音是六十甲子的分类，与实际五行强弱分开阅读。`))).join(''));
  return head+stems+branches+hidden+stage+shen+nayin;
 }
 function relationships(data){
@@ -110,7 +123,7 @@ export function baziView(ctx){
  ${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，此处只排年、月、日三柱；时柱与相关神煞不参与论断，流年应期仍可参考。</p>':''}
  <div class="bazi-board"><div class="bazi-grid">${baziGrid(d)}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
  <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d)}
- <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p>选择大运、流年、流月或流日后，下方只更新该时点的专属分析。</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${timeline(d,s.pick)}</div></section>
+ <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${timeline(d,s.pick)}</div></section>
  <p id="baziStatus" class="muted" role="status"></p>
  <section class="period-result"><div class="bazi-crossfade"><div data-bazi-data>${details(d)}</div></div></section></section>`;
  $('[data-combine]',ctx.root).onclick=()=>update(ctx,s.pick,!s.combine);
@@ -121,8 +134,11 @@ export function baziView(ctx){
   const b=e.target.closest('[data-rail]');
   if(!b)return;
   const {rail:id,pick:v}=b.dataset,n=Number(v),{pick}=s;
+  const next=id==='大运'?(v==='natal'?{}:{luck:n}):id==='流年'?{...pick,year:n,month:undefined,day:undefined}:id==='流月'?{...pick,month:n,day:undefined}:{...pick,day:n};
+  const line=$('.pc-current',ctx.root);if(line)line.textContent=pickLine(next);
+  if(b.scrollIntoView)if(typeof b.scrollIntoView==='function')b.scrollIntoView({inline:'center',block:'nearest'});
   ctx.state.activeTimeSystem='bazi';
-  update(ctx,id==='大运'?(v==='natal'?{}:{luck:n}):id==='流年'?{...pick,year:n,month:undefined,day:undefined}:id==='流月'?{...pick,month:n,day:undefined}:{...pick,day:n},s.combine);
+  update(ctx,next,s.combine);
  };
  for(const cell of ctx.root.querySelectorAll('[data-pillar]'))cell.onclick=e=>{
   if(e.target.closest('.term'))return;

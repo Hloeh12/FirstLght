@@ -26,12 +26,13 @@ export function termCard(word,text='',source='',fallback=''){
   return `<article class="term-card">
    <p class="tc-kicker">${esc(entry.category||'术语')}</p>
    <h3 class="tc-title">${esc(entry.title||word)}</h3>
+   ${text?`<section class="tc-block tc-own"><h4>在你的命盘里</h4><p>${esc(text)}</p></section>`:''}
    ${entry.nature?`<p class="tc-nature">${esc(entry.nature)}</p>`:''}
    ${listBlock('为喜用时',entry.pros)}
    ${listBlock('为忌偏时',entry.cons)}
    ${listBlock('取用提示',entry.advice)}
    ${entry.origin?`<blockquote class="tc-quote">${esc(entry.origin)}</blockquote>`:''}
-   <div class="tc-facts">${text?`<p><b>本盘</b>${esc(text)}</p>`:''}${source?`<p><b>出处</b>${esc(source)}</p>`:''}</div>
+   <div class="tc-facts">${source?`<p><b>出处</b>${esc(source)}</p>`:''}</div>
    <p class="tc-disclaimer">${DISCLAIMER}</p>
   </article>`;
  }
@@ -39,7 +40,7 @@ export function termCard(word,text='',source='',fallback=''){
  return `<article class="term-card">
   <p class="tc-kicker">术语</p>
   <h3 class="tc-title">${esc(word)}</h3>
-  <p class="tc-nature">${esc(body)}</p>
+  <section class="tc-block tc-own"><h4>在你的命盘里</h4><p>${esc(body)}</p></section>
   ${source?`<blockquote class="tc-quote">${esc(source)}</blockquote>`:''}
   <p class="tc-disclaimer">${DISCLAIMER}</p>
  </article>`;

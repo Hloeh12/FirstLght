@@ -47,8 +47,9 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert.equal(many('[data-palace]').length,12);
  assert($('#activeProfile').textContent.includes('测试案例'));
  assert.equal($('[data-profile-edit]'),null,'顶栏不再有重复的编辑铅笔按钮');
- assert.equal($('#activeProfile .capsule-left').getAttribute('aria-haspopup'),'dialog');
- click('#activeProfile');assert($('#inputSheet').open);click('#inputSheet [data-close]');
+ assert.equal($('#activeProfile .capsule-left').tagName,'DIV','顶栏标题不再重复做成按钮');
+ assert.equal($('#activeProfile .capsule-left').getAttribute('aria-haspopup'),null);
+ click('#configButton');click('#configSheet [data-config=edit]');assert($('#inputSheet').open);click('#inputSheet [data-close]');
  assert.equal(JSON.parse(w.localStorage.getItem('xy_active_profile')).name,'测试案例');
  click('#caseDrawerButton');
  $('#prefs [name=ziweiSchool]').value='quanjiTong';
@@ -255,7 +256,7 @@ test('liquid navigation has one measured physical pill, inline editing, keyboard
  assert.equal(d.documentElement.style.getPropertyValue('--sheet-limit'),'');
  click('#inputSheet [data-close]');
  assert.equal(d.querySelectorAll('#tabLiquidPill').length,1);assert.equal(d.querySelectorAll('#bottomNav [data-tab]').length,4);
- assert.equal($('#btnEditProfile'),null);assert.equal($('#activeProfile .capsule-left').closest('button button'),null);
+ assert.equal($('#btnEditProfile'),null);assert.equal($('#activeProfile .capsule-left').tagName,'DIV');assert.ok($('#caseDrawerButton'));
  $('#bottomNav').getBoundingClientRect=()=>({left:0,width:336});
  [...d.querySelectorAll('#bottomNav .nav-tab-item')].forEach((item,i)=>{item.getBoundingClientRect=()=>({left:8+i*80,width:80});});
  for(const [i,tab] of ['cases','chart','insights','me'].entries()){

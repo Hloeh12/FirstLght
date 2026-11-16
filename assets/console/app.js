@@ -733,13 +733,15 @@ function configPanel(){
  const later=(state.settings.lateZishi||'next-day')==='next-day'?'晚子时归次日':'晚子时归当日';
  const house=astroHouse();
  const getHouseLabel=id=>houseLabels[id]||id;
+ const fn=configRow('tools',`${({bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'})[state.system]||''}功能`,'打开');
+ const basis=configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准');
  const chartRows={
-  bazi:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('solar','真太阳时',solar),configRow('late','晚子时口径',later)],
-  ziwei:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('school','四化口径',school),configRow('late','晚子时口径',later)],
-  west:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('house','宫位制',getHouseLabel(house)),configRow('solar','真太阳时',solar)],
-  vedic:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('house','宫位制',getHouseLabel(house)),configRow('solar','真太阳时',solar)],
-  synastry:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('house','宫位制',getHouseLabel(house))]
- }[state.system]||[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准')];
+  bazi:[basis,configRow('solar','真太阳时',solar),configRow('late','晚子时口径',later),fn],
+  ziwei:[basis,configRow('school','四化口径',school),configRow('late','晚子时口径',later),fn],
+  west:[basis,configRow('house','宫位制',getHouseLabel(house)),configRow('solar','真太阳时',solar),fn],
+  vedic:[basis,configRow('house','宫位制',getHouseLabel(house)),configRow('solar','真太阳时',solar),fn],
+  synastry:[basis,configRow('house','宫位制',getHouseLabel(house)),fn]
+ }[state.system]||[basis];
  const html=[
   cfgSection('档案',[
    configRow('edit','当前命主',p?p.name:'未选择'),
@@ -871,7 +873,7 @@ root.addEventListener('click',e=>{
  const b=e.target.closest('[data-term]');
  if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain,b.dataset.source);}
 });
-$('#activeProfile').onclick=()=>state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);
+$('#activeProfile').removeAttribute('aria-haspopup');
 const editProfile=$('#btnEditProfile');
 if(editProfile)editProfile.onclick=e=>{e.stopPropagation();state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);};
 $('#caseDrawerButton').onclick=caseDrawer;

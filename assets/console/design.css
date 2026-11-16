@@ -1693,3 +1693,15 @@ dialog#termSheet::backdrop{background:rgba(58,30,46,.28);backdrop-filter:blur(6p
 dialog#termSheet .sheet-body{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;max-height:calc(86dvh - 118px);padding-right:2px}
 dialog#termSheet .sheet-body::-webkit-scrollbar{width:3px}
 dialog#termSheet .sheet-body::-webkit-scrollbar-thumb{background:rgba(190,120,155,.4);border-radius:3px}
+
+/* 本盘解读：置顶强调 */
+.term-card .tc-own{background:linear-gradient(135deg,rgba(255,225,239,.78),rgba(255,244,249,.62));border:1px solid rgba(255,160,198,.42)}
+.term-card .tc-own h4{color:#a8235c}
+.term-card .tc-own p{font-size:13px;line-height:1.78;color:#3a2029}
+.bg-name .term{font-size:11px!important;letter-spacing:.1em;color:rgba(90,44,66,.55)!important;border-bottom:1px dashed rgba(160,90,125,.35)}
+
+/* 大运与应期：让时间轨完整露出、可点 */
+#mainScrollView,.main-scroll-view{padding-bottom:132px!important}
+.period-control{padding-bottom:10px!important;scroll-margin-bottom:130px}
+.timeline,.rails{scroll-padding-inline:16px}
+.pc-current{margin:2px 0 0!important;font-size:11.5px!important;color:#a03a6c!important;letter-spacing:.01em}

@@ -34,7 +34,26 @@ export function timeline(res, opts={}){
  for(let t=+from;t<=+to;t+=8*D)samples.push({t,lon:{jupiter:lonOf(Astronomy.Body.Jupiter,t),saturn:lonOf(Astronomy.Body.Saturn,t)}});
  const sepOf=(a,b)=>{let d=Math.abs(n360(a-b));return d>180?360-d:d;};
  for(const bd of bodies)for(const tg of targets)for(const [angle,name] of [[0,'合'],[90,'刑'],[120,'拱'],[180,'冲']]){
-  const f=t=>{let lo=0,hi=samples.length-1;while(lo<hi){const mid=(lo+hi)>>1;if(samples[mid].t<t)lo=mid+1;else hi=mid;}return sepOf(lonOf(bd.body,t),tg.lon)-angle;};
+  if(angle===0){
+   // 合相（angle=0）修正：sepOf 值域恒为 [0,180]，sep-0>=0 恒成立，
+   // 旧的 d0<0 穿越判断永不触发，导致"合"事件完全漏算。
+   // 合相应检测分离度的局部极小值（行星掠过本命点时 sep 先减后增）。
+   for(let i=1;i<samples.length-1;i++){
+    const s0=sepOf(samples[i-1].lon[bd.key],tg.lon);
+    const s1=sepOf(samples[i].lon[bd.key],tg.lon);
+    const s2=sepOf(samples[i+1].lon[bd.key],tg.lon);
+    if(s1<=s0&&s1<=s2){
+     // 三分搜索精确极小点
+     let lo=samples[i-1].t,hi=samples[i+1].t;
+     for(let k=0;k<24;k++){
+      const m1=lo+(hi-lo)/3,m2=hi-(hi-lo)/3;
+      if(sepOf(lonOf(bd.body,m1),tg.lon)<sepOf(lonOf(bd.body,m2),tg.lon))hi=m2;else lo=m1;
+     }
+     wEvents.push({ts:Math.round((lo+hi)/2),label:`${bd.name}${name}${tg.label}`,system:'west'});
+    }
+   }
+   continue;
+  }
   for(let i=1;i<samples.length;i++){
    const d0=sepOf(samples[i-1].lon[bd.key],tg.lon)-angle,d1=sepOf(samples[i].lon[bd.key],tg.lon)-angle;
    if(d0<0&&d1>=0){let lo=samples[i-1].t,hi=samples[i].t;for(let k=0;k<12;k++){const mid=(lo+hi)/2;if(sepOf(lonOf(bd.body,mid),tg.lon)-angle<0)lo=mid;else hi=mid;}wEvents.push({ts:Math.round((lo+hi)/2),label:`${bd.name}${name}${tg.label}`,system:'west'});}

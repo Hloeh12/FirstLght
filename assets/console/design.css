@@ -1826,6 +1826,35 @@ dialog#termSheet .sheet-body::-webkit-scrollbar-thumb{background:rgba(190,120,15
    与原有 padding 共同承担，当前工作正常，此处不重复叠加，避免多余空白。 */
 .sheet{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px)!important}
 
+/* ---- 3b. 大运与应期时间轴：修复按钮被裁切、无法点击 ----
+   根因：.time-row 历史上定义为 3 列(36px 0 1fr)，但 .rail-tools 占位 div
+   被 display:none 后不参与 grid，导致 .rail 落进宽度为 0 的第 2 列，
+   按钮溢出被裁切。ui.js 已移除占位 div，这里统一为干净的 2 列布局。 */
+.timeline .time-row{
+  grid-template-columns:40px minmax(0,1fr)!important;
+  gap:8px!important;
+  width:100%!important;
+  min-width:0!important;
+}
+.timeline .time-row>strong{grid-column:1!important;min-width:0}
+.timeline .time-row>.rail{
+  grid-column:2!important;
+  grid-row:1!important;
+  display:flex!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  flex:1 1 auto!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  box-sizing:border-box!important;
+}
+.timeline .time-row>.rail::-webkit-scrollbar{display:none}
+.timeline .time-row>.rail>.rail-tools{display:none!important}
+.timeline .time-row>.rail button{flex:0 0 auto!important;white-space:nowrap}
+
 /* ---- 4. 交互反馈 ---- */
 button,.segments button,.rail button,.dock-rail button{
   -webkit-tap-highlight-color:transparent;

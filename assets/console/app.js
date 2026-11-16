@@ -869,6 +869,8 @@ function render(){
 installFeedback();
 root.addEventListener('click',e=>{
  const action=e.target.closest('[data-chart-action]');
+ // #instantToggle 自带 onclick，冒泡到此委托时跳过，避免 instant/restore 执行两次。
+ if(action&&action.id==='instantToggle')return;
  if(action){if(action.dataset.chartAction==='instant')instantChart();else if(action.dataset.chartAction==='restore')restoreOriginal();return;}
  const b=e.target.closest('[data-term]');
  if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain,b.dataset.source);}

@@ -62,8 +62,12 @@ function details(d){
 
  ${d.selected.length?`<article class="card"><h2>当前运程</h2>${d.selected.map(p=>`<p>${esc(p.name+' '+p.stem+p.branch)} · ${term(p.tenGod)} · ${term(p.changsheng,stages[p.changsheng])} · ${term(p.nayin,'六十甲子的纳音分类。')}</p>`).join('')}</article>`:''}`;
 }
-function entryCard(d){
+function entryCard(d,timeUnknown){
  const e=d.entry,a=e.duration;
+ // 起运时刻依赖出生时辰；未知时辰时不得输出"精确到小时"的伪精确结论。
+ if(timeUnknown){
+  return `<article class="card liquid-glass luck-entry"><h2>起运（需完整时辰）</h2><p class="muted">出生时刻未知，无法计算精确起运时刻（起运精度依赖出生时辰）。${esc(e.directionLabel)}的大运顺序仍然有效，可点下方时间轴查看各步大运的 analyzed 报告。</p><small>补全出生时辰后即可显示精确到日的起运与交运时刻。</small></article>`;
+ }
  return `<article class="card liquid-glass luck-entry"><h2>精确起运与交运</h2><p>起运：出生后 ${a.years}年${a.months}个月${a.days}天${a.hours}小时 · ${esc(e.directionLabel)}</p>
  <p>首次交运：${esc(e.local)}（出生地历史UTC偏移 ${e.offsetMinutes/60}）</p><p>${esc(e.year)}年 ${esc(e.term)}后第 ${e.daysAfter} 天交运 · 每十回归年换运</p><small>${esc(e.method)}</small></article>`;
 }
@@ -122,7 +126,7 @@ export function baziView(ctx){
  <div class="spread"><h1>四柱八字</h1>${btn('生克合化',`data-combine aria-pressed="${s.combine}"`)}</div>
  ${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，此处只排年、月、日三柱；时柱与相关神煞不参与论断，流年应期仍可参考。</p>':''}
  <div class="bazi-board"><div class="bazi-grid">${baziGrid(d)}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
- <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d)}
+ <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d,ctx.birth?.timeUnknown)}
  <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${timeline(d,s.pick)}</div></section>
  <p id="baziStatus" class="muted" role="status"></p>
  <section class="period-result"><div class="bazi-crossfade"><div data-bazi-data>${details(d)}</div></div></section></section>`;
@@ -140,12 +144,16 @@ export function baziView(ctx){
   ctx.state.activeTimeSystem='bazi';
   update(ctx,next,s.combine);
  };
- for(const cell of ctx.root.querySelectorAll('[data-pillar]'))cell.onclick=e=>{
-  if(e.target.closest('.term'))return;
-  const index=Number(cell.dataset.pillar);
-  s.selected=s.selected.includes(index)?s.selected.filter(i=>i!==index):[...s.selected.slice(-1),index];
-  drawRelations(ctx,s,true);
- };
+ for(const cell of ctx.root.querySelectorAll('[data-pillar]')){
+  const toggle=()=>{
+   const index=Number(cell.dataset.pillar);
+   s.selected=s.selected.includes(index)?s.selected.filter(i=>i!==index):[...s.selected.slice(-1),index];
+   drawRelations(ctx,s,true);
+  };
+  cell.onclick=e=>{if(e.target.closest('.term'))return;toggle();};
+  // 无障碍：柱头带 tabindex=0，需支持键盘 Enter/Space 触发（B8）
+  cell.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){if(e.target.closest('.term'))return;e.preventDefault();toggle();}};
+ }
  selectedRails(ctx.root);
  drawRelations(ctx,s,false);
  if(typeof ResizeObserver!=='undefined'){

@@ -16,6 +16,9 @@ import { provinces, cities, counties, resolvePlace, searchPlaces, nearestPlace }
 import { baziFromInput } from './src/baziInput.mjs';
 import {consoleRoutes} from './src/console-engine.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
+// 版本号单一来源：始终从 app-release.json 读取，避免 /api、/health、OpenAPI 三处漂移。
+let APP_VERSION='0.0.0';
+try{APP_VERSION=JSON.parse(await readFile(path.join(root,'app-release.json'),'utf8')).version||APP_VERSION;}catch{}
 const send=(req,res,status,obj)=>{
  const body=Buffer.from(JSON.stringify(obj));
  const headers={'content-type':'application/json; charset=utf-8','access-control-allow-origin':'*','access-control-allow-methods':'GET,POST,OPTIONS','access-control-allow-headers':'content-type','x-compute-ms':String(Math.round(performance.now()-req._t0))};
@@ -54,7 +57,7 @@ const server=http.createServer(async(req,res)=>{
  }
  if(req.method==='GET'&&url.pathname==='/offline.js'){res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','cache-control':'no-cache'});return res.end(await readFile(path.join(root,'assets/offline.js')));}
  if(req.method==='GET'&&url.pathname==='/'){res.writeHead(200,{'content-type':'text/html; charset=utf-8'});return res.end(await readFile(path.join(root,'index.html')));}
- if(req.method==='GET'&&url.pathname==='/api')return send(req,res,200,{name:'xingyu-local-replica',version:'0.15.0',endpoints:{chart:'POST /api/chart',synastry:'POST /api/synastry/chart',daily:'POST /api/daily',energy:'POST /api/energy',localReport:'POST /api/local-report',timeline:'POST /api/timeline',ziweiFlow:'POST /api/ziwei-flow'},notImplemented:['/api/report','/api/synastry/report']});
+ if(req.method==='GET'&&url.pathname==='/api')return send(req,res,200,{name:'xingyu-local-replica',version:APP_VERSION,endpoints:{chart:'POST /api/chart',synastry:'POST /api/synastry/chart',daily:'POST /api/daily',energy:'POST /api/energy',localReport:'POST /api/local-report',timeline:'POST /api/timeline',ziweiFlow:'POST /api/ziwei-flow'},notImplemented:['/api/report','/api/synastry/report']});
  if(req.method==='GET'&&url.pathname==='/api/history'){try{return send(req,res,200,{items:listRecords(Number(url.searchParams.get('limit'))||20)});}catch(e){return send(req,res,500,{error:e.message});}}
  if(req.method==='GET'&&/^\/api\/history\/[0-9]{14}-[0-9a-f]{6}$/.test(url.pathname)){try{return send(req,res,200,getRecord(url.pathname.split('/').pop()));}catch(e){return send(req,res,404,{error:e.message});}}
  if(req.method==='GET'&&url.pathname.startsWith('/api/geo')){
@@ -71,7 +74,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/api/cache/clear'){clearMemo();return send(req,res,200,{ok:true});}
  if(req.method==='GET'&&url.pathname==='/api/validate')return send(req,res,200,validate());
  if(req.method==='GET'&&url.pathname==='/openapi.json'){return send(req,res,200,openapi());}
- if(req.method==='GET'&&url.pathname==='/health')return send(req,res,200,{ok:true,name:'xingyu-local-replica',version:'0.15.0',readyAt,warmMs,uptimeSec:Math.round(process.uptime())});
+ if(req.method==='GET'&&url.pathname==='/health')return send(req,res,200,{ok:true,name:'xingyu-local-replica',version:APP_VERSION,readyAt,warmMs,uptimeSec:Math.round(process.uptime())});
  if(req.method==='POST'&&['/api/chart','/api/daily','/api/synastry/chart','/api/local-report','/api/energy','/api/timeline'].includes(url.pathname)){
   let raw='';for await(const chunk of req)raw+=chunk;
   if(raw.length>100000)return send(req,res,413,{error:'request too large'});
@@ -91,7 +94,7 @@ const server=http.createServer(async(req,res)=>{
 function openapi(){
  const birthSchema={type:'object',required:['Y','M','D','city'],properties:{Y:{type:'integer'},M:{type:'integer'},D:{type:'integer'},h:{type:'integer',default:12},mi:{type:'integer',default:0},gender:{type:'string',enum:['男','女']},dateStr:{type:'string'},timeStr:{type:'string'},timeUnknown:{type:'boolean'},useSolarTime:{type:'boolean'},city:{type:'object',required:['lat','lon'],properties:{label:{type:'string'},lat:{type:'number'},lon:{type:'number'},tz:{type:'number',default:8}}}}};
  const op=(summary,req,resp)=>({summary,requestBody:{required:true,content:{'application/json':{schema:req}}},responses:{200:{description:'OK',content:{'application/json':{schema:resp}}}}});
- return {openapi:'3.0.3',info:{title:'星谕公开算法独立复刻',version:'0.15.0',description:'独立实现，非原站后端；规则来源为公开客户端脚本与公开发布库。'},paths:{
+ return {openapi:'3.0.3',info:{title:'星谕公开算法独立复刻',version:APP_VERSION,description:'独立实现，非原站后端；规则来源为公开客户端脚本与公开发布库。'},paths:{
   '/api/chart':{post:op('三盘排盘',birthSchema,{type:'object'})},
   '/api/synastry/chart':{post:op('双人合盘',{type:'object',required:['a','b'],properties:{a:birthSchema,b:birthSchema,mode:{type:'string',enum:['synastry','composite','davison','midpoint']}}},{type:'object'})},
   '/api/daily':{post:op('每日运势',birthSchema,{type:'object'})},

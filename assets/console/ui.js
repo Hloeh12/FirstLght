@@ -18,8 +18,10 @@ export function bars(values){
  }).join('');
 }
 export function row(label,items,active){
- const reset='';
- return `<div class="time-row ${reset?'has-period-reset':''}"><strong>${esc(label)}</strong><div class="rail-tools">${reset}</div><div class="rail" role="group" aria-label="${esc(label)}">${items.map(([key,name])=>btn(name,`data-pick="${esc(key)}" data-rail="${esc(label)}" aria-pressed="${String(key===active)}"`)).join('')||'<small>　选择上一级后展开</small>'}</div></div>`;
+ // 注意：历史上此处有一个恒为空的 .rail-tools 占位 div，配合 CSS 的 3 列 grid
+ // （36px 0 minmax(0,1fr)）。display:none 的占位不参与 grid，导致 .rail 被排进
+ // 宽度为 0 的第 2 列、时间轴按钮溢出被裁切且无法点击。移除该占位，改用 2 列布局。
+ return `<div class="time-row"><strong>${esc(label)}</strong><div class="rail" role="group" aria-label="${esc(label)}">${items.map(([key,name])=>btn(name,`data-pick="${esc(key)}" data-rail="${esc(label)}" aria-pressed="${String(key===active)}"`)).join('')||'<small>　选择上一级后展开</small>'}</div></div>`;
 }
 export function selectedRails(root){
  for(const rail of root.querySelectorAll('.rail')){

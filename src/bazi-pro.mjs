@@ -121,6 +121,7 @@ export function baziPro({birth,selection={},combine=false}){
  const [year,,day]=b.pillars;
  const add=p=>({...describePillar(p,day),shensha:gods(p,year,day,b.pillars[1])});
  const pillars=b.pillars.map(add);
+ if(birth.timeUnknown)pillars[3]={...pillars[3],unknown:true,tenGod:'时辰未知',shensha:[],hidden:[],changsheng:'—',nayin:'—'};
  const commander=seasonalCommand(b.meta.utc);
  for(const item of pillars[1].hidden)item.commanding=item.stem===commander.stem;
  pillars[1].commander=commander;

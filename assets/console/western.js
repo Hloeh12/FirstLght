@@ -226,6 +226,7 @@ async function update(ctx,mode,at){
 }
 function options(data,value){return Object.entries(data).map(([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${esc(label)}</option>`).join('');}
 export const astroHouse=()=>cfg().house;
+export const houseLabels=houses;
 export const houseOptions=value=>options(houses,value);
 export function setAstroHouse(ctx,value){
  if(!Object.hasOwn(houses,value)||value===astroHouse())return;

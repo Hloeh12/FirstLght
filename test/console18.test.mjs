@@ -62,7 +62,7 @@ test('offline global cases, compact aspects, Vedic, composite and instant sky fo
   assert.equal(w.localStorage.getItem('xy_active_profile'),before);assert(!$('#caseDrawer').open);
   if(system==='west')assert($('[data-mode=sky][aria-pressed=true]'));
   const todayLocal = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
-  click('#btnEditProfile');assert($('#inputSheet').open);assert.equal($('#inputSheet input[name=date]').value,todayLocal());click('#inputSheet [data-close]');
+  click('#activeProfile .capsule-left');assert($('#inputSheet').open);assert.equal($('#inputSheet input[name=date]').value,todayLocal());click('#inputSheet [data-close]');
  }
  click('[data-tab=me]');assert(!$('[data-maintenance]').open);click('[data-maintenance]>summary');assert($('[data-app-version]'));assert($('[data-maintenance] [data-diagnostics]'));assert($('[data-maintenance] [data-maintenance-cache]'));
  assert.deepEqual(attempted,[]);assert.deepEqual(errors,[]);

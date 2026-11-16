@@ -1546,3 +1546,150 @@ dialog::backdrop{
 @media (prefers-reduced-motion:reduce){
  dialog[open],#screen.fl-swap,dialog::backdrop{animation:none!important}
 }
+
+/* ===================== Build 101 =====================
+   1) 主滚动容器不再被底部双层悬浮舱压住
+   2) 八字紧凑矩阵（列式：天干/地支/藏干/星运/神煞/纳音）
+   3) 术语解读卡片：半透明毛玻璃
+   4) 紫微盘面取消行高截断，时间滑轨完整可见
+*/
+#mainScrollView,.main-scroll-view{
+ bottom:calc(env(safe-area-inset-bottom,16px) + 118px)!important;
+ padding-bottom:18px!important;
+}
+.chart-basis-row{padding:0 2px 4px!important}
+
+/* ---------- 八字矩阵 ---------- */
+.bazi-board{position:relative;margin:2px 0 6px}
+.bazi-grid{
+ display:grid;
+ grid-template-columns:38px repeat(4,minmax(0,1fr));
+ gap:0;
+ border-radius:18px;
+ overflow:hidden;
+ background:linear-gradient(160deg,rgba(255,255,255,.72),rgba(255,244,249,.58));
+ border:1px solid rgba(126,94,114,.13);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 8px 22px -18px rgba(80,30,55,.5);
+ backdrop-filter:blur(26px) saturate(180%);
+ -webkit-backdrop-filter:blur(26px) saturate(180%);
+}
+.bazi-grid .bg-row{display:contents}
+.bazi-grid .bg-label{
+ display:flex;align-items:center;justify-content:center;
+ font-size:9px;letter-spacing:.06em;color:rgba(90,44,66,.4);
+ background:rgba(255,255,255,.34);
+ border-bottom:1px solid rgba(126,94,114,.08);
+ writing-mode:horizontal-tb;
+}
+.bazi-grid .bg-cell{
+ min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:2px;padding:5px 2px;border-bottom:1px solid rgba(126,94,114,.08);
+ border-left:1px solid rgba(126,94,114,.05);
+ transition:background .22s ease;
+}
+.bazi-grid .bg-cell-head{background:rgba(255,238,246,.5);padding:4px 2px}
+.bazi-grid .bg-head{width:100%;border:0;background:transparent;padding:0;display:grid;place-items:center;gap:1px;border-radius:8px}
+.bazi-grid .bg-head b{font-size:10.5px;letter-spacing:.1em;font-weight:650;color:rgba(90,44,66,.58)}
+.bazi-grid .bg-head .bg-god .term{font-size:10.5px;font-weight:700;border-bottom:0;color:#8c3f68}
+.bazi-grid .bg-head[aria-pressed=true] b{color:#c2185b}
+.bazi-grid .bg-char{padding:1px 1px 5px}
+.bazi-grid .bg-char .term{
+ font-family:"Songti SC","STSong",serif;
+ font-size:clamp(27px,7.6vw,38px);line-height:1.08;font-weight:600;
+ border-bottom:0;letter-spacing:.02em;
+ filter:drop-shadow(0 1px 0 rgba(255,255,255,.9));
+}
+.bazi-grid .bg-hidden{min-height:48px;justify-content:flex-start;padding:6px 2px 5px;gap:1px}
+.bazi-grid .hz2{display:flex;align-items:baseline;gap:3px;font-size:10.5px;line-height:1.34}
+.bazi-grid .hz2 .term{font-size:11.5px;border-bottom:0;font-weight:600}
+.bazi-grid .hz2 i{font-style:normal;font-size:8.5px;color:rgba(90,44,66,.48)}
+.bazi-grid .hz2.on .term{color:#c2185b}
+.bazi-grid .hz-note{font-size:8px;color:#b0477a;letter-spacing:.04em;opacity:.85}
+.bazi-grid .bg-stage .term,.bazi-grid .bg-nayin .term{
+ font-size:10.5px;line-height:1.3;border-bottom:0;color:rgba(56,38,48,.78);text-align:center;
+}
+.bazi-grid .bg-shensha{
+ flex-direction:row;flex-wrap:wrap;gap:2px 2px;
+ padding:5px 1px;min-height:40px;align-content:center;justify-content:center;
+}
+.bazi-grid .bg-shensha .term{
+ font-size:9px;line-height:1.25;padding:1px 3px;border:0;border-radius:5px;
+ background:rgba(255,231,243,.72);color:#8c3f68;white-space:nowrap;
+}
+.bazi-grid .bg-dash{font-size:9px;color:rgba(90,44,66,.28)}
+.bazi-grid .bg-row:last-child .bg-cell,
+.bazi-grid .bg-row:last-child .bg-label{border-bottom:0}
+.bazi-grid .pillar-on{background:rgba(255,214,233,.5)!important}
+.bazi-grid .pillar-clash{animation:bzclash .5s ease-out}
+@keyframes bzclash{0%{background:rgba(255,120,170,.55)}100%{background:transparent}}
+.bazi-board .bazi-overlay{z-index:2}
+
+/* ---------- 术语解读卡（毛玻璃） ---------- */
+dialog#termSheet{
+ background:linear-gradient(150deg,rgba(255,255,255,.62),rgba(255,239,247,.5))!important;
+ backdrop-filter:blur(42px) saturate(200%)!important;
+ -webkit-backdrop-filter:blur(42px) saturate(200%)!important;
+ border:1px solid rgba(255,255,255,.66)!important;
+ border-top-color:rgba(255,255,255,.9)!important;
+ box-shadow:0 -22px 70px rgba(96,30,66,.24),inset 0 1px 0 rgba(255,255,255,.95)!important;
+ max-height:86dvh!important;
+}
+dialog#termSheet::backdrop{background:rgba(58,30,46,.28);backdrop-filter:blur(6px)}
+.term-card{padding:2px 3px 4px}
+.tc-kicker{margin:0 0 3px;font-size:9.5px;letter-spacing:.2em;font-weight:750;color:#b0477a;text-transform:uppercase}
+.tc-title{margin:0 0 8px;font-family:"Songti SC","STSong",serif;font-size:19px;line-height:1.3;letter-spacing:.01em;color:#241820}
+.tc-nature{margin:0 0 11px;font-size:13px;line-height:1.75;color:#3d2b35}
+.tc-block{
+ margin:0 0 9px;padding:9px 11px;border-radius:13px;
+ background:rgba(255,255,255,.46);
+ border:1px solid rgba(255,255,255,.7);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.85);
+}
+.tc-block h4{margin:0 0 4px;font-size:10px;letter-spacing:.14em;font-weight:750;color:#a03a6c}
+.tc-block p{margin:0;font-size:12.5px;line-height:1.75;color:#43323c}
+.tc-quote{
+ margin:10px 0;padding:10px 12px;border-radius:0 12px 12px 0;
+ border-left:2px solid rgba(255,111,163,.62);
+ background:rgba(255,235,245,.42);
+ font-size:11.5px;line-height:1.72;color:#6a4457;
+}
+.tc-facts{margin:0 0 6px}
+.tc-facts p{margin:0 0 4px;font-size:12px;line-height:1.65;color:#57414d}
+.tc-facts b{display:inline-block;margin-right:6px;font-size:10px;letter-spacing:.1em;color:#a03a6c}
+.tc-disclaimer{
+ margin:12px 0 2px;padding-top:9px;font-size:10px;line-height:1.65;
+ color:rgba(90,44,66,.48);border-top:1px solid rgba(126,94,114,.13);
+}
+
+/* ---------- 紫微：取消截断，滑轨完整 ---------- */
+.zi-board{height:auto!important;grid-template-rows:repeat(4,minmax(88px,auto))!important;overflow:visible!important}
+.zi-cell{overflow:visible!important;min-height:88px}
+.zi-cell .zi-columns{overflow:visible!important}
+.zi-star .term{white-space:normal!important;text-overflow:clip!important;overflow:visible!important}
+.zi-center{overflow:visible!important}
+.period-control{position:relative;z-index:1}
+
+/* 出生时刻未知开关 */
+.time-unknown-wrap{display:flex!important;align-items:center;gap:8px;flex-wrap:wrap}
+.time-unknown-label{font-size:11.5px;color:rgba(90,44,66,.55);letter-spacing:.02em}
+.time-unknown-toggle{
+ border:1px solid rgba(255,133,179,.42)!important;
+ background:rgba(255,255,255,.62)!important;
+ color:#a03a6c!important;border-radius:14px!important;
+ padding:6px 11px!important;font-size:11.5px!important;letter-spacing:.01em;
+ backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);
+}
+.time-unknown-toggle[aria-pressed=true]{
+ background:linear-gradient(135deg,rgba(255,158,197,.9),rgba(255,95,154,.82))!important;
+ border-color:rgba(255,120,173,.85)!important;color:#4d1029!important;font-weight:650;
+}
+.time-unknown-note{
+ margin:0 0 8px;padding:8px 11px;border-radius:12px;font-size:11px;line-height:1.6;
+ color:#8a4a68;background:rgba(255,238,246,.6);border:1px solid rgba(255,170,202,.3);
+}
+.bazi-grid .bg-unknown{font-size:10px;color:rgba(90,44,66,.34);letter-spacing:.06em}
+
+/* 长文本术语卡：正文独立滚动，避免被 86dvh 截断 */
+dialog#termSheet .sheet-body{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;max-height:calc(86dvh - 118px);padding-right:2px}
+dialog#termSheet .sheet-body::-webkit-scrollbar{width:3px}
+dialog#termSheet .sheet-body::-webkit-scrollbar-thumb{background:rgba(190,120,155,.4);border-radius:3px}

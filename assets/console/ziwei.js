@@ -234,7 +234,7 @@ export function ziweiView(ctx,arrival=false){
  const panel=ctx.root;
  observer?.disconnect();
  const mode=[['flying','飞星模式'],['triad','三合模式'],['transform','四化模式']];
- panel.innerHTML=`<section aria-label="紫微斗数">${board(ctx,s)}<article class="card" data-zi-practical>${practicalZiwei(s.chart,s.flow).map(x=>`<p><b>${esc(x.name+' · '+x.palace)}</b> ${esc(x.text)}</p>`).join('')||'<small>当前未触发双禄、禄冲或羊陀夹忌条件。</small>'}</article>
+ panel.innerHTML=`<section aria-label="紫微斗数">${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，命宫、身宫与生时星按正午 12:00 推定，仅供结构参考，不宜据此断具体应期；填入时刻后可重排。</p>':''}${board(ctx,s)}<article class="card" data-zi-practical>${practicalZiwei(s.chart,s.flow).map(x=>`<p><b>${esc(x.name+' · '+x.palace)}</b> ${esc(x.text)}</p>`).join('')||'<small>当前未触发双禄、禄冲或羊陀夹忌条件。</small>'}</article>
  <div class="segments liquid-glass" aria-label="紫微模式">${mode.map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${id===s.mode}"`)).join('')}</div>
  ${s.mode==='transform'?'<div class="rail" aria-label="四化分析">'+[['natal','生年四化'],['self','自化分析'],['track','飞星轨迹']].map(([id,label])=>btn(label,`data-filter="${id}" aria-pressed="${s.filter===id}"`)).join('')+'</div>':''}
  <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大限与流限</h2><p>点任一格即切换下方当前阶段的专属分析。</p></div>${btn('↺ 本命','class="period-master-reset" data-reset-period')}</div><div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),flow?.scope==='decadal'?flow?.year:d.yearRange[0])}

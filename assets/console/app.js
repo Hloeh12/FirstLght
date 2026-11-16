@@ -16,9 +16,11 @@ import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './fe
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
 import {ziweiView,ziweiTools,ziweiPatterns,ziweiPeriodEvidence} from './ziwei.js';
 import {baziView,baziTools,baziQuick} from './bazi.js';
-import {westernView,westernTools,astroHouse,houseOptions,setAstroHouse} from './western.js';
+import {westernView,westernTools,astroHouse,houseOptions,houseLabels,setAstroHouse} from './western.js';
 import {extraView} from './extras.js';
 import {shareChart} from './share.js';
+import {DICTIONARY} from './dictionary-data.js';
+import {termCard} from './term-card.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
 
 installDiagnostics();
@@ -333,6 +335,7 @@ function birthSheet(profile,seed={}){
   <label>历法<select name="calendar"><option value="solar">公历</option><option value="lunar" ${f.calendar==='lunar'?'selected':''}>农历</option></select></label>
   <label>出生日期<input name="date" type="date" value="${esc(f.dateStr||'')}" placeholder="YYYY-MM-DD"></label>
   <label>出生时刻<input name="clock" type="time" value="${esc(f.timeStr||'12:00')}"></label>
+  <label class="wide time-unknown-wrap"><span class="time-unknown-label">出生时刻不确定？</span><button type="button" class="time-unknown-toggle" data-unknown-toggle aria-pressed="${f.timeUnknown?'true':'false'}">${f.timeUnknown?'已按未知时刻排盘 · 点此填时刻':'出生时刻未知 · 只排三柱'}</button></label>
   <label>案例分组<select name="category">${options}</select></label>
   <label>阳宅居住方位（可选）<select name="homeDirection"><option value="">不设置</option>${Object.entries(DIRECTIONS).map(([k,v])=>`<option value="${k}" ${f.housing?.direction===k?'selected':''}>${k}(${v})</option>`).join('')}</select></label><label>家庭身份（可选）<select name="homeMember"><option value="">不设置</option>${Object.entries({乾:'父',坤:'母',震:'长子',巽:'长女',坎:'中子',离:'中女',艮:'少子',兑:'少女'}).map(([k,v])=>`<option value="${k}" ${f.housing?.member===k?'selected':''}>${v}</option>`).join('')}</select></label>
   <label class="wide">出生城市<input name="city" value="${esc(city.label)}" placeholder="搜索城市，也可直接填写坐标" autocomplete="off"></label>
@@ -341,7 +344,7 @@ function birthSheet(profile,seed={}){
   <label>经度<input name="lon" type="number" step="any" value="${Number.isFinite(city.lon)?city.lon:''}" placeholder="−180 到 180"></label>
   <label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(city.tz)}"></label>
   ${btn('使用当前位置','data-locate')}
-  <div class="checks wide"><label><input name="unknown" type="checkbox" ${f.timeUnknown?'checked':''}>时辰未知</label><label><input name="solar" type="checkbox" ${(f.useSolarTime??setting.useSolarTime)?'checked':''}>真太阳时</label><label data-leap><input name="leap" type="checkbox" ${f.leapMonth?'checked':''}>闰月</label></div>
+  <div class="checks wide"><input name="unknown" type="checkbox" ${f.timeUnknown?'checked':''} hidden><label><input name="solar" type="checkbox" ${(f.useSolarTime??setting.useSolarTime)?'checked':''}>真太阳时</label><label data-leap><input name="leap" type="checkbox" ${f.leapMonth?'checked':''}>闰月</label></div>
   <p class="wide muted" id="birthStatus" role="status"></p><button type="submit" class="wide primary">生成命盘</button>
  </form>
  <div class="rail" aria-label="历史案例">${state.cases.slice(0,5).map(c=>btn(c.name,`data-use-case="${esc(c.id)}"`)).join('')}${profile?btn('＋ 起新盘','data-new'):''}</div>`);
@@ -351,7 +354,15 @@ function birthSheet(profile,seed={}){
   $('[data-leap]',d).hidden=!lunar;
  };
  fields.calendar.onchange=calendar;calendar();
- fields.unknown.onchange=()=>{fields.clock.disabled=fields.unknown.checked;};fields.unknown.onchange();
+ const unknownToggle=$('[data-unknown-toggle]',d);
+ const paintUnknown=()=>{
+  const on=fields.unknown.checked;
+  fields.clock.disabled=on;
+  unknownToggle.setAttribute('aria-pressed',String(on));
+  unknownToggle.textContent=on?'已按未知时刻排盘 · 点此填时刻':'出生时刻未知 · 只排三柱';
+ };
+ fields.unknown.onchange=paintUnknown;paintUnknown();
+ unknownToggle.onclick=()=>{fields.unknown.checked=!fields.unknown.checked;fields.unknown.onchange();};
  let query=0;
  fields.city.oninput=async()=>{
   const id=++query,value=fields.city.value.trim();
@@ -491,7 +502,7 @@ async function instantChart(){
  }catch(error){tell(error.message);}
 }
 const PAGE_TITLES={cases:'案例库',chart:'排盘',insights:'洞见',me:'我的'};
-const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',calendar:'历法'};
+const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘',calendar:'历法'};
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
  const pageTitle=$('#pageTitle');if(pageTitle)pageTitle.textContent=PAGE_TITLES[state.tab]||'排盘';
@@ -718,24 +729,29 @@ function configPanel(){
  const pad=n=>String(n??0).padStart(2,'0');
  const clock=b?`${b.Y}.${pad(b.M)}.${pad(b.D)} ${pad(b.h)}:${pad(b.mi)}`:'未设定';
  const place=b?.city?.label||p?.fields?.city?.label||'—';
+ const solar=state.settings.useSolarTime?'开':'关';
+ const later=(state.settings.lateZishi||'next-day')==='next-day'?'晚子时归次日':'晚子时归当日';
+ const house=astroHouse();
+ const getHouseLabel=id=>houseLabels[id]||id;
+ const chartRows={
+  bazi:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('solar','真太阳时',solar),configRow('late','晚子时口径',later)],
+  ziwei:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('school','四化口径',school),configRow('late','晚子时口径',later)],
+  west:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('house','宫位制',getHouseLabel(house)),configRow('solar','真太阳时',solar)],
+  vedic:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('house','宫位制',getHouseLabel(house)),configRow('solar','真太阳时',solar)],
+  synastry:[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),configRow('house','宫位制',getHouseLabel(house))]
+ }[state.system]||[configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准')];
  const html=[
   cfgSection('档案',[
    configRow('edit','当前命主',p?p.name:'未选择'),
    configRow('edit','出生信息',clock),
    configRow('edit','出生地',place)
   ]),
-  cfgSection('排盘',[
-   configRow('basis','时间基准',state.instantSnapshot?'即刻天象':'本命基准'),
-   configRow('system','排盘体系',SYSTEM_NAMES[state.system]||state.system),
-   configRow('school','紫微四化口径',school),
-   configRow('solar','真太阳时',state.settings.useSolarTime?'开':'关')
-  ]),
-  cfgSection('显示',[
-   configRow('feedback','交互音效与震动',feedbackEnabled()?'开':'关'),
-   configRow('tools','当前页功能',state.tab==='chart'?'打开':'仅排盘页')
+  cfgSection(labels[state.system]||'当前排盘',chartRows),
+  cfgSection('导出',[
+   configRow('share','分享当前长图',state.tab==='chart'?'生成':'仅排盘页')
   ]),
   cfgSection('系统',[
-   configRow('share','分享当前长图','生成'),
+   configRow('feedback','交互音效与震动',feedbackEnabled()?'开':'关'),
    configRow('diagnostics','运行诊断与日志',''),
    configRow('about','关于与版本',''),
    configRow('reset','回到排盘首页','',true)
@@ -750,6 +766,8 @@ function configPanel(){
    if(id==='system'){const order=['bazi','ziwei','west','vedic'],next=order[(order.indexOf(state.system)+1)%order.length];close(d);switchTab('chart',next);return;}
    if(id==='school'){const ids=Object.keys(ZIWEI_SCHOOLS),next=ids[(ids.indexOf(state.settings.ziweiSchool||'quanshu')+1)%ids.length];state.settings={...state.settings,ziweiSchool:next};save(SETTINGS,state.settings);profileMachine.clear();render();configPanel();return;}
    if(id==='solar'){const next=!state.settings.useSolarTime;state.settings={...state.settings,useSolarTime:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,useSolarTime:next}},false);configPanel();return;}
+   if(id==='house'){const ids=Object.keys(houseLabels),next=ids[(ids.indexOf(astroHouse())+1)%ids.length];setAstroHouse(ctx,next);close(d);configPanel();return;}
+   if(id==='late'){const next=(state.settings.lateZishi||'next-day')==='next-day'?'current-day':'next-day';state.settings={...state.settings,lateZishi:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,lateZishi:next}},false);configPanel();return;}
    if(id==='feedback'){setFeedback(!feedbackEnabled());configPanel();return;}
    if(id==='tools'||id==='share'){close(d);toolPanel();return;}
    if(id==='diagnostics'){close(d);diagnosticsPanel(ctx);return;}
@@ -771,18 +789,20 @@ const MODULE_ICONS={
  birth:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="3.4" y="4.6" width="13.2" height="12" rx="2.4"/><path d="M3.4 8.4h13.2M7.3 2.8v3M12.7 2.8v3"/></svg>',
  share:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.6V3.6M6.6 6.8 10 3.4l3.4 3.4"/><path d="M4.2 11.4v3.8a1.6 1.6 0 0 0 1.6 1.6h8.4a1.6 1.6 0 0 0 1.6-1.6v-3.8"/></svg>',
  diagnostics:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 10h3.2l1.8-4.2 3 8.4 1.8-4.2h4.9"/></svg>',
- about:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="10" cy="10" r="6.8"/><path d="M10 8.8v4.4"/><circle cx="10" cy="6.5" r=".9" fill="currentColor" stroke="none"/></svg>'
+ about:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="10" cy="10" r="6.8"/><path d="M10 8.8v4.4"/><circle cx="10" cy="6.5" r=".9" fill="currentColor" stroke="none"/></svg>',
+ pair:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="7" cy="10" r="4.2"/><circle cx="13" cy="10" r="4.2"/></svg>'
 };
 function modulePanel(){
  const sys=['bazi','ziwei','west','vedic'].map(id=>[id,SYSTEM_NAMES[id],MODULE_ICONS[id],state.system===id&&state.tab==='chart']);
+ const pair=[['synastry','双人合盘',MODULE_ICONS.pair,state.tab==='chart'&&state.system==='synastry']];
  const tabs=[['cases','案例库',MODULE_ICONS.cases,state.tab==='cases'],['insights','洞见',MODULE_ICONS.insights,state.tab==='insights'],['me','我的',MODULE_ICONS.me,state.tab==='me'],['birth','出生资料',MODULE_ICONS.birth,false]];
  const tools=[['share','分享长图',MODULE_ICONS.share,false],['diagnostics','运行诊断',MODULE_ICONS.diagnostics,false],['about','版本',MODULE_ICONS.about,false],['reset','回到首页',MODULE_ICONS.ziwei,false]];
  const group=(title,items)=>`<section class="mod-group"><h4>${esc(title)}</h4><div class="mod-grid">${items.map(([id,label,icon,on])=>`<button type="button" class="mod-item" data-module="${id}" aria-pressed="${on?'true':'false'}"><span class="mod-ico">${icon}</span><span class="mod-name">${esc(label)}</span></button>`).join('')}</div></section>`;
- const d=sheet('moduleSheet','全部模块',group('排盘体系',sys)+group('查阅',tabs)+group('工具',tools)+'<p class="mod-hint">底部轨道只放常用的排盘体系，其余功能都收在这里。</p>');
+ const d=sheet('moduleSheet','全部模块',group('排盘体系',sys)+group('双人关系',pair)+group('查阅',tabs)+group('工具',tools)+'<p class="mod-hint">底部轨道只放常用的排盘体系，其余功能都收在这里。</p>');
  for(const item of d.querySelectorAll('[data-module]')){
   item.onclick=()=>{
    const id=item.dataset.module;close(d);
-   if(['bazi','ziwei','west','vedic'].includes(id)){switchTab('chart',id);return;}
+   if(['bazi','ziwei','west','vedic','synastry'].includes(id)){switchTab('chart',id);return;}
    if(['cases','insights','me'].includes(id)){switchTab(id);return;}
    if(id==='birth'){birthSheet(state.profile);return;}
    if(id==='share'){toolPanel();return;}
@@ -806,7 +826,7 @@ const definitions={
 };
 const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,switchTab,onSelectTimeNode,download,
  get birth(){return state.profile?normalized(state.profile):null;},
- explain(word,text,source){sheet('termSheet',word,`<p>${esc(text||definitions[word]||'这是传统术数的辅助标记，需要结合所在宫位、干支及同盘条件理解。')}</p>${source?`<h3>典籍引证</h3><blockquote>${esc(source)}</blockquote>`:''}`);}
+ explain(word,text,source){sheet('termSheet',word,termCard(word,text,source,definitions[DICTIONARY[word]?word:word]||definitions[word]));}
 };
 function render(){
  profileTitle();
@@ -852,7 +872,8 @@ root.addEventListener('click',e=>{
  if(b){e.preventDefault();ctx.explain(b.dataset.term,b.dataset.explain,b.dataset.source);}
 });
 $('#activeProfile').onclick=()=>state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);
-$('#btnEditProfile').onclick=e=>{e.stopPropagation();state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);};
+const editProfile=$('#btnEditProfile');
+if(editProfile)editProfile.onclick=e=>{e.stopPropagation();state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);};
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
 $('#configButton').onclick=configPanel;

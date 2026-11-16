@@ -102,11 +102,10 @@ export function southIndianChart(d,natal=d){
 
 export function vedicTools(ctx,host){
  const s=ctx.state.chartState.vedic??={data:ctx.state.reading.vedic,n:1,layout:'north',path:[]};
- const actions=[['分盘切换 D1–D60','varga'],['大运时序 · 四级','dasha'],['星宿全览 · 27宿/Pada','nakshatra'],['行星状态 · 燃烧/交战','states'],['Ashtakoota · 八科合盘','koota']];
+ const actions=[['分盘切换 D1–D60','varga'],['大运时序 · 四级','dasha'],['星宿全览 · 27宿/Pada','nakshatra'],['行星状态 · 燃烧/交战','states']];
  host.innerHTML=`<div class="tool-grid vedic-tools">${actions.map(([name,id])=>btn(name,`data-vedic-action="${id}"`)).join('')}</div><p class="thin">当前 D${s.n||1} · ${s.layout==='south'?'南印方格':'北印菱形'}。只在印度占星页显示本菜单。</p>`;
  for(const b of host.querySelectorAll('[data-vedic-action]'))b.onclick=()=>{
   const id=b.dataset.vedicAction;
-  if(id==='koota'){ctx.close(document.querySelector('#toolSheet'));ctx.switchTab('chart','synastry');return;}
   ctx.close(document.querySelector('#toolSheet'));
   const target={varga:'[data-varga-select]',dasha:'.vedic-period',nakshatra:'[data-vedic-nakshatra]',states:'[data-vedic-states]'}[id];
   document.querySelector('#vedic '+target)?.scrollIntoView({behavior:'smooth',block:'start'});

@@ -12,15 +12,22 @@ function correction(b){
  const dst=b.timeCorrection?.dstApplied?'（夏令时-1h，标准时 '+[b.timeCorrection.standard.h,b.timeCorrection.standard.mi].map(n=>String(n).padStart(2,'0')).join(':')+'）':'';
  return c.corrected?`钟表 ${b.clock}${dst} → 经度差 ${format(c.longitudeCorrectionMinutes)} → 均时差 ${format(c.equationOfTimeMinutes)} → 真太阳时 ${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')}（${b.hourBranch}时${c.dayOffset?'，跨 '+c.dayOffset+' 日':''}）`:'钟表时 '+b.clock+dst;
 }
-function pillar(p,voids,index){
- return `<div class="pillar" data-pillar="${index}">
- ${btn(p.name,'class="pillar-select" aria-pressed="false"')}<span class="element" data-e="${p.stemElement}">${term(p.tenGod)}</span>
- <strong class="element" data-e="${p.stemElement}" data-pillar-anchor="stem">${term(p.stem,p.name+'天干 '+p.stem+'属'+p.stemElement+'。')}</strong><strong class="element" data-e="${p.branchElement}" data-pillar-anchor="branch">${term(p.branch,p.name+'地支 '+p.branch+'属'+p.branchElement+'。')}</strong>
- <div class="hidden-stems">${p.hidden.map(h=>`<div class="hz ${h.commanding?'commanding':''}" data-e="${h.element}">${h.commanding?'<small class="command-badge">令</small>':''}${term(h.stem,h.rank+'藏干 '+h.stem+'，属'+h.element+'，相对于日主为'+h.god+'。')}<span class="hz-lead"></span><span class="hz-god">${esc(h.god)}</span></div>`).join('')}</div>
- ${p.commander?`<span class="command-note">当令 ${esc(p.commander.stem)} · 交${esc(p.commander.term.name)}后 ${p.commander.elapsedDays.toFixed(2)}日</span>`:''}
- <span>${term(p.changsheng,stages[p.changsheng]+'。这是十二长生阶段，不表示寿命。')}</span>
- <span>${term(p.nayin,p.stem+p.branch+'的纳音为'+p.nayin+'。纳音是六十甲子的分类，可与实际五行强弱分别阅读。')}</span>
- ${voids.includes(p.branch)?term('空亡'):''}<div class="chips">${p.shensha.map(x=>term(x)).join('')}</div></div>`;
+function pillarHead(p,index){
+ return `<div class="bg-head" data-pillar="${index}" role="button" tabindex="0" aria-pressed="false" aria-label="${esc(p.name)}柱，点击可与其他柱对比合冲"><b>${esc(p.name)}</b><span class="bg-god" data-e="${p.stemElement}">${term(p.tenGod)}</span></div>`;
+}
+function baziGrid(d){
+ const ps=d.pillars,voids=d.voidBranches||[];
+ const cell=(cls,i,content,attrs='')=>`<div class="bg-cell ${cls}" data-pillar-index="${i}" ${attrs}>${content}</div>`;
+ const dash='<span class="bg-unknown">待补</span>';
+ const line=(label,cls,cells)=>`<div class="bg-row"><span class="bg-label">${label}</span>${cells}</div>`;
+ const head=`<div class="bg-row bg-row-head"><span class="bg-label"></span>${ps.map((p,i)=>cell('bg-cell-head',i,pillarHead(p,i))).join('')}</div>`;
+ const stems=line('天干','bg-roles',ps.map((p,i)=>cell('bg-char',i,p.unknown?dash:term(p.stem,p.name+'天干 '+p.stem+'，属'+p.stemElement+'。'),`data-e="${p.stemElement||''}" data-pillar-anchor="stem"`)).join(''));
+ const branches=line('地支','bg-roles',ps.map((p,i)=>cell('bg-char',i,p.unknown?dash:term(p.branch,p.name+'地支 '+p.branch+'，属'+p.branchElement+'。'),`data-e="${p.branchElement||''}" data-pillar-anchor="branch"`)).join(''));
+ const hidden=line('藏干','bg-roles',ps.map((p,i)=>cell('bg-hidden',i,p.unknown?dash:p.hidden.map(h=>`<span class="hz2${h.commanding?' on':''}">${term(h.stem,h.rank+'藏干 '+h.stem+'，属'+h.element+'，对日主为'+h.god+'。')}<i data-e="${h.element}">${esc(h.god)}</i></span>`).join('')+(p.commander?`<span class="hz-note">令 · ${esc(p.commander.stem)}</span>`:''))).join(''));
+ const stage=line('星运','bg-roles',ps.map((p,i)=>cell('bg-stage',i,p.unknown?dash:term(p.changsheng,stages[p.changsheng]+'。十二长生描述的是阶段强弱，不表示寿命。'))).join(''));
+ const shen=line('神煞','bg-roles',ps.map((p,i)=>cell('bg-shensha',i,(p.shensha.map(x=>term(x)).join('')||'<span class="bg-dash">—</span>')+(voids.includes(p.branch)?term('空亡'):''))).join(''));
+ const nayin=line('纳音','bg-roles',ps.map((p,i)=>cell('bg-nayin',i,p.unknown?dash:term(p.nayin,p.stem+p.branch+'的纳音为'+p.nayin+'。纳音是六十甲子的分类，可与实际五行强弱分别阅读。'))).join(''));
+ return head+stems+branches+hidden+stage+shen+nayin;
 }
 function relationships(data){
  return `<div class="chips">${data.relationships.map(r=>term(r.pattern+' '+r.type+' · '+r.pillars.join('／'),
@@ -54,41 +61,54 @@ function timeline(d,pick){
   row('流日',d.days.map(x=>[x.index,x.date.slice(5)+' '+x.stem+x.branch]),pick.day);
 }
 function drawRelations(ctx,s,animate){
- const board=$('.bazi-board',ctx.root),overlay=$('.bazi-overlay',board),box=overlay.getBoundingClientRect();
- const cells=[...board.querySelectorAll('[data-pillar]')],w=box.width||400,h=box.height||250;
+ const board=$('.bazi-board',ctx.root);
+ if(!board)return;
+ const overlay=$('.bazi-overlay',board),box=overlay.getBoundingClientRect();
+ const sel=new Set(s.selected);
+ for(const el of board.querySelectorAll('[data-pillar-index]'))el.classList.toggle('pillar-on',sel.has(Number(el.dataset.pillarIndex)));
+ for(const b of board.querySelectorAll('.bg-head'))b.setAttribute('aria-pressed',String(sel.has(Number(b.dataset.pillar))));
  const active=s.selected.length===2
   ?s.data.relationships.filter(r=>r.ids.length===2&&r.ids.every(i=>s.selected.includes(i)))
   :s.combine&&s.pulse?s.data.relationships:[];
  const links=active.filter(r=>r.ids.length===2&&r.ids.every(i=>i<4)&&['天干五合','六冲'].includes(r.type));
- for(const [i,cell] of cells.entries()){
-  const selected=s.selected.includes(i),clash=links.some(r=>r.type==='六冲'&&r.ids.includes(i));
-  $('.pillar-select',cell).setAttribute('aria-pressed',String(selected));
-  cell.classList.remove('pillar-clash');
-  if(clash&&animate){void cell.offsetWidth;cell.classList.add('pillar-clash');}
+ const anchorAt=(i,name)=>{
+  const cellEl=board.querySelector('[data-pillar-anchor="'+name+'"][data-pillar-index="'+i+'"]');
+  const el=cellEl?.querySelector('.term')||cellEl;
+  if(!el)return null;
+  const rect=el.getBoundingClientRect();
+  return [rect.left-box.left+rect.width/2,rect.top-box.top+rect.height/2];
+ };
+ for(const i of [0,1,2,3]){
+  const el=board.querySelector('[data-pillar-anchor="branch"][data-pillar-index="'+i+'"]');
+  if(!el)continue;
+  el.classList.remove('pillar-clash');
+  if(animate&&links.some(r=>r.type==='六冲'&&r.ids.includes(i))){void el.offsetWidth;el.classList.add('pillar-clash');}
  }
- overlay.setAttribute('viewBox',`0 0 ${w} ${h}`);
+ overlay.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
  const lines=links.map(r=>{
-  const isClash=r.type==='六冲',anchor=isClash?'branch':'stem';
-  const [a,b]=r.ids.map(i=>{
-   const rect=$('[data-pillar-anchor="'+anchor+'"]',cells[i]).getBoundingClientRect();
-   return box.width?[rect.left-box.left+rect.width/2,rect.top-box.top+rect.height/2]:[(i+.5)*100,isClash?90:53];
-  });
-  const arch=Math.max(12,Math.min(42,(b[0]-a[0])/4)),d=`M ${a.join(' ')} Q ${(a[0]+b[0])/2} ${Math.max(8,a[1]-arch*2)} ${b.join(' ')}`;
+  const isClash=r.type==='六冲',name=isClash?'branch':'stem';
+  const a=anchorAt(r.ids[0],name),b=anchorAt(r.ids[1],name);
+  if(!a||!b)return '';
+  const arch=Math.max(12,Math.min(42,Math.abs(b[0]-a[0])/4));
+  const d='M '+a.join(' ')+' Q '+((a[0]+b[0])/2)+' '+Math.max(8,Math.min(a[1],b[1])-arch*2)+' '+b.join(' ');
   const type=isClash?'clash':'merge';
-  return `<path class="bazi-link ${type}" d="${d}" pathLength="1"/><path class="bazi-pulse ${type}${animate?' run':''}" d="${d}" pathLength="1"/>`;
- });
- overlay.innerHTML='<defs><linearGradient id="bazi-gold"><stop stop-color="#ff77aa"/><stop offset=".5" stop-color="#ffe7b1"/><stop offset="1" stop-color="#ff4f8b"/></linearGradient></defs>'+lines.join('');
- $('#pillarRelation',ctx.root).textContent=s.selected.length===2
+  return '<path class="bazi-link '+type+'" d="'+d+'" pathLength="1"/><path class="bazi-pulse '+type+(animate?' run':'')+'" d="'+d+'" pathLength="1"/>';
+ }).join('');
+ overlay.innerHTML='<defs><linearGradient id="bazi-gold"><stop stop-color="#ff77aa"/><stop offset=".5" stop-color="#ffe7b1"/><stop offset="1" stop-color="#ff4f8b"/></linearGradient></defs>'+lines;
+ const relation=$('#pillarRelation',ctx.root);
+ if(relation)relation.textContent=s.selected.length===2
   ?links.map(r=>r.pattern+' '+r.type+(r.type==='天干五合'&&s.data.strength.activated.some(x=>x.pattern===r.pattern&&x.ids.join()===r.ids.join())?' · 合化'+r.element:'')).join('、')||'所选两柱未形成天干五合或地支六冲'
-  :'点选两柱，查看合冲连线';
+  :'点按柱头可对比两柱的合冲连线';
 }
+
 let observer;
 export function baziView(ctx){
  const s=setUp(ctx),d=s.data;
  observer?.disconnect();
  ctx.root.innerHTML=`<section aria-label="四柱八字">
  <div class="spread"><h1>四柱八字</h1>${btn('生克合化',`data-combine aria-pressed="${s.combine}"`)}</div>
- <div class="bazi-board"><div class="matrix">${d.pillars.map((p,i)=>pillar(p,d.voidBranches,i)).join('')}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
+ ${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，此处只排年、月、日三柱；时柱与相关神煞不参与论断，流年应期仍可参考。</p>':''}
+ <div class="bazi-board"><div class="bazi-grid">${baziGrid(d)}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
  <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d)}
  <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p>选择大运、流年、流月或流日后，下方只更新该时点的专属分析。</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${timeline(d,s.pick)}</div></section>
  <p id="baziStatus" class="muted" role="status"></p>

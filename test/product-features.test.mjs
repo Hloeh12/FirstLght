@@ -82,3 +82,22 @@ test('产品回归：八字术语按钮白框回归已被权威层修复',async(
  assert.match(css,/\.term[\s\S]{0,600}background:transparent!important/,'.term 应有透明底高优先级规则');
  assert.match(css,/button\.term/,'应含 button.term 选择器');
 });
+
+test('运势趋势：引擎为每个流年/大运真算扶助度，口径与岁运提要一致',async()=>{
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const city={label:'上海',lat:31.2304,lon:121.4737,tz:8,tzName:'Asia/Shanghai'};
+ const birth={Y:1998,M:11,D:21,h:0,mi:2,gender:'女',city,dateStr:'1998-11-21',timeStr:'00:02'};
+ const base=baziPro({birth});
+ assert.ok(base.trend,'应输出 trend 字段');
+ assert.equal(base.trend.years.length,base.years.length,'流年趋势与流年列表同长');
+ assert.equal(base.trend.cycles.length,base.cycles.length,'大运趋势与大运列表同长');
+ for(const y of base.trend.years){
+  assert.equal(typeof y.support,'number');assert.ok(y.support>0&&y.support<100,'扶助度应在 0-100 内');
+  assert.ok(base.years.some(x=>x.year===y.year),'趋势年应存在于流年列表');
+ }
+ // 选中某流年后，guidance 的 strength.support 应与该年趋势值一致（同一口径）
+ const pickYear=base.trend.years[3].year;
+ const sel=baziPro({birth,selection:{year:pickYear}});
+ assert.ok(Math.abs(sel.strength.support-base.trend.years[3].support)<0.01,'选中年扶助度应与趋势值一致');
+ assert.equal(base.trend.natal.support,base.natalStrength.support,'本命扶助度一致');
+});

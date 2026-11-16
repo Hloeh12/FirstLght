@@ -2,6 +2,7 @@ import {buildBaziKnowledgeReport,BAZI_FLOW_RULES} from '../../www/js/rules.js';
 globalThis.BAZI_FLOW_RULES = BAZI_FLOW_RULES;
 import {reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,bars,table,selectedRails,splitDate,periodSections} from './ui.js';
+import {trendChart} from './trend-chart.js';
 const setUp=ctx=>ctx.state.chartState.bazi??={data:ctx.state.reading.bazi,combine:false,pick:{},token:0,error:'',selected:[],pulse:false};
 const stages={
  长生:'像新生一样，表示力量开始生长。',沐浴:'处于初生后的变化期，表示适应和转换。',冠带:'表示逐渐成形、开始显露。',临官:'表示条件齐备、开始承担职责。',帝旺:'表示力量处在高点。',衰:'表示达到高点后开始回落。',病:'表示力量受到牵制，适合观察休整需求。',死:'表示某一阶段结束。',墓:'表示力量归藏、暂未显露。',绝:'表示旧阶段与新阶段的转折。',胎:'表示新阶段开始孕育。',养:'表示积累条件，准备进入下一阶段。'
@@ -127,7 +128,7 @@ export function baziView(ctx){
  ${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，此处只排年、月、日三柱；时柱与相关神煞不参与论断，流年应期仍可参考。</p>':''}
  <div class="bazi-board"><div class="bazi-grid">${baziGrid(d)}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
  <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d,ctx.birth?.timeUnknown)}
- <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${timeline(d,s.pick)}</div></section>
+ <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${trendChart(d,s.pick)}${timeline(d,s.pick)}</div></section>
  <p id="baziStatus" class="muted" role="status"></p>
  <section class="period-result"><div class="bazi-crossfade"><div data-bazi-data>${details(d)}</div></div></section></section>`;
  $('[data-combine]',ctx.root).onclick=()=>update(ctx,s.pick,!s.combine);
@@ -144,6 +145,12 @@ export function baziView(ctx){
   ctx.state.activeTimeSystem='bazi';
   update(ctx,next,s.combine);
  };
+ // SVG 柱体不是原生 button，Enter/Space 需手动转发 click
+ periodPanel.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const g=e.target.closest('svg [data-rail]');
+  if(g){e.preventDefault();g.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
+ });
  for(const cell of ctx.root.querySelectorAll('[data-pillar]')){
   const toggle=()=>{
    const index=Number(cell.dataset.pillar);
@@ -166,7 +173,7 @@ function refresh(ctx,s){
  const root=ctx.root,rails=$('[data-bazi-rails]',root),current=$('[data-bazi-data]',root);
  const focused=document.activeElement?.closest('[data-rail]');
  const scrolls=[...rails.querySelectorAll('.rail')].map(r=>r.scrollLeft);
- rails.innerHTML=timeline(s.data,s.pick);
+ rails.innerHTML=trendChart(s.data,s.pick)+timeline(s.data,s.pick);
  [...rails.querySelectorAll('.rail')].forEach((r,i)=>{r.scrollLeft=scrolls[i]||0;});
  if(focused&&rails.contains(focused)===false)for(const b of rails.querySelectorAll('[data-rail]')){
   if(b.dataset.rail===focused.dataset.rail&&b.dataset.pick===focused.dataset.pick){b.focus({preventScroll:true});break;}

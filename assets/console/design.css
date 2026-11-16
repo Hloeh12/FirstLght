@@ -1980,3 +1980,34 @@ dialog#reportSheet::backdrop{position:fixed;inset:0;z-index:999;background:rgba(
 .zi-board .zi-cell .zi-palace-line .term{flex:0 1 auto!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 .zi-board .zi-cell .zi-palace-line .zi-flow,
 .zi-board .zi-cell .zi-palace-line .chip{max-width:none!important;flex:0 0 auto!important;text-overflow:clip!important}
+
+/* =========================================================
+   运势起伏图（trend-block）：十年流年扶助度曲线 + 大运条带
+   数值来自引擎 trend 字段，颜色按用神/忌神关系，不做吉凶断言
+   ========================================================= */
+.trend-block{grid-column:1/-1;margin:2px 0 6px;padding:10px 12px 8px;border-radius:14px;background:rgba(255,255,255,.5);box-shadow:inset 0 0 0 1px rgba(190,120,155,.12)}
+.trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.trend-head h3{margin:0;font-size:13px;color:#7a2350;font-weight:700}
+.trend-legend{margin:0;font-size:10px;color:var(--muted,#8a6a7a);display:flex;gap:8px;align-items:center}
+.trend-legend i{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:3px;vertical-align:-1px}
+.trend-svg{display:block;width:100%;height:auto;margin:6px 0 0;touch-action:pan-y}
+.trend-svg .tline{fill:none;stroke:rgba(255,79,139,.55);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.trend-svg .tb{opacity:.85;transition:opacity .15s ease}
+.trend-svg .ty{cursor:pointer}
+.trend-svg .ty:hover .tb,.trend-svg .ty:focus .tb{opacity:1}
+.trend-svg .ty:focus{outline:none}
+.trend-svg .ty:focus-visible circle{stroke:#7a2350}
+.trend-svg .ty.on .tb{opacity:1;stroke:#7a2350;stroke-width:1.2}
+.trend-svg .tx{font-size:9px;fill:#9a7a8c;font-family:inherit}
+.trend-svg .tx.now{fill:#e0357f;font-weight:700}
+.trend-svg .tnow{stroke:rgba(224,53,127,.35);stroke-width:1;stroke-dasharray:2 3}
+.trend-cap{margin:4px 0 0;font-size:9.5px;line-height:1.6;color:var(--muted,#8a6a7a)}
+.cyc-band{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin-top:8px}
+.cyc-seg{position:relative;display:grid;justify-items:center;gap:1px;padding:6px 2px 8px;border:none;border-radius:9px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(190,120,155,.14);cursor:pointer;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.cyc-seg:active{transform:scale(.96)}
+.cyc-seg .cs-gz{font-size:11.5px;font-weight:700;color:#6d2a4e}
+.cyc-seg .cs-age{font-size:8.5px;color:#9a7a8c}
+.cyc-seg .cs-bar{position:absolute;left:4px;bottom:3px;height:3px;border-radius:2px;background:var(--role,#ff4f8b);opacity:.75;transition:width .3s ease}
+.cyc-seg .cs-sup{font-size:8px;color:#b088a0}
+.cyc-seg.on{background:rgba(255,224,238,.92);box-shadow:inset 0 0 0 1.5px rgba(255,79,139,.55),0 4px 10px -6px rgba(190,50,110,.45)}
+.cyc-seg.on .cs-gz{color:#e0357f}

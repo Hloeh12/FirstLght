@@ -180,7 +180,8 @@ export function baziPro({birth,selection={},combine=false}){
  const entry={directionLabel:b.luck.directionLabel,duration:b.luck.duration,intervalSeconds:b.luck.intervalSeconds,utc:cycles[0].startUtc,local:startLocal,offsetMinutes:entryOffset,
   term:prior.name,termUtc:prior.date.toISOString(),daysAfter:elapsedDays,year:entryYear.stem+entryYear.branch,
   method:'起运年龄按三天一年、一日四月、一时辰十天折算；交运UT按365.24219878日回归年累计。年龄年月日为传统360日年表示。'};
- const result={entry,pillars,cycles,years,months,days,selected,relationships:links,strength:strength(matrix,links,combine),natalStrength:strength(pillars,relations(pillars),combine),
+ const natalStrength=strength(pillars,relations(pillars),combine);
+ const result={entry,pillars,cycles,years,months,days,selected,relationships:links,strength:strength(matrix,links,combine),natalStrength,
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
   commander,info:{solarYear:b.meta.yearPillarYear,solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
    clock:birth.timeUnknown?'时辰未知':birth.timeStr??[h,mi].map(n=>String(n).padStart(2,'0')).join(':'),
@@ -192,6 +193,15 @@ export function baziPro({birth,selection={},combine=false}){
    .map(link=>link.pattern+link.type)
  })).filter(month=>month.links.length).sort((a,b)=>b.links.length-a.links.length)
   .slice(0,3).sort((a,b)=>a.index-b.index);
+ // 图形化时间轴数据：把每个流年/大运干支单独并入原局，用与「岁运提要」完全相同的
+ // 五行权重模型计算日主扶助度。数值口径与选中该年时的 guidance.strength 一致，非拍脑袋估算。
+ const supportOf=p=>strength([...pillars,p],relations([...pillars,p]),combine).support;
+ result.trend={
+  natal:{support:natalStrength.support,kind:natalStrength.kind},
+  years:years.map(y=>({year:y.year,ganzhi:y.stem+y.branch,element:y.stemElement,support:supportOf(y)})),
+  cycles:cycles.map(c=>({index:c.index,age:c.age,startYear:c.startYear,endYear:c.endUtc?new Date(c.endUtc).getUTCFullYear():c.startYear+9,ganzhi:c.stem+c.branch,element:c.stemElement,support:supportOf(c)})),
+  method:'流年与大运干支单独并入原局重算日主扶助度，口径与岁运提要一致。'
+ };
  result.guidance=periodGuidance({...result,monthWindows});
  return result;
 }

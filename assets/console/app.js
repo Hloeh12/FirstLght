@@ -1,4 +1,5 @@
 import {buildBaziKnowledgeReport,buildZiweiKnowledgeReport} from '../../www/js/rules.js';
+import {composeFullReport,reportHtml} from './full-report.js';
 import {periodSections} from './ui.js';
 import {installCivilPickers} from './civil-picker.js';
 import {ProfileMachine} from './profile-machine.js';
@@ -621,21 +622,54 @@ function selectedTimeISO(){
  return new Date().toISOString();
 }
 let insightGeneration=0;
+function paintResonance(){
+ // 洞见页宿主 + 排盘页各体系的反馈区都刷新，避免只刷一处导致另一处卡在 loading。
+ for(const host of document.querySelectorAll('#screen [data-resonance-host], #screen [data-period-resonance]'))host.innerHTML=resonanceCard();
+}
 function forceRefreshAllInsights(){
  const revision=++insightGeneration;
  if(!state.reading||!state.profile)return;
- const host=$('#screen [data-resonance-host]');
- if(!host)return;
+ const hosts=[...document.querySelectorAll('#screen [data-resonance-host], #screen [data-period-resonance]')];
+ if(!hosts.length)return;
  state.resonance=null;
- host.innerHTML=resonanceCard();
+ paintResonance();
  const at=selectedTimeISO(),config=stored('xy_astro_config',{});
  request('/api/console/resonance',{birth:normalized(state.profile),at,config}).then(result=>{
-  if(revision!==insightGeneration||!host.isConnected)return;
-  state.resonance=result;host.innerHTML=resonanceCard();
+  if(revision!==insightGeneration)return;
+  state.resonance=result;paintResonance();
  }).catch(error=>{
-  if(revision!==insightGeneration||!host.isConnected)return;
-  state.resonance={error:error.message};host.innerHTML=resonanceCard();
+  if(revision!==insightGeneration)return;
+  state.resonance={error:error.message};paintResonance();
  });
+}
+// 生成成篇深度报告：复活四层知识库，做成可生成/可导出/可复制的产品功能。
+function openFullReport(){
+ if(!state.reading){tell('请先排盘，再生成报告。');return;}
+ const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'};
+ const d=document.getElementById('reportSheet');
+ const report=composeFullReport(state,names);
+ d.innerHTML=`<div class="dialog-content report-content">
+  <div class="rpt-topbar"><button type="button" class="icon" data-rpt-close aria-label="关闭报告">×</button>
+   <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
+   <button type="button" class="rpt-act" data-rpt-copy>复制</button>
+   <button type="button" class="rpt-act primary" data-rpt-export>导出长图</button></div>
+  <div class="sheet-body rpt-body" id="reportBody">${reportHtml(report)}<div class="scroll-clearance" aria-hidden="true"></div></div>
+ </div>`;
+ d.querySelector('[data-rpt-close]').onclick=()=>close(d);
+ d.querySelector('[data-rpt-copy]').onclick=async()=>{
+  const doc=d.querySelector('[data-full-report]');
+  const text=[doc.querySelector('h2')?.innerText,doc.querySelector('.rpt-owner')?.innerText,
+   ...[...doc.querySelectorAll('.rpt-sec')].map(s=>s.innerText)].filter(Boolean).join('\n\n');
+  try{await navigator.clipboard.writeText(text);tell('报告文本已复制。');}
+  catch{e=>tell('复制失败，请使用导出长图。');}
+ };
+ d.querySelector('[data-rpt-export]').onclick=async e=>{
+  const b=e.currentTarget;b.disabled=true;
+  try{await shareChart(d.querySelector('#reportBody'),`${report.cover.name} · ${report.title}`);tell('报告长图已生成，可在分享面板保存。');}
+  catch(err){tell('导出失败：'+(err.message||err));}
+  finally{b.disabled=false;}
+ };
+ open(d);
 }
 // FINAL_INSIGHT_REPORT_BUNDLE_CHECK: the report dictionaries are imported by this entry and bundled into js/console.js.
 function insights(){
@@ -663,8 +697,9 @@ function insights(){
   natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p></article>`;
   lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
  }
- root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">${esc(state.profile.name)} · ${esc(names[current])}</p></div>${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><article class="card liquid-glass insight-boundary"><h2>应期分析在哪里？</h2><p>流年、流月、流日和大运的专属分析只显示在对应排盘页的时间轴下方；洞见页不混入短期应期。</p></article></section>`;
+ root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><article class="card liquid-glass insight-boundary"><h2>应期分析在哪里？</h2><p>流年、流月、流日和大运的专属分析只显示在对应排盘页的时间轴下方；洞见页不混入短期应期。</p></article></section>`;
  for(const x of root.querySelectorAll('[data-insight-system]'))x.onclick=()=>{state.system=x.dataset.insightSystem;render();};
+ const or=root.querySelector('[data-open-report]');if(or)or.onclick=()=>openFullReport();
  const ex=root.querySelector('[data-share-current]');if(ex)ex.onclick=async()=>{ex.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前报告已生成，可在系统分享面板保存。');}catch(e){tell('导出失败：'+e.message);}finally{ex.disabled=false;}};
  forceRefreshAllInsights();
 }
@@ -749,7 +784,8 @@ function configPanel(){
    configRow('edit','出生地',place)
   ]),
   cfgSection(labels[state.system]||'当前排盘',chartRows),
-  cfgSection('导出',[
+  cfgSection('报告与导出',[
+   configRow('report','生成深度报告',state.reading?'生成':'需先排盘'),
    configRow('share','分享当前长图',state.tab==='chart'?'生成':'仅排盘页')
   ]),
   cfgSection('系统',[
@@ -766,11 +802,12 @@ function configPanel(){
    if(id==='edit'){close(d);birthSheet(state.instantSnapshot?null:state.profile,state.instantSnapshot?state.profile.fields:undefined);return;}
    if(id==='basis'){close(d);if(state.instantSnapshot)restoreOriginal();else instantChart();return;}
    if(id==='system'){const order=['bazi','ziwei','west','vedic'],next=order[(order.indexOf(state.system)+1)%order.length];close(d);switchTab('chart',next);return;}
-   if(id==='school'){const ids=Object.keys(ZIWEI_SCHOOLS),next=ids[(ids.indexOf(state.settings.ziweiSchool||'quanshu')+1)%ids.length];state.settings={...state.settings,ziweiSchool:next};save(SETTINGS,state.settings);profileMachine.clear();render();configPanel();return;}
+   if(id==='school'){const ids=Object.keys(ZIWEI_SCHOOLS),next=ids[(ids.indexOf(state.settings.ziweiSchool||'quanshu')+1)%ids.length];state.settings={...state.settings,ziweiSchool:next};save(SETTINGS,state.settings);profileMachine.clear();if(state.profile)activate({...state.profile,fields:{...state.profile.fields,ziweiSchool:next}},false);render();configPanel();tell('四化口径已切换为「'+(ZIWEI_SCHOOLS[next]||{}).label+'」，盘面已重算。');return;}
    if(id==='solar'){const next=!state.settings.useSolarTime;state.settings={...state.settings,useSolarTime:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,useSolarTime:next}},false);configPanel();return;}
    if(id==='house'){const ids=Object.keys(houseLabels),next=ids[(ids.indexOf(astroHouse())+1)%ids.length];setAstroHouse(ctx,next);close(d);configPanel();return;}
    if(id==='late'){const next=(state.settings.lateZishi||'next-day')==='next-day'?'current-day':'next-day';state.settings={...state.settings,lateZishi:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,lateZishi:next}},false);configPanel();return;}
    if(id==='feedback'){setFeedback(!feedbackEnabled());configPanel();return;}
+   if(id==='report'){close(d);openFullReport();return;}
    if(id==='tools'||id==='share'){close(d);toolPanel();return;}
    if(id==='diagnostics'){close(d);diagnosticsPanel(ctx);return;}
    if(id==='about'){close(d);const about=sheet('termSheet','关于与版本',versionCard());about.querySelector('[data-release-history]').onclick=()=>releaseHistory(ctx);return;}
@@ -795,18 +832,22 @@ const MODULE_ICONS={
  pair:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="7" cy="10" r="4.2"/><circle cx="13" cy="10" r="4.2"/></svg>'
 };
 function modulePanel(){
+ const ico=(paths)=>`<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+ const sysIcons={qizheng:ico('<circle cx="10" cy="10" r="2.2" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="6.4"/><path d="M10 1.6v2.2M10 16.2v2.2M1.6 10h2.2M16.2 10h2.2"/>'),yijing:ico('<path d="M6 3.2h8v13.6H6zM10 3.2v13.6M6.6 7h1.4M12 7h1.4M6.6 13h1.4M12 13h1.4"/>'),calendar:ico('<rect x="3.4" y="4.6" width="13.2" height="12" rx="2.2"/><path d="M3.4 8.4h13.2M7 2.8v3M13 2.8v3"/>')};
  const sys=['bazi','ziwei','west','vedic'].map(id=>[id,SYSTEM_NAMES[id],MODULE_ICONS[id],state.system===id&&state.tab==='chart']);
- const pair=[['synastry','双人合盘',MODULE_ICONS.pair,state.tab==='chart'&&state.system==='synastry']];
+ const extra=[['qizheng','七政四余',sysIcons.qizheng,state.system==='qizheng'&&state.tab==='chart'],['yijing','易经推命',sysIcons.yijing,state.system==='yijing'&&state.tab==='chart'],['calendar','万年历择日',sysIcons.calendar,state.system==='calendar'&&state.tab==='chart']];
+ const pair=[['synastry','双人合盘',MODULE_ICONS.pair,state.tab==='chart'&&state.system==='synastry'],['report','深度报告',MODULE_ICONS.insights,false],['share','分享长图',MODULE_ICONS.share,false]];
  const tabs=[['cases','案例库',MODULE_ICONS.cases,state.tab==='cases'],['insights','洞见',MODULE_ICONS.insights,state.tab==='insights'],['me','我的',MODULE_ICONS.me,state.tab==='me'],['birth','出生资料',MODULE_ICONS.birth,false]];
- const tools=[['share','分享长图',MODULE_ICONS.share,false],['diagnostics','运行诊断',MODULE_ICONS.diagnostics,false],['about','版本',MODULE_ICONS.about,false],['reset','回到首页',MODULE_ICONS.ziwei,false]];
+ const tools=[['diagnostics','运行诊断',MODULE_ICONS.diagnostics,false],['about','版本',MODULE_ICONS.about,false],['reset','回到首页',MODULE_ICONS.ziwei,false]];
  const group=(title,items)=>`<section class="mod-group"><h4>${esc(title)}</h4><div class="mod-grid">${items.map(([id,label,icon,on])=>`<button type="button" class="mod-item" data-module="${id}" aria-pressed="${on?'true':'false'}"><span class="mod-ico">${icon}</span><span class="mod-name">${esc(label)}</span></button>`).join('')}</div></section>`;
- const d=sheet('moduleSheet','全部模块',group('排盘体系',sys)+group('双人关系',pair)+group('查阅',tabs)+group('工具',tools)+'<p class="mod-hint">底部轨道只放常用的排盘体系，其余功能都收在这里。</p>');
+ const d=sheet('moduleSheet','全部模块',group('排盘体系',sys)+group('传统技艺',extra)+group('关系与输出',pair)+group('查阅',tabs)+group('工具',tools)+'<p class="mod-hint">底部轨道只放常用的排盘体系，其余功能都收在这里。</p>');
  for(const item of d.querySelectorAll('[data-module]')){
   item.onclick=()=>{
    const id=item.dataset.module;close(d);
-   if(['bazi','ziwei','west','vedic','synastry'].includes(id)){switchTab('chart',id);return;}
+   if(['bazi','ziwei','west','vedic','synastry','qizheng','yijing','calendar'].includes(id)){switchTab('chart',id);return;}
    if(['cases','insights','me'].includes(id)){switchTab(id);return;}
    if(id==='birth'){birthSheet(state.profile);return;}
+   if(id==='report'){openFullReport();return;}
    if(id==='share'){toolPanel();return;}
    if(id==='diagnostics'){diagnosticsPanel(ctx);return;}
    if(id==='about'){const about=sheet('termSheet','关于与版本',versionCard());about.querySelector('[data-release-history]').onclick=()=>releaseHistory(ctx);return;}
@@ -878,6 +919,13 @@ root.addEventListener('click',e=>{
 $('#activeProfile').removeAttribute('aria-haspopup');
 const editProfile=$('#btnEditProfile');
 if(editProfile)editProfile.onclick=e=>{e.stopPropagation();state.instantSnapshot?birthSheet(null,state.profile.fields):birthSheet(state.profile);};
+// 点命主胶囊本身即可整理出生资料（与更新说明一致；旧的 btnEditProfile 在当前结构里不存在）。
+$('#activeProfile').onclick=e=>{
+ if(e.target.closest('[data-profile-edit]'))return;
+ if(state.instantSnapshot)birthSheet(null,state.profile?.fields);
+ else if(state.profile)birthSheet(state.profile);
+ else birthSheet(null);
+};
 $('#caseDrawerButton').onclick=caseDrawer;
 $('#toolsButton').onclick=toolPanel;
 $('#configButton').onclick=configPanel;

@@ -1,1 +1,25 @@
-ew0KICAibmFtZSI6ICJ4aW5neXUtbG9jYWwtcmVwbGljYSIsDQogICJ2ZXJzaW9uIjogIjAuMjguNSIsDQogICJwcml2YXRlIjogdHJ1ZSwNCiAgInR5cGUiOiAibW9kdWxlIiwNCiAgInNjcmlwdHMiOiB7DQogICAgInN0YXJ0IjogIm5vZGUgc2VydmVyLm1qcyIsDQogICAgInByZXN0YXJ0IjogIm5wbSBydW4gYnVpbGQ6Y29uc29sZSIsDQogICAgImJ1aWxkOmNvbnNvbGUiOiAibm9kZSBzY3JpcHRzL2J1aWxkLWNvbnNvbGUubWpzIiwNCiAgICAidGVzdCI6ICJub2RlIC0tdGVzdCAtLXRlc3QtY29uY3VycmVuY3k9MSB0ZXN0LyoudGVzdC5tanMiLA0KICAgICJidWlsZDp6aXdlaSI6ICJlc2J1aWxkIHNyYy9yZW5odWFpL2VudHJ5LnRzIC0tYnVuZGxlIC0tcGxhdGZvcm09bm9kZSAtLWZvcm1hdD1lc20gLS1wYWNrYWdlcz1leHRlcm5hbCAtLW91dGZpbGU9c3JjL3Jlbmh1YWktZW5naW5lLm1qcyIsDQogICAgImNoZWNrOnJlbGVhc2UiOiAibm9kZSBzY3JpcHRzL2NoZWNrLXJlbGVhc2UubWpzIiwNCiAgICAicHJlYnVpbGQ6Y29uc29sZSI6ICJucG0gcnVuIGNoZWNrOnJlbGVhc2UiDQogIH0sDQogICJkZXBlbmRlbmNpZXMiOiB7DQogICAgImFzdHJvbm9teS1lbmdpbmUiOiAiMi4xLjE5IiwNCiAgICAiZXNidWlsZCI6ICJeMC4yOC4yIiwNCiAgICAiaXp0cm8iOiAiMi42LjMiLA0KICAgICJsdW5hci1qYXZhc2NyaXB0IjogIl4xLjcuNyINCiAgfSwNCiAgImRldkRlcGVuZGVuY2llcyI6IHsNCiAgICAianNkb20iOiAiXjMxLjAuMCIsDQogICAgInBsYXl3cmlnaHQiOiAiXjEuNjIuMSINCiAgfQ0KfQ0K
+{
+  "name": "xingyu-local-replica",
+  "version": "0.28.5",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "prestart": "npm run build:console",
+    "build:console": "node scripts/build-console.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "build:ziwei": "esbuild src/renhuai/entry.ts --bundle --platform=node --format=esm --packages=external --outfile=src/renhuai-engine.mjs",
+    "check:release": "node scripts/check-release.mjs",
+    "prebuild:console": "npm run check:release"
+  },
+  "dependencies": {
+    "astronomy-engine": "2.1.19",
+    "esbuild": "^0.28.2",
+    "iztro": "2.6.3",
+    "lunar-javascript": "^1.7.7"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.0",
+    "playwright": "^1.62.1"
+  }
+}

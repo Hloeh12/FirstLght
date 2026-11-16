@@ -1,1 +1,31 @@
-PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjwhRE9DVFlQRSBwbGlzdCBQVUJMSUMgIi0vL0FwcGxlLy9EVEQgUExJU1QgMS4wLy9FTiIgImh0dHA6Ly93d3cuYXBwbGUuY29tL0RURHMvUHJvcGVydHlMaXN0LTEuMC5kdGQiPg0KPHBsaXN0IHZlcnNpb249IjEuMCI+DQo8ZGljdD4NCiAgPGtleT5DRkJ1bmRsZURpc3BsYXlOYW1lPC9rZXk+DQogIDxzdHJpbmc+Rmlyc3RMZ2h0PC9zdHJpbmc+DQogIDxrZXk+Q0ZCdW5kbGVJZGVudGlmaWVyPC9rZXk+DQogIDxzdHJpbmc+Y29tLmZpcnN0bGlnaHQuYXBwPC9zdHJpbmc+DQogIDxrZXk+Q0ZCdW5kbGVFeGVjdXRhYmxlPC9rZXk+PHN0cmluZz4kKEVYRUNVVEFCTEVfTkFNRSk8L3N0cmluZz48a2V5PkNGQnVuZGxlSW5mb0RpY3Rpb25hcnlWZXJzaW9uPC9rZXk+PHN0cmluZz42LjA8L3N0cmluZz48a2V5PkNGQnVuZGxlTmFtZTwva2V5Pg0KICA8c3RyaW5nPkZpcnN0TGdodDwvc3RyaW5nPg0KICA8a2V5PkNGQnVuZGxlUGFja2FnZVR5cGU8L2tleT4NCiAgPHN0cmluZz5BUFBMPC9zdHJpbmc+DQogIDxrZXk+Q0ZCdW5kbGVTaG9ydFZlcnNpb25TdHJpbmc8L2tleT4NCiAgPHN0cmluZz4wLjI4LjU8L3N0cmluZz4NCiAgPGtleT5DRkJ1bmRsZVZlcnNpb248L2tleT4NCiAgPHN0cmluZz4xMDU8L3N0cmluZz4NCiAgPGtleT5OU1Bob3RvTGlicmFyeUFkZFVzYWdlRGVzY3JpcHRpb248L2tleT48c3RyaW5nPueUqOS6juWwhuaCqOS4u+WKqOWIhuS6q+eahOWRveebmOmVv+WbvuS/neWtmOWIsOebuOWGjOOAgjwvc3RyaW5nPg0KICA8a2V5Pk5TTG9jYXRpb25XaGVuSW5Vc2VVc2FnZURlc2NyaXB0aW9uPC9rZXk+PHN0cmluZz7nlKjkuo7loavlhpnmjpLnm5jlh7rnlJ/lnLDngrnlnZDmoIfvvJvkuZ/lj6/miYvliqjpgInmi6nlnLDngrnjgII8L3N0cmluZz48a2V5PkxTUmVxdWlyZXNJUGhvbmVPUzwva2V5Pg0KICA8dHJ1ZS8+DQogIDxrZXk+VUlMYXVuY2hTY3JlZW48L2tleT4NCiAgPGRpY3QvPg0KICA8a2V5PlVJU3VwcG9ydGVkSW50ZXJmYWNlT3JpZW50YXRpb25zPC9rZXk+DQogIDxhcnJheT4NCiAgICA8c3RyaW5nPlVJSW50ZXJmYWNlT3JpZW50YXRpb25Qb3J0cmFpdDwvc3RyaW5nPg0KICA8L2FycmF5Pg0KICA8a2V5PlVJVXNlckludGVyZmFjZVN0eWxlPC9rZXk+PHN0cmluZz5MaWdodDwvc3RyaW5nPjxrZXk+VUlTdGF0dXNCYXJTdHlsZTwva2V5PjxzdHJpbmc+VUlTdGF0dXNCYXJTdHlsZURlZmF1bHQ8L3N0cmluZz48a2V5PlVJVmlld0NvbnRyb2xsZXJCYXNlZFN0YXR1c0JhckFwcGVhcmFuY2U8L2tleT4NCiAgPGZhbHNlLz4NCjwvZGljdD4NCjwvcGxpc3Q+DQoNCg0K
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>FirstLght</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.firstlight.app</string>
+  <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string><key>CFBundleInfoDictionaryVersion</key><string>6.0</string><key>CFBundleName</key>
+  <string>FirstLght</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.28.5</string>
+  <key>CFBundleVersion</key>
+  <string>105</string>
+  <key>NSPhotoLibraryAddUsageDescription</key><string>用于将您主动分享的命盘长图保存到相册。</string>
+  <key>NSLocationWhenInUseUsageDescription</key><string>用于填写排盘出生地点坐标；也可手动选择地点。</string><key>LSRequiresIPhoneOS</key>
+  <true/>
+  <key>UILaunchScreen</key>
+  <dict/>
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+  </array>
+  <key>UIUserInterfaceStyle</key><string>Light</string><key>UIStatusBarStyle</key><string>UIStatusBarStyleDefault</string><key>UIViewControllerBasedStatusBarAppearance</key>
+  <false/>
+</dict>
+</plist>
+
+

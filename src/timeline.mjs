@@ -1,1 +1,92 @@
-aW1wb3J0ICogYXMgQXN0cm9ub215IGZyb20gJ2FzdHJvbm9teS1lbmdpbmUnOw0KaW1wb3J0IHsgYXN0cm8gYXMgSVpUUk8gfSBmcm9tICdpenRybyc7DQovKiDkuInkvZPns7vml7bpl7TovbTvvJrntKvlvq7lpKfpmZDvvIjomZrlsoHmipjnrpfvvInDlyDljbDluqblpKfov5Agw5cg5pyo5Zyf6L+H6L+Q44CCDQogKiDop4TliJnlj5boh6rlhazlvIDliY3nq6/lm77kvovvvJrov4fov5DvvJ3mnKgv5Zyf5a+55pys5ZG95pel44CB5pyI44CB5LiK5Y2H44CB5Lit5aSp55qE5ZCIL+WIkS/mi7Ev5Yay77ybDQogKiDlhbHmjK/vvJ3kuI3lkIzkvZPns7vnmoTot6jkvZPns7vkuovku7bokL3lnKggMTQg5aSp5YaF44CC56qX5Y+j6IGa5ZCI5LiO5by65byx5Li65pys5Zyw5a6e546w77yM6Z2e5Y6f56uZ5ZCO56uv44CCICovDQpjb25zdCBEPTg2NDAwMDAwLCBuMzYwPXg9PigoeCUzNjApKzM2MCklMzYwOw0KZXhwb3J0IGZ1bmN0aW9uIHRpbWVsaW5lKHJlcywgb3B0cz17fSl7DQogY29uc3Qge3dlc3Rlcm4sdmVkaWMseml3ZWl9PXJlczsNCiBjb25zdCBtb250aHM9TnVtYmVyKG9wdHMubW9udGhzKXx8MzA7DQogY29uc3Qgbm93PW9wdHMubm93P25ldyBEYXRlKG9wdHMubm93KTpuZXcgRGF0ZSgpOw0KIGNvbnN0IGZyb209bmV3IERhdGUobm93KSwgdG89bmV3IERhdGUoK25vdyttb250aHMqMzAuNDQqRCk7DQogY29uc3QgYmlydGhZZWFyPW5ldyBEYXRlKHdlc3Rlcm4udXRjKS5nZXRVVENGdWxsWWVhcigpOw0KIC8vIOe0q+W+ruWkp+mZkA0KIGNvbnN0IHpEZWNhZGVzPSh6aXdlaSYmeml3ZWkucGFsYWNlcz96aXdlaS5wYWxhY2VzOltdKS5tYXAocD0+ew0KICBjb25zdCByPXAuZGVjYWRhbCYmcC5kZWNhZGFsLnJhbmdlOw0KICBpZighcilyZXR1cm4gbnVsbDsNCiAgcmV0dXJuIHtuYW1lOnAubmFtZSxicmFuY2g6cC5lYXJ0aGx5QnJhbmNoLHN0YXJ0WWVhcjpiaXJ0aFllYXIrclswXS0xLGVuZFllYXI6YmlydGhZZWFyK3JbMV0tMX07DQogfSkuZmlsdGVyKEJvb2xlYW4pLnNvcnQoKGEsYik9PmEuc3RhcnRZZWFyLWIuc3RhcnRZZWFyKTsNCiAvLyDntKvlvq7mtYHlubTluKYNCiBjb25zdCBmbG93QmFuZHM9W107Y29uc3QgeTA9ZnJvbS5nZXRVVENGdWxsWWVhcigpLHkxPXRvLmdldFVUQ0Z1bGxZZWFyKCk7DQogaWYoeml3ZWkmJnppd2VpLnBhbGFjZXMpZm9yKGxldCB5PXkwO3k8PXkxO3krKyl7DQogIGNvbnN0IGlkeD16aXdlaVllYXJJbmRleChyZXMseSk7DQogIGNvbnN0IHBhbD1pZHghPW51bGw/eml3ZWkucGFsYWNlc1tpZHhdOm51bGw7DQogIGZsb3dCYW5kcy5wdXNoKHtsYWJlbDpTdHJpbmcoeSkscGFsYWNlOnBhbD9wYWwubmFtZTon4oCUJyxzdGFydFRzOituZXcgRGF0ZShEYXRlLlVUQyh5LDEsNCkpLGVuZFRzOituZXcgRGF0ZShEYXRlLlVUQyh5KzEsMSw0KSl9KTsNCiB9DQogLy8g5Y2w5bqm5aSn6L+QDQogY29uc3QgdkRhc2hhcz12ZWRpYy5kYXNoYXMubWFwKGQ9Pih7bG9yZDpkLmxvcmQsc3RhcnRUczorbmV3IERhdGUoZC5zdGFydCksZW5kVHM6K25ldyBEYXRlKGQuZW5kKSxjdXJyZW50Om5vdz49bmV3IERhdGUoZC5zdGFydCkmJm5vdzxuZXcgRGF0ZShkLmVuZCl9KSk7DQogY29uc3QgYm91bmRzPXZlZGljLmRhc2hhcy5tYXAoZD0+KHt0czorbmV3IERhdGUoZC5zdGFydCksbGFiZWw6ZC5sb3JkKycg5aSn6L+QJyxzeXN0ZW06J3ZlZGljJ30pKTsNCiAvLyDmnKjlnJ/ov4fov5ANCiBjb25zdCB0YXJnZXRzPVt7a2V5OidzdW4nLGxhYmVsOiflpKrpmLMnLGxvbjpieUtleSh3ZXN0ZXJuLCdzdW4nKX0se2tleTonbW9vbicsbGFiZWw6J+aciOS6ricsbG9uOmJ5S2V5KHdlc3Rlcm4sJ21vb24nKX0se2tleTonYXNjJyxsYWJlbDon5LiK5Y2HJyxsb246d2VzdGVybi5hc2MubG9ufSx7a2V5OidtYycsbGFiZWw6J+S4reWkqScsbG9uOndlc3Rlcm4ubWMubG9ufV0uZmlsdGVyKHg9PngubG9uIT1udWxsKTsNCiBjb25zdCB3RXZlbnRzPVtdOw0KIGNvbnN0IGJvZGllcz1be2tleTonanVwaXRlcicsbmFtZTon5pyo5pifJyxib2R5OkFzdHJvbm9teS5Cb2R5Lkp1cGl0ZXJ9LHtrZXk6J3NhdHVybicsbmFtZTon5Zyf5pifJyxib2R5OkFzdHJvbm9teS5Cb2R5LlNhdHVybn1dOw0KIGNvbnN0IHNhbXBsZXM9W107DQogZm9yKGxldCB0PStmcm9tO3Q8PSt0bzt0Kz04KkQpc2FtcGxlcy5wdXNoKHt0LGxvbjp7anVwaXRlcjpsb25PZihBc3Ryb25vbXkuQm9keS5KdXBpdGVyLHQpLHNhdHVybjpsb25PZihBc3Ryb25vbXkuQm9keS5TYXR1cm4sdCl9fSk7DQogY29uc3Qgc2VwT2Y9KGEsYik9PntsZXQgZD1NYXRoLmFicyhuMzYwKGEtYikpO3JldHVybiBkPjE4MD8zNjAtZDpkO307DQogZm9yKGNvbnN0IGJkIG9mIGJvZGllcylmb3IoY29uc3QgdGcgb2YgdGFyZ2V0cylmb3IoY29uc3QgW2FuZ2xlLG5hbWVdIG9mIFtbMCwn5ZCIJ10sWzkwLCfliJEnXSxbMTIwLCfmi7EnXSxbMTgwLCflhrInXV0pew0KICBpZihhbmdsZT09PTApew0KICAgLy8g5ZCI55u477yIYW5nbGU9MO+8ieS/ruato++8mnNlcE9mIOWAvOWfn+aBkuS4uiBbMCwxODBd77yMc2VwLTA+PTAg5oGS5oiQ56uL77yMDQogICAvLyDml6fnmoQgZDA8MCDnqb/otorliKTmlq3msLjkuI3op6blj5HvvIzlr7zoh7Qi5ZCIIuS6i+S7tuWujOWFqOa8j+eul+OAgg0KICAgLy8g5ZCI55u45bqU5qOA5rWL5YiG56a75bqm55qE5bGA6YOo5p6B5bCP5YC877yI6KGM5pif5o6g6L+H5pys5ZG954K55pe2IHNlcCDlhYjlh4/lkI7lop7vvInjgIINCiAgIGZvcihsZXQgaT0xO2k8c2FtcGxlcy5sZW5ndGgtMTtpKyspew0KICAgIGNvbnN0IHMwPXNlcE9mKHNhbXBsZXNbaS0xXS5sb25bYmQua2V5XSx0Zy5sb24pOw0KICAgIGNvbnN0IHMxPXNlcE9mKHNhbXBsZXNbaV0ubG9uW2JkLmtleV0sdGcubG9uKTsNCiAgICBjb25zdCBzMj1zZXBPZihzYW1wbGVzW2krMV0ubG9uW2JkLmtleV0sdGcubG9uKTsNCiAgICBpZihzMTw9czAmJnMxPD1zMil7DQogICAgIC8vIOS4ieWIhuaQnOe0oueyvuehruaegeWwj+eCuQ0KICAgICBsZXQgbG89c2FtcGxlc1tpLTFdLnQsaGk9c2FtcGxlc1tpKzFdLnQ7DQogICAgIGZvcihsZXQgaz0wO2s8MjQ7aysrKXsNCiAgICAgIGNvbnN0IG0xPWxvKyhoaS1sbykvMyxtMj1oaS0oaGktbG8pLzM7DQogICAgICBpZihzZXBPZihsb25PZihiZC5ib2R5LG0xKSx0Zy5sb24pPHNlcE9mKGxvbk9mKGJkLmJvZHksbTIpLHRnLmxvbikpaGk9bTI7ZWxzZSBsbz1tMTsNCiAgICAgfQ0KICAgICB3RXZlbnRzLnB1c2goe3RzOk1hdGgucm91bmQoKGxvK2hpKS8yKSxsYWJlbDpgJHtiZC5uYW1lfSR7bmFtZX0ke3RnLmxhYmVsfWAsc3lzdGVtOid3ZXN0J30pOw0KICAgIH0NCiAgIH0NCiAgIGNvbnRpbnVlOw0KICB9DQogIGZvcihsZXQgaT0xO2k8c2FtcGxlcy5sZW5ndGg7aSsrKXsNCiAgIGNvbnN0IGQwPXNlcE9mKHNhbXBsZXNbaS0xXS5sb25bYmQua2V5XSx0Zy5sb24pLWFuZ2xlLGQxPXNlcE9mKHNhbXBsZXNbaV0ubG9uW2JkLmtleV0sdGcubG9uKS1hbmdsZTsNCiAgIGlmKGQwPDAmJmQxPj0wKXtsZXQgbG89c2FtcGxlc1tpLTFdLnQsaGk9c2FtcGxlc1tpXS50O2ZvcihsZXQgaz0wO2s8MTI7aysrKXtjb25zdCBtaWQ9KGxvK2hpKS8yO2lmKHNlcE9mKGxvbk9mKGJkLmJvZHksbWlkKSx0Zy5sb24pLWFuZ2xlPDApbG89bWlkO2Vsc2UgaGk9bWlkO313RXZlbnRzLnB1c2goe3RzOk1hdGgucm91bmQoKGxvK2hpKS8yKSxsYWJlbDpgJHtiZC5uYW1lfSR7bmFtZX0ke3RnLmxhYmVsfWAsc3lzdGVtOid3ZXN0J30pO30NCiAgfQ0KIH0NCiAvLyDlhbHmjK/vvJrot6jkvZPns7vkuovku7YgMTQg5aSp5YaF6IGa5ZCIDQogY29uc3QgekV2ZW50cz1bXTtmb3IobGV0IGk9MTtpPGZsb3dCYW5kcy5sZW5ndGg7aSsrKXtpZihmbG93QmFuZHNbaV0ucGFsYWNlIT09Zmxvd0JhbmRzW2ktMV0ucGFsYWNlKXpFdmVudHMucHVzaCh7dHM6Zmxvd0JhbmRzW2ldLnN0YXJ0VHMsbGFiZWw6YOa1geW5tOWRveWuq+enu+WFpSR7Zmxvd0JhbmRzW2ldLnBhbGFjZX1gLHN5c3RlbToneml3ZWknfSk7fWZvcihjb25zdCB6IG9mIHpEZWNhZGVzKWlmKHouc3RhcnRZZWFyPj1mcm9tLmdldFVUQ0Z1bGxZZWFyKCkmJnouc3RhcnRZZWFyPD10by5nZXRVVENGdWxsWWVhcigpKXpFdmVudHMucHVzaCh7dHM6K25ldyBEYXRlKERhdGUuVVRDKHouc3RhcnRZZWFyLDAsMSkpLGxhYmVsOmAke3oubmFtZX3lpKfpmZDotbfvvIgke3ouc3RhcnRZZWFyfe+8iWAsc3lzdGVtOid6aXdlaSd9KTsNCiBjb25zdCBhbGw9Wy4uLndFdmVudHMubWFwKGU9Pih7dHM6ZS50cyxsYWJlbDplLmxhYmVsLHN5c3RlbTond2VzdCd9KSksLi4udkRhc2hhcy5tYXAodj0+KHt0czp2LnN0YXJ0VHMsbGFiZWw6di5sb3JkKycg5aSn6L+Q6LW3JyxzeXN0ZW06J3ZlZGljJ30pKSwuLi56RXZlbnRzXS5zb3J0KChhLGIpPT5hLnRzLWIudHMpOw0KIGNvbnN0IHJlc29uYW5jZXM9W107bGV0IGNsdXN0ZXI9W107DQogZm9yKGNvbnN0IGUgb2YgYWxsKXsNCiAgaWYoY2x1c3Rlci5sZW5ndGgmJmUudHMtY2x1c3RlcltjbHVzdGVyLmxlbmd0aC0xXS50cz4xNCpEKXtwdXNoQ2x1c3RlcihjbHVzdGVyKTtjbHVzdGVyPVtdO30NCiAgY2x1c3Rlci5wdXNoKGUpOw0KIH0NCiBpZihjbHVzdGVyLmxlbmd0aClwdXNoQ2x1c3RlcihjbHVzdGVyKTsNCiBmdW5jdGlvbiBwdXNoQ2x1c3RlcihjKXsNCiAgY29uc3Qgc3lzdGVtcz1bLi4ubmV3IFNldChjLm1hcCh4PT54LnN5c3RlbSkpXTsNCiAgaWYoc3lzdGVtcy5sZW5ndGg8MilyZXR1cm47DQogIHJlc29uYW5jZXMucHVzaCh7c3RhcnRUczpjWzBdLnRzLGVuZFRzOmNbYy5sZW5ndGgtMV0udHMsbGFiZWw6YOWFseaMr++8miR7Yy5tYXAoeD0+eC5sYWJlbCkuam9pbign77ybJyl9YCxzeXN0ZW1zLGNvdW50OmMubGVuZ3RofSk7DQogfQ0KIHJldHVybiB7YmlydGhZZWFyLHdpbmRvdzp7ZnJvbVRzOitmcm9tLHRvVHM6K3RvfSxub3dUczorbm93LHpEZWNhZGVzLHZEYXNoYXMsd0V2ZW50cyxmbG93QmFuZHMsYm91bmRzLHJlc29uYW5jZXMsbm90aWNlOiflhazlvIDlm77kvovlj6PlvoTvvJrov4fov5DkuLrmnKgv5Zyf5a+55pys5ZG95pel44CB5pyI44CB5LiK5Y2H44CB5Lit5aSp55qE5ZCI5YiR5oux5Yay77yb5YWx5oyv5Li66Leo5L2T57O7IDE0IOWkqeWGheS6i+S7tuOAguiBmuWQiOS4juW8uuW8seS4uuacrOWcsOWunueOsOOAgid9Ow0KfQ0KZnVuY3Rpb24gbG9uT2YoYm9keSx0KXtyZXR1cm4gbjM2MChBc3Ryb25vbXkuRWNsaXB0aWMoQXN0cm9ub215Lkdlb1ZlY3Rvcihib2R5LG5ldyBEYXRlKHQpLHRydWUpKS5lbG9uKTt9DQpmdW5jdGlvbiBieUtleSh3LGspe2NvbnN0IHA9dy5wbGFuZXRzLmZpbmQoeD0+eC5rZXk9PT1rKTtyZXR1cm4gcD9wLmxvbjpudWxsO30NCmZ1bmN0aW9uIHppd2VpWWVhckluZGV4KHJlcyx5ZWFyKXsNCiB0cnl7DQogIC8vIOS8mOWFiOWkjeeUqOS4u+ebmOiQveebmOeahOe0q+W+ruacieaViOaXpeacny/ml7bovrDvvJvml6flk43lupTml6Dor6XlrZfmrrXml7blm57pgIDliLDljp/lp4vovpPlhaXjgIINCiAgY29uc3QgZWZmPXJlcy5tZXRhPy56aXdlaUVmZmVjdGl2ZTsNCiAgY29uc3QgaT1yZXMubWV0YS5pbnB1dDsNCiAgY29uc3QgZD1lZmY/LmRhdGV8fGkuZGF0ZVN0cjsNCiAgY29uc3QgbT1TdHJpbmcoZCkubWF0Y2goL14oXGR7NH0pLShcZHsxLDJ9KS0oXGR7MSwyfSkvKTsNCiAgaWYoIW0pcmV0dXJuIG51bGw7DQogIGNvbnN0IGlkeD1lZmY/LnRpbWVJbmRleD8/KE51bWJlcihpLnppd2VpVGltZUluZGV4KXx8MCk7DQogIGNvbnN0IGE9SVpUUk8uYnlTb2xhcihgJHtOdW1iZXIobVsxXSl9LSR7TnVtYmVyKG1bMl0pfS0ke051bWJlcihtWzNdKX1gLGlkeCxpLmdlbmRlcj09PSfnlLcnPyfnlLcnOiflpbMnLHRydWUsJ3poLUNOJyk7DQogIHJldHVybiBhLmhvcm9zY29wZShuZXcgRGF0ZSh5ZWFyLDYsMSkpLnllYXJseS5pbmRleDsNCiB9Y2F0Y2goZSl7cmV0dXJuIG51bGw7fQ0KfQ0K
+import * as Astronomy from 'astronomy-engine';
+import { astro as IZTRO } from 'iztro';
+/* 三体系时间轴：紫微大限（虚岁折算）× 印度大运 × 木土过运。
+ * 规则取自公开前端图例：过运＝木/土对本命日、月、上升、中天的合/刑/拱/冲；
+ * 共振＝不同体系的跨体系事件落在 14 天内。窗口聚合与强弱为本地实现，非原站后端。 */
+const D=86400000, n360=x=>((x%360)+360)%360;
+export function timeline(res, opts={}){
+ const {western,vedic,ziwei}=res;
+ const months=Number(opts.months)||30;
+ const now=opts.now?new Date(opts.now):new Date();
+ const from=new Date(now), to=new Date(+now+months*30.44*D);
+ const birthYear=new Date(western.utc).getUTCFullYear();
+ // 紫微大限
+ const zDecades=(ziwei&&ziwei.palaces?ziwei.palaces:[]).map(p=>{
+  const r=p.decadal&&p.decadal.range;
+  if(!r)return null;
+  return {name:p.name,branch:p.earthlyBranch,startYear:birthYear+r[0]-1,endYear:birthYear+r[1]-1};
+ }).filter(Boolean).sort((a,b)=>a.startYear-b.startYear);
+ // 紫微流年带
+ const flowBands=[];const y0=from.getUTCFullYear(),y1=to.getUTCFullYear();
+ if(ziwei&&ziwei.palaces)for(let y=y0;y<=y1;y++){
+  const idx=ziweiYearIndex(res,y);
+  const pal=idx!=null?ziwei.palaces[idx]:null;
+  flowBands.push({label:String(y),palace:pal?pal.name:'—',startTs:+new Date(Date.UTC(y,1,4)),endTs:+new Date(Date.UTC(y+1,1,4))});
+ }
+ // 印度大运
+ const vDashas=vedic.dashas.map(d=>({lord:d.lord,startTs:+new Date(d.start),endTs:+new Date(d.end),current:now>=new Date(d.start)&&now<new Date(d.end)}));
+ const bounds=vedic.dashas.map(d=>({ts:+new Date(d.start),label:d.lord+' 大运',system:'vedic'}));
+ // 木土过运
+ const targets=[{key:'sun',label:'太阳',lon:byKey(western,'sun')},{key:'moon',label:'月亮',lon:byKey(western,'moon')},{key:'asc',label:'上升',lon:western.asc.lon},{key:'mc',label:'中天',lon:western.mc.lon}].filter(x=>x.lon!=null);
+ const wEvents=[];
+ const bodies=[{key:'jupiter',name:'木星',body:Astronomy.Body.Jupiter},{key:'saturn',name:'土星',body:Astronomy.Body.Saturn}];
+ const samples=[];
+ for(let t=+from;t<=+to;t+=8*D)samples.push({t,lon:{jupiter:lonOf(Astronomy.Body.Jupiter,t),saturn:lonOf(Astronomy.Body.Saturn,t)}});
+ const sepOf=(a,b)=>{let d=Math.abs(n360(a-b));return d>180?360-d:d;};
+ for(const bd of bodies)for(const tg of targets)for(const [angle,name] of [[0,'合'],[90,'刑'],[120,'拱'],[180,'冲']]){
+  if(angle===0){
+   // 合相（angle=0）修正：sepOf 值域恒为 [0,180]，sep-0>=0 恒成立，
+   // 旧的 d0<0 穿越判断永不触发，导致"合"事件完全漏算。
+   // 合相应检测分离度的局部极小值（行星掠过本命点时 sep 先减后增）。
+   for(let i=1;i<samples.length-1;i++){
+    const s0=sepOf(samples[i-1].lon[bd.key],tg.lon);
+    const s1=sepOf(samples[i].lon[bd.key],tg.lon);
+    const s2=sepOf(samples[i+1].lon[bd.key],tg.lon);
+    if(s1<=s0&&s1<=s2){
+     // 三分搜索精确极小点
+     let lo=samples[i-1].t,hi=samples[i+1].t;
+     for(let k=0;k<24;k++){
+      const m1=lo+(hi-lo)/3,m2=hi-(hi-lo)/3;
+      if(sepOf(lonOf(bd.body,m1),tg.lon)<sepOf(lonOf(bd.body,m2),tg.lon))hi=m2;else lo=m1;
+     }
+     wEvents.push({ts:Math.round((lo+hi)/2),label:`${bd.name}${name}${tg.label}`,system:'west'});
+    }
+   }
+   continue;
+  }
+  for(let i=1;i<samples.length;i++){
+   const d0=sepOf(samples[i-1].lon[bd.key],tg.lon)-angle,d1=sepOf(samples[i].lon[bd.key],tg.lon)-angle;
+   if(d0<0&&d1>=0){let lo=samples[i-1].t,hi=samples[i].t;for(let k=0;k<12;k++){const mid=(lo+hi)/2;if(sepOf(lonOf(bd.body,mid),tg.lon)-angle<0)lo=mid;else hi=mid;}wEvents.push({ts:Math.round((lo+hi)/2),label:`${bd.name}${name}${tg.label}`,system:'west'});}
+  }
+ }
+ // 共振：跨体系事件 14 天内聚合
+ const zEvents=[];for(let i=1;i<flowBands.length;i++){if(flowBands[i].palace!==flowBands[i-1].palace)zEvents.push({ts:flowBands[i].startTs,label:`流年命宫移入${flowBands[i].palace}`,system:'ziwei'});}for(const z of zDecades)if(z.startYear>=from.getUTCFullYear()&&z.startYear<=to.getUTCFullYear())zEvents.push({ts:+new Date(Date.UTC(z.startYear,0,1)),label:`${z.name}大限起（${z.startYear}）`,system:'ziwei'});
+ const all=[...wEvents.map(e=>({ts:e.ts,label:e.label,system:'west'})),...vDashas.map(v=>({ts:v.startTs,label:v.lord+' 大运起',system:'vedic'})),...zEvents].sort((a,b)=>a.ts-b.ts);
+ const resonances=[];let cluster=[];
+ for(const e of all){
+  if(cluster.length&&e.ts-cluster[cluster.length-1].ts>14*D){pushCluster(cluster);cluster=[];}
+  cluster.push(e);
+ }
+ if(cluster.length)pushCluster(cluster);
+ function pushCluster(c){
+  const systems=[...new Set(c.map(x=>x.system))];
+  if(systems.length<2)return;
+  resonances.push({startTs:c[0].ts,endTs:c[c.length-1].ts,label:`共振：${c.map(x=>x.label).join('；')}`,systems,count:c.length});
+ }
+ return {birthYear,window:{fromTs:+from,toTs:+to},nowTs:+now,zDecades,vDashas,wEvents,flowBands,bounds,resonances,notice:'公开图例口径：过运为木/土对本命日、月、上升、中天的合刑拱冲；共振为跨体系 14 天内事件。聚合与强弱为本地实现。'};
+}
+function lonOf(body,t){return n360(Astronomy.Ecliptic(Astronomy.GeoVector(body,new Date(t),true)).elon);}
+function byKey(w,k){const p=w.planets.find(x=>x.key===k);return p?p.lon:null;}
+function ziweiYearIndex(res,year){
+ try{
+  // 优先复用主盘落盘的紫微有效日期/时辰；旧响应无该字段时回退到原始输入。
+  const eff=res.meta?.ziweiEffective;
+  const i=res.meta.input;
+  const d=eff?.date||i.dateStr;
+  const m=String(d).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(!m)return null;
+  const idx=eff?.timeIndex??(Number(i.ziweiTimeIndex)||0);
+  const a=IZTRO.bySolar(`${Number(m[1])}-${Number(m[2])}-${Number(m[3])}`,idx,i.gender==='男'?'男':'女',true,'zh-CN');
+  return a.horoscope(new Date(year,6,1)).yearly.index;
+ }catch(e){return null;}
+}

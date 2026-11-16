@@ -1,1 +1,38 @@
-aW1wb3J0IHsgcmVzb2x2ZUJpcnRoVGltZSB9IGZyb20gJy4vYmlydGgubWpzJzsNCmltcG9ydCB7IGx1bmFyVG9Tb2xhciB9IGZyb20gJy4vbHVuYXIubWpzJzsNCmltcG9ydCB7IGNhbGN1bGF0ZVRydWVTb2xhclRpbWUgfSBmcm9tICcuL3Jlbmh1YWktZW5naW5lLm1qcyc7DQppbXBvcnQgeyBiYXppLCBkeW5hbWljQmF6aSB9IGZyb20gJy4vYmF6aS5tanMnOw0KDQovKiog5oqK5YmN56uv5Y+j5b6E55qE5Ye655Sf6L6T5YWl6L2s5o2i5Li65YWr5a2X5omA6ZyA77ya57ud5a+55pe25Yi7IFVUQyArIOacrOWcsOmSn+mdouaXtumXtCAqLw0KZXhwb3J0IGZ1bmN0aW9uIGJhemlGcm9tSW5wdXQoaW5wdXQpew0KICBsZXQgWT1OdW1iZXIoaW5wdXQuWSksTT1OdW1iZXIoaW5wdXQuTSksRD1OdW1iZXIoaW5wdXQuRCk7DQogIGlmKGlucHV0LmNhbGVuZGFyPT09J2x1bmFyJyl7Y29uc3Qgcz1sdW5hclRvU29sYXIoWSxNLEQsaW5wdXQubGVhcE1vbnRoKTtpZighcyl0aHJvdyBuZXcgRXJyb3IoJ+WGnOWOhuaXpeacn+aXoOaViCcpO2NvbnN0IHA9cy5zcGxpdCgnLScpLm1hcChOdW1iZXIpO1k9cFswXTtNPXBbMV07RD1wWzJdO30NCiAgY29uc3QgaD1OdW1iZXIoaW5wdXQuaD8/MTIpLG1pPU51bWJlcihpbnB1dC5taT8/MCk7DQogIGNvbnN0IHR6PU51bWJlcihpbnB1dC5jaXR5Py50ej8/OCksbG9uPU51bWJlcihpbnB1dC5jaXR5Py5sb24pOw0KICBsZXQgdXRjLHNoaWZ0PTAsZW90PTAsc29sYXJDbG9jaz1udWxsLGxvY2FsOw0KICBjb25zdCByZXNvbHZlZD1yZXNvbHZlQmlydGhUaW1lKHtZLE0sRCxoLG1pLGNpdHk6aW5wdXQuY2l0eSxkc3QxOTg4UnVsZTppbnB1dC5kc3QxOTg4UnVsZX0pOw0KICB1dGM9cmVzb2x2ZWQudXRjO3NoaWZ0PXJlc29sdmVkLm9mZnNldE1pbi82MDsNCiAgaWYoaW5wdXQudXNlU29sYXJUaW1lKXsNCiAgICBjb25zdCBjPWNhbGN1bGF0ZVRydWVTb2xhclRpbWUoe3llYXI6WSxtb250aDpNLGRheTpELGNsb2NrSG91cjpoLGNsb2NrTWludXRlOm1pLGxvbmdpdHVkZTpsb24sdXRjT2Zmc2V0TWludXRlczpzaGlmdCo2MH0pOw0KICAgIGlmKCFjLmRhdGVWYWxpZCl0aHJvdyBFcnJvcign5peg5pWI5Ye655Sf5pel5pyfJyk7DQogICAgY29uc3QgY29ycmVjdGVkPW5ldyBEYXRlKERhdGUuVVRDKFksTS0xLEQrYy5kYXlPZmZzZXQpKTsNCiAgICBsb2NhbD17eTpjb3JyZWN0ZWQuZ2V0VVRDRnVsbFllYXIoKSxtOmNvcnJlY3RlZC5nZXRVVENNb250aCgpKzEsZDpjb3JyZWN0ZWQuZ2V0VVRDRGF0ZSgpLGg6Yy5ob3VyLG1pOmMubWludXRlfTsNCiAgICBzb2xhckNsb2NrPWAke1N0cmluZyhjLmhvdXIpLnBhZFN0YXJ0KDIsJzAnKX06JHtTdHJpbmcoYy5taW51dGUpLnBhZFN0YXJ0KDIsJzAnKX1gOw0KICAgIGVvdD1jLmVxdWF0aW9uT2ZUaW1lTWludXRlczsNCiAgfWVsc2V7DQogICAgY29uc3QgYz1yZXNvbHZlZC5zdGFuZGFyZDtsb2NhbD17eTpjLlksbTpjLk0sZDpjLkQsaDpjLmgsbWk6Yy5taX07DQogIH0NCiAgLy8g5o2i5pel5Y+j5b6E57uf5LiA5YWl5Y+j77ya5pi+5byPIGRheUJvdW5kYXJ5QXQyMzAwIOS8mOWFiO+8jOWQpuWImeeUsSBsYXRlWmlzaGkg5o6o5a+844CCDQogIC8vIOm7mOiupCBuZXh0LWRhee+8iDIzOjAwIOaNouaXpe+8ie+8jOS4jue0q+W+riAvIOS4k+S4muaOkuebmOaOpeWPo+S/neaMgeS4gOiHtO+8jOmBv+WFjeWQjOS4gOaXtuWIu+WIh+aNouS9k+ezu+WPmOebmOOAgg0KICBjb25zdCBkYXlCb3VuZGFyeUF0MjMwMD1pbnB1dC5kYXlCb3VuZGFyeUF0MjMwMCE9PXVuZGVmaW5lZA0KICAgID8hIWlucHV0LmRheUJvdW5kYXJ5QXQyMzAwDQogICAgOihpbnB1dC5sYXRlWmlzaGl8fCduZXh0LWRheScpIT09J2N1cnJlbnQtZGF5JzsNCiAgY29uc3Qgb3V0PWJhemkoe3V0Yyxsb2NhbCxnZW5kZXI6aW5wdXQuZ2VuZGVyPT09J+Wlsyc/J+Wlsyc6J+eUtycsZGF5Qm91bmRhcnlBdDIzMDB9KTsNCiAgb3V0Lm1ldGEuaW5wdXQ9ey4uLmlucHV0LGNpdHk6e2xhYmVsOmlucHV0LmNpdHk/LmxhYmVsLGxhdDppbnB1dC5jaXR5Py5sYXQsbG9uLHR6fX07DQogIG91dC5tZXRhLnNvbGFyQ2xvY2s9c29sYXJDbG9jaztvdXQubWV0YS5lb3RNaW49TWF0aC5yb3VuZChlb3QqMTApLzEwOw0KICBvdXQubWV0YS50aW1lQ29ycmVjdGlvbj17ZHN0QXBwbGllZDpyZXNvbHZlZC5kc3RBcHBsaWVkLGRzdFJ1bGU6cmVzb2x2ZWQuZHN0UnVsZSx3YXJuaW5nOnJlc29sdmVkLndhcm5pbmcsc3RhbmRhcmQ6cmVzb2x2ZWQuc3RhbmRhcmQsb2Zmc2V0TWluOnJlc29sdmVkLm9mZnNldE1pbn07DQogIG91dC5tZXRhLnV0Yz11dGMudG9JU09TdHJpbmcoKTtvdXQubWV0YS5sb2NhbD1sb2NhbDsNCiAgb3V0LmR5bmFtaWM9ZHluYW1pY0Jhemkob3V0LGlucHV0KTsNCiAgcmV0dXJuIG91dDsNCn0NCg0K
+import { resolveBirthTime } from './birth.mjs';
+import { lunarToSolar } from './lunar.mjs';
+import { calculateTrueSolarTime } from './renhuai-engine.mjs';
+import { bazi, dynamicBazi } from './bazi.mjs';
+
+/** 把前端口径的出生输入转换为八字所需：绝对时刻 UTC + 本地钟面时间 */
+export function baziFromInput(input){
+  let Y=Number(input.Y),M=Number(input.M),D=Number(input.D);
+  if(input.calendar==='lunar'){const s=lunarToSolar(Y,M,D,input.leapMonth);if(!s)throw new Error('农历日期无效');const p=s.split('-').map(Number);Y=p[0];M=p[1];D=p[2];}
+  const h=Number(input.h??12),mi=Number(input.mi??0);
+  const tz=Number(input.city?.tz??8),lon=Number(input.city?.lon);
+  let utc,shift=0,eot=0,solarClock=null,local;
+  const resolved=resolveBirthTime({Y,M,D,h,mi,city:input.city,dst1988Rule:input.dst1988Rule});
+  utc=resolved.utc;shift=resolved.offsetMin/60;
+  if(input.useSolarTime){
+    const c=calculateTrueSolarTime({year:Y,month:M,day:D,clockHour:h,clockMinute:mi,longitude:lon,utcOffsetMinutes:shift*60});
+    if(!c.dateValid)throw Error('无效出生日期');
+    const corrected=new Date(Date.UTC(Y,M-1,D+c.dayOffset));
+    local={y:corrected.getUTCFullYear(),m:corrected.getUTCMonth()+1,d:corrected.getUTCDate(),h:c.hour,mi:c.minute};
+    solarClock=`${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')}`;
+    eot=c.equationOfTimeMinutes;
+  }else{
+    const c=resolved.standard;local={y:c.Y,m:c.M,d:c.D,h:c.h,mi:c.mi};
+  }
+  // 换日口径统一入口：显式 dayBoundaryAt2300 优先，否则由 lateZishi 推导。
+  // 默认 next-day（23:00 换日），与紫微 / 专业排盘接口保持一致，避免同一时刻切换体系变盘。
+  const dayBoundaryAt2300=input.dayBoundaryAt2300!==undefined
+    ?!!input.dayBoundaryAt2300
+    :(input.lateZishi||'next-day')!=='current-day';
+  const out=bazi({utc,local,gender:input.gender==='女'?'女':'男',dayBoundaryAt2300});
+  out.meta.input={...input,city:{label:input.city?.label,lat:input.city?.lat,lon,tz}};
+  out.meta.solarClock=solarClock;out.meta.eotMin=Math.round(eot*10)/10;
+  out.meta.timeCorrection={dstApplied:resolved.dstApplied,dstRule:resolved.dstRule,warning:resolved.warning,standard:resolved.standard,offsetMin:resolved.offsetMin};
+  out.meta.utc=utc.toISOString();out.meta.local=local;
+  out.dynamic=dynamicBazi(out,input);
+  return out;
+}
+

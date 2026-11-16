@@ -169,6 +169,19 @@ export function baziPro({birth,selection={},combine=false}){
   if(!Number.isInteger(selection.day)||!days[selection.day])throw Error('无效流日');
   selected.push(days[selection.day]);
  }
+ // 流时：选中流日后按「五鼠遁」起十二时辰时柱（甲己日起甲子、乙庚日起丙子……）
+ let hours=[];
+ if(days[selection.day??0]&&!birth.timeUnknown){
+  const base=days[selection.day??0],dayStemIdx=stems.indexOf(base.stem);
+  hours=Array.from({length:12},(_,i)=>{
+   const p={stem:stems[(dayStemIdx*2+i)%10],branch:branches[i],name:'流时'};
+   return {...add(p),index:i,label:branches[i]+'时',clock:`${String((i*2+23)%24).padStart(2,'0')}:00–${String((i*2+25)%24).padStart(2,'0')}:00`};
+  });
+  if(selection.hour!==undefined&&selection.hour!==null){
+   if(!Number.isInteger(selection.hour)||!hours[selection.hour])throw Error('无效流时');
+   selected.push(hours[selection.hour]);
+  }
+ }
  const matrix=[...pillars,...selected],links=relations(matrix);
  const node=b.luck.edge;
  const nodeWall=new Date(Date.parse(node.utc)+8*3600000).toISOString().slice(0,19).replace('T',' ');
@@ -181,7 +194,7 @@ export function baziPro({birth,selection={},combine=false}){
   term:prior.name,termUtc:prior.date.toISOString(),daysAfter:elapsedDays,year:entryYear.stem+entryYear.branch,
   method:'起运年龄按三天一年、一日四月、一时辰十天折算；交运UT按365.24219878日回归年累计。年龄年月日为传统360日年表示。'};
  const natalStrength=strength(pillars,relations(pillars),combine);
- const result={entry,pillars,cycles,years,months,days,selected,relationships:links,strength:strength(matrix,links,combine),natalStrength,
+ const result={entry,pillars,cycles,years,months,days,hours,selected,relationships:links,strength:strength(matrix,links,combine),natalStrength,
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
   commander,info:{solarYear:b.meta.yearPillarYear,solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
    clock:birth.timeUnknown?'时辰未知':birth.timeStr??[h,mi].map(n=>String(n).padStart(2,'0')).join(':'),

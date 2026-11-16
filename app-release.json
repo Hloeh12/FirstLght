@@ -1,11 +1,11 @@
 {
   "name": "FirstLght",
-  "version": "0.28.8",
-  "build": 109,
+  "version": "0.29.0",
+  "build": 110,
   "releases": [
     {
-      "version": "0.28.8",
-      "build": 109,
+      "version": "0.29.0",
+      "build": 110,
       "date": "2026-11-17",
       "title": "大运流年图形化：运势起伏曲线",
       "items": [

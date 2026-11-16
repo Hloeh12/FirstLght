@@ -22,6 +22,7 @@ function pickLine(p){
  if(p2.year!=null)parts.push(p2.year+'年');
  if(p2.month!=null)parts.push('第'+(Number(p2.month)+1)+'个月');
  if(p2.day!=null)parts.push('第'+(Number(p2.day)+1)+'天');
+ if(p2.hour!=null)parts.push('第'+(Number(p2.hour)+1)+'个时辰');
  return parts.length?'正在看：'+parts.join(' · ')+' —— 下方分析已随之更新':'正在看：本命原局（点下面任一时点可切换）';
 }
 function chartLine(d){
@@ -74,9 +75,10 @@ function entryCard(d,timeUnknown){
 }
 function timeline(d,pick){
  const year=d.years.map(y=>[y.year,y.year+' '+y.stem+y.branch]);
+ const hourRail=(pick.day!=null&&d.hours?.length)?row('流时',d.hours.map(h=>[h.index,h.label+' '+h.stem+h.branch]),pick.hour):'';
  return row('大运',[['natal','本命'],...d.cycles.map(p=>[p.index,p.age+'岁 '+p.stem+p.branch+' '+p.changsheng])],pick.luck??'natal')+
   row('流年',year,pick.year)+row('流月',d.months.map(m=>[m.index,m.label+' '+m.stem+m.branch]),pick.month)+
-  row('流日',d.days.map(x=>[x.index,x.date.slice(5)+' '+x.stem+x.branch]),pick.day);
+  row('流日',d.days.map(x=>[x.index,x.date.slice(5)+' '+x.stem+x.branch]),pick.day)+hourRail;
 }
 function drawRelations(ctx,s,animate){
  const board=$('.bazi-board',ctx.root);
@@ -139,7 +141,7 @@ export function baziView(ctx){
   const b=e.target.closest('[data-rail]');
   if(!b)return;
   const {rail:id,pick:v}=b.dataset,n=Number(v),{pick}=s;
-  const next=id==='大运'?(v==='natal'?{}:{luck:n}):id==='流年'?{...pick,year:n,month:undefined,day:undefined}:id==='流月'?{...pick,month:n,day:undefined}:{...pick,day:n};
+  const next=id==='大运'?(v==='natal'?{}:{luck:n}):id==='流年'?{...pick,year:n,month:undefined,day:undefined,hour:undefined}:id==='流月'?{...pick,month:n,day:undefined,hour:undefined}:id==='流日'?{...pick,day:n,hour:undefined}:{...pick,hour:n};
   const line=$('.pc-current',ctx.root);if(line)line.textContent=pickLine(next);
   if(b.scrollIntoView)if(typeof b.scrollIntoView==='function')b.scrollIntoView({inline:'center',block:'nearest'});
   ctx.state.activeTimeSystem='bazi';

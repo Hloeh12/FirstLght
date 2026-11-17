@@ -1,8 +1,18 @@
 {
   "name": "FirstLght",
-  "version": "0.31.0",
-  "build": 114,
+  "version": "0.31.1",
+  "build": 115,
   "releases": [
+    {
+      "version": "0.31.1",
+      "build": 115,
+      "date": "2026-11-17",
+      "title": "印占审计数据源修复",
+      "items": [
+        "修复排盘初始数据不走 vedicPro 导致 Shadbala/Bhava Bala/岁运面板与报告章节为空的问题：首屏 reading 现已包含全部力量审计数据。",
+        "冒烟脚本适配印占工具面板 7 个入口，并新增 Shadbala 与岁运面板的渲染断言。"
+      ]
+    },
     {
       "version": "0.31.0",
       "build": 114,

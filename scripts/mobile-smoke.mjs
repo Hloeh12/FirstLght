@@ -151,8 +151,11 @@ try{
   await page.locator('[data-bazi-data]').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));
   await page.screenshot({path:'build/mobile-'+engine+'-bazi-'+width+'.png'});
   await page.locator('#moduleButton').click();
+  await page.locator('#moduleSheet[open]').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));
   await page.locator('#moduleSheet [data-module=share]').click();
   await checkSheet();
+  // 工具面板内容在分享模块点击后才挂载——显式等待条目出现，避免 CI 上动画竞态读到 0
+  await page.locator('#toolSheet[open] [data-bazi-tool]').first().waitFor({state:'attached',timeout:15000});
   assert.equal(await page.locator('#toolSheet [data-bazi-tool]').count(),5);
   await page.locator('#toolSheet [data-close]').click();
   await shareSnapshot('bazi');

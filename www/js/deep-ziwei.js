@@ -177,8 +177,25 @@ export function buildZiweiDeepReport(chart,flow){
   gloss['化'+x.type]=({禄:'福泽与机缘',权:'权力与担当',科:'名声与文书',忌:'执念与阻滞'})[x.type];
   return `「${x.star}化${x.type}」入${x.palace}宫：${SIHUA_EVENTS[x.type][x.palace]||'见宫位主题参断'}——这是写入命盘的先天气质，一生围绕此课题展开；行运再逢同类化象时被再次引动。`;
  });
+ // 四化飞星轨迹：每宫的「干」引动四化，飞向对应星曜所在宫——文墨式可核的飞星连线文字版
+ function findStarPalace(starName){return palaces.find(p=>['majorStars','minorStars','adjectiveStars','borrowedStars','stars'].some(k=>(p[k]||[]).some(s=>s.name===starName)));}
+ const FLYING_SIHUA={禄:'资源入口',权:'责任所系',科:'名声所倚',忌:'亏欠所系'};
+ const flyRows=palaces.flatMap(p=>{
+  const flying=p.flying||[];
+  return flying.map(m=>{
+   const target=palaces.find(q=>q.branch===m.branch)||{};
+   const star=findStarPalace(m.star);
+   return {from:p.name,fromBranch:p.earthlyBranch,type:m.type,star:m.star,to:target.name||('第'+((m.branch??0)+1)+'宫'),toBranch:target.earthlyBranch||'—',starPalace:star?.name||'—'};
+  }).filter(m=>m.type&&m.star);
+ }).filter(m=>m.from&&m.to&&m.type&&m.star);
+ const flyTable=flyRows.length?`<table class="rpt-table rpt-fly"><thead><tr><th>起宫</th><th>四化</th><th>化星</th><th>落宫</th><th>象意</th></tr></thead><tbody>${flyRows.slice(0,24).map(m=>`<tr><td>${m.from}（${m.fromBranch}）</td><td><b>${m.type}</b></td><td>${m.star}</td><td>${m.to}（${m.toBranch}）</td><td>${FLYING_SIHUA[m.type]||''}·${PALACE_THEME[m.to]||''}</td></tr>`).join('')}</tbody></table>`:'';
+ const flyLines=flyRows.length?[
+  `飞星轨迹回答的是「谁把力量送到哪里」：每一宫的宫干引动四化，把某颗星的化禄/化权/化科/化忌送到另一宫。上表按宫位列出全部飞星——这是文墨天机式「点击飞星连线」的文字版，可与盘面交互层互相核对。`,
+  `读法：化禄飞入财帛＝资源的入口在财；化忌飞入夫妻＝此生在亲密关系里最需修行的功课；权科同会一宫＝该宫领域靠专业立身。飞星与本宫生年四化叠加看——同星同化是「双重引动」，异化同宫是「禄忌交战」或「权科相随」。`
+ ]:['飞星轨迹数据待排盘后生成（需完整宫位与四化）。'];
  const sihuaSec=sihuaLines.length?sihuaLines:['生年四化数据待排盘后生成。'];
  sihuaSec.push(`读法：化禄是资源入口、化权是责任所系、化科是名声所倚、化忌是亏欠所系。四化互看——禄忌同宫成「禄逢冲破」式的甜中带苦；权科同会，事业以专业立身。化忌所在不是绝地，而是此生必修的功课，修过即成专业。`);
+ if(flyLines.length&&flyLines[0].startsWith('飞星轨迹'))sihuaSec.push(...flyLines);
 
  /* 五、大限逐限详批 */
  const decades=chart?.decades||[];
@@ -196,7 +213,6 @@ export function buildZiweiDeepReport(chart,flow){
  const decadesSec=decadeLines?`<ul class="rpt-list rpt-decades">${decadeLines}</ul>`:'大限资料待排盘后生成——紫微的十年剧本按大限宫逐限展开，本报告在排盘后自动列出每限主题。';
 
  /* 六、流年逐流年详批（未来十年）——流年命宫按年支定位，流年四化按年干飞布 */
- const findStarPalace=starName=>palaces.find(p=>['majorStars','minorStars','adjectiveStars','borrowedStars','stars'].some(k=>(p[k]||[]).some(s=>s.name===starName)));
  const flowDecadeLines=Array.from({length:10},(_,i)=>{
   const year=nowYear+i;
   const stemIdx=((year-4)%10+10)%10,branchIdx=((year-4)%12+12)%12;
@@ -333,7 +349,7 @@ const flowDayHtml=`${flowDayTable||''}${flowHourTable||''}`;
   {title:'一、命盘总览与命宫主星',lines:overview},
   {title:'二、三方四正配置',lines:sanction},
   {title:'三、十二宫逐宫详解',lines:[],html:palacesSec},
-  {title:'四、生年四化与人生课题',lines:sihuaSec},
+  {title:'四、生年四化与人生课题（含四化飞星轨迹）',lines:sihuaSec,html:flyTable||undefined},
   {title:'五、大限逐限详批（十二个十年）',lines:[],html:decadesSec},
   {title:'六、流年逐流年详批（未来十年）',lines:flowDecadeIntro,html:flowDecadeSec},
  {title:'七、流年指向性事件（所选流年）',lines:flowSec},

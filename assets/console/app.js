@@ -671,12 +671,35 @@ function openFullReport(){
   try{await navigator.clipboard.writeText(text);tell('报告文本已复制。');}
   catch{e=>tell('复制失败，请使用导出长图。');}
  };
- d.querySelector('[data-rpt-export]').onclick=async e=>{
+  d.querySelector('[data-rpt-export]').onclick=async e=>{
   const b=e.currentTarget;b.disabled=true;
   try{await shareChart(d.querySelector('#reportBody'),`${report.cover.name} · ${report.title}`);tell('报告长图已生成，可在分享面板保存。');}
   catch(err){tell('导出失败：'+(err.message||err));}
   finally{b.disabled=false;}
  };
+ /* 目录交互：锚点跳转 + 滚动进度 */
+ const rptBody=d.querySelector('#reportBody');
+ const rptDoc=d.querySelector('[data-full-report]');
+ rptBody?.addEventListener('click',e=>{
+  const t=e.target.closest('[data-toc]');
+  if(!t||!rptDoc)return;
+  const sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
+  sec?.scrollIntoView({behavior:'smooth',block:'start'});
+ });
+ const rptProg=d.querySelector('[data-rpt-progress]');
+ const rptOnScroll=()=>{
+  if(!rptBody||!rptDoc)return;
+  const total=rptDoc.scrollHeight-rptBody.clientHeight;
+  const p=total>0?Math.min(100,Math.round((rptBody.scrollTop/total)*100)):0;
+  if(rptProg)rptProg.textContent=p+'%';
+  const cur=rptDoc.querySelectorAll('.rpt-sec');
+  const at=rptBody.scrollTop;
+  let active=0;
+  for(let i=0;i<cur.length;i++){if(cur[i].offsetTop-rptBody.offsetTop<=at+80)active=i+1;}
+  rptDoc.querySelectorAll('[data-toc]').forEach(b=>b.classList.toggle('on',Number(b.dataset.toc)===active));
+ };
+ rptBody?.addEventListener('scroll',rptOnScroll,{passive:true});
+ rptOnScroll();
  open(d);
 }
 // FINAL_INSIGHT_REPORT_BUNDLE_CHECK: the report dictionaries are imported by this entry and bundled into js/console.js.

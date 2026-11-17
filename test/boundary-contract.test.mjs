@@ -113,3 +113,37 @@ test('盘面语义：传统五行色为默认、品牌粉可切、口径条与�
  const liquid=await read('../assets/console/liquid.css');
  assert.match(liquid,/\.sheet\.liquid-glass,\.drawer\.liquid-glass\{background:linear-gradient\(180deg,rgba\(36,29,42/,'深色弹层必须覆盖 liquid.css 的 !important 浅色层');
 });
+
+test('报告可用性：目录锚点、滚动进度与章节导航已接入',async()=>{
+ const fr=await read('../assets/console/full-report.js');
+ assert.match(fr,/function tocHtml\(/,'应生成目录');
+ assert.match(fr,/class="rpt-toc"/);
+ assert.match(fr,/data-sec="\$\{i\+1\}"/,'章节应带锚点');
+ assert.match(fr,/data-toc="\$\{i\+1\}"/,'目录项应指向锚点');
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/data-rpt-progress/,'应有滚动进度');
+ assert.match(app,/scrollIntoView\(\{behavior:'smooth'/,'点击目录应平滑滚动');
+ assert.match(app,/addEventListener\('scroll',rptOnScroll/,'应监听滚动更新进度');
+ const css=await read('../assets/console/design.css');
+ assert.match(css,/\.rpt-toc\{position:relative/);
+ assert.match(css,/\.rpt-toc-item\.on/);
+ const app2=await read('../assets/console/app.js');
+ assert.match(app2,/reportHtml\(report\)/,'报告页渲染入口存在');
+});
+
+test('紫微四化飞星轨迹：每宫宫干引动四化飞向目标宫，文墨式可核',async()=>{
+ const {ziweiChart,ziweiFlow}=await import('../src/ziwei.mjs');
+ const {buildZiweiDeepReport}=await import('../www/js/deep-ziwei.js');
+ const chart=ziweiChart({dateStr:'1990-06-15',timeIndex:7,gender:'男'});
+ const flow=ziweiFlow({dateStr:'1990-06-15',timeIndex:7,gender:'男',flowYear:2026,scope:'daily',month:6,day:10});
+ const r=buildZiweiDeepReport(chart,flow);
+ const sec=r.sections.find(x=>x.title.includes('四化飞星轨迹'));
+ assert.ok(sec,'应存在含飞星轨迹的四化章节');
+ assert.ok(sec.html&&/<table/.test(sec.html),'四化章应含飞星轨迹表格');
+ const rows=sec.html.match(/<tr/g)||[];
+ assert.ok(rows.length>=12,'飞星轨迹应逐宫列出（至少12宫）');
+ assert.match(sec.lines.join(''),/飞星轨迹/);
+ assert.match(sec.lines.join(''),/点击飞星连线/,'应说明与盘面飞星交互层互核');
+ const txt=sec.lines.join('')+(sec.html||'');
+ assert.doesNotMatch(txt,/undefined|NaN/);
+});

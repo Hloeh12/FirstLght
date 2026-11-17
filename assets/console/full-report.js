@@ -37,7 +37,13 @@ function baziReportData(state){
  };
 }
 function sectionHtml(report){
- return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}</h3>${sec.lines?.map(line=>`<p>${esc(line)}</p>`).join('')||''}${sec.table||''}${sec.html||''}</section>`).join('');
+ return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}</h3>${sec.lines?.map(line=>`<p>${esc(line)}</p>`).join('')||''}${sec.table||''}${sec.html||''}</section>`).join('');
+}
+/* 目录：章节锚点导航 + 滚动进度。让 7000+ 字报告可跳章节、可看读到哪。 */
+function tocHtml(report){
+ if(!report.sections?.length)return '';
+ const items=report.sections.map((s,i)=>`<button type="button" class="rpt-toc-item" data-toc="${i+1}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(i+1).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`).join('');
+ return `<details class="rpt-toc" aria-label="报告目录" open><summary class="rpt-toc-head"><span>目录</span><span class="rpt-progress" data-rpt-progress>0%</span></summary><div class="rpt-toc-list">${items}</div></details>`;
 }
 const stripTags=s=>String(s).replace(/<[^>]*>/g,'');
 const charactersOf=sections=>sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+stripTags(x.table||'').length+stripTags(x.html||'').length,0);
@@ -112,7 +118,7 @@ export function composeFullReport(state,names){
   const selected=(data.selected||[]).map(p=>(p.stem||'')+(p.branch||'')).join('、');
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'bazi',gege:report.gege,
    lead:`日主 ${esc(data.dayMaster?.stem||'—')}${esc(data.dayMaster?.element||'')} · ${esc(data.strength?.kind||'待定')} · 扶助 ${Number(data.strength?.support||0).toFixed(1)}% · 判定${esc(report.gege||'格局')}。全文十三章：命局格局、三垣与力量来源、性格、事业、财富、婚姻、健康、神煞、大运逐运详批、流年逐年详批、流月逐月详批、流日与流时择时${selected?`（当前选中：${esc(selected)}）`:''}——每个术语都附白话。`,
-   body:sectionHtml(report)};
+   body:sectionHtml(report),sections:report.sections};
  }
  if(system==='ziwei'){
   const chart=state.chartState?.ziwei?.chart||state.reading?.ziwei||{};
@@ -122,14 +128,14 @@ export function composeFullReport(state,names){
   const lifeStars=life?.majorStars?.length?life.majorStars:life?.borrowedStars||[];
   return {cover,title:flow?`紫微 · ${flow.label||'流年'}详批`:'紫微斗数 · 全盘详批',characters:charactersOf(report.sections),kind:'ziwei',
    lead:`命宫在 ${esc(life?.earthlyBranch||'待定')}，${lifeStars.length?'主星 '+esc(lifeStars.map(s=>s.name).join('、')):'空宫借星'} · ${esc(chart.fiveElementsClass||'')}。全文十章：命盘总览、三方四正、十二宫逐宫详解、生年四化、大限逐限详批、流年逐流年详批（未来十年）${flow?'、所选流年指向性事件':''}、流月逐月详批（斗君起正月）、流日与流时、综合建议——流年命宫按年支定位、四化按年干飞布，逐年逐月可核。`,
-   body:sectionHtml(report)};
+   body:sectionHtml(report),sections:report.sections};
  }
  if(system==='vedic'){
   const v=state.reading?.vedic||{};
   const report=withGlossary(buildVedicDeepReport(v));
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'vedic',
    lead:`Lahiri 恒星黄道 · 整宫制。上升 ${esc(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗，Vimshottari 大运 ${(v.dashas||[]).length} 段，命格 ${esc((report.yogas||[]).length)} 组成立${v.varshaphala?`，岁运盘 ${v.varshaphala.year} 年已起`:`''`}。全文十一章：上升主轴、行星力量评级、Shadbala 六力审计、Yoga 命格、九曜落宫、大运逐运详批、小运细分、D9/D10 分盘、十二宫力量审计、岁运 Varshaphala、人生格局总结。`,
-   body:sectionHtml(report)};
+   body:sectionHtml(report),sections:report.sections};
  }
  if(system==='synastry'){
   const syn=state.chartState?.synastry||{};
@@ -139,7 +145,7 @@ export function composeFullReport(state,names){
   const report=withGlossary(buildSynastryDeepReport(result,profile.name,otherName));
   return {cover,title:report.title,characters:report.characters,kind:'synastry',
    lead:`${esc(profile.name||'甲方')} 与 ${esc(otherName)} 的合盘：综合契合度 ${esc(result.fit?.percent??result.percent??'—')}%。全文七章：关系总览、日月金火五星对照、跨盘相位逐条详解、八科逐科化解、月亮星宿与 D9 互参、干支三镜合参、经营指南——每组相位都写明「剧情怎么上演、怎么接招」。`,
-   body:sectionHtml(report)};
+   body:sectionHtml(report),sections:report.sections};
  }
  // west 及未知体系兜底：显式分支，避免未来新体系再误落本命模板
  const w=state.reading?.western||{};
@@ -147,7 +153,7 @@ export function composeFullReport(state,names){
  const ascText=typeof w.asc==='string'?w.asc:(w.asc?.sign||'待定');
  return {cover,title:report.title,characters:charactersOf(report.sections),kind:'west',
   lead:`太阳在${esc(w.planets?.find(p=>p.key==='sun')?.sign||'待定')}、月亮在${esc(w.planets?.find(p=>p.key==='moon')?.sign||'待定')}、上升${esc(ascText)}。全文五章：核心三要素、逐星解读、相位格局、盘面格局与元素失衡检测、领域速览——逐星成段、格局可核。`,
-  body:sectionHtml(report)};
+  body:sectionHtml(report),sections:report.sections};
 }
 
 export function reportHtml(report){
@@ -160,6 +166,7 @@ export function reportHtml(report){
    <p class="rpt-stamp">生成于 ${esc(report.cover.stamp)} ${wordLine}</p>
   </header>
   <p class="rpt-lead">${report.lead}</p>
+  ${tocHtml(report)}
   ${report.body}
   <footer class="rpt-foot">本报告依传统术数规则与当前命盘条件生成，仅作文化与自我观察参考，不构成事实预测、投资、法律或医疗建议。<br>留一束初光，照见当下的自己。</footer>
  </article>`;

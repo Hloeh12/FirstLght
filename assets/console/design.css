@@ -2073,3 +2073,17 @@ html[data-palette=pink]{--wood:#a44a86;--fire:#bd2d63;--earth:#92602d;--metal:#a
 [data-e=土]{color:var(--earth)!important}[data-e=土] .term{color:var(--earth)!important}
 [data-e=金]{color:var(--metal)!important}[data-e=金] .term{color:var(--metal)!important}
 [data-e=水]{color:var(--water)!important}[data-e=水] .term{color:var(--water)!important}
+
+/* P1 报告目录与进度（0.33.0） */
+.rpt-toc{position:relative;z-index:5;margin:0 0 12px;padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.72);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:1px solid rgba(255,182,206,.3);box-shadow:0 6px 18px -8px rgba(255,79,139,.12)}
+.rpt-sec{scroll-margin-top:96px}
+.rpt-toc summary{list-style:none;display:flex;justify-content:space-between;align-items:center}
+.rpt-toc summary::-webkit-details-marker{display:none}
+.rpt-toc summary::after{content:/▾/;font-size:11px;color:#b0895c}/n.rpt-toc:not([open]) summary::after{content:/▸/}/n.rpt-toc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;font-weight:800;letter-spacing:.06em;color:#8c2f5f}
+.rpt-toc-head .rpt-progress{font-variant-numeric:tabular-nums;color:#b0895c}
+.rpt-toc-list{display:flex;flex-wrap:wrap;gap:4px;max-height:132px;overflow:auto}
+.rpt-toc-item{border:1px solid rgba(255,182,206,.35);border-radius:999px;padding:3px 9px;font-size:11.5px;background:rgba(255,255,255,.5);color:#5a4a56;white-space:nowrap}
+.rpt-toc-item .rpt-toc-no{font-variant-numeric:tabular-nums;color:#b0895c;margin-right:3px;font-size:10px}
+.rpt-toc-item.on{background:linear-gradient(135deg,#ff77aa,#ff4f8b);border-color:#ff8fb6;color:#fff}
+.rpt-toc-item.on .rpt-toc-no{color:#ffe0ec}
+@media (prefers-color-scheme:dark){.rpt-toc{background:rgba(36,29,42,.8);border-color:rgba(255,164,206,.22)}.rpt-toc-head{color:#ff9fc9}.rpt-toc-head .rpt-progress{color:#c7a06a}.rpt-toc-item{background:rgba(46,38,54,.6);border-color:rgba(255,164,206,.2);color:#d8c8d4}.rpt-toc-item.on{background:linear-gradient(135deg,#ff77aa,#ff4f8b);color:#fff}}

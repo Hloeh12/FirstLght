@@ -93,6 +93,39 @@ function strength(pillars,relationships,enabled){
   caution:kind==='身弱'?[produce[day],control[day]]:kind==='身强'?[resource,day]:[],
   activated,method:enabled?'天干与藏干按各自基础权重，同日干阴阳 ×1.05，月支 ×1.8。合局得令或得月生且相关支未遭六冲时，将参与项 45% 权重归入化神。':'天干等权，藏干按本中余气；未启用月令与合化修正。'};
 }
+/* 四柱力量来源分解：把「身强/身弱」这个结论拆回得令、得地、得势、通根、透干五条证据。
+   评分只用于说明力量从哪来，不替代 strength() 的五行权重口径。 */
+function strengthBreakdown(pillars){
+ const dayStem=pillars[2]?.stem||'甲',self=elementOf(dayStem);
+ const resource=Object.keys(produce).find(e=>produce[e]===self)||'水';
+ const output=produce[self],wealth=control[self],officer=Object.keys(control).find(e=>control[e]===self)||'木';
+ const monthMain=pillars[1]?.hidden?.[0]?.element||pillars[1]?.branchElement||'';
+ const deLing=monthMain===self?{ok:true,role:'同我',text:`月令本气为${monthMain||'—'}，与日主同气，得令——先天气势最足，做事有底`}
+  :monthMain===resource?{ok:true,role:'生我',text:`月令本气为${monthMain||'—'}，生我日主，得令——如水源不断，后劲足`}
+  :{ok:false,role:monthMain===output?'我生':monthMain===wealth?'我克':monthMain===officer?'克我':'失令',
+    text:`月令本气为${monthMain||'—'}，${monthMain===output?'我生而泄气':monthMain===wealth?'我克而耗力':monthMain===officer?'克我而受制':'与日主无直接生克'}——失令，须靠他处补力`};
+ const deDi=pillars.map(p=>({pillar:p.name,branch:p.branch,
+  stems:(p.hidden||[]).filter(h=>h.element===self).map(h=>h.stem),
+  strong:(p.hidden||[]).some(h=>h.element===self&&h.rank==='本气')
+ })).filter(x=>x.stems.length);
+ const deShi=pillars.map((p,i)=>({p,i})).filter(({p,i})=>i!==2&&(p.stemElement===self||p.stemElement===resource));
+ const strongRoots=deDi.filter(x=>x.strong).length,weakRoots=deDi.length-strongRoots;
+ const touGan=pillars.map((p,i)=>({p,i})).filter(({i})=>i!==2)
+  .filter(({p})=>pillars.some(q=>(q.hidden||[]).some(h=>h.stem===p.stem))).map(({p})=>p.stem);
+ const score=(deLing.ok?2:0)+Math.min(3,strongRoots*1.5+weakRoots*.75)+Math.min(1.5,deShi.length*.75);
+ return {
+  deLing,deDi,deShi:{stems:deShi.map(({p})=>p.stem),count:deShi.length,
+   text:deShi.length?`天干${deShi.map(({p})=>p.stem).join('、')}${deShi.some(({p})=>p.stemElement===self)?'帮身':'生身'}，得势——同辈与资源可借力`:'天干无同我生我之神，不得势——凡事亲力亲为，助力多在后天经营'},
+  tongGen:{count:deDi.length,text:deDi.length?`日主之根在${deDi.map(x=>`${x.pillar}${x.branch}（${x.stems.join('')}）`).join('、')}——${strongRoots?'有本气强根，根深能任事':'仅余气弱根，力量需积累'}`:'地支无同我之根——日主浮而不实，最忌单打独斗'},
+  touGan:{count:touGan.length,stems:touGan,
+   text:touGan.length?`天干${touGan.join('、')}透出且地支有根——这些力量不悬空，能落到现实（是助力还是压力，看它对日主是生扶还是克泄）`: '天干之字在地支无根，浮于表面，须行运引动才显'},
+  score,full:6.5,
+  verdict:score>=4.5?'力量来源充足：令、地、势三者至少得其两，属先天底气厚的一类'
+   :score>=2.5?'力量来源中等：有一处得力的落脚点，成败多取决于行运是否补足'
+   :'力量来源偏薄：令地势力皆弱，须以平台、团队与后天节奏补足',
+  method:'得令看月令本气与日主的生克；得地看四支藏干中同我之根（本气强根、余气弱根）；得势看天干同我生我之数。评分 0–6.5，仅用于说明力量来源结构，不替代五行权重扶助度。'
+ };
+}
 export function civilSolar(Y,M,D){
  const d=new Date(Date.UTC(Y,M-1,D));
  if(d.getUTCFullYear()!==Y||d.getUTCMonth()+1!==M||d.getUTCDate()!==D)throw Error('该公历日期不存在');
@@ -193,8 +226,25 @@ export function baziPro({birth,selection={},combine=false}){
  const entry={directionLabel:b.luck.directionLabel,duration:b.luck.duration,intervalSeconds:b.luck.intervalSeconds,utc:cycles[0].startUtc,local:startLocal,offsetMinutes:entryOffset,
   term:prior.name,termUtc:prior.date.toISOString(),daysAfter:elapsedDays,year:entryYear.stem+entryYear.branch,
   method:'起运年龄按三天一年、一日四月、一时辰十天折算；交运UT按365.24219878日回归年累计。年龄年月日为传统360日年表示。'};
- const natalStrength=strength(pillars,relations(pillars),combine);
- const result={entry,pillars,cycles,years,months,days,hours,selected,relationships:links,strength:strength(matrix,links,combine),natalStrength,
+const natalStrength=strength(pillars,relations(pillars),combine);
+// 传统三垣：胎元（受胎之气）、命宫（先天禀赋与人生主轴）、身宫（后天作为与身体）。
+// 依赖月柱与时支，时辰未知时命宫/身宫不成立，只保留胎元与胎息。
+const ec=Solar.fromYmdHms(normal.Y,normal.M,normal.D,h,mi,0).getLunar().getEightChar();
+const annotateTriple=gz=>{
+ if(!gz||gz.length<2)return null;
+ const stem=gz[0],branch=gz[1];
+ return {ganzhi:gz,stem,branch,tenGod:tenGod(stems.indexOf(b.dayMaster.stem),stems.indexOf(stem)),nayin:LunarUtil.NAYIN[gz]||''};
+};
+const traditional={
+ taiYuan:annotateTriple(ec.getTaiYuan()),
+ taiXi:annotateTriple(ec.getTaiXi()),
+ mingGong:birth.timeUnknown?null:annotateTriple(ec.getMingGong()),
+ shenGong:birth.timeUnknown?null:annotateTriple(ec.getShenGong()),
+ unknown:!!birth.timeUnknown,
+ method:'胎元＝月柱天干进一位、地支进三位；命宫以生月与生时定位（子平法）；身宫＝月支与时支相加定支，天干由年干五虎遁推出。三垣补四柱之未备，用于参照先天禀赋与后天作为，不改动四柱主体。'
+};
+const result={entry,pillars,cycles,years,months,days,hours,selected,relationships:links,strength:strength(matrix,links,combine),natalStrength,
+ traditional,strengthBreakdown:strengthBreakdown(pillars),
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
   commander,info:{solarYear:b.meta.yearPillarYear,solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
    clock:birth.timeUnknown?'时辰未知':birth.timeStr??[h,mi].map(n=>String(n).padStart(2,'0')).join(':'),

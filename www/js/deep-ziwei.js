@@ -244,7 +244,83 @@ export function buildZiweiDeepReport(chart,flow){
   `叠加判读：流年四化若与本命四化、大限四化同宫重叠（禄叠禄、忌叠忌），该主题显著加强——双禄之年进财力度倍增，双忌之年务必保守。`
  ];
 
- /* 八、综合建议 */
+ /* 八、流月逐月详批（斗君起正月，月四化落宫） */
+const MONTH_STEM_START={甲:2,己:2,乙:4,庚:4,丙:6,辛:6,丁:8,壬:8,戊:0,癸:0};
+let lunarMeta={};
+try{lunarMeta=typeof chart?.lunarDate==='string'?JSON.parse(chart.lunarDate):(chart?.lunarDate||{});}catch{lunarMeta={};}
+const bornMonth=Math.abs(lunarMeta.lunarMonth||1),bornHour=chart?.effectiveTimeIndex??0;
+const fyYear=flow?.year??nowYear;
+const idxOfBranch=b=>palaces.findIndex(p=>p.branch===b);
+const flowMonths=(()=>{
+ if(!palaces.length)return [];
+ const fyBranchIdx=((fyYear-4)%12+12)%12;
+ const base=idxOfBranch(fyBranchIdx);
+ if(base<0)return [];
+ // 斗君：流年支宫起正月顺数至生月，该宫起子时逆数至生时——即流年正月所在宫
+ const p1=(base+bornMonth-1)%12;
+ const doujun=((p1-bornHour)%12+12)%12;
+ const yearStem=STEMS[((fyYear-4)%10+10)%10];
+ return Array.from({length:12},(_,i)=>{
+  const palIndex=(doujun+i)%12,pal=palaces[palIndex];
+  const stem=STEMS[(MONTH_STEM_START[yearStem]+i)%10],branch=BRANCHES[(2+i)%12];
+  const mut=GAN_SIHUA[stem]||{};
+  const events=[];
+  for(const t of ['禄','权','科','忌']){
+   const sp=findStarPalace(mut[t]);
+   const ev=sp?SIHUA_EVENTS[t]?.[sp.name]:null;
+   if(sp&&ev)events.push({star:mut[t],type:t,palace:sp.name,text:ev});
+  }
+  const stars=pal?(pal.majorStars?.length?pal.majorStars:(pal.borrowedStars||[])):[];
+  const isNow=(flow?.scope==='monthly'||flow?.scope==='daily')&&Math.abs(Number(flow?.month||0))===i+1;
+  return {index:i+1,label:`${i+1}月`,stem,branch,palIndex,palaceName:pal?.name||'—',stars,events,isNow};
+ });
+})();
+const flowMonthLines=flowMonths.map(m=>{
+ const core=m.stars.map(s=>STAR_CORE[s.name]).filter(Boolean);
+ const mutText=m.events.length?m.events.map(e=>`${e.star}化${e.type}入${e.palace}${e.type==='忌'?'（防：'+e.text+'）':'（宜：'+e.text+'）'}`).join('；'):'本月四化未见强势落宫';
+ const action=m.events.some(e=>e.type==='忌')?'有忌化之月，先把该宫领域的老问题收尾，别开新战场。'
+  :m.events.some(e=>e.type==='禄')?'有禄化之月，主动出击的成本最低——约人、递方案、谈条件都放在这时。'
+  :'四化平缓之月，按年度计划推进即可，重在积累。';
+ return `<li class="${m.isNow?'rpt-now':''}"><b>${m.label} · ${m.stem}${m.branch} · 流月命宫走${m.palaceName}宫${m.isNow?' · 【当前月】':''}</b><span>${m.stars.length?`主星${m.stars.map(s=>s.name).join('、')}：${core.map(c=>c.career).filter(Boolean).join('；')}。`:'空宫借对宫参断，本月主题随环境走。'}月四化：${mutText}。${action}</span></li>`;
+}).join('');
+const flowMonthSec=flowMonthLines?`<ul class="rpt-list rpt-months">${flowMonthLines}</ul>`:'';
+const flowMonthIntro=flowMonths.length?[
+ `流月不是把流年除以十二：它有自己的命宫。古法以「斗君」定流年正月——从流年地支宫起正月顺数到你出生的农历${bornMonth}月，再从该宫起子时逆数到你出生的${BRANCHES[bornHour]||'子'}时，落宫即斗君；斗君起正月，顺行十二宫。`,
+ `本段按上述斗君法排出 ${fyYear} 年十二个月的流月命宫，并以五虎遁定月干、以月干飞四化。月四化落宫＝这个月最容易被点亮的事——禄宜攻、忌宜守，比「哪个月好」更具体。`,
+ `用法：把年度要事排进「禄化之月」，把清账、收尾、体检排进「忌化之月」；流月是节奏工具，不是吉凶判决。`
+]:['流月数据待完整命盘生成。'];
+
+/* 九、流日与流时（流日命宫顺行，日干四化取今日）——日干支由儒略日自推，不依赖排盘页选择 */
+const curMonth=flowMonths.find(m=>m.isNow)||flowMonths[0]||null;
+const dayGzOf=(y,m,d)=>{const j=Math.floor(Date.UTC(y,m-1,d)/86400000)+2440588;const i=((j+49)%60+60)%60;return STEMS[i%10]+BRANCHES[i%12];};
+const nowDate=new Date(),curY=nowDate.getFullYear(),curM=nowDate.getMonth()+1,curD=nowDate.getDate();
+const monthLen=new Date(Date.UTC(curY,curM,0)).getUTCDate();
+const flowDayRows=curMonth?Array.from({length:monthLen},(_,i)=>{
+ const d=i+1,gz=dayGzOf(curY,curM,d),pal=palaces[(curMonth.palIndex+i)%12];
+ const mut=GAN_SIHUA[gz[0]]||{};
+ const hit=Object.entries(mut).map(([t,sn])=>{const sp=findStarPalace(sn);return sp&&sp.name===pal?.name?t:null;}).filter(Boolean);
+ return {day:d,date:`${curY}-${String(curM).padStart(2,'0')}-${String(d).padStart(2,'0')}`,ganZhi:gz,palace:pal?.name||'—',mut,hit,isNow:d===curD};
+}):[];
+const flowDayTable=flowDayRows.length?`<table class="rpt-table rpt-days"><thead><tr><th>日期</th><th>干支</th><th>流日命宫</th><th>日干四化</th></tr></thead><tbody>${flowDayRows.map(r=>`<tr${r.isNow?' class="rpt-now"':''}><td>${r.date.slice(5)}${r.isNow?' · 今':''}</td><td>${r.ganZhi}</td><td>${r.palace}</td><td>${Object.entries(r.mut).map(([t,sn])=>`${sn}化${t}`).join('、')}${r.hit.length?`<b>（${r.hit.join('')}入本宫）</b>`:''}</td></tr>`).join('')}</tbody></table>`:'';
+const HOUR_LABEL=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const dayStemOf=dayGzOf(curY,curM,curD)[0];
+const flowHours=Array.from({length:12},(_,i)=>{
+ const stem=STEMS[(STEMS.indexOf(dayStemOf)*2+i)%10];
+ const mut=GAN_SIHUA[stem]||{};
+ const pal=curMonth?palaces[(curMonth.palIndex+(curD-1)+i)%12]:null;
+ const events=Object.entries(mut).map(([t,sn])=>{const sp=findStarPalace(sn);return sp?`${sn}化${t}入${sp.name}`:null;}).filter(Boolean);
+ return {label:HOUR_LABEL[i]+'时',stem,mut,palace:pal?.name||'—',events,isNow:i===Math.floor(((nowDate.getHours()+1)%24)/2)};
+});
+const flowHourTable=`<table class="rpt-table rpt-hours"><thead><tr><th>时辰</th><th>时干</th><th>流时命宫</th><th>时干四化</th></tr></thead><tbody>${flowHours.map(h=>`<tr${h.isNow?' class="rpt-now"':''}><td>${h.label}${h.isNow?' · 今':''}</td><td>${h.stem}</td><td>${h.palace}</td><td>${h.events.join('、')||'—'}</td></tr>`).join('')}</tbody></table>`;
+const flowDaySec=[
+ `流日命宫由流月命宫逐日顺行一位，日干四化看当天哪一宫被点亮。下表为本月（${curY}-${String(curM).padStart(2,'0')}，流月命宫${curMonth?.palaceName||'—'}）的整月流日；日干支由儒略日直接推算（(JDN+49) mod 60），与排盘页所选时点无关。`,
+ flowHourTable?`时干由今日日干（${dayStemOf}日）按五鼠遁推出，${dayStemOf}日起${STEMS[(STEMS.indexOf(dayStemOf)*2)%10]}子时。流时命宫沿流日命宫逐时辰顺行——把一天里最关键的一件事，放进「时干四化吉化入命/财/官」的时辰。`:'',
+ `流日流时是「择日择时」的最细一层：它不能改变大势，但能在同一个月里帮你避开最硬的阻力、抓住最顺的窗口。`
+];
+// 表格走 html 字段，避免被 lines 的转义逻辑渲染成标签字面量。
+const flowDayHtml=`${flowDayTable||''}${flowHourTable||''}`;
+
+/* 十、综合建议 */
  const advice=[
   `总纲：紫微看命，先认格局（命宫主星）、再排时机（大限四化）、后取动作（流年指向）。你的底盘是${lifeStars.map(s=>s.name).join('、')||'空宫'}，后半生身宫发力点在${bodyPalace?.name||'待考'}。`,
   `择业建议：${lifeStars.map(s=>STAR_CORE[s.name]?.career).filter(Boolean).join('；')||'空宫之人宜借大限星曜定赛道——走到哪步大限，就借该限主星的行业东风。'}`,
@@ -260,8 +336,10 @@ export function buildZiweiDeepReport(chart,flow){
   {title:'四、生年四化与人生课题',lines:sihuaSec},
   {title:'五、大限逐限详批（十二个十年）',lines:[],html:decadesSec},
   {title:'六、流年逐流年详批（未来十年）',lines:flowDecadeIntro,html:flowDecadeSec},
-  {title:'七、流年指向性事件（所选流年）',lines:flowSec},
-  {title:'八、综合建议',lines:advice}
+ {title:'七、流年指向性事件（所选流年）',lines:flowSec},
+ {title:'八、流月逐月详批（斗君起正月 · 十二个月）',lines:flowMonthIntro,html:flowMonthSec},
+ {title:'九、流日与流时（整月流日 · 十二时辰）',lines:flowDaySec,html:flowDayHtml||undefined},
+ {title:'十、综合建议',lines:advice}
  ];
  return {title:'紫微斗数 · 全盘详批',sections,glossary:gloss,kind:'ziwei'};
 }

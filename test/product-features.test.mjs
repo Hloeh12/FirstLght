@@ -184,12 +184,42 @@ test('紫微流年逐年详批：未来十年——流年命宫按年支定位�
  assert.doesNotMatch(t,/undefined/);
 });
 
+test('紫微流月流日：斗君起正月、十二月逐月成条、流日整月与十二时辰',async()=>{
+ const {ziweiChart,ziweiFlow}=await import('../src/ziwei.mjs');
+ const {buildZiweiDeepReport}=await import('../www/js/deep-ziwei.js');
+ const {Solar}=await import('lunar-javascript');
+ const chart=ziweiChart({dateStr:'1990-06-15',timeIndex:7,gender:'男'});
+ const flow=ziweiFlow({dateStr:'1990-06-15',timeIndex:7,gender:'男',flowYear:2026,scope:'daily',month:6,day:10});
+ // 即便用户未选任何流限（flow=null），流日流时也应自足生成
+ for(const f of [flow,null]){
+  const r=buildZiweiDeepReport(chart,f);
+  assert.equal(r.sections.length,10,'紫微报告应为十章');
+  const monthSec=r.sections.find(x=>x.title.includes('流月逐月'));
+  assert.ok(monthSec,'应存在流月逐月章节');
+  const monthHtml=monthSec.html||'';
+  assert.equal((monthHtml.match(/<li/g)||[]).length,12,'十二个月应逐月成条');
+  assert.match(monthSec.lines.join(''),/斗君/,'应说明斗君口径');
+  assert.match(monthHtml,/月四化/);
+  const daySec=r.sections.find(x=>x.title.includes('流日与流时'));
+  assert.ok(daySec,'应存在流日与流时章节');
+  const dayHtml=daySec.html||'';
+  assert.ok((dayHtml.match(/<tr/g)||[]).length>=42,'应含整月流日与十二时辰两张表');
+  assert.match(dayHtml,/流日命宫/);
+  assert.match(daySec.lines.join(''),/五鼠遁/);
+  assert.doesNotMatch(daySec.lines.join(''),/<table|<tr/,'lines 不得含表格标签');
+  assert.doesNotMatch(dayHtml,/undefined/);
+  // 今日流日干支应与历库一致（(JDN+49) mod 60）
+  const today=new Date(),gz=Solar.fromYmd(today.getFullYear(),today.getMonth()+1,today.getDate()).getLunar().getDayInGanZhi();
+  assert.ok(dayHtml.includes(gz),'流日表应含今日干支 '+gz);
+ }
+});
+
 test('印占小运细分：当前与下一大运各九段 Antardasha，合计恰满大运',async()=>{
  const {vedicPro}=await import('../src/vedic-pro.mjs');
  const {buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
  const v=vedicPro({birth:{Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY,dateStr:'1990-06-15',timeStr:'14:30'}});
  const r=buildVedicDeepReport(v);
- const sec=r.sections.find(x=>x.title.startsWith('六、小运'));
+ const sec=r.sections.find(x=>x.title.startsWith('七、小运'));
  assert.ok(sec,'应存在小运细分章节');
  const html=sec.html||'';
  assert.ok((html.match(/<li/g)||[]).length>=18,'两大运各九段小运');
@@ -201,6 +231,47 @@ test('印占小运细分：当前与下一大运各九段 Antardasha，合计恰
  assert.ok(first,'首段小运应与大运同主');
  assert.equal(first[1],String(active.start).slice(0,10),'首段小运起点应等于大运起点');
  assert.doesNotMatch(txt,/undefined/);
+});
+
+test('印占 Shadbala 六力：七曜分项齐全、位次唯一、口径不虚报达标',async()=>{
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const {buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
+ const v=vedicPro({birth:{Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY,dateStr:'1990-06-15',timeStr:'14:30'}});
+ const s=v.shadbala;
+ assert.ok(s,'应输出 shadbala');
+ assert.equal(s.rows.length,7,'七颗主星');
+ for(const r of s.rows){
+  for(const k of ['uchcha','kendra','drek','dig','paksha','cheshta','naisargika','rupas','rank','weakestPart']){
+   assert.ok(Number.isFinite(r[k])||k==='weakestPart','分项 '+k+' 应为数值');
+  }
+  assert.ok(r.rupas>=0&&r.rupas<=12,'Rupas 应在合理区间');
+ }
+ const ranks=s.rows.map(r=>r.rank).sort((a,b)=>a-b);
+ assert.deepEqual(ranks,[1,2,3,4,5,6,7],'位次应为 1–7 无重复');
+ assert.match(s.method,/系统性偏低/,'口径须说明未覆盖项会拉低总分');
+ // 报告里不得出现绝对达标断言
+ const r=buildVedicDeepReport(v);
+ const sec=r.sections.find(x=>x.title.includes('Shadbala'));
+ assert.ok(sec,'报告应含 Shadbala 章节');
+ assert.doesNotMatch((sec.lines||[]).join(''),/未达标的有|全部达到经典最低线/,'不应给绝对达标结论');
+});
+
+test('印占岁运 Varshaphala：返照盘成立、Muntha 每年进一宫',async()=>{
+ const {vedicPro}=await import('./../src/vedic-pro.mjs');
+ const b={birth:{Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY,dateStr:'1990-06-15',timeStr:'14:30'}};
+ const a=vedicPro({...b,at:'2026-06-01T00:00:00Z'});
+ const n=vedicPro({...b,at:'2027-06-01T00:00:00Z'});
+ const vs=a.varshaphala;
+ assert.ok(vs,'应输出岁运盘');
+ assert.ok(vs.chart?.lagna,'返照盘应有上升');
+ assert.equal(vs.chart.planets.length>=9,true,'返照盘应有九曜');
+ assert.ok(vs.returnUtc&&vs.year===2026,'岁运年份与返照时刻');
+ assert.equal(((vs.muntha.house-1+12)%12),((a.varshaphala.age%12)+12)%12,'Muntha 应与年龄同步进宫');
+ assert.notEqual(n.varshaphala.muntha.house,vs.muntha.house,'相邻两年 Muntha 应进一宫');
+ const {buildVedicDeepReport}=await import('./../www/js/deep-vedic.js');
+ const sec=buildVedicDeepReport(a).sections.find(x=>x.title.includes('Varshaphala'));
+ assert.ok(sec,'报告应含岁运章节');
+ assert.match((sec.lines||[]).join(''),/Muntha 落第/);
 });
 
 test('西洋行运触发点：星历实算外行星对落宫与相位',async()=>{
@@ -223,7 +294,7 @@ test('八字流月逐月详批：所选流年十二个月逐月成条',async()=>
  const d=baziPro({birth:BIRTH,selection:{year:2026}});
  const {buildBaziDeepReport}=await import('../www/js/deep-bazi.js');
  const r=buildBaziDeepReport(d);
- const sec=r.sections.find(x=>x.title.startsWith('十、流月逐月'));
+ const sec=r.sections.find(x=>x.title.startsWith('十一、流月逐月'));
  assert.ok(sec,'应存在流月逐月章节');
  const html=sec.html||'';
  assert.equal((html.match(/<li/g)||[]).length,12,'十二个月应逐月成条，实际 '+(html.match(/<li/g)||[]).length);
@@ -231,6 +302,47 @@ test('八字流月逐月详批：所选流年十二个月逐月成条',async()=>
  assert.match(txt,/立春/);
  assert.match(txt,/聚力月|变动月/,'应给出刑冲合判读');
  assert.doesNotMatch(txt,/undefined/);
+});
+
+test('八字三垣与力量来源：胎元/命宫/身宫成立，得令得地得势可分解',async()=>{
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const d=baziPro({birth:BIRTH});
+ assert.ok(d.traditional?.taiYuan?.ganzhi,'应输出胎元干支');
+ assert.ok(d.traditional?.mingGong?.ganzhi,'应输出命宫干支');
+ assert.ok(d.traditional?.shenGong?.ganzhi,'应输出身宫干支');
+ assert.ok(d.traditional.taiYuan.tenGod,'三垣应带对日主的十神');
+ const sb=d.strengthBreakdown;
+ assert.ok(sb&&typeof sb.deLing.role==='string','力量分解应含得令');
+ assert.ok(Array.isArray(sb.deDi)&&Array.isArray(sb.deShi.stems),'力量分解应含得地与得势');
+ assert.ok(sb.score>=0&&sb.score<=sb.full,'评分应落在 0 到满分之间');
+ const {buildBaziDeepReport}=await import('../www/js/deep-bazi.js');
+ const r=buildBaziDeepReport(d);
+ const sec=r.sections.find(x=>x.title.includes('三垣'));
+ assert.ok(sec,'报告应含三垣章节');
+ const txt=(sec.lines||[]).join('')+(sec.html||'');
+ assert.match(txt,/胎元/);assert.match(txt,/命宫/);assert.match(txt,/身宫/);
+ assert.doesNotMatch(txt,/undefined/);
+});
+
+test('八字流日流时：逐日成表、十二时辰带宜忌、重点日不重复',async()=>{
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const d=baziPro({birth:BIRTH,selection:{year:2026}});
+ const {buildBaziDeepReport}=await import('../www/js/deep-bazi.js');
+ const r=buildBaziDeepReport(d);
+ const sec=r.sections.find(x=>x.title.includes('流日与流时'));
+ assert.ok(sec,'报告应含流日流时章节');
+ const txt=(sec.lines||[]).join('');
+ assert.match(txt,/流日是把「择时」落到天/);
+ assert.match(txt,/重点日/);
+ assert.ok((txt.match(/时<br>|时辰/g)||[]).length>=0);
+ const html=sec.html||'';
+ const hours=(html.match(/<table[^>]*rpt-hours[\s\S]*?<\/table>/)||[''])[0];
+ assert.equal((hours.match(/<tr/g)||[]).length,13,'应为 1 行表头 + 十二时辰');
+ const days=(html.match(/<table[^>]*rpt-days[\s\S]*?<\/table>/)||[''])[0];
+ assert.ok((days.match(/<tr>/g)||[]).length>=28,'流日表应覆盖整月');
+ assert.doesNotMatch(txt,/undefined/);
+ assert.doesNotMatch(txt,/冲日柱——[\s\S]{0,40}冲日柱/,'冲日柱不应在同一句重复出现');
+ assert.doesNotMatch(txt,/<table|<tr/,'lines 不得含表格标签，否则会被渲染转义');
 });
 
 test('产品回归：八字术语按钮白框回归已被权威层修复',async()=>{
@@ -289,4 +401,25 @@ test('流时粒度：选中流日后输出十二时辰，可逐时选看',async(
  // 时辰未知时不输出流时
  const noTime=baziPro({birth:{...BIRTH,timeUnknown:true}});
  assert.ok(!noTime.hours?.length,'时辰未知不得输出流时');
+});
+
+test('报告渲染契约：sections.lines 必须为纯文本，表格只能放 html/table 字段',async()=>{
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const {buildBaziDeepReport}=await import('../www/js/deep-bazi.js');
+ const {ziweiChart,ziweiFlow}=await import('../src/ziwei.mjs');
+ const {buildZiweiDeepReport}=await import('../www/js/deep-ziwei.js');
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const {buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
+ const bazi=buildBaziDeepReport(baziPro({birth:BIRTH,selection:{year:2026}}));
+ const chart=ziweiChart({dateStr:'1990-06-15',timeIndex:7,gender:'男'});
+ const ziwei=buildZiweiDeepReport(chart,ziweiFlow({dateStr:'1990-06-15',timeIndex:7,gender:'男',flowYear:2026,scope:'daily',month:6,day:10}));
+ const vedic=buildVedicDeepReport(vedicPro({birth:BIRTH}));
+ for(const [name,report] of [['八字',bazi],['紫微',ziwei],['印占',vedic]]){
+  for(const sec of report.sections){
+   for(const line of sec.lines||[]){
+    assert.equal(typeof line,'string',name+' '+sec.title+' 的 lines 必须是字符串');
+    assert.doesNotMatch(line,/<(table|tr|td|th|ul|li|div|section|b|i|br)\b/i,`${name} 的「${sec.title}」把 HTML 放进了 lines，渲染时会被转义: ${line.slice(0,60)}`);
+   }
+  }
+ }
 });

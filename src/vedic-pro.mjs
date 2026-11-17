@@ -1,5 +1,6 @@
 import {chart} from './chart.mjs';
 import {TROPICAL_YEAR_MS} from './time-constants.mjs';
+import {shadbala,bhavaBala,varshaphala} from './vedic-strong.mjs';
 export const DASHA_LORDS=['计都','金星','太阳','月亮','火星','罗睺','木星','土星','水星'];
 const years=[7,20,6,10,7,18,16,19,17],mansion=360/27;
 const norm=x=>((x%360)+360)%360;
@@ -23,5 +24,19 @@ export function vedicReading(source,utc,at=new Date().toISOString()){
   method:'Lahiri恒星黄道与整宫制；罗睺/计都采用平交点。27星宿每宿13°20′，月亮已行比例折算出生大运余额；Vimshottari共120年，年长采用365.24219878日。Lahiri岁差为本机近似模型。'};
 }
 export function vedicPro({birth,at}){
- const full=chart(birth,{baseOnly:true});return vedicReading(full.vedic,full.meta.utc,at);
+ const full=chart(birth,{baseOnly:true});
+ const result=vedicReading(full.vedic,full.meta.utc,at);
+ const strong=shadbala(result);
+ result.shadbala=strong;
+ result.bhavaBala=bhavaBala(result,strong);
+ const year=new Date(result.at).getUTCFullYear();
+ const tz=Number(birth.city?.tz??8);
+ result.varshaphala=varshaphala({
+  natal:result,birth,year,tz,
+  buildChart:utc=>{
+   const local=new Date(+utc+tz*3600000);
+   return chart({Y:local.getUTCFullYear(),M:local.getUTCMonth()+1,D:local.getUTCDate(),h:local.getUTCHours(),mi:local.getUTCMinutes(),city:birth.city,calendar:'solar'},{baseOnly:true}).vedic;
+  }
+ });
+ return result;
 }

@@ -58,7 +58,8 @@ function knowledgeReport(d){
 function details(d){
  return `<article class="card liquid-glass"><div class="spread"><h2>五行力量</h2><b>${d.strength.kind} · ${d.strength.support.toFixed(1)}%</b></div>
  ${bars(d.strength.percentages)}<p class="thin">喜用参考 ${d.strength.useful.join('、')||'五行扶助较均衡'} · 忌偏参考 ${d.strength.caution.join('、')||'不单列'}</p><small>${esc(d.strength.method)}</small></article>
- <article class="card"><h2>干支关系</h2>${relationships(d)}<p class="thin">日主通根 ${esc(d.roots.map(r=>r.pillar+r.branch+'藏'+r.stem).join('、')||'未见')} · 透干 ${esc(d.revealed.map(r=>r.rootAt+'藏'+r.stem+'透'+r.visibleAt).join('、')||'未见')} · 旬空 ${esc(d.voidBranches.join('、'))}</p></article>
+ <article class="card"><h2>干支关系</h2>${relationships(d)}<p class="thin">日主通根 ${esc(d.roots.map(r=>r.pillar+r.branch+'藏'+r.stem).join('、')||'未见')} · 透干 ${esc(d.revealed.map(r=>r.rootAt+'藏'+r.stem+'透'+r.visibleAt).join('、')||'未见')} · 旬空 ${esc(d.voidBranches.join('、'))}</p>
+ ${d.strengthBreakdown?`<p class="thin">力量来源：${esc(d.strengthBreakdown.deLing.role)} · 有根 ${d.strengthBreakdown.tongGen.count} 处 · 帮身 ${d.strengthBreakdown.deShi.count} 位 · 评分 ${Number(d.strengthBreakdown.score).toFixed(1)}/${d.strengthBreakdown.full} —— ${esc(d.strengthBreakdown.verdict)}</p>`:''}</article>
  ${d.guidance?`<article class="card period-guidance" aria-live="polite" data-period-guidance><h2>${esc(d.guidance.title)}</h2><p>${esc(d.guidance.summary)}</p>
  ${periodSections(d.guidance)}<small>传统干支规则与权重模型提供的观察参考。</small></article>`:''}
 
@@ -213,8 +214,13 @@ async function showTool(ctx,i){
  const d=setUp(ctx).data,b=d.info;
  const titles=panels[i];
  let content='';
+ const t=d.traditional||{};
  if(i===0)content=table(['项目','结果'],[
   ['公历',b.solar+' '+b.clock],['农历',b.lunar],['四柱',d.pillars.map(p=>p.stem+p.branch).join(' ')],
+  ['胎元',t.taiYuan?t.taiYuan.ganzhi+' · '+t.taiYuan.tenGod+' · '+t.taiYuan.nayin:'—'],
+  ['命宫',t.mingGong?t.mingGong.ganzhi+' · '+t.mingGong.tenGod+' · '+t.mingGong.nayin:'时辰未知，不立命宫'],
+  ['身宫',t.shenGong?t.shenGong.ganzhi+' · '+t.shenGong.tenGod+' · '+t.shenGong.nayin:'时辰未知，不立身宫'],
+  ['胎息',t.taiXi?t.taiXi.ganzhi+' · '+t.taiXi.tenGod:'—'],
   ['交节司令',d.commander.stem+' · '+d.commander.term.name+' '+d.commander.term.utc+' · 交节后 '+d.commander.elapsedDays.toFixed(6)+' 日'],
   ['起运时刻',b.startUtc+'（UT）'],['起运年长',b.tropicalYearDays+' 日/回归年'],['起运',b.startAge+' 岁 · '+(b.forward?'顺行':'逆行')],['夏令时校正',b.timeCorrection.dstApplied?'夏令时-1h':'未应用'],['时间提示',b.timeCorrection.warning||'无切换歧义'],['交运取节',b.node.name+' '+b.node.at+'（东八区节气）'],
   ['校准',correction(b)],['晚子时',b.lateZishi==='current-day'?'归当日':'归次日']

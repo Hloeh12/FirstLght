@@ -111,7 +111,7 @@ export function composeFullReport(state,names){
   const report=withGlossary(buildBaziDeepReport(data));
   const selected=(data.selected||[]).map(p=>(p.stem||'')+(p.branch||'')).join('、');
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'bazi',gege:report.gege,
-   lead:`日主 ${esc(data.dayMaster?.stem||'—')}${esc(data.dayMaster?.element||'')} · ${esc(data.strength?.kind||'待定')} · 扶助 ${Number(data.strength?.support||0).toFixed(1)}% · 判定${esc(report.gege||'格局')}。全文十一章：命局格局、性格、事业、财富、婚姻、健康、神煞、大运逐运详批、流年逐年详批、流月逐月详批${selected?`（当前选中：${esc(selected)}）`:''}——每个术语都附白话。`,
+   lead:`日主 ${esc(data.dayMaster?.stem||'—')}${esc(data.dayMaster?.element||'')} · ${esc(data.strength?.kind||'待定')} · 扶助 ${Number(data.strength?.support||0).toFixed(1)}% · 判定${esc(report.gege||'格局')}。全文十三章：命局格局、三垣与力量来源、性格、事业、财富、婚姻、健康、神煞、大运逐运详批、流年逐年详批、流月逐月详批、流日与流时择时${selected?`（当前选中：${esc(selected)}）`:''}——每个术语都附白话。`,
    body:sectionHtml(report)};
  }
  if(system==='ziwei'){
@@ -121,14 +121,14 @@ export function composeFullReport(state,names){
   const life=(chart.palaces||[]).find(p=>p.name==='命宫');
   const lifeStars=life?.majorStars?.length?life.majorStars:life?.borrowedStars||[];
   return {cover,title:flow?`紫微 · ${flow.label||'流年'}详批`:'紫微斗数 · 全盘详批',characters:charactersOf(report.sections),kind:'ziwei',
-   lead:`命宫在 ${esc(life?.earthlyBranch||'待定')}，${lifeStars.length?'主星 '+esc(lifeStars.map(s=>s.name).join('、')):'空宫借星'} · ${esc(chart.fiveElementsClass||'')}。全文八章：命盘总览、三方四正、十二宫逐宫详解、生年四化、大限逐限详批、流年逐流年详批（未来十年）${flow?'、所选流年指向性事件':''}、综合建议——流年命宫按年支定位、四化按年干飞布，逐年可核。`,
+   lead:`命宫在 ${esc(life?.earthlyBranch||'待定')}，${lifeStars.length?'主星 '+esc(lifeStars.map(s=>s.name).join('、')):'空宫借星'} · ${esc(chart.fiveElementsClass||'')}。全文十章：命盘总览、三方四正、十二宫逐宫详解、生年四化、大限逐限详批、流年逐流年详批（未来十年）${flow?'、所选流年指向性事件':''}、流月逐月详批（斗君起正月）、流日与流时、综合建议——流年命宫按年支定位、四化按年干飞布，逐年逐月可核。`,
    body:sectionHtml(report)};
  }
  if(system==='vedic'){
   const v=state.reading?.vedic||{};
   const report=withGlossary(buildVedicDeepReport(v));
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'vedic',
-   lead:`Lahiri 恒星黄道 · 整宫制。上升 ${esc(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗，Vimshottari 大运 ${(v.dashas||[]).length} 段，命格 ${esc((report.yogas||[]).length)} 组成立。全文七章：上升主轴、行星力量评级、Yoga 命格、九曜落宫、大运逐运详批、D9/D10 分盘、人生格局总结。`,
+   lead:`Lahiri 恒星黄道 · 整宫制。上升 ${esc(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗，Vimshottari 大运 ${(v.dashas||[]).length} 段，命格 ${esc((report.yogas||[]).length)} 组成立${v.varshaphala?`，岁运盘 ${v.varshaphala.year} 年已起`:`''`}。全文十一章：上升主轴、行星力量评级、Shadbala 六力审计、Yoga 命格、九曜落宫、大运逐运详批、小运细分、D9/D10 分盘、十二宫力量审计、岁运 Varshaphala、人生格局总结。`,
    body:sectionHtml(report)};
  }
  if(system==='synastry'){

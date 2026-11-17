@@ -151,7 +151,22 @@ export function buildVedicDeepReport(v){
   `「逆行」（℞）不是坏词：该行星的能量向内走——适合深耕、复盘与内在打磨，不宜外放冒进。`
  ];
 
- /* 三、Yoga 命格识别 */
+ /* 三、Shadbala 六力审计 */
+const shad=v?.shadbala||null;
+const housesOfPlanet=name=>SIGN_LIST.map((s,i)=>SIGN_LORD[i]===name?((i-lagnaIndex+12)%12)+1:null).filter(Boolean);
+gloss['Shadbala']='六力评分：位置、方向、时间、动势、自然（另含相位，本实现未计）——判断一颗行星「有没有力气把所主宫位兑现出来」的经典体系';
+gloss['Rupas']='Shadbala 的计分单位，60 virupa = 1 Rupa；每颗行星另有经典最低要求，达不到即判「力量不足」';
+const shadTable=shad?`<table class="rpt-table rpt-shad"><thead><tr><th>行星</th><th>位置</th><th>方向</th><th>时间</th><th>动势</th><th>自然</th><th>Rupas</th><th>位次</th></tr></thead><tbody>${shad.rows.map(r=>`<tr><td>${r.name}${r.retro?' ℞':''}</td><td>${r.sthana.toFixed(0)}</td><td>${r.dig.toFixed(0)}</td><td>${r.paksha.toFixed(0)}</td><td>${r.cheshta}</td><td>${r.naisargika.toFixed(0)}</td><td><b>${r.rupas.toFixed(2)}</b></td><td>${r.rank}/7</td></tr>`).join('')}</tbody></table>`:'';
+const shadWeak=shad?[...shad.rows].sort((a,b)=>a.rupas-b.rupas):[];
+const shadLines=shad?[
+ `Shadbala 回答的是「这颗星有没有力气办事」：分数越高，它主管的宫位越能在现实里兑现。60 virupa = 1 Rupa——下表是七颗主星的分项得分与合计。`,
+ `最强 ${shad.strongest}（${shad.rows.find(r=>r.name===shad.strongest)?.rupas.toFixed(2)} Rupas）——它主管的第 ${housesOfPlanet(shad.strongest).join('、')||'—'} 宫，是你本命最「不费力就比别人好」的领域，选赛道优先从这里出发。最弱 ${shad.weakest}（${shad.rows.find(r=>r.name===shad.weakest)?.rupas.toFixed(2)} Rupas），对应领域宜借力、宜后补，不宜强攻。`,
+ `相对最弱的三颗，以及各自短在哪一项：${shadWeak.slice(0,3).map(r=>`${r.name}（${r.rupas.toFixed(2)}，第${r.rank}位，短板在${r.weakestPart[0]} ${r.weakestPart[1].toFixed(0)}/60，主管第 ${housesOfPlanet(r.name).join('、')||'—'} 宫——${housesOfPlanet(r.name).map(h=>HOUSE_THEME[h]).join('、')||'本命无主管宫位'}）`).join('；')}。短板项告诉你「该补什么」：庙旺度低宜换战场、方向力低宜借位置、月相力低宜养情绪、动势力低宜主动出击。`,
+ `读法：力量强而所主宫位一般的星，是「有余力可调用的资源」；力量弱而所主宫位关键的星，是「必须提前布防的短板」。两者合看，才是完整的资源调度图。`,
+ `口径：${shad.method}`
+]:['Shadbala 数据待排盘后生成。'];
+
+/* 四、Yoga 命格识别 */
  const yogaLines=yogas.map(k=>{const y=YOGA_LIB[k];gloss[y.name.split(' ')[0]]=y.form;return `【${y.name}】构成：${y.form}。判读：${y.text}`;});
  const yogaSec=yogaLines.length?[...yogaLines,`Yoga 是印占「命格」的核心——多格成立时看相互是否同主题（同主星、同宫位）叠加；不同主题则各有兑现年份，随大运轮播。`]:['本盘按传统 12 式常见 Yoga 逐项检测：未检出成立条件。这不代表命差——无 Yoga 之盘成败更看行星力量评级与大运配合，后天选择权重更大。'];
 
@@ -229,7 +244,34 @@ export function buildVedicDeepReport(v){
  }
  const vargaSec=[...vargaLines,'分盘原则：D1 是前提，分盘只回答专项问题——D9 断婚姻内在，D10 断事业成色，D7 断子息；脱离 D1 单看分盘必失其准。'];
 
- /* 七、人生格局总结 */
+ /* 八、十二宫力量审计（Bhava Bala） */
+const bhava=v?.bhavaBala||null;
+gloss['Bhava Bala']='宫位力量：把宫主星的六力得分、宫内吉凶星与罗计干扰合成一个分数，用来比较十二宫谁强谁弱、资源该往哪投';
+const bhavaTable=bhava?`<table class="rpt-table rpt-bhava"><thead><tr><th>宫位</th><th>星座</th><th>宫主</th><th>宫内</th><th>宫主力</th><th>评分</th><th>评级</th></tr></thead><tbody>${bhava.rows.map(r=>`<tr${r.grade==='弱'?' class="rpt-warn"':''}><td>${r.house} · ${r.theme}</td><td>${r.sign}</td><td>${r.lord}</td><td>${r.occupants.join('、')||'—'}</td><td>${r.lordPower.toFixed(1)}</td><td><b>${r.score.toFixed(1)}</b></td><td>${r.grade}</td></tr>`).join('')}</tbody></table>`:'';
+const bhavaTop=bhava?[...bhava.rows].sort((a,b)=>b.score-a.score):[];
+const bhavaLines=bhava?[
+ `同一个盘里，十二宫不是一样「厚」的。宫主星有力量、宫内有吉星，这一宫的事就办得顺；宫主弱、宫内凶星多，这一宫就得多花力气。`,
+ `最强的三宫：${bhavaTop.slice(0,3).map(r=>`第${r.house}宫（${r.theme}，${r.score.toFixed(1)}，${r.grade}）`).join('；')}——这是你本命的资源富集区，重大目标优先借这三股力。`,
+ `最弱的三宫：${[...bhavaTop].reverse().slice(0,3).map(r=>`第${r.house}宫（${r.theme}，${r.score.toFixed(1)}，${r.grade}）`).join('；')}——不是「没有」，而是要靠规划、搭档与时间来补，别指望一蹴而就。`,
+ `用法：把「最强宫」当杠杆——用强宫的资源去补弱宫的缺口（例如十宫强而七宫弱，就以事业平台去经营关系）；这是印占里最实用的一条资源调度原则。`,
+ `口径：${bhava.method}`
+]:['宫位力量数据待排盘后生成。'];
+
+/* 九、岁运 Varshaphala */
+const vs=v?.varshaphala||null;
+gloss['Varshaphala']='太阳返照岁运：太阳回到出生时所在黄经的那一刻重新起盘，专门看「这一年」的主题';
+gloss['Muntha']='岁运盘里的年度敏感点：自本命上升每年进一宫，指这一年的关注落在哪一域';
+const vsLocal=vs?(()=>{const tz=Number(vs.tz??8);const d=new Date(+new Date(vs.returnUtc)+tz*3600000);return d.toISOString().slice(0,16).replace('T',' ');})():'';
+const vsLordRow=vs&&shad?shad.rows.find(r=>r.name===vs.yearLord.name):null;
+const vsSec=vs?[
+ `岁运盘于 ${vsLocal}（出生地时间）起盘——太阳回到你出生时所在的黄经，这一年的「年度命盘」由此成立。本命回答「你是谁」，岁运回答「今年轮到什么」。`,
+ `返照上升 ${vs.chart.lagna}：这一年的整体气质与出手方式。年度主星为${vs.yearLord.name}${vs.yearLord.house?`，在返照盘落第${vs.yearLord.house}宫（${HOUSE_THEME[vs.yearLord.house]}）`:''}${vs.yearLord.retro?'，且逆行——今年的主题偏向内省、复盘与延迟兑现':''}${vsLordRow?`；其本命六力为 ${vsLordRow.rupas.toFixed(2)} Rupas，在七曜中排第 ${vsLordRow.rank} 位`:''}。${vsLordRow?(vsLordRow.rank<=3?'年主星力量靠前，这一年的计划推得动，适合主动出击。':vsLordRow.rank>=6?'年主星在七曜中偏弱，今年宜守成、宜调整，把资源留给下一个强运年。':'年主星力量居中，成败看你投入的节奏与执行密度。'):''}`,
+ `Muntha 落第 ${vs.muntha.house} 宫（${vs.muntha.sign}）：今年的焦点在「${vs.muntha.theme}」。Muntha 每年进一宫，十二年走完一圈——它指的那一宫，就是这一年最容易发生实质变化的生活领域。`,
+ `怎么用：把年度目标对着 Muntha 的宫位定，用年主星的方式去推进。${vs.muntha.house===1?'Muntha 在命宫：今年是「重启自我」的一年，形象、健康与人生方向都会有实质调整。':vs.muntha.house===10?'Muntha 在事业宫：今年事业与公开身份是主战场，值得把资源压过来。':vs.muntha.house===7?'Muntha 在伴侣宫：今年关系与合作是主线，单身者易有实质进展。':vs.muntha.house===4?'Muntha 在家宅宫：今年重心回到家人、居所与内心，宜安定。':vs.muntha.house===2||vs.muntha.house===11?'Muntha 在财帛/收益宫：今年是财务结构变化年，收入与支出都值得重新规划。':vs.muntha.house===5?'Muntha 在子女与智慧宫：今年利创作、学习与添丁。':vs.muntha.house===6?'Muntha 在竞争与健康宫：今年宜处理旧账、整顿身体与工作节奏。':vs.muntha.house===8?'Muntha 在转化宫：今年是深水区，宜研究、宜转型，不宜冒进。':vs.muntha.house===9?'Muntha 在运势宫：今年利远行、进修、拜师与信念升级。':vs.muntha.house===3?'Muntha 在勇气宫：今年利学习、表达与短途奔波。':'Muntha 在消耗宫：今年宜收尾、宜休养、宜幕后布局。'}`,
+ `口径：${vs.method}`
+]:['岁运盘数据待排盘后生成。'];
+
+/* 十、人生格局总结 */
  const t10=planets.filter(p=>p.house===10).map(p=>p.name),t2=planets.filter(p=>p.house===2).map(p=>p.name),t7=planets.filter(p=>p.house===7).map(p=>p.name),t6=planets.filter(p=>p.house===6).map(p=>p.name);
  const lordHouseOf=h=>{const lord=byName(lordOfHouse(h,lagnaIndex));return lord?`第${lord.house}宫（${HOUSE_THEME[lord.house]}）`:'待考';};
  const lifePattern=[
@@ -244,12 +286,15 @@ export function buildVedicDeepReport(v){
  const sections=[
   {title:'一、上升与人生主轴',lines:overview},
   {title:'二、行星力量评级',lines:powerLines,table:powerTable},
-  {title:'三、Yoga 命格识别',lines:yogaSec},
-  {title:'四、九曜逐星落宫详解',lines:[],html:planetSec},
-  {title:'五、Vimshottari 大运逐运详批',lines:dashaIntro,html:dashaSec},
-  {title:'六、小运细分（当前与下一大运的九段 Antardasha）',lines:antarIntro,html:antarSec},
-  {title:'七、分盘专项（D9/D10）',lines:vargaSec},
-  {title:'八、人生格局总结',lines:lifePattern}
+  {title:'三、Shadbala 六力审计',lines:shadLines,table:shadTable},
+  {title:'四、Yoga 命格识别',lines:yogaSec},
+  {title:'五、九曜逐星落宫详解',lines:[],html:planetSec},
+  {title:'六、Vimshottari 大运逐运详批',lines:dashaIntro,html:dashaSec},
+  {title:'七、小运细分（当前与下一大运的九段 Antardasha）',lines:antarIntro,html:antarSec},
+  {title:'八、分盘专项（D9/D10）',lines:vargaSec},
+  {title:'九、十二宫力量审计（Bhava Bala）',lines:bhavaLines,table:bhavaTable},
+  {title:'十、岁运 Varshaphala（今年年度盘）',lines:vsSec},
+  {title:'十一、人生格局总结',lines:lifePattern}
  ];
  return {title:'印度占星 · Jyotish 终身详批',sections,glossary:gloss,kind:'vedic',yogas};
 }

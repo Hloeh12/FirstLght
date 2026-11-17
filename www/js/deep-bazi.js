@@ -123,7 +123,33 @@ export function buildBaziDeepReport(data){
   `四柱排布如上表：年柱看祖上与早年、月柱看父母与立业、日柱看自己与婚姻、时柱看子女与晚景。表内「十神」即每一柱天干与日主的关系，${TEN_GOD_DEEP.正官.gloss.slice(0,24)}……详见文末术语小词典。`
  ];
 
- /* 二、性格与天赋 */
+ /* 二、命局根基：三垣与力量来源 */
+const tri=data.traditional||{},sb=data.strengthBreakdown||{};
+const tripleRows=[]
+ .concat(tri.taiYuan?[['胎元',tri.taiYuan.ganzhi,tri.taiYuan.tenGod,tri.taiYuan.nayin,'受胎之气：看先天体质与家族底色，胎元受生扶者底子厚']]:[])
+ .concat(tri.mingGong?[['命宫',tri.mingGong.ganzhi,tri.mingGong.tenGod,tri.mingGong.nayin,'先天禀赋与人生主轴：命宫所主之神，是一生最顺手的做事方式']]:[])
+ .concat(tri.shenGong?[['身宫',tri.shenGong.ganzhi,tri.shenGong.tenGod,tri.shenGong.nayin,'后天作为与身体：身宫落在哪一柱的领域，中年后越用越显']]:[])
+ .concat(tri.taiXi?[['胎息',tri.taiXi.ganzhi,tri.taiXi.tenGod,tri.taiXi.nayin,'胎元之合气，古法备参，现代多作辅助参考']]:[]);
+const tripleTable=tripleRows.length?`<table class="rpt-table"><thead><tr><th>项目</th><th>干支</th><th>对日主</th><th>纳音</th><th>取象</th></tr></thead><tbody>${tripleRows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]||'—'}</td><td>${r[3]||'—'}</td><td>${r[4]}</td></tr>`).join('')}</tbody></table>`:'';
+const strengthEvidence=[
+ sb.deLing?.text,
+ sb.tongGen?.text,
+ sb.deShi?.text,
+ sb.touGan?.text
+].filter(Boolean);
+const strengthSec=[
+ `同样是「${ns.kind||'中和'}」，成因可以完全不同——有人靠月令当令，有人靠地支强根，有人靠天干帮身。拆开来看，才知道该补哪一块。`,
+ ...strengthEvidence.map(x=>`${x}${/[。！]$/.test(x)?'':'。'}`),
+ sb.verdict?`【结论】${sb.verdict}（力量来源评分 ${Number(sb.score||0).toFixed(1)} / ${sb.full||6.5}）。`:'',
+ sb.deLing?.ok&&sb.deDi?.length?'现实用法：令与地皆得，属于「起步就顺」的类型，重点在选对赛道，不必过度补短板。'
+  :sb.deLing?.ok?'现实用法：得令而根浅，起势快但续航需靠积累——把资源沉淀成可复用的能力与团队。'
+  :sb.deDi?.length?'现实用法：失令而得地，属于「靠根基硬扛」的类型，前期慢热，越到中后段越稳。'
+  :'现实用法：令地皆弱，最忌硬撑。借平台、借团队、借行运，是这一格局的正确打开方式，不是妥协。',
+ `三垣补四柱之未备：${tri.mingGong?`命宫${tri.mingGong.ganzhi}（${tri.mingGong.tenGod}）——${TEN_GOD_DEEP[tri.mingGong.tenGod]?.person||'主一生做事的底色'}；`:''}${tri.shenGong?`身宫${tri.shenGong.ganzhi}（${tri.shenGong.tenGod}）——中年后越用越显，${TEN_GOD_DEEP[tri.shenGong.tenGod]?.career?.slice(0,28)||'主后天作为'}；`:''}${tri.unknown?'时辰未知，命宫与身宫不成立，补全时辰后可参断。':'三垣与四柱合看，先天禀赋（命宫）与后天作为（身宫）是否同气，决定「想做的」与「做成的」是否一致。'}`,
+ tri.method?`口径：${tri.method}`:''
+].filter(Boolean);
+
+/* 二、性格与天赋 */
  const godCount={};
  for(const p of pillars){const g=p.tenGod||tenGodOf(dayStem,p.stem);if(g&&g!=='日主')godCount[g]=(godCount[g]||0)+1;}
  for(const p of pillars)for(const h of p.hidden||[]){const g=h.god;if(g)godCount[g]=(godCount[g]||0)+0.4;}
@@ -230,6 +256,56 @@ export function buildBaziDeepReport(data){
   return `<li><b>${m.label||m.stem+m.branch} · ${m.stem}${m.branch} · ${G(god||'正官')}</b><span>${deep?deep.person.slice(0,20)+'式节奏；':''}${roleText}。${hitText}${clashYear}。</span></li>`;
  }).join('');
  const monthSec=monthLines?`<ul class="rpt-list rpt-months">${monthLines}</ul>`:'';
+
+/* 十一、流日与流时：把「择时」落到具体日子与两小时 */
+const HOUR_USE={
+ 正官:'见上级、递材料、把规矩定下来',七杀:'处理硬仗、做决断、拆难题',
+ 正财:'谈薪报价、收款、签长约',偏财:'谈合作、拓客、跑外勤',
+ 食神:'创作、试菜、陪家人、慢工出细活',伤官:'提案、演讲、写东西、亮作品',
+ 正印:'学习、考证、读合同、静养',偏印:'研究、复盘、独处、钻冷门',
+ 比肩:'协作、健身、同行交流',劫财:'竞技、抢时机——但别在这时候谈钱'
+};
+const days=data.days||[],hours=data.hours||[];
+const dayFocus=days.map(d=>{
+ const hits=relationWithNatal(d.branch,pillars);
+ const god=d.tenGod||tenGodOf(dayStem,d.stem);
+ const clash=hits.filter(h=>h.type==='六冲'),merge=hits.filter(h=>h.type!=='六冲');
+ const clashDay=clash.some(h=>h.pillar==='日柱'),clashMonth=clash.some(h=>h.pillar==='月柱');
+ return {...d,god,clash,merge,clashDay,clashMonth,
+  score:(clashDay?3:0)+(clashMonth?2:0)+clash.length+(merge.some(h=>h.pillar==='日柱')?1.5:0)};
+}).filter(d=>d.clash.length||d.merge.length).sort((a,b)=>b.score-a.score);
+const dayFocusTop=dayFocus.slice(0,6).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+const dayTable=days.length?`<table class="rpt-table rpt-days"><thead><tr><th>日期</th><th>干支</th><th>十神</th><th>与原局</th></tr></thead><tbody>${days.map(d=>{
+ const hits=relationWithNatal(d.branch,pillars);
+ return `<tr><td>${(d.date||'').slice(5)}</td><td>${d.stem}${d.branch}</td><td>${d.tenGod||tenGodOf(dayStem,d.stem)||'—'}</td><td>${hits.map(h=>h.type+h.pillar).join('、')||'—'}</td></tr>`;
+}).join('')}</tbody></table>`:'';
+const daySec=days.length?[
+ `流日是把「择时」落到天：日干十神定当天的做事手感，日支与原局的冲合定当天的剧情起伏。以下为所选流月内的全部日子。`,
+ ...(dayFocusTop.length?[`【重点日】${dayFocusTop.map(d=>{
+  const bits=[];
+  if(d.clash.length){
+   const names=d.clash.map(h=>h.pillar==='月柱'?'月柱（提纲）':h.pillar).join('、');
+   bits.push(d.clashDay?`冲${names}——变动最明显的一天，签约、手术、远行尤忌`
+    :d.clashMonth?`冲${names}——整月节奏在此前后转折，别把定案压在这天`
+    :`冲${names}——易有变动与返工，关键事留缓冲`);
+  }
+  if(d.merge.length)bits.push(`合${d.merge.map(h=>h.pillar).join('、')}——人缘顺，适合约人谈事`);
+  return `${(d.date||'').slice(5)}（${d.stem}${d.branch}·${G(d.god)}）${bits.join('；')}`;
+ }).join('。')}。`]:['所选流月内，流日与原局无强刑冲——这个月的日子比较平均，按计划推进即可，不必刻意挑日。']),
+ `挑日原则：大事（签约、面试、手术、搬家）避开冲日柱、冲用神之日；日常沟通与协作，选合日更省力。流时用于把一天之内的事排进对的时段。`
+]:[];
+const hourSec=hours.length?[
+ `流时以两小时为一个时辰，时干由当日日干按五鼠遁推出。同样的日子，挑对时辰做事，阻力会小一档。`,
+ `用法：把一天里最难的那件事，放进「十神对口且不冲原局」的时辰；把纯执行的杂事，放进冲时——反正都要做，不如放在阻力本来就大的时段。`
+]:[];
+// 表格必须走 html 字段：lines 在渲染时会被转义，塞进去只会显示成标签字面量。
+const hourTable=hours.length?`<table class="rpt-table rpt-hours"><thead><tr><th>时辰</th><th>干支</th><th>十神</th><th>宜</th></tr></thead><tbody>${hours.map((h,i)=>{
+ const god=h.tenGod||tenGodOf(dayStem,h.stem);
+ const clash=relationWithNatal(h.branch,pillars).some(x=>x.type==='六冲');
+ return `<tr${i===Math.floor(((new Date().getHours()+1)%24)/2)?' class="rpt-now"':''}><td>${h.label||'—'}<br><small>${h.clock||''}</small></td><td>${h.stem}${h.branch}</td><td>${G(god||'正官')}</td><td>${HOUR_USE[god]||'按当日主题推进'}${clash?'；<b>此时辰冲原局，忌硬推</b>':''}</td></tr>`;
+}).join('')}</tbody></table>`:'';
+const dayHourHtml=`${dayTable||''}${hourTable||''}`;
+
  const monthWindows=data.guidance?.monthWindows||[];
  const advice=[
   `流月层面：以节气为界换月，每月干支与原局的刑冲合害决定该月节奏。${monthWindows.length?`近段干支引动最强的月份为 ${monthWindows.map(m=>`${m.label}（${(m.links||[]).join('、')}）`).join('、')}——这些月份适合提前安排要事。`:'在排盘页时间轴选到具体年份后，逐月提示会同步到流月轨道。'}`,
@@ -238,22 +314,24 @@ export function buildBaziDeepReport(data){
   `本报告由命盘证据逐条推导（格局取月令透干、断语随十神与刑冲合害触发），术语白话见下节词典。传统术数供文化与自我观察参考，不构成事实预测、投资或医疗建议。`
  ];
 
- const sections=[
-  {title:'一、命局总览与格局',lines:overview,table:pillarTable},
-  {title:'二、性格与天赋',lines:personality},
-  {title:'三、事业方向',lines:career},
-  {title:'四、财富模式',lines:wealth},
-  {title:'五、婚姻与六亲',lines:love},
-  {title:'六、健康与调候',lines:health},
-  {title:'七、神煞详解',lines:shenshaSec},
-  {title:'八、大运逐运详批（每步十年）',lines:[],list:cycles.length?undefined:undefined,html:cycles.length?cycleSec:undefined},
-  {title:'九、流年逐年详批（未来十年）',lines:[],html:years.length?yearSec:undefined},
-  {title:'十、流月逐月详批（所选流年十二个月）',lines:months.length?[
-   `流月以节气为界换月（立春起寅月）。下表逐月给出：月干支对日主的十神（当月主气质）、月支五行对喜忌的顺逆（环境风力）、与原局四柱的刑冲合（剧情走向）。`,
-   `用法：合月签约合作、冲月防守缓冲、喜用月推进要事、忌神月收尾复盘——把一年的大事排进对的月份，就是「择时而动」。`
-  ]:[],html:months.length?monthSec:undefined},
-  {title:'十一、趋吉避凶总则',lines:advice}
- ];
+const sections=[
+ {title:'一、命局总览与格局',lines:overview,table:pillarTable},
+ {title:'二、命局根基：三垣与四柱力量来源',lines:strengthSec,table:tripleTable},
+ {title:'三、性格与天赋',lines:personality},
+ {title:'四、事业方向',lines:career},
+ {title:'五、财富模式',lines:wealth},
+ {title:'六、婚姻与六亲',lines:love},
+ {title:'七、健康与调候',lines:health},
+ {title:'八、神煞详解',lines:shenshaSec},
+ {title:'九、大运逐运详批（每步十年）',lines:[],list:cycles.length?undefined:undefined,html:cycles.length?cycleSec:undefined},
+ {title:'十、流年逐年详批（未来十年）',lines:[],html:years.length?yearSec:undefined},
+ {title:'十一、流月逐月详批（所选流年十二个月）',lines:months.length?[
+  `流月以节气为界换月（立春起寅月）。下表逐月给出：月干支对日主的十神（当月主气质）、月支五行对喜忌的顺逆（环境风力）、与原局四柱的刑冲合（剧情走向）。`,
+  `用法：合月签约合作、冲月防守缓冲、喜用月推进要事、忌神月收尾复盘——把一年的大事排进对的月份，就是「择时而动」。`
+ ]:[],html:months.length?monthSec:undefined},
+ {title:'十二、流日与流时（择时落到日与时）',lines:daySec.length||hourSec.length?[...daySec,...hourSec]:['在排盘页选到具体流月后，此处将逐日列出流日干支与原局的冲合，并给出十二时辰的宜忌。'],html:dayHourHtml||undefined},
+ {title:'十三、趋吉避凶总则',lines:advice}
+];
  const glossary={...gloss};
  return {title:'八字命理 · 终身详批',sections,glossary,gege:gege.name,kind:'bazi'};
 }

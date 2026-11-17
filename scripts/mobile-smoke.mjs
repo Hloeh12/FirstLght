@@ -169,9 +169,18 @@ try{
   await page.locator('.vedic-chart').waitFor();assert.equal(await page.locator('[data-vedic-house]').count(),12);
   await page.locator('#moduleButton').click();
   await page.locator('#moduleSheet [data-module=share]').click();
-  assert.equal(await page.locator('[data-vedic-action]').count(),4);
+  assert.equal(await page.locator('[data-vedic-action]').count(),7);
   await page.locator('[data-vedic-action=states]').click();
   assert(await page.locator('[data-vedic-states] .term').count()>0);
+  // 点击 action 会关闭 toolSheet，切换面板前须重新打开
+  await page.locator('#moduleButton').click();
+  await page.locator('#moduleSheet [data-module=share]').click();
+  await page.locator('[data-vedic-action=shadbala]').click();
+  assert(await page.locator('[data-vedic-shadbala] table').count()>0,'shadbala audit panel must render');
+  await page.locator('#moduleButton').click();
+  await page.locator('#moduleSheet [data-module=share]').click();
+  await page.locator('[data-vedic-action=varsha]').click();
+  assert((await page.locator('[data-vedic-varsha]').textContent()).includes('Muntha'),'varshaphala panel must render');
   await page.locator('[data-layout=south]').click();assert.equal(await page.locator('[data-vedic-house]').count(),12);await page.locator('[data-varga="60"]').click();assert((await page.locator('#vedic h2').first().textContent()).includes('D60'));assert.equal(await page.locator('.vedic-dasha').count(),4);await page.locator('[data-dasha]').last().click();
   const south=await page.locator('.south-chart').evaluate(n=>({chart:n.getBoundingClientRect().toJSON(),houses:[...n.querySelectorAll('.south-house')].map(h=>({box:h.getBoundingClientRect().toJSON(),scroll:h.scrollWidth,client:h.clientWidth}))}));
   assert(south.houses.every(h=>h.box.left>=south.chart.left-1&&h.box.right<=south.chart.right+1&&h.scroll<=h.client+1),'south chart must contain every house');

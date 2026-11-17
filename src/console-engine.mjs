@@ -20,8 +20,10 @@ function solarInput(birth,bazi=baziPro({birth})){
 function consoleReading({birth}){
  const bazi=baziPro({birth}),standard=solarInput(birth,bazi);
  const ziwei=ziweiChart(standard);
+ // 印占走 vedicPro：附 Shadbala 六力、Bhava Bala 与 Varshaphala 岁运——报告与面板依赖这些字段
+ const vedic=vedicPro({birth:standard});
  const full=chart(standard,{baseOnly:true});
- return {bazi,ziwei,western:full.western,vedic:vedicReading(full.vedic,full.meta.utc),analysis:full.analysis,meta:full.meta,
+ return {bazi,ziwei,western:full.western,vedic,analysis:full.analysis,meta:full.meta,
   report:localTemplateReport({...full,ziwei})};
 }
 function pairReading({a,b,mode,config}){

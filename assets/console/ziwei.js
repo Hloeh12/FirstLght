@@ -37,19 +37,20 @@ function badge(text,type,branch,kind){
  const glyph=String(text).slice(-1);
  return btn(glyph,`class="badge" data-t="${type}" data-badge="${kind}" data-branch-target="${branch}" aria-label="${text}，${cues[type]}" title="${text}"`);
 }
-function center(ctx,s){
- const b=ctx.state.reading.bazi.info,z=s.chart,p=ctx.state.profile;
+function timeBasis(ctx){
+ const b=ctx.state.reading.bazi.info;
  const c=b.correction,signed=n=>(n>=0?'+':'')+Number(n).toFixed(1)+' 分';
  const pad=n=>String(n).padStart(2,'0');
  const hourIdx=(h,mi)=>Math.floor(((Number(h)*60+Number(mi||0)+60)%1440)/120);
  const std=b.timeCorrection?.standard||{};
- let precision;
  if(c.corrected){
   const crossPillar=[hourIdx(c.hour,c.minute)!==hourIdx(std.h??b.clock.slice(0,2),std.mi??b.clock.slice(3))&&'跨时柱',c.dayOffset&&(c.dayOffset>0?'跨次日日柱':'跨前日日柱')].filter(Boolean);
-  precision=`<p class="time-basis-note" role="note"><b>时间口径：真太阳时 ${pad(c.hour)}:${pad(c.minute)}（${b.hourBranch}时）</b> · 钟表 ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时已还原':''} → 经度 ${signed(c.longitudeCorrectionMinutes)} · 均时差 ${signed(c.equationOfTimeMinutes)}${crossPillar.length?` · <b class="tb-warn">${crossPillar.join('，')}</b>——已按真太阳时换柱`:''} · 晚子时${b.lateZishi==='current-day'?'归当日':'归次日'}</p>`;
- }else{
-  precision=`<p class="time-basis-note" role="note"><b>时间口径：标准钟表时 ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时已还原（标准时 '+pad(b.timeCorrection.standard.h)+':'+pad(b.timeCorrection.standard.mi)+'）':''}</b> · 真太阳时未启用</p>`;
+  return `<p class="time-basis-note" role="note"><b>时间口径：真太阳时 ${pad(c.hour)}:${pad(c.minute)}（${b.hourBranch}时）</b> · 钟表 ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时已还原':''} → 经度 ${signed(c.longitudeCorrectionMinutes)} · 均时差 ${signed(c.equationOfTimeMinutes)}${crossPillar.length?` · <b class="tb-warn">${crossPillar.join('，')}</b>——已按真太阳时换柱`:''} · 晚子时${b.lateZishi==='current-day'?'归当日':'归次日'}</p>`;
  }
+ return `<p class="time-basis-note" role="note"><b>时间口径：标准钟表时 ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时已还原（标准时 '+pad(b.timeCorrection.standard.h)+':'+pad(b.timeCorrection.standard.mi)+'）':''}</b> · 真太阳时未启用</p>`;
+}
+function center(ctx,s){
+ const b=ctx.state.reading.bazi.info,z=s.chart,p=ctx.state.profile;
  return `<div class="zi-center ${s.mode==='triad'?'glow':''}">
   <span class="kicker">FIRST LIGHT · ${names[z.astroType]}</span>
   <strong class="zc-name">${esc(p.name)}</strong>
@@ -64,7 +65,7 @@ function center(ctx,s){
   <div class="zc-stats"><div><span>命主</span><b>${esc(z.soul)}</b></div><div><span>身主</span><b>${esc(z.body)}</b></div><div><span>起限</span><b>${z.decades[0].ageRange[0]} 岁</b></div></div>
   <p class="zc-now">${esc(s.flow?timeLabels[s.flow.scope]+' '+s.flow.ganZhi:'本命总览')}</p>
   <p class="muted thin zc-stamp">${esc(s.flow?.date||(ctx.state.instantSnapshot?'即刻 '+formatLocalDisplayTime(p.fields):'本命 '+b.solar+' '+b.clock))}</p>
-  <div class="chips">${z.sihua.map(m=>badge(m.type,m.type,palace(z,z.palaces.find(p=>p.name===m.palace)?.branch)?.branch,'natal')).join('')}</div>${precision}</div>`;
+  <div class="chips">${z.sihua.map(m=>badge(m.type,m.type,palace(z,z.palaces.find(p=>p.name===m.palace)?.branch)?.branch,'natal')).join('')}</div></div>`;
 }
 const coreAssist=new Set(['左辅','右弼','文昌','文曲','天魁','天钺','擎羊','陀罗','火星','铃星','地空','地劫']);
 function board(ctx,s){
@@ -90,7 +91,7 @@ function board(ctx,s){
    <footer class="zi-foot"><div class="zi-annual">${annual.map(name=>term(name,name+'是岁前或将前十二神之一，随盘局安列。')).join('')}</div>
    <div class="zi-palace-line">${btn(p.name,'class="term" data-palace-name')}${active?`<b class="zi-flow">${active}</b>`:''}</div>
    <div class="zi-age"><span>${esc(p.heavenlyStem+p.earthlyBranch)} ${p.isBodyPalace?'身':''}</span><small>${esc(p.decadal?.range?.join('–')||'')}岁</small></div></footer></article>`;
- }).join('')}${center(ctx,s)}<svg class="zi-overlay" aria-hidden="true" preserveAspectRatio="none"></svg></div>`;
+ }).join('')}<div class="zi-center-slot">${center(ctx,s)}</div><svg class="zi-overlay" aria-hidden="true" preserveAspectRatio="none"></svg></div>${timeBasis(ctx)}`;
 }
 function clearFlyingLayer(host, canvas){
  canvas.replaceChildren();

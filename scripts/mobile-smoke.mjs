@@ -289,7 +289,11 @@ try{
   console.log(engine+' '+width+'×'+height+' 离线自检：'+(await page.locator('[data-diagnostic-checks] li').allTextContents()).join(' | '));
   await page.locator('#toolSheet [data-close]').click();
   await page.locator('#configButton').click();
+  // 配置弹层有 .22s 上滑动画：慢速 runner 上若立即点击，手指会落在滑动中的行外，
+  // 出生资料弹层便不会打开（表现为「纬度」输入框一直不可见）。先等动画收敛再点。
+  await page.locator('#configSheet').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));
   await page.locator('#configSheet [data-config=edit]').first().click();
+  await page.locator('#inputSheet[open]').waitFor({state:'visible',timeout:10000});
   await checkSheet();
   await page.locator('#inputSheet').getByLabel('纬度',{exact:true}).fill('70');
   await page.getByRole('button',{name:'生成命盘',exact:true}).click();
@@ -300,6 +304,7 @@ try{
   assert.deepEqual(api,[]);assert.deepEqual(errors,[]);
   await page.locator('[data-tab=cases]').click();
   await page.locator('[data-create]').click();
+  await page.locator('#inputSheet[open]').waitFor({state:'visible',timeout:10000});
   await page.locator('#inputSheet').getByLabel('命主姓名',{exact:true}).fill('跨组同伴');
   await chooseBirthTime(2001,5,4,720);
   await page.locator('#birthForm [name=category]').selectOption({label:'亲人'});

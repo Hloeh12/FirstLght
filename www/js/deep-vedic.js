@@ -173,6 +173,40 @@ export function buildVedicDeepReport(v){
   `大运判读三步：①主星本命落宫＝此运舞台；②主星力量评级＝演出质量；③副运（Antar）主星落宫＝该运内的波段。排盘页可四级下钻到细运（Pratyantar）与微运（Sookshma）。`
  ];
 
+ /* 五b、当前与下一大运的 Antardasha（小运）细分 */
+ const SEQ=['计都','金星','太阳','月亮','火星','罗睺','木星','土星','水星'];
+ const SEQ_YEARS={计都:7,金星:20,太阳:6,月亮:10,火星:7,罗睺:18,木星:16,土星:19,水星:17}; // 合计 120 年
+ const antarLines=[];
+ try{
+  const fmt=d=>d instanceof Date?d.toISOString().slice(0,10):String(d||'').slice(0,10);
+  const activeIdx=dashas.findIndex(d=>d.active);
+  const pickIdxs=[activeIdx,activeIdx+1].filter(i=>i>=0&&i<dashas.length);
+  for(const mi of pickIdxs){
+   const M=dashas[mi];
+   const s=new Date(M.start).getTime(),e=new Date(M.end).getTime();
+   if(!Number.isFinite(s)||!Number.isFinite(e))continue;
+   const T=e-s;
+   const startIdx=SEQ.indexOf(M.lord);
+   const subs=SEQ.map((_,i)=>SEQ[(startIdx+i)%9]).map((lord,i,all)=>{
+    const ratio=SEQ_YEARS[lord]/120;
+    const prev=all.slice(0,i).reduce((sum,x)=>sum+SEQ_YEARS[x]/120,0);
+    return {lord,start:new Date(s+T*prev),end:new Date(s+T*(prev+ratio)),years:(T*ratio)/(365.2425*86400000)};
+   });
+   const subLordP=byName(subs[0].lord);
+   const rows=subs.map(x=>{
+    const lp=byName(x.lord),theme=DASHA_THEME[x.lord]||{};
+    const now2=Date.now();
+    const isNow=x.start.getTime()<=now2&&now2<x.end.getTime();
+    return `<li class="${isNow?'rpt-now':''}"><b>${M.lord}运之${x.lord}小运 · ${fmt(x.start)} 至 ${fmt(x.end)}${isNow?' · 【当前小运】':''}</b><span>${x.lord}主星${lp?`落第${lp.house}宫（${HOUSE_THEME[lp.house]}）`:''}。主轴：${theme.best||''}${theme.watch?'；防：'+theme.watch:''}。判读＝大运舞台（${M.lord}）×小运波段（${x.lord}）：${M.lord===x.lord?`小运与大运同主——该波段大运主题以最强音呈现，是整段大运的定点年。`:`以${x.lord}的方式兑现${M.lord}的议题（如${M.lord}运遇${x.lord}小运：${theme.best||'见上'}）。`}</span></li>`;
+   }).join('');
+   antarLines.push(`<li class="rpt-group"><b>${M.lord}大运（${fmt(M.start)} 至 ${fmt(M.end)}）内的九段小运</b><ul class="rpt-list">${rows}</ul></li>`);
+  }
+ }catch{/* 小运计算异常时静默跳过，不影响主报告 */}
+ const antarSec=antarLines.length?`<ul class="rpt-list rpt-decades">${antarLines.join('')}</ul>`:'小运数据待排盘后生成。';
+ const antarIntro=[
+  `Antardasha（小运/副运）：每段大运内部再按九曜比例切分为九段小运——小运主星落宫决定「这一两年的波段剧情」。上表列出当前大运与下一大运的全部小运及起止日期，【当前小运】即当下所在波段。`,
+  `判读：大运定舞台（十年之约），小运定剧目（一两年之内）——木星大运里的土星小运，扩张主题暂时让位于验收与责任；土星大运里的金星小运，苦功之中开一扇享受与感情的窗。重叠看：小运主星若与命格（Yoga）之星同星，该波段即命格兑现期。`
+ ];
  /* 六、分盘与专项 */
  const vargaLines=[];
  if(Number.isFinite(v?.ascSid)){
@@ -213,8 +247,9 @@ export function buildVedicDeepReport(v){
   {title:'三、Yoga 命格识别',lines:yogaSec},
   {title:'四、九曜逐星落宫详解',lines:[],html:planetSec},
   {title:'五、Vimshottari 大运逐运详批',lines:dashaIntro,html:dashaSec},
-  {title:'六、分盘专项（D9/D10）',lines:vargaSec},
-  {title:'七、人生格局总结',lines:lifePattern}
+  {title:'六、小运细分（当前与下一大运的九段 Antardasha）',lines:antarIntro,html:antarSec},
+  {title:'七、分盘专项（D9/D10）',lines:vargaSec},
+  {title:'八、人生格局总结',lines:lifePattern}
  ];
  return {title:'印度占星 · Jyotish 终身详批',sections,glossary:gloss,kind:'vedic',yogas};
 }

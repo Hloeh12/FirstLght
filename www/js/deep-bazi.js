@@ -217,7 +217,19 @@ export function buildBaziDeepReport(data){
  }).join('');
  const yearSec=yearLines?`<ul class="rpt-list rpt-years">${yearLines}</ul>`:'流年数据待排盘后生成。';
 
- /* 十、流月提要与建议 */
+ /* 十、流月逐月详批 + 趋吉避凶 */
+ const months=data.months||[];
+ const monthLines=months.map(m=>{
+  const god=m.tenGod||tenGodOf(dayStem,m.stem);
+  const hits=relationWithNatal(m.branch,pillars);
+  const role=roleOfBranch(m.branch,ns);
+  const deep=TEN_GOD_DEEP[god];
+  const roleText=role==='useful'?'月令五行为喜用——本月环境顺风，宜推进要事':role==='caution'?'月令五行为忌神——本月环境逆风，宜收尾守成、不宜开局':'月令五行中性——看个人动作，不看天吃饭';
+  const hitText=hits.length?hits.map(h=>h.type==='六冲'?`与${h.pillar}（${h.branch}）相冲——变动月：行程、合同、人事易反复，重要节点留缓冲`:`与${h.pillar}（${h.branch}）相合——聚力月：合作、签约、见贵人的好窗口`).join('；'):'与原局无明显刑冲——平顺月，按计划走';
+  const clashYear=months.length&&m.branch===CLASH_MAP[pillars[1]?.branch||'']?'；【冲提纲】此月动摇月令根基，大决策建议顺延':'';
+  return `<li><b>${m.label||m.stem+m.branch} · ${m.stem}${m.branch} · ${G(god||'正官')}</b><span>${deep?deep.person.slice(0,20)+'式节奏；':''}${roleText}。${hitText}${clashYear}。</span></li>`;
+ }).join('');
+ const monthSec=monthLines?`<ul class="rpt-list rpt-months">${monthLines}</ul>`:'';
  const monthWindows=data.guidance?.monthWindows||[];
  const advice=[
   `流月层面：以节气为界换月，每月干支与原局的刑冲合害决定该月节奏。${monthWindows.length?`近段干支引动最强的月份为 ${monthWindows.map(m=>`${m.label}（${(m.links||[]).join('、')}）`).join('、')}——这些月份适合提前安排要事。`:'在排盘页时间轴选到具体年份后，逐月提示会同步到流月轨道。'}`,
@@ -236,7 +248,11 @@ export function buildBaziDeepReport(data){
   {title:'七、神煞详解',lines:shenshaSec},
   {title:'八、大运逐运详批（每步十年）',lines:[],list:cycles.length?undefined:undefined,html:cycles.length?cycleSec:undefined},
   {title:'九、流年逐年详批（未来十年）',lines:[],html:years.length?yearSec:undefined},
-  {title:'十、流月提要与趋吉避凶',lines:advice}
+  {title:'十、流月逐月详批（所选流年十二个月）',lines:months.length?[
+   `流月以节气为界换月（立春起寅月）。下表逐月给出：月干支对日主的十神（当月主气质）、月支五行对喜忌的顺逆（环境风力）、与原局四柱的刑冲合（剧情走向）。`,
+   `用法：合月签约合作、冲月防守缓冲、喜用月推进要事、忌神月收尾复盘——把一年的大事排进对的月份，就是「择时而动」。`
+  ]:[],html:months.length?monthSec:undefined},
+  {title:'十一、趋吉避凶总则',lines:advice}
  ];
  const glossary={...gloss};
  return {title:'八字命理 · 终身详批',sections,glossary,gege:gege.name,kind:'bazi'};

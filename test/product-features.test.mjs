@@ -134,11 +134,103 @@ test('深度报告：双人合盘生成专属报告，标题不再误用本命�
  assert.equal(syn.kind,'synastry');
  assert.match(syn.title,/双人合盘/);
  assert.doesNotMatch(syn.title,/西洋占星/,'合盘标题不得误用本命模板');
- assert.equal((syn.body.match(/class="rpt-sec"/g)||[]).length,4);
+ assert.ok((syn.body.match(/class="rpt-sec"/g)||[]).length>=7,'深度合盘应至少七章（含词典），实际 '+(syn.body.match(/class="rpt-sec"/g)||[]).length);
  assert.match(syn.body,/契合度/);
  assert.match(syn.body,/印度八科/);
- assert.match(syn.body,/跨盘相位/);
+ assert.match(syn.body,/跨盘相位逐条详解/);
+ assert.match(syn.body,/五星对照/);
+ assert.match(syn.body,/经营指南/);
  assert.match(syn.lead,/乙命主/,'应显示第二人姓名');
+ assert.doesNotMatch(syn.body,/undefined/);
+});
+
+test('深度合盘：真实双盘驱动——五星对照/跨盘相位/八科化解逐条成篇',async()=>{
+ const {localRequest}=await import('../src/console-engine.mjs');
+ const B={Y:1992,M:3,D:8,h:9,mi:20,gender:'女',city:CITY,dateStr:'1992-03-08',timeStr:'09:20'};
+ const result=localRequest('/api/synastry/chart',{a:BIRTH,b:B,mode:'synastry'});
+ const {buildSynastryDeepReport}=await import('../www/js/deep-synastry.js');
+ const r=buildSynastryDeepReport(result,'甲','乙');
+ assert.equal(r.sections.length,7);
+ assert.ok(r.characters>=3000,'深度合盘应达 3000 字，实际 '+r.characters);
+ const pairSec=r.sections.find(x=>x.title.startsWith('二、'));
+ assert.ok((pairSec.html.match(/<li>/g)||[]).length===5,'五星对照应五条');
+ const aspSec=r.sections.find(x=>x.title.startsWith('三、'));
+ assert.ok((aspSec.html.match(/<li>/g)||[]).length>=5,'跨盘相位应多条');
+ const kootaSec=r.sections.find(x=>x.title.startsWith('四、'));
+ assert.match(kootaSec.table,/rpt-warn|<td>/,'八科应有逐科表格');
+ assert.doesNotMatch(JSON.stringify(r),/undefined/);
+});
+
+test('紫微流年逐年详批：未来十年——流年命宫按年支定位、四化按年干飞布',async()=>{
+ const {ziweiChart}=await import('../src/ziwei.mjs');
+ const {buildZiweiDeepReport}=await import('../www/js/deep-ziwei.js');
+ const chart=ziweiChart({dateStr:'1990-06-15',timeIndex:7,gender:'男',h:14,mi:30,city:CITY});
+ const r=buildZiweiDeepReport(chart,null);
+ const sec=r.sections.find(x=>x.title.startsWith('六、流年逐流年'));
+ assert.ok(sec,'应存在流年逐流年章节');
+ const html=sec.html||'';
+ const yearItems=(html.match(/<li/g)||[]).length;
+ assert.equal(yearItems,10,'未来十年应逐年成条，实际 '+yearItems);
+ const nowYear=new Date().getFullYear();
+ assert.match(html,new RegExp(String(nowYear)+'年'));
+ assert.match(html,/流年命宫/);
+ assert.match(html,/流年四化/);
+ assert.match(html,/【今年】/);
+ // 流年命宫应随年支变化：2026 午 与 2027 未 命宫不同
+ const t=html.replace(/<[^>]*>/g,'');
+ const m26=t.match(/2026年 [^·]*· 流年命宫走([^宫]*)宫/);
+ const m27=t.match(/2027年 [^·]*· 流年命宫走([^宫]*)宫/);
+ assert.ok(m26&&m27&&m26[1]!==m27[1],'相邻年支流年命宫应不同');
+ assert.doesNotMatch(t,/undefined/);
+});
+
+test('印占小运细分：当前与下一大运各九段 Antardasha，合计恰满大运',async()=>{
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const {buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
+ const v=vedicPro({birth:{Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY,dateStr:'1990-06-15',timeStr:'14:30'}});
+ const r=buildVedicDeepReport(v);
+ const sec=r.sections.find(x=>x.title.startsWith('六、小运'));
+ assert.ok(sec,'应存在小运细分章节');
+ const html=sec.html||'';
+ assert.ok((html.match(/<li/g)||[]).length>=18,'两大运各九段小运');
+ assert.match(html,/【当前小运】/,'应标出当前小运');
+ // 首段小运与大运同主，且日期与大运起点一致
+ const txt=html.replace(/<[^>]*>/g,'');
+ const active=v.dashas.find(d=>d.active);
+ const first=txt.match(new RegExp(active.lord+'运之'+active.lord+'小运 · (\\d{4}-\\d{2}-\\d{2})'));
+ assert.ok(first,'首段小运应与大运同主');
+ assert.equal(first[1],String(active.start).slice(0,10),'首段小运起点应等于大运起点');
+ assert.doesNotMatch(txt,/undefined/);
+});
+
+test('西洋行运触发点：星历实算外行星对落宫与相位',async()=>{
+ const {chart}=await import('../src/chart.mjs');
+ const {buildWesternDeepReport}=await import('../www/js/deep-west.js');
+ const full=chart({Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY},{baseOnly:true});
+ const r=buildWesternDeepReport(full.western);
+ const sec=r.sections.find(x=>x.title.startsWith('五、当下行运'));
+ assert.ok(sec,'应存在行运触发点章节');
+ const txt=(sec.html||'').replace(/<[^>]*>/g,'');
+ for(const name of ['木星','土星','天王星','海王星','冥王星']){
+  assert.ok(txt.includes(name),'行运应含 '+name);
+  assert.match(txt,new RegExp(name+' · 现行 [^ ]+ · 你本命第\\d+宫'),'行运 '+name+' 应给出星座与落宫');
+ }
+ assert.doesNotMatch(txt,/undefined/);
+});
+
+test('八字流月逐月详批：所选流年十二个月逐月成条',async()=>{
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const d=baziPro({birth:BIRTH,selection:{year:2026}});
+ const {buildBaziDeepReport}=await import('../www/js/deep-bazi.js');
+ const r=buildBaziDeepReport(d);
+ const sec=r.sections.find(x=>x.title.startsWith('十、流月逐月'));
+ assert.ok(sec,'应存在流月逐月章节');
+ const html=sec.html||'';
+ assert.equal((html.match(/<li/g)||[]).length,12,'十二个月应逐月成条，实际 '+(html.match(/<li/g)||[]).length);
+ const txt=html.replace(/<[^>]*>/g,'');
+ assert.match(txt,/立春/);
+ assert.match(txt,/聚力月|变动月/,'应给出刑冲合判读');
+ assert.doesNotMatch(txt,/undefined/);
 });
 
 test('产品回归：八字术语按钮白框回归已被权威层修复',async()=>{

@@ -1,4 +1,6 @@
 // 西洋占星深度知识库：逐星「星座×宫位」成篇解读 + 盘面格局检测（星群/大三角/T三角/元素失衡）。
+// 行运触发点由星历实算（木土天海冥当前行度对本命行星的相位与落宫）。
+import {bodyAt} from '../../src/ephemeris.mjs';
 const GLOSS={};
 const PLANET_CORE={
  sun:'自我意志与生命力的核心——你想成为什么样的人',moon:'情绪需求与安全感的来源——你需要什么才能安心',
@@ -106,7 +108,57 @@ export function buildWesternDeepReport(w){
  const patternSec=topPatterns.length?topPatterns:['未检出经典格局（星群/大三角/T三角）——格局不是好命的必要条件，多数人的驱动力来自紧张相位而非天赋格局。'];
  patternSec.push(...elementLines);
 
- /* 五、领域速览与建议 */
+ /* 五、当下行运触发点（星历实算） */
+ const TRANSIT_INFO={
+  jupiter:{name:'木星',theme:'扩张与机遇——所触之宫位进入放大期，机会窗口约一年'},
+  saturn:{name:'土星',theme:'验收与结构——所触之宫位进入责任期，压力与成熟同来，约两年半'},
+  uranus:{name:'天王星',theme:'变革与松绑——所触之宫位出现意外翻新，约七年'},
+  neptune:{name:'海王星',theme:'消融与梦想——所触之宫位边界变模糊，宜防理想化，约十四年'},
+  pluto:{name:'冥王星',theme:'深层转化——所触之宫位旧结构连根拔起再重建，约二十年'}
+ };
+ const transitRows=[];
+ const now=new Date();
+ try{
+  const cusps=w?.cusps||[];
+  const norm=x=>((x%360)+360)%360;
+  const natalHouseOf=lon=>{
+   for(let i=0;i<12;i++){
+    const a=cusps[i]??i*30,b=cusps[(i+1)%12]??((i+1)*30);
+    const d=norm(lon-a),span=norm(b-a);
+    if(d<span)return i+1;
+   }
+   return Math.floor(norm(lon)/30)+1;
+  };
+  const SIGN_NAMES=['白羊座','金牛座','双子座','巨蟹座','狮子座','处女座','天秤座','天蝎座','射手座','摩羯座','水瓶座','双鱼座'];
+  const TRANSIT_IDS={jupiter:5,saturn:6,uranus:7,neptune:8,pluto:9};
+  for(const [key,info] of Object.entries(TRANSIT_INFO)){
+   const body=bodyAt(now,TRANSIT_IDS[key],0);
+   if(!body||!Number.isFinite(body.longitude))continue;
+   const tLon=norm(body.longitude);
+   const tSign=SIGN_NAMES[Math.floor(tLon/30)];
+   const tHouse=natalHouseOf(tLon);
+   let hits=[];
+   for(const p of planets){
+    if(!Number.isFinite(p.lon))continue;
+    const s=norm(tLon-norm(p.lon));
+    for(const a of [0,60,90,120,180]){
+     const d=Math.min(Math.abs(s-a),360-Math.abs(s-a));
+     if(d<=2.5)hits.push({p,a,d,level:'正激活'});
+     else if(d<=5)hits.push({p,a,d,level:'临近'});
+    }
+   }
+   hits.sort((x,y)=>x.d-y.d);hits=hits.slice(0,4);
+   const hitText=hits.map(h=>`${h.p.name}${h.level}（${ASPECT_MEANING[h.a]?.replace(/（.*/,'')||'相位'}，容许度${h.d.toFixed(1)}°）`).join('、');
+   transitRows.push(`<li><b>${info.name} · 现行 ${tSign} · 你本命第${tHouse}宫（${HOUSE_THEME[tHouse]}）</b><span>${info.theme}。${hitText?`对本命：${hitText}——被触行星的主题（${hits.map(h=>PLANET_CORE[h.p.key]?.split('——')[0]).filter(Boolean).join('、')}）将在该宫位领域被点名重演。`:`当前与你的本命行星无紧密相位——行运吉凶中性，看该宫本身的课题节奏。`}</span></li>`);
+  }
+ }catch{transitRows.length=0;}
+ const transitSec=transitRows.length?`<ul class="rpt-list">${transitRows.join('')}</ul>`:'行运数据待星历支持后生成。';
+ const transitIntro=[
+  `行运（Transit）：天上行星此刻的真实位置与你本命盘的对话。上表由星历按当下时刻实算——每颗外行星现在的星座、进入你本命的哪一宫、正与你哪些本命行星成相位。这是「现在进行时」的一章。`,
+  `用法：木星过境＝播种窗口（该宫领域主动争取）；土星过境＝验收期（该宫领域补结构、还旧账）；天海冥过境＝时代级课题（该宫领域的深层改版）。正激活（容许度≤2.5°）是当下最强音，临近（≤5°）是未来数月将进入的主题。`
+ ];
+
+ /* 六、领域速览与建议 */
  const findHouse=h=>planets.filter(p=>p.house===h).map(p=>p.name);
  const domains=[
   `事业：看天顶${mc}、第10宫${findHouse(10).join('、')||'空宫（看宫主星）'}与第6宫（${findHouse(6).join('、')||'日常工作象限'}）——方向在${SIGN_TRAIT[mc]||'—'}，成色看土星与木星的状态。`,
@@ -121,7 +173,8 @@ export function buildWesternDeepReport(w){
   {title:'二、逐星解读（星座×宫位）',lines:planetIntro,html:planetSec},
   {title:'三、相位格局',lines:aspLines,table:aspTable},
   {title:'四、盘面格局与元素',lines:patternSec},
-  {title:'五、领域速览与成长建议',lines:domains}
+  {title:'五、当下行运触发点（星历实算）',lines:transitIntro,html:transitSec},
+  {title:'六、领域速览与成长建议',lines:domains}
  ];
  return {title:'西洋占星 · 本命详批',sections,glossary:gloss,kind:'west'};
 }

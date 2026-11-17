@@ -4,6 +4,7 @@ import {buildBaziDeepReport} from '../../www/js/deep-bazi.js';
 import {buildZiweiDeepReport} from '../../www/js/deep-ziwei.js';
 import {buildVedicDeepReport} from '../../www/js/deep-vedic.js';
 import {buildWesternDeepReport} from '../../www/js/deep-west.js';
+import {buildSynastryDeepReport} from '../../www/js/deep-synastry.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pick=(...vals)=>vals.find(v=>v!==undefined&&v!==null&&!(Array.isArray(v)&&!v.length))??vals.at(-1);
@@ -110,7 +111,7 @@ export function composeFullReport(state,names){
   const report=withGlossary(buildBaziDeepReport(data));
   const selected=(data.selected||[]).map(p=>(p.stem||'')+(p.branch||'')).join('、');
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'bazi',gege:report.gege,
-   lead:`日主 ${esc(data.dayMaster?.stem||'—')}${esc(data.dayMaster?.element||'')} · ${esc(data.strength?.kind||'待定')} · 扶助 ${Number(data.strength?.support||0).toFixed(1)}% · 判定${esc(report.gege||'格局')}。全文十章：命局格局、性格、事业、财富、婚姻、健康、神煞、大运逐运详批、流年逐年详批、流月提要${selected?`（当前选中：${esc(selected)}）`:''}——每个术语都附白话。`,
+   lead:`日主 ${esc(data.dayMaster?.stem||'—')}${esc(data.dayMaster?.element||'')} · ${esc(data.strength?.kind||'待定')} · 扶助 ${Number(data.strength?.support||0).toFixed(1)}% · 判定${esc(report.gege||'格局')}。全文十一章：命局格局、性格、事业、财富、婚姻、健康、神煞、大运逐运详批、流年逐年详批、流月逐月详批${selected?`（当前选中：${esc(selected)}）`:''}——每个术语都附白话。`,
    body:sectionHtml(report)};
  }
  if(system==='ziwei'){
@@ -120,7 +121,7 @@ export function composeFullReport(state,names){
   const life=(chart.palaces||[]).find(p=>p.name==='命宫');
   const lifeStars=life?.majorStars?.length?life.majorStars:life?.borrowedStars||[];
   return {cover,title:flow?`紫微 · ${flow.label||'流年'}详批`:'紫微斗数 · 全盘详批',characters:charactersOf(report.sections),kind:'ziwei',
-   lead:`命宫在 ${esc(life?.earthlyBranch||'待定')}，${lifeStars.length?'主星 '+esc(lifeStars.map(s=>s.name).join('、')):'空宫借星'} · ${esc(chart.fiveElementsClass||'')}。全文七章：命盘总览、三方四正、十二宫逐宫详解、生年四化、大限逐限详批${flow?'、流年指向性事件':''}、综合建议——四化落宫即指向事件，逐条可核。`,
+   lead:`命宫在 ${esc(life?.earthlyBranch||'待定')}，${lifeStars.length?'主星 '+esc(lifeStars.map(s=>s.name).join('、')):'空宫借星'} · ${esc(chart.fiveElementsClass||'')}。全文八章：命盘总览、三方四正、十二宫逐宫详解、生年四化、大限逐限详批、流年逐流年详批（未来十年）${flow?'、所选流年指向性事件':''}、综合建议——流年命宫按年支定位、四化按年干飞布，逐年可核。`,
    body:sectionHtml(report)};
  }
  if(system==='vedic'){
@@ -135,9 +136,9 @@ export function composeFullReport(state,names){
   const result=syn.result||syn;
   const otherCase=(state.cases||[]).find(c=>c.id===syn.other);
   const otherName=syn.otherName||syn.name||otherCase?.name||'另一方';
-  const report=buildSynastryKnowledgeReport(result,profile.name,otherName);
+  const report=withGlossary(buildSynastryDeepReport(result,profile.name,otherName));
   return {cover,title:report.title,characters:report.characters,kind:'synastry',
-   lead:`${esc(profile.name||'甲方')} 与 ${esc(otherName)} 的合盘：综合契合度 ${esc(result.fit?.percent??result.percent??'—')}%。以下从契合总览、印度八科、跨盘相位与干支互参四层展开，看互动模式而非断定关系走向。`,
+   lead:`${esc(profile.name||'甲方')} 与 ${esc(otherName)} 的合盘：综合契合度 ${esc(result.fit?.percent??result.percent??'—')}%。全文七章：关系总览、日月金火五星对照、跨盘相位逐条详解、八科逐科化解、月亮星宿与 D9 互参、干支三镜合参、经营指南——每组相位都写明「剧情怎么上演、怎么接招」。`,
    body:sectionHtml(report)};
  }
  // west 及未知体系兜底：显式分支，避免未来新体系再误落本命模板

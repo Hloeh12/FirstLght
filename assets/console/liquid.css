@@ -141,6 +141,14 @@ input,select,textarea{
  box-shadow:0 4px 10px -4px rgba(190,46,104,.6);
 }
 .rpt-years li b em,.rpt-years li b i{font-style:normal;font-size:10.5px;color:#a8285d;opacity:.85}
+/* 小运/流月等分组与内嵌列表 */
+.rpt-list li.rpt-group{background:linear-gradient(180deg,rgba(255,248,251,.5),rgba(255,243,247,.38))!important;border-style:dashed!important;box-shadow:none!important;padding:8px 13px}
+.rpt-list li.rpt-group b{font-size:12px!important;color:#a8285d!important}
+.rpt-list li.rpt-group ul{margin:6px 0 0;padding:0}
+.rpt-list li.rpt-group i{font-style:normal;font-weight:650}
+.rpt-months li span{font-size:12px!important}
+/* 八科低分警示单元格 */
+.rpt-table td.rpt-warn{color:#b3261e!important;font-weight:700}
 .rpt-table{border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 8px 20px -14px rgba(168,44,94,.28)}
 .rpt-table th{background:linear-gradient(180deg,rgba(255,240,247,.9),rgba(255,232,242,.72));white-space:nowrap}
 .rpt-table td{white-space:normal}

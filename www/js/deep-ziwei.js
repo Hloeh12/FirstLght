@@ -106,6 +106,21 @@ const SIHUA_EVENTS={
  }
 };
 const PALACE_ORDER=['命宫','兄弟','夫妻','子女','财帛','疾厄','迁移','仆役','官禄','田宅','福德','父母'];
+// 十天干四化表（流年干/大限干通用：甲廉破武阳、乙机梁紫阴……）
+const GAN_SIHUA={
+ 甲:{禄:'廉贞',权:'破军',科:'武曲',忌:'太阳'},
+ 乙:{禄:'天机',权:'天梁',科:'紫微',忌:'太阴'},
+ 丙:{禄:'天同',权:'天机',科:'文昌',忌:'廉贞'},
+ 丁:{禄:'太阴',权:'天同',科:'天机',忌:'巨门'},
+ 戊:{禄:'贪狼',权:'太阴',科:'右弼',忌:'天机'},
+ 己:{禄:'武曲',权:'贪狼',科:'天梁',忌:'文曲'},
+ 庚:{禄:'太阳',权:'武曲',科:'太阴',忌:'天同'},
+ 辛:{禄:'巨门',权:'太阳',科:'文曲',忌:'文昌'},
+ 壬:{禄:'天梁',权:'紫微',科:'左辅',忌:'武曲'},
+ 癸:{禄:'破军',权:'巨门',科:'太阴',忌:'贪狼'}
+};
+const STEMS='甲乙丙丁戊己庚辛壬癸';
+const BRANCHES='子丑寅卯辰巳午未申酉戌亥';
 
 function brightnessOf(star){return star?.brightness||'';}
 function starEntry(star,palaceName,gloss){
@@ -180,7 +195,40 @@ export function buildZiweiDeepReport(chart,flow){
  }).join('');
  const decadesSec=decadeLines?`<ul class="rpt-list rpt-decades">${decadeLines}</ul>`:'大限资料待排盘后生成——紫微的十年剧本按大限宫逐限展开，本报告在排盘后自动列出每限主题。';
 
- /* 六、流年指向性事件 */
+ /* 六、流年逐流年详批（未来十年）——流年命宫按年支定位，流年四化按年干飞布 */
+ const findStarPalace=starName=>palaces.find(p=>['majorStars','minorStars','adjectiveStars','borrowedStars','stars'].some(k=>(p[k]||[]).some(s=>s.name===starName)));
+ const flowDecadeLines=Array.from({length:10},(_,i)=>{
+  const year=nowYear+i;
+  const stemIdx=((year-4)%10+10)%10,branchIdx=((year-4)%12+12)%12;
+  const stem=STEMS[stemIdx],branch=BRANCHES[branchIdx];
+  const fPal=find(branchIdx);
+  const fStars=fPal?(fPal.majorStars?.length?fPal.majorStars:(fPal.borrowedStars||[])):[];
+  const mut=GAN_SIHUA[stem];
+  const evs=[];
+  for(const t of ['禄','权','科','忌']){
+   const starName=mut[t];
+   const sp=findStarPalace(starName);
+   const ev=sp?SIHUA_EVENTS[t]?.[sp.name]:null;
+   if(sp&&ev)evs.push(`<i>${starName}化${t}入${sp.name}</i>${t==='忌'?'（防）':'（宜）'}：${ev}`);
+  }
+  // 叠化检测：流年四化之星与生年四化同星——同化叠强、禄忌相遇为交战
+  const natalMap=(chart?.sihua||[]).reduce((m,x)=>{m[x.star]=x.type;return m;},{});
+  const stackText=(sn,ft,nt)=>{
+   if(ft===nt)return `${sn}双${ft}（生年化${nt}叠流年化${ft}，同主题显著加强）`;
+   if((ft==='禄'&&nt==='忌')||(ft==='忌'&&nt==='禄'))return `${sn}禄忌交战（生年化${nt}遇流年化${ft}——机遇与消耗并存，进财须防暗耗、得利须防反复）`;
+   return `${sn}化${nt}化${ft}叠至（生年课题被流年再引动，该年此主题必上议程）`;
+  };
+  const stacks=Object.entries(mut).filter(([,sn])=>natalMap[sn]).map(([t,sn])=>stackText(sn,t,natalMap[sn]));
+  const starText=fStars.length?`流年命宫主星${fStars.map(s=>s.name+(s.brightness||'')).join('、')}——${fStars.map(s=>STAR_CORE[s.name]?.person).filter(Boolean).join('；')}。全年气质据此：${fStars.map(s=>STAR_CORE[s.name]?.risk).filter(Boolean)[0]||'顺其自然，主动而不冒进'}。`:`流年命宫空宫（借对宫参断）——随环境而变的一年，主动权在「跟对人、上对船」。`;
+  return `<li class="${i===0?'rpt-now':''}"><b>${year}年 ${stem}${branch} · 流年命宫走${fPal?.name||'—'}宫${i===0?' · 【今年】':''}</b><span>${starText}${evs.length?`<br>流年四化：${evs.join('；')}。`:''}${stacks.length?`<br>叠化提示：${stacks.join('；')}。`:''}</span></li>`;
+ }).join('');
+ const flowDecadeSec=`<ul class="rpt-list rpt-decades">${flowDecadeLines}</ul>`;
+ const flowDecadeIntro=[
+  `流年命宫＝该年地支所在之宫（如${BRANCHES[((nowYear-4)%12+12)%12]}年走${find(((nowYear-4)%12+12)%12)?.name||'—'}宫），宫内主星即全年主气质；流年四化＝以流年天干飞布禄权科忌，落宫即指向性事件。两者合看：命宫主星答「今年像什么样的一年」，四化落宫答「今年哪件事被点亮」。`,
+  `用法：把「忌入之宫」当作该年的防守科目提前布防；「禄入之宫」当作进攻窗口主动布局。吉化不等于躺着发生——没有对应动作（求职/签约/表白），禄也无处兑现。`
+ ];
+
+ /* 七、流年指向性事件（所选流年） */
  const flowEvents=[];
  if(flow?.mutagens?.length){
   for(const m of flow.mutagens){
@@ -196,7 +244,7 @@ export function buildZiweiDeepReport(chart,flow){
   `叠加判读：流年四化若与本命四化、大限四化同宫重叠（禄叠禄、忌叠忌），该主题显著加强——双禄之年进财力度倍增，双忌之年务必保守。`
  ];
 
- /* 七、综合建议 */
+ /* 八、综合建议 */
  const advice=[
   `总纲：紫微看命，先认格局（命宫主星）、再排时机（大限四化）、后取动作（流年指向）。你的底盘是${lifeStars.map(s=>s.name).join('、')||'空宫'}，后半生身宫发力点在${bodyPalace?.name||'待考'}。`,
   `择业建议：${lifeStars.map(s=>STAR_CORE[s.name]?.career).filter(Boolean).join('；')||'空宫之人宜借大限星曜定赛道——走到哪步大限，就借该限主星的行业东风。'}`,
@@ -211,8 +259,9 @@ export function buildZiweiDeepReport(chart,flow){
   {title:'三、十二宫逐宫详解',lines:[],html:palacesSec},
   {title:'四、生年四化与人生课题',lines:sihuaSec},
   {title:'五、大限逐限详批（十二个十年）',lines:[],html:decadesSec},
-  {title:'六、流年指向性事件',lines:flowSec},
-  {title:'七、综合建议',lines:advice}
+  {title:'六、流年逐流年详批（未来十年）',lines:flowDecadeIntro,html:flowDecadeSec},
+  {title:'七、流年指向性事件（所选流年）',lines:flowSec},
+  {title:'八、综合建议',lines:advice}
  ];
  return {title:'紫微斗数 · 全盘详批',sections,glossary:gloss,kind:'ziwei'};
 }

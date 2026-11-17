@@ -189,7 +189,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  await until(()=>$('#screen').textContent.includes('八字跨盘干支'),'deep pair calculation');
  assert($('#screen').textContent.includes(fit));
  click('[data-tab=me]');
- assert.equal($('[data-app-version]').textContent,`FirstLght ${release.version}（${release.build}）`);
+ assert.equal($('[data-app-version]').textContent,`星谕 FirstLight ${release.version}（${release.build}）`);
  assert($('[data-app-build]').textContent.includes('构建标识'));
  click('[data-release-history]');
  assert($('#toolSheet').textContent.includes('历次更新与修复'));

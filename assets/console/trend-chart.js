@@ -3,7 +3,8 @@ import {esc} from './ui.js';
  * 数值全部来自引擎 trend 字段（每个干支单独并入原局重算的日主扶助度），颜色按该干支五行相对
  * 本命用神/忌神的关系着色，不做吉凶断言。 */
 const roleOf=(element,natal)=>natal.useful?.includes(element)?'useful':natal.caution?.includes(element)?'caution':'neutral';
-const ROLE={useful:'#ff4f8b',caution:'#8b95ad',neutral:'#d9a3c4'};
+/* 颜色走 CSS 变量（--fl-*），随「传统五行色 / 品牌粉」配色方案联动；SVG 属性位必须用 style 承载 var() */
+const ROLE={useful:'var(--fl-useful)',caution:'var(--fl-caution)',neutral:'var(--fl-neutral)'};
 export function trendChart(d,pick){
  const t=d.trend;
  if(!t||!t.years?.length||!t.cycles?.length)return '';
@@ -18,8 +19,8 @@ export function trendChart(d,pick){
  const line=pts.map((p,i)=>(i?'L ':'M ')+p.x.toFixed(1)+' '+(base-p.h).toFixed(1)).join(' ');
  const bars=pts.map(p=>`
   <g data-rail="流年" data-pick="${p.y}" role="button" tabindex="0" aria-label="${p.y}年 ${p.g} 扶助度 ${p.s.toFixed(1)}%" class="ty${pick.year===p.y?' on':''}">
-   <rect class="tb" x="${(p.x-bw/2).toFixed(1)}" y="${(base-p.h).toFixed(1)}" width="${bw.toFixed(1)}" height="${p.h.toFixed(1)}" rx="4" fill="${ROLE[p.role]}"/>
-   <circle cx="${p.x.toFixed(1)}" cy="${(base-p.h).toFixed(1)}" r="3.2" fill="#fff" stroke="${ROLE[p.role]}" stroke-width="1.6"/>
+   <rect class="tb" x="${(p.x-bw/2).toFixed(1)}" y="${(base-p.h).toFixed(1)}" width="${bw.toFixed(1)}" height="${p.h.toFixed(1)}" rx="4" style="fill:${ROLE[p.role]}"/>
+   <circle cx="${p.x.toFixed(1)}" cy="${(base-p.h).toFixed(1)}" r="3.2" style="fill:#fff;stroke:${ROLE[p.role]};stroke-width:1.6"/>
    <rect class="thit" x="${(p.x-step/2).toFixed(1)}" y="0" width="${step.toFixed(1)}" height="${H}" fill="transparent"/>
   </g>`).join('');
  const labels=pts.map(p=>`<text x="${p.x.toFixed(1)}" y="132" text-anchor="middle" class="tx${p.y===nowYear?' now':''}">${String(p.y).slice(2)}</text>`).join('');

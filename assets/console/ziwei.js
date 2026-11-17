@@ -40,7 +40,16 @@ function badge(text,type,branch,kind){
 function center(ctx,s){
  const b=ctx.state.reading.bazi.info,z=s.chart,p=ctx.state.profile;
  const c=b.correction,signed=n=>(n>=0?'+':'')+Number(n).toFixed(1)+' 分';
- const precision=c.corrected?`<p class="muted thin" title="真太阳时校准">${esc(b.clock)} → 经度 ${signed(c.longitudeCorrectionMinutes)} → 均时差 ${signed(c.equationOfTimeMinutes)} → ${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')} ${b.hourBranch}时</p>`:'';
+ const pad=n=>String(n).padStart(2,'0');
+ const hourIdx=(h,mi)=>Math.floor(((Number(h)*60+Number(mi||0)+60)%1440)/120);
+ const std=b.timeCorrection?.standard||{};
+ let precision;
+ if(c.corrected){
+  const crossPillar=[hourIdx(c.hour,c.minute)!==hourIdx(std.h??b.clock.slice(0,2),std.mi??b.clock.slice(3))&&'跨时柱',c.dayOffset&&(c.dayOffset>0?'跨次日日柱':'跨前日日柱')].filter(Boolean);
+  precision=`<p class="time-basis-note" role="note"><b>时间口径：真太阳时 ${pad(c.hour)}:${pad(c.minute)}（${b.hourBranch}时）</b> · 钟表 ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时已还原':''} → 经度 ${signed(c.longitudeCorrectionMinutes)} · 均时差 ${signed(c.equationOfTimeMinutes)}${crossPillar.length?` · <b class="tb-warn">${crossPillar.join('，')}</b>——已按真太阳时换柱`:''} · 晚子时${b.lateZishi==='current-day'?'归当日':'归次日'}</p>`;
+ }else{
+  precision=`<p class="time-basis-note" role="note"><b>时间口径：标准钟表时 ${esc(b.clock)}${b.timeCorrection.dstApplied?' · 夏令时已还原（标准时 '+pad(b.timeCorrection.standard.h)+':'+pad(b.timeCorrection.standard.mi)+'）':''}</b> · 真太阳时未启用</p>`;
+ }
  return `<div class="zi-center ${s.mode==='triad'?'glow':''}">
   <span class="kicker">FIRST LIGHT · ${names[z.astroType]}</span>
   <strong class="zc-name">${esc(p.name)}</strong>

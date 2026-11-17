@@ -56,8 +56,8 @@ jobs:
           mkdir -p www/js www/assets/console
           cp index.html www/
           cp js/console.js www/js/
-          rm -f www/js/rules.js
-          cp assets/console/{design.css,credits.html} www/assets/console/
+          rm -f www/js/rules.js www/js/deep-*.js
+          cp assets/console/design.css assets/console/liquid.css assets/console/credits.html www/assets/console/
           xcodegen generate --spec project.yml
           xcodebuild -list -project FirstLight.xcodeproj
       - name: Build unsigned app
@@ -80,7 +80,7 @@ jobs:
           info = plistlib.loads((app / 'Info.plist').read_bytes())
           import json, re
           release = json.loads(pathlib.Path('app-release.json').read_text())
-          expected = dict(CFBundleDisplayName='FirstLght', CFBundleName='FirstLght', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString=release['version'], CFBundleVersion=str(release['build']), LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
+          expected = dict(CFBundleDisplayName='星谕', CFBundleName='FirstLight', CFBundleIdentifier='com.firstlight.app', CFBundleShortVersionString=release['version'], CFBundleVersion=str(release['build']), LSRequiresIPhoneOS=True, MinimumOSVersion='15.0')
           for key, value in expected.items():
               assert info.get(key) == value, (key, info.get(key), value)
           catalog = app / 'Assets.car'
@@ -88,16 +88,23 @@ jobs:
           icon = info['CFBundleIcons']['CFBundlePrimaryIcon']
           assert icon.get('CFBundleIconName') == 'AppIcon', icon
           assert icon.get('CFBundleIconFiles'), icon
-          for name in ['index.html', 'js/console.js', 'assets/console/design.css', 'assets/console/credits.html']:
-              assert (app / 'www' / name).exists(), name
+          for name in ['index.html', 'js/console.js', 'assets/console/design.css', 'assets/console/liquid.css', 'assets/console/credits.html', 'PrivacyInfo.xcprivacy']:
+              assert (app / 'www' / name).exists() or (app / name).exists(), name
+          html = (app / 'www/index.html').read_text()
+          assert '/js/console.js' in html and 'rules.js' not in html, 'index must load only the compiled entry'
+          # 打包资源完整性：index.html 引用的每个本地样式/脚本都必须在包内存在
+          for m in re.finditer(r'(?:href|src)="(/[^"]+|\.\/[^"]+)"', html):
+              ref = m.group(1).lstrip('./')
+              if ref.startswith('http') or ref.startswith('firstlight://'):
+                  continue
+              assert (app / 'www' / ref).exists(), 'index.html references missing asset: ' + ref
+          assert not any((app / 'www/js').glob('deep-*.js')), 'deep-*.js source copies must not ship in the IPA'
           console_path = app / 'www/js/console.js'
           console_text = console_path.read_text()
           decoded_console = re.sub(r'\\u\{([0-9a-fA-F]+)\}|\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1) or m.group(2), 16)), console_text)
           for marker in ['BAZI_FLOW_RULES', 'ZIWEI_FLOW_RULES', 'globalThis.BAZI_FLOW_RULES', 'globalThis.ZIWEI_FLOW_RULES', '甲木参天']:
               assert marker in console_text or marker in decoded_console, 'compiled offline rules missing: ' + marker
           assert not (app / 'www/js/rules.js').exists(), 'rules.js must be bundled, not shipped as a sidecar'
-          html = (app / 'www/index.html').read_text()
-          assert '/js/console.js' in html and 'rules.js' not in html, 'index must load only the compiled console entry'
           PY
           mkdir -p build/Payload
           ditto "$APP" build/Payload/FirstLight.app
@@ -105,7 +112,7 @@ jobs:
           unzip -tq build/FirstLight.ipa
           unzip -p build/FirstLight.ipa Payload/FirstLight.app/Assets.car > build/PackagedAssets.car
           cmp "$APP/Assets.car" build/PackagedAssets.car
-          IPA_NAME="$(node -p '"FirstLght-"+require("./app-release.json").version+"-build"+require("./app-release.json").build+".ipa"')"
+          IPA_NAME="$(node -p '"FirstLight-"+require("./app-release.json").version+"-build"+require("./app-release.json").build+".ipa"')"
           cp build/FirstLight.ipa "build/$IPA_NAME"
           echo "IPA_FILE=$IPA_NAME" >> "$GITHUB_ENV"
       - name: Upload unsigned IPA

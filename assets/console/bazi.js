@@ -13,6 +13,19 @@ function correction(b){
  const dst=b.timeCorrection?.dstApplied?'（夏令时-1h，标准时 '+[b.timeCorrection.standard.h,b.timeCorrection.standard.mi].map(n=>String(n).padStart(2,'0')).join(':')+'）':'';
  return c.corrected?`钟表 ${b.clock}${dst} → 经度差 ${format(c.longitudeCorrectionMinutes)} → 均时差 ${format(c.equationOfTimeMinutes)} → 真太阳时 ${String(c.hour).padStart(2,'0')}:${String(c.minute).padStart(2,'0')}（${b.hourBranch}时${c.dayOffset?'，跨 '+c.dayOffset+' 日':''}）`:'钟表时 '+b.clock+dst;
 }
+/* 盘头常驻口径条：标准时/真太阳时、校正分钟、是否跨柱——专业盘的口径必须一眼可见 */
+function timeBasis(info){
+ if(!info)return '';
+ const c=info.correction||{},pad=n=>String(n).padStart(2,'0');
+ const hourIdx=(h,mi)=>Math.floor(((Number(h)*60+Number(mi||0)+60)%1440)/120);
+ const dst=info.timeCorrection?.dstApplied?` · 夏令时已还原（钟表 ${pad(info.timeCorrection.standard.h)}:${pad(info.timeCorrection.standard.mi)}）`:'';
+ if(!c.corrected)return `<p class="time-basis-note" role="note"><b>时间口径：标准钟表时 ${info.clock}${dst}</b> · 真太阳时未启用——出生地偏离东经 120° 或出生日靠近节气交界时，时柱可能偏移。</p>`;
+ const std=info.timeCorrection?.standard||{};
+ const stdIdx=hourIdx(std.h??info.clock.slice(0,2),std.mi??info.clock.slice(3));
+ const solarIdx=hourIdx(c.hour,c.minute);
+ const crossPillar=[solarIdx!==stdIdx&&'跨时柱',c.dayOffset&&(c.dayOffset>0?'跨次日日柱':'跨前日日柱')].filter(Boolean);
+ return `<p class="time-basis-note" role="note"><b>时间口径：真太阳时 ${pad(c.hour)}:${pad(c.minute)}（${info.hourBranch}时）</b> · 钟表 ${info.clock}${dst} → 经度差 ${(c.longitudeCorrectionMinutes>=0?'+':'')+Number(c.longitudeCorrectionMinutes).toFixed(1)}m · 均时差 ${(c.equationOfTimeMinutes>=0?'+':'')+Number(c.equationOfTimeMinutes).toFixed(1)}m${crossPillar.length?` · <b class="tb-warn">${crossPillar.join('，')}</b>——已按真太阳时换柱`:''} · 晚子时${info.lateZishi==='current-day'?'归当日':'归次日'}</p>`;
+}
 function pillarHead(p,index,chart){
  return `<div class="bg-head" data-pillar="${index}" role="button" tabindex="0" aria-pressed="false" aria-label="${esc(p.name)}柱，点击可与其他柱对比合冲"><b class="bg-name">${p.unknown?esc(p.name):term(p.name,`${chart} 这一柱是${p.stem}${p.branch}：天干${p.stem}为${p.tenGod}，地支${p.branch}藏${p.hidden.map(h=>h.stem).join('、')}。`)}</b><span class="bg-god" data-e="${p.stemElement}">${term(p.tenGod,`${chart} 你在${p.name}天干见${p.tenGod}。`)}</span></div>`;
 }
@@ -57,7 +70,7 @@ function knowledgeReport(d){
 }
 function details(d){
  return `<article class="card liquid-glass"><div class="spread"><h2>五行力量</h2><b>${d.strength.kind} · ${d.strength.support.toFixed(1)}%</b></div>
- ${bars(d.strength.percentages)}<p class="thin">喜用参考 ${d.strength.useful.join('、')||'五行扶助较均衡'} · 忌偏参考 ${d.strength.caution.join('、')||'不单列'}</p><small>${esc(d.strength.method)}</small></article>
+ ${bars(d.strength.percentages)}<p class="thin">喜用参考 ${d.strength.useful.join('、')||'五行扶助较均衡'} · 忌偏参考 ${d.strength.caution.join('、')||'不单列'}${d.strength.roles?` · 仇神 ${d.strength.roles.enemy.join('、')||'无'} · 闲神 ${d.strength.roles.idle.join('、')||'无'}`:''}</p><small>${esc(d.strength.approach||'')} ${esc(d.strength.method)}</small></article>
  <article class="card"><h2>干支关系</h2>${relationships(d)}<p class="thin">日主通根 ${esc(d.roots.map(r=>r.pillar+r.branch+'藏'+r.stem).join('、')||'未见')} · 透干 ${esc(d.revealed.map(r=>r.rootAt+'藏'+r.stem+'透'+r.visibleAt).join('、')||'未见')} · 旬空 ${esc(d.voidBranches.join('、'))}</p>
  ${d.strengthBreakdown?`<p class="thin">力量来源：${esc(d.strengthBreakdown.deLing.role)} · 有根 ${d.strengthBreakdown.tongGen.count} 处 · 帮身 ${d.strengthBreakdown.deShi.count} 位 · 评分 ${Number(d.strengthBreakdown.score).toFixed(1)}/${d.strengthBreakdown.full} —— ${esc(d.strengthBreakdown.verdict)}</p>`:''}</article>
  ${d.guidance?`<article class="card period-guidance" aria-live="polite" data-period-guidance><h2>${esc(d.guidance.title)}</h2><p>${esc(d.guidance.summary)}</p>
@@ -129,6 +142,7 @@ export function baziView(ctx){
  ctx.root.innerHTML=`<section aria-label="四柱八字">
  <div class="spread"><h1>四柱八字</h1>${btn('生克合化',`data-combine aria-pressed="${s.combine}"`)}</div>
  ${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，此处只排年、月、日三柱；时柱与相关神煞不参与论断，流年应期仍可参考。</p>':''}
+ ${timeBasis(d.info)}
  <div class="bazi-board"><div class="bazi-grid">${baziGrid(d)}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
  <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d,ctx.birth?.timeUnknown)}
  <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${trendChart(d,s.pick)}${timeline(d,s.pick)}</div></section>
@@ -227,7 +241,8 @@ async function showTool(ctx,i){
  ]);
  if(i===1)content=`<h3>${d.strength.kind} · 扶助 ${d.strength.support.toFixed(1)}%</h3><p>${stepText(d.strength.kind)}。</p>${bars(d.strength.percentages)}
  ${table(['五行','权重'],Object.entries(d.strength.weights).map(([k,v])=>[k,v.toFixed(2)]))}
- <p>${esc(d.strength.method)}</p><p>喜用参考 ${d.strength.useful.join('、')||'未单列'} · 忌偏参考 ${d.strength.caution.join('、')||'未单列'}</p>
+ <p>${esc(d.strength.approach||'')} ${esc(d.strength.method)}</p><p>喜用参考 ${d.strength.useful.join('、')||'未单列'} · 忌偏参考 ${d.strength.caution.join('、')||'未单列'}${d.strength.roles?` · 仇神 ${d.strength.roles.enemy.join('、')||'无'} · 闲神 ${d.strength.roles.idle.join('、')||'无'}`:''}</p>
+ ${d.shenshaMethod?`<p class="thin">神煞查法：${esc(d.shenshaMethod)}</p>`:''}
  <p>${d.strength.activated.length?'满足模型合化条件：'+esc(d.strength.activated.map(r=>r.pattern+'化'+r.element).join('、')):'本次没有应用合化转移。'}</p>`;
  if(i===2)content=table(['类型','组合','涉及柱','白话'],d.relationships.map(r=>[r.type,r.pattern,r.pillars.join('、'),r.meaning]));
  if(i===3)content='<p id="boneResult" role="status">正在计算称骨…</p>';

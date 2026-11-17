@@ -117,7 +117,7 @@ export function diagnosticsPanel(ctx){
  d.addEventListener('close',()=>messages.removeEventListener('update',draw),{once:true});
  $('[data-export-clear-logs]',d).onclick=()=>{
   try{
-   ctx.download(JSON.stringify({version:appBuild.version,build:appBuild.build,logs},null,2),'FirstLght-runtime-logs.json','application/json');
+   ctx.download(JSON.stringify({version:appBuild.version,build:appBuild.build,logs},null,2),'FirstLight-runtime-logs.json','application/json');
    localStorage.removeItem(key);logs=[];draw();
    status.textContent='已发起日志导出并清空本地旧日志；案例与偏好完整保留。';
   }catch(error){status.textContent='导出失败，旧日志已保留：'+error.message;}
@@ -136,7 +136,7 @@ export function diagnosticsPanel(ctx){
   }finally{button.disabled=false;}
  };
  $('[data-copy-logs]',d).onclick=async()=>{
-  output.value=JSON.stringify({app:'FirstLght',version:appBuild.version,build:appBuild.build,revision:appBuild.revision,at:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight},online:navigator.onLine,userAgent:navigator.userAgent,checks:ctx.state.lastDiagnostics||[],logs},null,2);
+  output.value=JSON.stringify({app:'FirstLight',version:appBuild.version,build:appBuild.build,revision:appBuild.revision,at:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight},online:navigator.onLine,userAgent:navigator.userAgent,checks:ctx.state.lastDiagnostics||[],logs},null,2);
   status.textContent=await copyLogs(output)?'诊断包已复制。':'诊断包已选中，可以手动复制。';
  };
  $('[data-reset-cache]',d).onclick=async e=>{

@@ -254,7 +254,7 @@ try{
   }
   await page.locator('[data-tab="me"]').click();
   await page.locator('[data-maintenance]>summary').click();
-  assert.equal(await page.locator('[data-app-version]').textContent(),`FirstLght ${release.version}（${release.build}）`);
+  assert.equal(await page.locator('[data-app-version]').textContent(),`星谕 FirstLight ${release.version}（${release.build}）`);
   if(process.env.GITHUB_SHA)assert((await page.locator('[data-app-build]').textContent()).includes(process.env.GITHUB_SHA.slice(0,7)));
   assert((await page.locator('[data-app-build]').textContent()).includes('构建标识'));
   await page.locator('[data-release-history]').click();

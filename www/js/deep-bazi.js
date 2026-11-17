@@ -18,6 +18,25 @@ export const TEN_GOD_DEEP={
  劫财:{gloss:'与我同类又争抢的力量——象征竞争、破耗与豪爽',person:'豪爽大方、行动快、容易冲动承诺',career:'宜团队作战、开拓型岗位；忌独自管钱',wealth:'破耗之星——借贷、担保、合伙出资都须设上限',love:'为情破财的剧本常见，金钱界限是底线',health:'注意意外伤与上火'}
 };
 /* ---------- 神煞详解 ---------- */
+/* 0.32.0 扩充：将星/灾煞/亡神/孤辰寡宿/红鸾天喜/天罗地网/金舆/魁罡/学堂词馆/十恶大败/天德月德 */
+export const SHENSHA_MORE={
+ 将星:{gloss:'三合局旺气所聚之星，象征组织力与掌控力',inPillar:'落在哪柱，该柱所主的人事容易出现「被推到台前」的局面'},
+ 灾煞:{gloss:'与驿马对望的急耗之星，象征突发破坏与计划被打断',inPillar:'落在哪柱，该领域的关键事务都要留出缓冲与备份'},
+ 亡神:{gloss:'机巧与心机之星，象征谋略、城府与暗中消耗',inPillar:'宜用在研究、策略与风控，不宜用在算计人际上'},
+ 孤辰:{gloss:'独处倾向之星，象征自立、疏离与精神独立',inPillar:'落在日时柱，习惯一个人扛事，须主动建立可依靠的关系'},
+ 寡宿:{gloss:'与孤辰相对，象征清静自守与情感克制',inPillar:'落在哪柱，哪一柱的领域偏向少言多思、靠自己成事'},
+ 红鸾:{gloss:'婚喜之星，象征姻缘、喜事与人情往来',inPillar:'逢流年引动时，感情与社交场合的机会明显增多'},
+ 天喜:{gloss:'与红鸾对冲的喜乐之星，象征开心事与贵人牵线',inPillar:'落宫所主的领域常有「不期而遇」的好消息'},
+ 天罗:{gloss:'戌为天罗，象征网罗与束缚',inPillar:'逢之宜守法守规，忌投机与灰色操作'},
+ 地网:{gloss:'辰为地网，象征牵绊与难以脱身',inPillar:'落在哪柱，该柱的人事易陷纠缠，宜早立边界'},
+ 金舆:{gloss:'车马华盖之星，象征体面、出行便利与配偶助力',inPillar:'年月主得长辈体面相待，日时主婚姻中能得实际帮衬'},
+ 魁罡:{gloss:'庚辰、庚戌、壬辰、戊戌四日，象征刚烈果断与不服人',inPillar:'日柱逢之性格鲜明、办事有魄力，须防过刚易折'},
+ 学堂:{gloss:'日干长生位所临，象征学习能力与系统训练',inPillar:'落在哪柱，该柱所主领域成为「学得进、教得出」的长项'},
+ 词馆:{gloss:'日干临官位所临，象征文才与专业表达',inPillar:'宜以文字、专业与可复用的作品立身'},
+ 十恶大败:{gloss:'传统所指的耗败之日，象征财来财去与大开大合',inPillar:'仅作传统取象参考，不据此断言凶吉，重在提醒守恒与留余地'},
+ 天德贵人:{gloss:'月令所生的仁厚之星，象征逢凶化吉与长辈庇护',inPillar:'落在哪柱，该柱所主的人事多能遇贵人解围'},
+ 月德贵人:{gloss:'三合月气所钟的祥和之星，象征宽厚与福泽',inPillar:'与天德同看，两德齐聚者待人宽、遇事有人帮'}
+};
 export const SHENSHA_DEEP={
  天乙贵人:{gloss:'最强的吉星，象征关键时刻出现的贵人与转机',inPillar:'年月柱逢之，长辈提携；日时柱逢之，同辈与晚辈助力'},
  太极贵人:{gloss:'与玄学、哲学、文化有缘的星，象征悟性与研究天赋',inPillar:'落在哪柱，该柱所主的领域都带一份「钻研成事」的底色'},
@@ -120,7 +139,9 @@ export function buildBaziDeepReport(data){
   `命主日主为「${dayStem}${elementOfStem(dayStem)}」，${strengthText}，全局扶助度 ${Number(ns.support??50).toFixed(1)}%${useful?`。喜用之神为${G(useful)}（行运遇之多顺）`:''}${caution?`，忌神为${caution}（行运遇之多滞，须提前防守）`:''}。`,
   `月令为${pillars[1]?.branch||'—'}（${(pillars[1]?.branchElement)||'—'}），${TIAOHOU[pillars[1]?.branch||'子']}。`,
   `本命判定为${G(gege.name)}：${gege.basis}。${gegeInfo.text}`,
-  `四柱排布如上表：年柱看祖上与早年、月柱看父母与立业、日柱看自己与婚姻、时柱看子女与晚景。表内「十神」即每一柱天干与日主的关系，${TEN_GOD_DEEP.正官.gloss.slice(0,24)}……详见文末术语小词典。`
+  `四柱排布如上表：年柱看祖上与早年、月柱看父母与立业、日柱看自己与婚姻、时柱看子女与晚景。表内「十神」即每一柱天干与日主的关系，${TEN_GOD_DEEP.正官.gloss.slice(0,24)}……详见文末术语小词典。`,
+  ...(ns.approach?[`取用口径：${ns.approach}这是本盘得出「喜用什么、忌什么」的规则；换一套派别结论可能不同，换盘时请先核对这一行。`]:[]),
+  ...(ns.roles?[`十神角色补全：喜用 ${ns.roles.useful.join('、')||'未单列'} · 忌神 ${ns.roles.avoid.join('、')||'未单列'} · 仇神 ${ns.roles.enemy.join('、')||'本盘无独立仇神'} · 闲神 ${ns.roles.idle.join('、')||'无'}。${ns.roles.note}`]:[])
  ];
 
  /* 二、命局根基：三垣与力量来源 */
@@ -203,13 +224,14 @@ const strengthSec=[
  const shenshaLines=[];
  for(const p of pillars){
   for(const s of p.shensha||[]){
-   const info=SHENSHA_DEEP[s];
+   const info=SHENSHA_DEEP[s]||SHENSHA_MORE[s]||{gloss:'传统神煞，按所列口径查得',inPillar:'落在哪柱便侧重观察该柱所主的人事。'};
    shenshaLines.push(`「${G(s)}」落于${p.name}${p.stem}${p.branch}：${info.gloss}。${info.inPillar}`);
   }
  }
  if((data.voidBranches||[]).length){
   shenshaLines.push(`「${G('空亡')}」：${SHENSHA_DEEP.空亡.gloss}。本命空亡为${data.voidBranches.join('、')}——落在哪柱，那一柱的人事早年多靠自力。`);
  }
+ if(data.shenshaMethod)shenshaLines.push(`查法口径：${data.shenshaMethod}`);
  const shenshaSec=shenshaLines.length?shenshaLines:['本命四柱未检出所列常用吉凶神煞——神煞是锦上添花的细断，无神煞不碍格局大局。'];
 
  /* 八、大运逐运详批 */

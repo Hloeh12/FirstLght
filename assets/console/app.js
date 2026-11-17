@@ -37,6 +37,9 @@ const state={
  query:'',filter:'全部',chartState:{},pending:false,error:''
 };
 const profileMachine=new ProfileMachine(birth=>request('/api/console/reading',{birth}));
+/* P1 五行配色：默认传统五行色（木绿/火红/土黄/金白/水蓝黑），可切回品牌粉；干支/十神/运势曲线随之联动 */
+const applyPalette=()=>{document.documentElement.dataset.palette=state.settings.palette==='pink'?'pink':'traditional';};
+applyPalette();
 const root=$('#screen');
 let generation=0,flight,noticeTimer,locationToken=0,locationReply;
 window.firstlightLocation=(token,lat,lon)=>{if(token===locationToken)locationReply?.(lat,lon);};
@@ -105,7 +108,7 @@ function normalized(profile){
  const clock=f.timeStr??[f.h??12,f.mi??0].map(n=>String(n).padStart(2,'0')).join(':');
  const [h,mi]=clock.split(':').map(Number);
  return {...f,...splitDate(date),name:profile.name,dateStr:date,timeStr:clock,h,mi,gender:f.gender||'女',
-  useSolarTime:f.useSolarTime??state.settings.useSolarTime??false,
+  useSolarTime:f.useSolarTime??state.settings.useSolarTime??(Number.isFinite(Number(f.city?.lon))&&Math.abs(Number(f.city?.lon))<=180),
   ziweiSchool:state.settings.ziweiSchool||'quanshu',
   ziweiLeap:state.settings.ziweiLeap||'split',dst1988Rule:state.settings.dst1988Rule||'iana',
   lateZishi:f.lateZishi||state.settings.lateZishi||'next-day',
@@ -345,11 +348,15 @@ function birthSheet(profile,seed={}){
   <label>经度<input name="lon" type="number" step="any" value="${Number.isFinite(city.lon)?city.lon:''}" placeholder="−180 到 180"></label>
   <label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(city.tz)}"></label>
   ${btn('使用当前位置','data-locate')}
-  <div class="checks wide"><input name="unknown" type="checkbox" ${f.timeUnknown?'checked':''} hidden><label><input name="solar" type="checkbox" ${(f.useSolarTime??setting.useSolarTime)?'checked':''}>真太阳时</label><label data-leap><input name="leap" type="checkbox" ${f.leapMonth?'checked':''}>闰月</label></div>
+  <div class="checks wide"><input name="unknown" type="checkbox" ${f.timeUnknown?'checked':''} hidden><label><input name="solar" type="checkbox" ${(f.useSolarTime??setting.useSolarTime??(Number.isFinite(city.lon)&&Math.abs(city.lon)<=180))?'checked':''}>真太阳时${(f.useSolarTime??setting.useSolarTime)==null&&Number.isFinite(city.lon)?'<small>（已按出生地经度默认开启）</small>':''}</label><label data-leap><input name="leap" type="checkbox" ${f.leapMonth?'checked':''}>闰月</label></div>
   <p class="wide muted" id="birthStatus" role="status"></p><button type="submit" class="wide primary">生成命盘</button>
  </form>
  <div class="rail" aria-label="历史案例">${state.cases.slice(0,5).map(c=>btn(c.name,`data-use-case="${esc(c.id)}"`)).join('')}${profile?btn('＋ 起新盘','data-new'):''}</div>`);
  const form=$('form',d),fields=form.elements,feedback=$('#birthStatus',d),matches=$('#cityMatches',d);
+ // 真太阳时默认策略：用户没手动碰过开关时，一旦有有效经度就默认开启（问真/狗运极佳口径）
+ let solarTouched=false;
+ fields.solar.onchange=()=>{solarTouched=true;};
+ const autoSolar=()=>{if(!solarTouched){const lon=Number(fields.lon.value);fields.solar.checked=Number.isFinite(lon)&&Math.abs(lon)<=180;}};
  const calendar=()=>{
   const lunar=fields.calendar.value==='lunar';
   $('[data-leap]',d).hidden=!lunar;
@@ -378,20 +385,20 @@ function birthSheet(profile,seed={}){
      try{
       const location=await request('/api/geo/resolve?'+new URLSearchParams({p:item.provinceCode||item.code,c:item.cityCode||(item.level==='city'?item.code:''),d:item.level==='county'?item.code:''}));
       if(token!==query||!d.open)return;
-      fields.city.value=location.label||item.name;fields.lat.value=location.lat;fields.lon.value=location.lon;fields.tz.value=8;
+      fields.city.value=location.label||item.name;fields.lat.value=location.lat;fields.lon.value=location.lon;fields.tz.value=8;autoSolar();
       matches.replaceChildren();
      }catch(error){feedback.textContent=error.message;}
     };matches.append(b);
    }
   }catch{if(id===query)feedback.textContent='城市搜索暂不可用，可直接填写坐标';}
  };
- for(const k of ['lat','lon','tz'])fields[k].oninput=()=>{query++;matches.replaceChildren();};
+ for(const k of ['lat','lon','tz'])fields[k].oninput=()=>{query++;matches.replaceChildren();autoSolar();};
  $('[data-locate]',d).onclick=()=>{
   const token=++query;
   const reply=(lat,lon)=>{
    if(token!==query||!d.open||!form.isConnected)return;
    if(!Number.isFinite(lat)||!Number.isFinite(lon)){feedback.textContent='定位未完成，可手动填写';return;}
-   fields.lat.value=lat.toFixed(6);fields.lon.value=lon.toFixed(6);
+   fields.lat.value=lat.toFixed(6);fields.lon.value=lon.toFixed(6);autoSolar();
    fields.city.value='当前位置';fields.tz.value=-new Date().getTimezoneOffset()/60;feedback.textContent='坐标已填写';
   };
   const native=window.webkit?.messageHandlers?.findLocation;
@@ -790,6 +797,7 @@ function configPanel(){
    configRow('share','分享当前长图',state.tab==='chart'?'生成':'仅排盘页')
   ]),
   cfgSection('系统',[
+   configRow('palette','五行配色',state.settings.palette==='pink'?'品牌粉':'传统五行色'),
    configRow('feedback','交互音效与震动',feedbackEnabled()?'开':'关'),
    configRow('diagnostics','运行诊断与日志',''),
    configRow('about','关于与版本',''),
@@ -807,6 +815,7 @@ function configPanel(){
    if(id==='solar'){const next=!state.settings.useSolarTime;state.settings={...state.settings,useSolarTime:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,useSolarTime:next}},false);configPanel();return;}
    if(id==='house'){const ids=Object.keys(houseLabels),next=ids[(ids.indexOf(astroHouse())+1)%ids.length];setAstroHouse(ctx,next);close(d);configPanel();return;}
    if(id==='late'){const next=(state.settings.lateZishi||'next-day')==='next-day'?'current-day':'next-day';state.settings={...state.settings,lateZishi:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,lateZishi:next}},false);configPanel();return;}
+   if(id==='palette'){const next=state.settings.palette==='pink'?'traditional':'pink';state.settings={...state.settings,palette:next};save(SETTINGS,state.settings);applyPalette();configPanel();tell('五行配色已切换为「'+(next==='pink'?'品牌粉':'传统五行色')+'」，盘面与运势曲线已联动。');return;}
    if(id==='feedback'){setFeedback(!feedbackEnabled());configPanel();return;}
    if(id==='report'){close(d);openFullReport();return;}
    if(id==='tools'||id==='share'){close(d);toolPanel();return;}

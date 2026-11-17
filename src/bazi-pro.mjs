@@ -38,6 +38,13 @@ export function relations(pillars){
  }
  return results;
 }
+/* 神煞表：前段沿用原天乙/太极/文昌/驿马/桃花/华盖/劫煞/羊刃/天医；
+   后段补常用但此前缺项的将星/亡神/灾煞/孤辰寡宿/红鸾天喜/天罗地网/金舆/魁罡/学堂词馆/十恶大败/
+   天德月德。三合局表按年支起，学堂词馆按日干长生/临官定位（子平简化口径），见 shenshaMethod。 */
+const SHEN_SHA_JIN_YU={甲:'辰',乙:'巳',丙:'未',丁:'申',戊:'未',己:'申',庚:'戌',辛:'亥',壬:'丑',癸:'寅'};
+const SHEN_SHA_EVIL_DAYS=['甲辰','乙巳','丙申','丁亥','戊戌','己丑','庚辰','辛巳','壬申','癸亥'];
+const SHEN_SHA_TIAN_DE=['丁','申','壬','辛','亥','甲','癸','寅','丙','乙','巳','庚'];
+const shenshaMethod='常用神煞：天乙/太极/文昌按年干或日干查；驿马/桃花/华盖/劫煞/将星/亡神/灾煞按年支三合局查；孤辰寡宿/红鸾天喜按年支查；天德按月支、月德按三合月查；金舆按年干查；魁罡/十恶大败仅看日柱；学堂按日干长生位、词馆按临官位（子平简化口径，与「年柱纳音学堂」派别不同）；天罗（戌）地网（辰）以年支或日支对照四柱地支。仅作传统取象参考，吉凶须与原局生克合冲同看。';
 function gods(p,year,day,month){
  const shensha=new Set();
  const triads=['申子辰','寅午戌','巳酉丑','亥卯未'];
@@ -49,10 +56,36 @@ function gods(p,year,day,month){
    ['文昌',['巳','午','申','酉','申','酉','亥','子','寅','卯']]
   ])if(table[i]?.includes(p.branch))shensha.add(name);
   const j=triads.findIndex(g=>g.includes(ref.branch));
-  for(const [name,targets] of [['驿马','寅申亥巳'],['咸池桃花','酉卯午子'],['华盖','辰戌丑未'],['劫煞','巳亥寅申']])if(targets[j]===p.branch)shensha.add(name);
+  for(const [name,targets] of [['驿马','寅申亥巳'],['咸池桃花','酉卯午子'],['华盖','辰戌丑未'],['劫煞','巳亥寅申'],['将星','子午酉卯'],['灾煞','午子卯酉'],['亡神','亥巳寅申']])if(targets[j]===p.branch)shensha.add(name);
  }
  if(({甲:'卯',丙:'午',戊:'午',庚:'酉',壬:'子'})[day.stem]===p.branch)shensha.add('羊刃');
  if(branches[(branches.indexOf(month.branch)+11)%12]===p.branch)shensha.add('天医');
+ // 孤辰寡宿：年支三会分组
+ const gi=Math.floor(branches.indexOf(year.branch)/3);
+ if(['寅','巳','申','亥'][gi]===p.branch)shensha.add('孤辰');
+ if(['戌','丑','辰','未'][gi]===p.branch)shensha.add('寡宿');
+ // 红鸾起卯逆数生年支，天喜为其对冲
+ const yi=(3-branches.indexOf(year.branch)+12)%12;
+ if(branches[yi]===p.branch)shensha.add('红鸾');
+ if(branches[(yi+6)%12]===p.branch)shensha.add('天喜');
+ // 天罗（戌）地网（辰）
+ if(year.branch==='戌'&&p.branch==='辰'||day.branch==='戌'&&p.branch==='辰')shensha.add('天罗');
+ if(year.branch==='辰'&&p.branch==='戌'||day.branch==='辰'&&p.branch==='戌')shensha.add('地网');
+ // 金舆：年干起支（日干再参一遍）
+ for(const ref of [year,day])if(SHEN_SHA_JIN_YU[ref.stem]===p.branch)shensha.add('金舆');
+ // 魁罡 / 十恶大败：只看日柱
+ if(p.name==='日柱'){
+  if(['庚辰','庚戌','壬辰','戊戌'].includes(p.stem+p.branch))shensha.add('魁罡');
+  if(SHEN_SHA_EVIL_DAYS.includes(p.stem+p.branch))shensha.add('十恶大败');
+ }
+ // 天德贵人（月支）/ 月德贵人（月支三合）
+ if(SHEN_SHA_TIAN_DE[branches.indexOf(month.branch)]===p.stem||SHEN_SHA_TIAN_DE[branches.indexOf(month.branch)]===p.branch)shensha.add('天德贵人');
+ const yueDe={'申':'壬','子':'壬','辰':'壬','寅':'丙','午':'丙','戌':'丙','巳':'庚','酉':'庚','丑':'庚','亥':'甲','卯':'甲','未':'甲'}[month.branch];
+ if(yueDe===p.stem)shensha.add('月德贵人');
+ // 学堂（日干长生位）/ 词馆（日干临官位）；阳干顺行、阴干逆行
+ const si=stems.indexOf(day.stem),start=branches.indexOf('亥午寅酉寅酉巳子申卯'[si]);
+ if(branches[start]===p.branch)shensha.add('学堂');
+ if(branches[(start+(si%2?-3:3)+12)%12]===p.branch)shensha.add('词馆');
  return [...shensha];
 }
 const lifecycle=['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
@@ -91,6 +124,16 @@ function strength(pillars,relationships,enabled){
  return {weights,percentages:Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,100*v/total])),support:support*100,kind,
   useful:kind==='身弱'?[resource,day]:kind==='身强'?[produce[day],control[day]]:[],
   caution:kind==='身弱'?[produce[day],control[day]]:kind==='身强'?[resource,day]:[],
+  // 十神角色：喜用/忌神之外，明示仇神（生助忌神或克喜用）与闲神（其余），避免只给两分法
+  roles:(()=>{
+   const useful=kind==='身弱'?[resource,day]:kind==='身强'?[produce[day],control[day]]:[];
+   const avoid=kind==='身弱'?[produce[day],control[day]]:kind==='身强'?[resource,day]:[];
+   const all=Object.keys(weights);
+   const enemy=all.filter(e=>!useful.includes(e)&&!avoid.includes(e)&&(avoid.some(j=>produce[e]===j)||useful.some(u=>control[e]===u)));
+   const idle=all.filter(e=>!useful.includes(e)&&!avoid.includes(e)&&!enemy.includes(e));
+   return {useful,avoid,enemy,idle,note:'仇神＝生助忌神或克制喜用、且不在前两类中的五行；闲神＝与日主喜忌不显著的余项。仅为扶抑模型内的角色划分，具体吉凶须看它落在哪一柱、被谁引出。'};
+  })(),
+  approach:'扶抑法（同我与生我权重定强弱、定喜忌）＋月令调候参考，未切换调候/病药/从格等其它派别。',
   activated,method:enabled?'天干与藏干按各自基础权重，同日干阴阳 ×1.05，月支 ×1.8。合局得令或得月生且相关支未遭六冲时，将参与项 45% 权重归入化神。':'天干等权，藏干按本中余气；未启用月令与合化修正。'};
 }
 /* 四柱力量来源分解：把「身强/身弱」这个结论拆回得令、得地、得势、通根、透干五条证据。
@@ -244,7 +287,7 @@ const traditional={
  method:'胎元＝月柱天干进一位、地支进三位；命宫以生月与生时定位（子平法）；身宫＝月支与时支相加定支，天干由年干五虎遁推出。三垣补四柱之未备，用于参照先天禀赋与后天作为，不改动四柱主体。'
 };
 const result={entry,pillars,cycles,years,months,days,hours,selected,relationships:links,strength:strength(matrix,links,combine),natalStrength,
- traditional,strengthBreakdown:strengthBreakdown(pillars),
+ traditional,strengthBreakdown:strengthBreakdown(pillars),shenshaMethod,
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
   commander,info:{solarYear:b.meta.yearPillarYear,solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,
    clock:birth.timeUnknown?'时辰未知':birth.timeStr??[h,mi].map(n=>String(n).padStart(2,'0')).join(':'),

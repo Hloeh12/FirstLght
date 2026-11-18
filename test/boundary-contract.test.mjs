@@ -220,6 +220,10 @@ test('iOS 显示缩放免疫：两套缩放( pageZoom + zoomScale )须同时锁�
  // 关键：iOS 显示缩放同时影响 pageZoom 和 scrollView.zoomScale，两者都要锁
  assert.match(swift,/webView\.pageZoom = 1\.0/,'须锁 pageZoom');
  assert.match(swift,/setZoomScale\(1\.0/,'须同时锁 scrollView.zoomScale（visual viewport）');
+ // 根因硬锁（0.34.4）：只复位当前值不够，系统/手势会在加载后把 zoomScale 顶回非 1
+ // （真机抓到 1.0659 → innerWidth 413、offsetLeft 14、右侧裁切）。必须把 min/max 范围锁死。
+ assert.match(swift,/scrollView\.minimumZoomScale = 1\.0/,'须锁 minimumZoomScale=1');
+ assert.match(swift,/scrollView\.maximumZoomScale = 1\.0/,'须锁 maximumZoomScale=1（根治放大裁切）');
  // 必须在配置阶段注入 viewport WKUserScript（初始化后注入无效）
  assert.match(swift,/WKUserScript\(source:/,'须在配置阶段注入 viewport 脚本');
  assert.match(swift,/initial-scale=1,minimum-scale=1/,'viewport 须锁定 initial/minimum scale=1');

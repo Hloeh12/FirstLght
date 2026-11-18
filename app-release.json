@@ -1,8 +1,20 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.34.3",
-  "build": 124,
+  "version": "0.34.4",
+  "build": 125,
   "releases": [
+    {
+      "version": "0.34.4",
+      "build": 125,
+      "date": "2026-11-18",
+      "title": "冷启动首屏放大·根因修复（四）：物理锁死 zoomScale 范围",
+      "items": [
+        "根因：真机诊断确认加载完成后 scrollView.zoomScale 被顶到 1.0659（innerWidth 413、offsetLeft 14、右侧裁切）；此前只复位当前值未锁范围，系统/手势可随时改回，这正是退出重进才恢复的原因。",
+        "根治：scrollView.minimumZoomScale 与 maximumZoomScale 均锁死为 1.0，zoomScale 在物理上无法再偏离 1。",
+        "双保险：回到前台启动 1 秒巡检定时器，持续把 pageZoom 与 zoomScale 两套缩放按回 1x，覆盖系统延后应用场景。",
+        "诊断增强：首屏快照写入原生 zoomScale/pageZoom，并监听 visualViewport 变化留证，下次真机可一眼定位是否仍被系统顶缩放。"
+      ]
+    },
     {
       "version": "0.34.3",
       "build": 124,

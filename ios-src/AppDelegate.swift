@@ -28,6 +28,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     private var webView: WKWebView!
     private var statusView: UIView?
     private var didInitialLoad = false
+    private var zoomGuard: Timer?
     private let appURL = URL(string: "firstlight://bundle/")!
 
     override func viewDidLoad() {
@@ -68,7 +69,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         // 首屏视口快照：在文档最早时刻记录 innerWidth/scale，供诊断包对比「首帧 vs 当前」，
         // 定位冷启动首屏是否按错误视口排版。仅采样，不改变页面行为。
         let bootProbe = WKUserScript(source:
-            "(function(){var s=function(t){var v=window.visualViewport||{};return {tag:t,iw:innerWidth,ih:innerHeight,cw:document.documentElement&&document.documentElement.clientWidth,sw:screen.width,scale:v.scale,vvw:v.width,vvh:v.height};};window.__FL_BOOT__={start:s('start'),marks:[]};document.addEventListener('DOMContentLoaded',function(){window.__FL_BOOT__.marks.push(s('dom'));});window.addEventListener('load',function(){window.__FL_BOOT__.marks.push(s('load'));});})();",
+            "(function(){var s=function(t){var v=window.visualViewport||{};return {tag:t,iw:innerWidth,ih:innerHeight,cw:document.documentElement&&document.documentElement.clientWidth,sw:screen.width,scale:v.scale,vvw:v.width,vvh:v.height,ol:v.offsetLeft};};window.__FL_BOOT__={start:s('start'),marks:[]};var push=function(t){var b=window.__FL_BOOT__;if(b&&b.marks.length<24)b.marks.push(s(t));};document.addEventListener('DOMContentLoaded',function(){push('dom');});window.addEventListener('load',function(){push('load');});try{var v=window.visualViewport;if(v&&v.addEventListener){var n=0;v.addEventListener('resize',function(){if(Math.abs(v.scale-1)>0.001)push('vv-'+(++n));});}}catch(e){}})();",
             injectionTime: .atDocumentStart, forMainFrameOnly: true)
         config.userContentController.addUserScript(bootProbe)
         config.setURLSchemeHandler(LocalResources(), forURLScheme: "firstlight")
@@ -93,6 +94,11 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         webView.scrollView.isDirectionalLockEnabled = true
         webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
+        // 根因硬锁：setZoomScale(1.0) 只是一次性赋值，系统/手势可在之后把 zoomScale 改成非 1。
+        // 真机诊断实测加载后 zoomScale=1.0659、innerWidth=413、offsetLeft=14（页被放大且右侧裁切）。
+        // 把 min/max 范围本身锁为 1，zoomScale 在物理上不可能再偏离 1，这是唯一根治手段。
+        webView.scrollView.minimumZoomScale = 1.0
+        webView.scrollView.maximumZoomScale = 1.0
         // 首屏在拿到正确 frame、渲染出第一帧前保持隐藏，杜绝任何错误视口的瞬态被看到。
         webView.alpha = 0
         // 免疫 iOS「显示缩放/大字体」：锁定页面缩放为 1x，避免 WebView 被系统放大后右侧内容被裁切
@@ -102,11 +108,26 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     }
 
     // WKWebView 有两套缩放：pageZoom(CSS 页面缩放) 与 scrollView.zoomScale(visual viewport)。
-    // iOS 显示缩放/大字体在冷启动加载后同时影响两者，只锁 pageZoom 不够 —— 必须一起锁。
+    // 关键：min/max 范围锁为 1 是根治点；setZoomScale 只是把当前值复位，二者缺一不可 ——
+    // 只复位当前值而不锁范围，系统/手势随时可再改（真机抓到 1.0659 导致放大裁切）。
     private func applyZoomLock() {
-        guard #available(iOS 15.0, *) else { return }
-        webView.pageZoom = 1.0
-        webView.scrollView.setZoomScale(1.0, animated: false)
+        let sv = webView.scrollView
+        if sv.minimumZoomScale != 1.0 { sv.minimumZoomScale = 1.0 }
+        if sv.maximumZoomScale != 1.0 { sv.maximumZoomScale = 1.0 }
+        if abs(sv.zoomScale - 1.0) > 0.001 { sv.setZoomScale(1.0, animated: false) }
+        if #available(iOS 15.0, *) { webView.pageZoom = 1.0 }
+    }
+    // 后台回前台 / 系统字体与显示缩放变化时，持续巡检把 visual viewport 按回 1x。
+    // min/max 已锁死，这里是双保险：覆盖系统先改范围再改当前值的边缘时序。
+    private func startZoomGuard() {
+        stopZoomGuard()
+        zoomGuard = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            DispatchQueue.main.async { self?.applyZoomLock() }
+        }
+    }
+    private func stopZoomGuard() {
+        zoomGuard?.invalidate()
+        zoomGuard = nil
     }
     // 初始化/回前台统一走这里；延迟一次覆盖系统延后应用的场景。
     private func resetPageZoom() {
@@ -114,10 +135,16 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         DispatchQueue.main.async { [weak self] in self?.applyZoomLock() }
     }
 
-    // 系统字体/显示缩放变化回到前台时，强制把两套缩放复位到 1x
+    // 系统字体/显示缩放变化回到前台时，强制把两套缩放复位到 1x 并启动巡检
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         resetPageZoom()
+        startZoomGuard()
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        stopZoomGuard()
     }
 
     // 页面首次真正可见时再锁一次：冷启动的系统缩放应用晚于 viewWillAppear。
@@ -165,10 +192,14 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     // 这里在导航完成后复位，并跨下一次主线程循环再锁一次，覆盖系统延迟应用的场景。
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         applyZoomLock()
-        // 把原生实际 frame 写进首屏快照，供诊断对比（确认加载时视口是否与屏幕一致）。
+        // 把原生实际 frame 与两套缩放写进首屏快照，供诊断对比（确认加载时视口是否与屏幕一致、
+        // zoomScale 是否被系统顶到非 1）。
         let w = Int(webView.bounds.width), h = Int(webView.bounds.height)
         let sw = Int(UIScreen.main.bounds.width), sh = Int(UIScreen.main.bounds.height)
-        webView.evaluateJavaScript("window.__FL_BOOT__&&(window.__FL_BOOT__.native={w:\(w),h:\(h),sw:\(sw),sh:\(sh)})")
+        let zs = webView.scrollView.zoomScale
+        let pz: Double
+        if #available(iOS 15.0, *) { pz = webView.pageZoom } else { pz = -1 }
+        webView.evaluateJavaScript("window.__FL_BOOT__&&(window.__FL_BOOT__.native={w:\(w),h:\(h),sw:\(sw),sh:\(sh),zs:\(zs),pz:\(pz)})")
         // 下一帧再显示：此时布局已按正确 frame 完成，避免闪出按错误视口排版的中间态。
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }

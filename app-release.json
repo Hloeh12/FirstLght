@@ -1,8 +1,20 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.34.4",
-  "build": 125,
+  "version": "0.34.5",
+  "build": 126,
   "releases": [
+    {
+      "version": "0.34.5",
+      "build": 126,
+      "date": "2026-11-18",
+      "title": "修复输入框聚焦放大：表单控件字号 15px→16px 根治 iOS 自动缩放",
+      "items": [
+        "根因：0.34.4 诊断 vv-1 实锤——所有输入框为 15px，iOS WKWebView 聚焦时自动把整页放大到 1.0659（≈16/15）并弹键盘（vvh 956→530），右侧被裁；此放大走 visualViewport 而非 zoomScale，缩放范围锁对其无效。",
+        "修复：输入/选择控件（含 #inputSheet、#screen form 的 ID 选择器及聚焦态）字号统一提到 16px!important，用同等特异性覆盖 design.css 的 15px!important，消除 iOS 放大触发条件。",
+        "0.34.4 已确认冷启动缩放锁生效（原生 zs=1/pz=1、当前态 scale=1），本版专门清除残留的输入框聚焦放大。",
+        "真机探测 15 个控件全部 >=16px（UNDER16=0）；新增契约测试锁定覆盖规则防回归。"
+      ]
+    },
     {
       "version": "0.34.4",
       "build": 125,

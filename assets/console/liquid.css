@@ -237,3 +237,7 @@ input,select,textarea{
  .chip{background:rgba(255,164,206,.1)!important;border-color:rgba(255,164,206,.2)!important;color:#ffb0d0}
  .liquid-bottom-nav{background:linear-gradient(160deg,rgba(36,29,42,.9),rgba(28,22,34,.8))!important;border-color:rgba(255,255,255,.12)!important}
 }
+/* FL-IOS16-INPUT: 输入控件字号须 >=16px，否则 iOS WKWebView 聚焦时自动放大整页（visualViewport.scale≈16/15）右侧被裁切。须用同等 ID 选择器特异性覆盖 design.css 的 15px!important */
+#inputSheet input,#inputSheet select,#screen form input,#screen form select,
+#inputSheet input:focus,#inputSheet select:focus,#screen form input:focus,
+input,select,textarea{font-size:16px!important}

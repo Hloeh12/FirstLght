@@ -260,3 +260,18 @@ test('冷启动首屏：加载须等到 viewDidLayoutSubviews 拿到真实 frame
  const diag=await read('../assets/console/diagnostics.js');
  assert.match(diag,/boot:window\.__FL_BOOT__/,'诊断包须导出首屏快照');
 });
+
+test('iOS 输入框聚焦放大免疫：表单控件字号须 >=16px（含 ID 选择器覆盖），杜绝 visualViewport.scale≈16/15',async()=>{
+ // 根因（0.34.5 诊断 vv-1）：所有输入框 15px，iOS WKWebView 聚焦时自动把整页放大到 1.0659（≈16/15）
+ // 并弹键盘（vvh 缩到 530），右侧被裁。此放大不走 zoomScale，缩放范围锁无法阻止，只能从字号根治。
+ // 关键坑：design.css 有 #inputSheet input{font-size:15px!important}（ID+!important），
+ // 必须用同等 ID 选择器 + !important 覆盖，单纯 input{...!important} 因特异性低无效。
+ const liquid=await read('../assets/console/liquid.css');
+ assert.match(liquid,/#inputSheet input,#inputSheet select,#screen form input,#screen form select[\s\S]{0,300}font-size:16px!important/,
+   '须用同等 ID 选择器 + !important 覆盖 design.css 的 15px 输入字号');
+ assert.match(liquid,/#inputSheet input:focus[\s\S]{0,200}font-size:16px!important/,'聚焦态字号也须覆盖为 16px');
+ // design.css 的 15px 规则须仍在（被覆盖而非删除），保证非输入态与既有布局不变
+ const design=await read('../assets/console/design.css');
+ assert.match(design,/#inputSheet input,#inputSheet select,#screen form input,#screen form select[\s\S]{0,120}font-size:15px!important/,
+   'design.css 原 15px 规则保留，由 liquid.css 覆盖');
+});

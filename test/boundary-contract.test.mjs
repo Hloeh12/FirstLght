@@ -215,16 +215,23 @@ test('Shadbala 六力补强：Saptavargaja/Drik 入分项且口径声明覆盖�
  assert.match(s.method,/Nathonnatha/,'须披露仍未计入的 Kala 其余分项');
 });
 
-test('iOS 显示缩放免疫：pageZoom 须在导航完成后复位，杜绝冷启动首屏放大',async()=>{
+test('iOS 显示缩放免疫：两套缩放( pageZoom + zoomScale )须同时锁定，viewport 注入在配置阶段',async()=>{
  const swift=await read('../ios-src/AppDelegate.swift');
- // 必须有 didFinish navigation 回调，且在其中复位 pageZoom（仅 viewDidLoad/viewWillAppear 会被加载覆盖）
+ // 关键：iOS 显示缩放同时影响 pageZoom 和 scrollView.zoomScale，两者都要锁
+ assert.match(swift,/webView\.pageZoom = 1\.0/,'须锁 pageZoom');
+ assert.match(swift,/setZoomScale\(1\.0/,'须同时锁 scrollView.zoomScale（visual viewport）');
+ // 必须在配置阶段注入 viewport WKUserScript（初始化后注入无效）
+ assert.match(swift,/WKUserScript\(source:/,'须在配置阶段注入 viewport 脚本');
+ assert.match(swift,/initial-scale=1,minimum-scale=1/,'viewport 须锁定 initial/minimum scale=1');
+ assert.doesNotMatch(swift,/user-scalable=no|maximum-scale=1/,'不得禁用双指缩放（无障碍契约）');
+ // 复位时机齐全：初始化 / viewWillAppear / viewDidAppear / didFinish + 延迟
+ assert.match(swift,/override func viewDidAppear/,'须在页面可见时再锁一次');
  assert.match(swift,/func webView\(_ webView: WKWebView, didFinish navigation: WKNavigation!\)/,'须实现导航完成回调');
- const didFinish=swift.slice(swift.indexOf('didFinish navigation: WKNavigation!'));
- assert.match(didFinish,/webView\.pageZoom = 1\.0/,'导航完成后须复位 pageZoom 为 1x');
- assert.match(didFinish,/asyncAfter/,'须延迟再锁一次，覆盖系统延后应用缩放的场景');
- // 三处复位点都在（初始化 / 回前台 / 导航完成）
- assert.ok((swift.match(/pageZoom = 1\.0/g)||[]).length>=4,'初始化/回前台/导航完成/延迟四处均须锁定');
- // 无障碍契约不回退：不得禁用双指缩放的 viewport 声明
+ assert.match(swift,/asyncAfter/,'须延迟再锁，覆盖系统延后应用缩放');
+ assert.ok((swift.match(/applyZoomLock\(\)/g)||[]).length>=5,'applyZoomLock 须在多个时机调用');
+ // 诊断包须含 visualViewport.scale，便于真机定位
+ const diag=await read('../assets/console/diagnostics.js');
+ assert.match(diag,/visualViewport:vv\?\{[^}]*scale:vv\.scale/,'诊断包须导出 visualViewport.scale');
  const html=await read('../index.html');
  assert.doesNotMatch(html,/user-scalable=no/,'必须允许双指缩放');
 });

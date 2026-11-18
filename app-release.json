@@ -1,8 +1,20 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.34.1",
-  "build": 122,
+  "version": "0.34.2",
+  "build": 123,
   "releases": [
+    {
+      "version": "0.34.2",
+      "build": 123,
+      "date": "2026-11-18",
+      "title": "修复冷启动首屏放大（第二版）：同时锁定 pageZoom 与 scrollView.zoomScale，配置阶段注入 viewport 脚本",
+      "items": [
+        "根因补充：iOS 显示缩放同时影响两套缩放——pageZoom(CSS 页面缩放) 与 scrollView.zoomScale(visual viewport)，上一版只锁 pageZoom 故未生效；且系统缩放的应用晚于 viewWillAppear。",
+        "修复：applyZoomLock 同时锁 pageZoom=1.0 与 scrollView.zoomScale=1.0；复位时机扩到初始化/回前台/页面可见(viewDidAppear)/导航完成，并以 0.35s、1.0s 两道延迟兜底系统延后应用。",
+        "配置阶段用 WKUserScript 注入 viewport 锁定 initial/minimum scale=1（初始化后注入无效），不设最大缩放上限、保留双指放大（无障碍契约）。",
+        "诊断包新增缩放指标（visualViewport.scale、innerWidth/Screen/DPR、bodyScrollWidth、textSizeAdjust），便于真机精确定位。"
+      ]
+    },
     {
       "version": "0.34.1",
       "build": 122,

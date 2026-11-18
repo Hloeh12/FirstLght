@@ -40,6 +40,13 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     private func setupWebView() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
+        // viewport 修正必须在 configuration 阶段作为 WKUserScript 注入：WKWebView 初始化后再 add 不生效。
+        // 只锁定初始/最小缩放为 1，不设最大缩放上限、不关闭手势缩放，
+        // 保留双指放大查看的无障碍能力。
+        let viewportScript = WKUserScript(source:
+            "var m=document.querySelector('meta[name=viewport]');if(m){m.setAttribute('content','width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover');}",
+            injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        config.userContentController.addUserScript(viewportScript)
         config.setURLSchemeHandler(LocalResources(), forURLScheme: "firstlight")
         config.userContentController.add(self, name: "shareChart")
         config.userContentController.add(self, name: "caseReminder")
@@ -68,20 +75,28 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         view.addSubview(webView)
     }
 
-    // WKWebView 会在「页面加载完成」时用系统显示缩放重新计算 pageZoom，
-    // 只在初始化 / viewWillAppear 设置会被这次重算覆盖 —— 这正是冷启动首屏放大、
-    // 退出重进（不再 load）才正常的原因。三处都复位，并在 didFinish 后延迟一帧锁死。
-    private func resetPageZoom() {
+    // WKWebView 有两套缩放：pageZoom(CSS 页面缩放) 与 scrollView.zoomScale(visual viewport)。
+    // iOS 显示缩放/大字体在冷启动加载后同时影响两者，只锁 pageZoom 不够 —— 必须一起锁。
+    private func applyZoomLock() {
         guard #available(iOS 15.0, *) else { return }
         webView.pageZoom = 1.0
-        DispatchQueue.main.async { [weak self] in
-            self?.webView.pageZoom = 1.0
-        }
+        webView.scrollView.setZoomScale(1.0, animated: false)
+    }
+    // 初始化/回前台统一走这里；延迟一次覆盖系统延后应用的场景。
+    private func resetPageZoom() {
+        applyZoomLock()
+        DispatchQueue.main.async { [weak self] in self?.applyZoomLock() }
     }
 
-    // 系统字体/显示缩放变化回到前台时，强制把页面缩放复位到 1x
+    // 系统字体/显示缩放变化回到前台时，强制把两套缩放复位到 1x
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        resetPageZoom()
+    }
+
+    // 页面首次真正可见时再锁一次：冷启动的系统缩放应用晚于 viewWillAppear。
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
         resetPageZoom()
     }
 
@@ -118,13 +133,11 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     // viewDidLoad/viewWillAppear 里的复位都早于此时，会被覆盖 —— 冷启动首屏放大即源于此。
     // 这里在导航完成后复位，并跨下一次主线程循环再锁一次，覆盖系统延迟应用的场景。
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        resetPageZoom()
-        DispatchQueue.main.async { [weak self] in
-            self?.webView.pageZoom = 1.0
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.webView.pageZoom = 1.0
-        }
+        applyZoomLock()
+        DispatchQueue.main.async { [weak self] in self?.applyZoomLock() }
+        // 冷启动时系统显示缩放的应用可能晚于导航完成，用两道延迟兜底。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in self?.applyZoomLock() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in self?.applyZoomLock() }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {

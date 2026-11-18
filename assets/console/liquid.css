@@ -241,3 +241,66 @@ input,select,textarea{
 #inputSheet input,#inputSheet select,#screen form input,#screen form select,
 #inputSheet input:focus,#inputSheet select:focus,#screen form input:focus,
 input,select,textarea{font-size:16px!important}
+
+/* FL-THEME-CHECKBOX: 出生表单复选框去除浏览器默认深灰/黑色描边，改粉色主题勾选框（用户反馈的"黑色边框"） */
+#birthForm .checks label input[type=checkbox]{
+  appearance:none;-webkit-appearance:none;
+  width:17px;height:17px;flex:0 0 17px;margin:0 6px 0 0;vertical-align:-3px;
+  border:1.5px solid #ff4f8b!important;border-radius:5px;background:#fff!important;
+  position:relative;cursor:pointer;box-shadow:0 1px 3px rgba(255,79,139,.18)
+}
+#birthForm .checks label input[type=checkbox]:checked{background:#ff4f8b!important;border-color:#ff4f8b!important}
+#birthForm .checks label input[type=checkbox]:checked::after{
+NaN
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)
+}
+/* FL-THEME-SCROLLBAR: 滚动条改为融入主题的细条，去掉深色粗边 */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,79,139,.35);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,79,139,.55)}
+
+/* FL-PERIOD-WORKBENCH: 洞见页时点专项报告工作台 + 报告命盘快照 */
+.period-workbench .spread{align-items:center}
+.period-scope-rail{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.period-scope{border:1px solid rgba(255,79,139,.35);background:rgba(255,79,139,.06);color:#c23571;border-radius:999px;padding:6px 15px;font-size:14px;cursor:pointer;transition:.18s}
+.period-scope.on{background:#ff4f8b;color:#fff;border-color:#ff4f8b;box-shadow:0 2px 10px rgba(255,79,139,.3)}
+.period-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
+.period-controls label{flex:1;min-width:150px;display:flex;flex-direction:column;gap:5px;font-size:13px;color:#8a6076}
+.period-controls select{width:100%;padding:9px 10px;border:1px solid #f0b9d2;border-radius:10px;background:#fff;font-size:16px;color:#4a2d3d}
+/* 报告内命盘快照 */
+.rpt-chart{margin:20px 0 28px;padding:16px;border:1px solid var(--line,#ecdbe4);border-radius:14px;background:linear-gradient(160deg,#fffafc,#fff)}
+.rpt-chart-title{margin:0 0 12px;font-size:16px;color:var(--accent,#7a2350);border:0;padding:0}
+.rpt-chart-stage{display:flex;justify-content:center;overflow:hidden}
+.rpt-chart-stage .snap-board,.rpt-chart-stage .snap-bazi,.rpt-chart-stage .snap-vedic,.rpt-chart-stage .snap-west{max-width:100%}
+.rpt-chart-caption{margin:10px 0 0;font-size:12px;color:#8a6076;text-align:center}
+.snap-zi{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:2px;width:100%;max-width:520px;aspect-ratio:1;font-size:11px}
+.snap-zi-cell{border:1px solid #e7c8d9;border-radius:4px;padding:4px;display:flex;flex-direction:column;background:#fffafd;position:relative;min-width:0;overflow:hidden}
+.snap-zi-cell.borrowed{background:#faf5f8}.snap-zi-cell.flow-active{background:#fff0f6;border-color:#ff8ab8}
+.snap-zi-stars{display:flex;flex-wrap:wrap;gap:1px 3px;align-items:baseline;line-height:1.25;min-height:16px}
+.snap-zi-stars b{color:#a8326a;font-size:11px}.snap-zi-stars i{font-size:9px;color:#c98aa8;font-style:normal}
+.snap-zi-stars em.snap-flow{font-size:9px;font-style:normal;color:#fff;background:#ff4f8b;border-radius:3px;padding:0 3px}
+.snap-empty,.snap-empty-note{color:#b99aab;font-size:11px}
+.snap-zi-minor{font-size:9px;color:#a98aa0;line-height:1.2;flex:1}
+.snap-zi-foot{display:flex;justify-content:space-between;border-top:1px dotted #e7c8d9;padding-top:2px;margin-top:auto;font-size:10px;color:#7a4a63}
+.snap-zi-foot b{color:#a8326a}.snap-zi-foot span{color:#a98aa0}
+.snap-flow-tag{position:absolute;top:2px;right:2px;font-size:9px;color:#fff;background:#ff4f8b;border-radius:3px;padding:0 3px}
+.snap-zi-center{grid-row:2/4;grid-column:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fff;border:1px solid #e7c8d9;border-radius:6px;text-align:center}
+.snap-zi-center b{font-size:15px;color:#a8326a}.snap-zi-center span{font-size:11px;color:#8a6076}.snap-zi-center small{font-size:9px;color:#b99aab}
+.snap-bazi{width:100%;max-width:560px;font-size:12px}
+@media(max-width:600px){.period-controls label{min-width:100%}}
+@media (prefers-color-scheme:dark){
+ .period-workbench{background:rgba(46,38,54,.8)!important}
+ .period-scope{color:#ff9cc4;background:rgba(255,79,139,.1)}
+ .period-scope.on{color:#fff}
+ .period-controls select{background:rgba(30,24,36,.9);color:#f5d8e6;border-color:rgba(255,138,184,.4)}
+ .snap-zi-cell,.snap-zi-center{background:rgba(40,32,48,.85);border-color:rgba(255,160,200,.2)}
+ .snap-zi-cell.flow-active{background:rgba(255,79,139,.25)}
+ .snap-zi-stars b,.snap-zi-foot b,.snap-zi-center b{color:#ff9cc4}
+ .rpt-chart{background:rgba(40,32,48,.6);border-color:rgba(255,160,200,.2)}
+}
+
+/* FL-TOC-GROUP: 报告目录主题分区标签 */
+.rpt-toc-group{margin:10px 0 3px;color:#a8326a;font-weight:800;font-size:12px;letter-spacing:.06em;border-left:3px solid #ff4f8b;padding-left:8px}
+.rpt-toc-item{padding-left:11px}
+@media (prefers-color-scheme:dark){.rpt-toc-group{color:#ff9cc4;border-color:#ff4f8b}}

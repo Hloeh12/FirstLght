@@ -302,3 +302,44 @@ test('深度报告导出改用自包含 HTML 文档，不再走 canvas 长图（
  assert.match(swift,/appendingPathComponent\(file\)/,'文档须写成文件供分享面板保存');
  assert.match(swift,/hasSuffix\("\.html"\)/,'须强制 .html 后缀并防路径穿越');
 });
+
+test('视觉杂质清理：出生表单复选框用粉色主题自定义样式（去掉默认黑色描边），滚动条细化',async()=>{
+ // 用户反馈红圈处的「真太阳时/闰月」复选框有深灰/黑色描边，与粉色主题不搭。
+ // 须用 appearance:none 自定义勾选框，边框改品牌粉；同时保留上一版 16px 字号规则（防 iOS 聚焦放大回归）。
+ const liquid=await read('../assets/console/liquid.css');
+ assert.match(liquid,/#birthForm \.checks label input\[type=checkbox\]\{[\s\S]{0,200}appearance:none;-webkit-appearance:none/,
+  '复选框须自定义外观（去掉系统默认描边）');
+ assert.match(liquid,/#birthForm \.checks label input\[type=checkbox\]\{[\s\S]{0,300}border:1\.5px solid #ff4f8b!important/,
+  '复选框未选中边框须为品牌粉，去掉黑色描边');
+ assert.match(liquid,/#birthForm \.checks label input\[type=checkbox\]:checked\{background:#ff4f8b!important/,
+  '选中态须粉色填充');
+ assert.match(liquid,/#birthForm \.checks label input\[type=checkbox\]:checked::after/,'选中态须白色对勾');
+ assert.match(liquid,/::-webkit-scrollbar\{width:6px;height:6px\}/,'滚动条须细化为 6px');
+ assert.match(liquid,/input,select,textarea\{font-size:16px!important\}/,'16px 字号规则须保留（防聚焦放大回归）');
+});
+
+test('洞见页时点专项报告工作台：四体系分别生成报告 + 报告内嵌命盘快照',async()=>{
+ // 用户要求对标专业 App：洞见页可按大运/流年/流月/流日分别生成详细报告，报告里直观显示对应时点命盘。
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/import \{buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES\} from '\.\/period-report\.js'/,'须引入时点报告模块');
+ assert.match(app,/class="card liquid-glass period-workbench"/,'洞见页须有时点报告工作台');
+ assert.match(app,/data-period-scope/,'须有时点类型切换（大运/流年/流月/流日）');
+ assert.match(app,/data-period-generate/,'须有生成按钮');
+ assert.match(app,/openFullReport\(report\)/,'生成后须打开预生成的报告');
+ assert.doesNotMatch(app,/洞见页不混入短期应期/,'旧的「应期不进洞见」声明须移除');
+ // openFullReport 须接受预生成 report
+ assert.match(app,/function openFullReport\(prebuilt\)/,'报告弹层须接受预生成报告对象');
+ // 报告渲染层须支持 chartHtml
+ const full=await read('../assets/console/full-report.js');
+ assert.match(full,/report\.chartHtml\?`<section class="rpt-chart"/,'报告 HTML 须渲染命盘快照区');
+ const mod=await read('../assets/console/period-report.js');
+ assert.match(mod,/export async function buildPeriodReport/,'须有四体系时点报告生成器');
+ for(const s of ['bazi','ziwei','vedic'])assert.match(mod,new RegExp(`system==='${s}'`),`须支持 ${s} 体系`);
+ assert.match(mod,/\/\/ west[\s\S]{0,200}buildWesternDeepReport/,'west 须作为兜底分支生成西洋报告');
+ assert.match(mod,/ziweiSnapshot|baziGrid|northIndianChart|wheel/,'须内嵌四体系命盘渲染');
+ assert.match(mod,/时点聚焦/,'报告须含时点聚焦专章，确保正文反映所选时点');
+ assert.match(mod,/buildBaziDeepReport[\s\S]*buildZiweiDeepReport[\s\S]*buildVedicDeepReport[\s\S]*buildWesternDeepReport/,'须复用四体系深度知识库生成详细正文');
+ // 报告导出文档样式须含命盘快照
+ const exp=await read('../assets/console/report-export.js');
+ assert.match(exp,/\.snap-zi\{/,'导出文档样式须含紫微盘快照');
+});

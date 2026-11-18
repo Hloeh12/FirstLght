@@ -21,6 +21,7 @@ import {westernView,westernTools,astroHouse,houseOptions,houseLabels,setAstroHou
 import {extraView} from './extras.js';
 import {shareChart} from './share.js';
 import {exportReportDocument} from './report-export.js';
+import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES} from './period-report.js';
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
@@ -651,12 +652,13 @@ function forceRefreshAllInsights(){
  });
 }
 // 生成成篇深度报告：复活四层知识库，做成可生成/可导出/可复制的产品功能。
-function openFullReport(){
+// 可传入预生成的 report（时点专项报告工作台用），否则按当前本命盘生成。
+function openFullReport(prebuilt){
  const synReady=state.system==='synastry'&&state.chartState.synastry?.result;
- if(!state.reading&&!synReady){tell('请先排盘，再生成报告。');return;}
+ if(!prebuilt&&!state.reading&&!synReady){tell('请先排盘，再生成报告。');return;}
  const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'};
  const d=document.getElementById('reportSheet');
- const report=composeFullReport(state,names);
+ const report=prebuilt||composeFullReport(state,names);
  d.innerHTML=`<div class="dialog-content report-content">
   <div class="rpt-topbar"><button type="button" class="icon" data-rpt-close aria-label="关闭报告">×</button>
    <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
@@ -729,11 +731,93 @@ function insights(){
   natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p></article>`;
   lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
  }
- root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><article class="card liquid-glass insight-boundary"><h2>应期分析在哪里？</h2><p>流年、流月、流日和大运的专属分析只显示在对应排盘页的时间轴下方；洞见页不混入短期应期。</p></article></section>`;
+ root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section>${periodWorkbenchHtml(current)}</section>`;
  for(const x of root.querySelectorAll('[data-insight-system]'))x.onclick=()=>{state.system=x.dataset.insightSystem;render();};
  const or=root.querySelector('[data-open-report]');if(or)or.onclick=()=>openFullReport();
  const ex=root.querySelector('[data-share-current]');if(ex)ex.onclick=async()=>{ex.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前报告已生成，可在系统分享面板保存。');}catch(e){tell('导出失败：'+e.message);}finally{ex.disabled=false;}};
+ wirePeriodWorkbench(root,current);
  forceRefreshAllInsights();
+}
+
+/* ---------------- 洞见页：时点专项报告工作台 ---------------- */
+// 根据体系从当前缓存数据准备时点选项：选「时点类型」→选具体时点→生成该时点的详细报告+命盘快照。
+function periodOptions(system,scope){
+ const cs=state.chartState||{},r=state.reading||{};
+ const opt=(v,t,on)=>`<option value="${esc(String(v))}"${on?' selected':''}>${esc(t)}</option>`;
+ if(system==='bazi'){
+  const d=cs.bazi?.data||r.bazi||{};
+  const key={luck:'cycles',year:'years',month:'months',day:'days'}[scope];
+  const list=d[key]||[];
+  if(scope==='luck')return [opt('natal','本命原局'),...list.map((x,i)=>opt(i,`第${i+1}步 ${x.stem||''}${x.branch||''}（${x.startYear||x.age||''}起）`))].join('');
+  if(scope==='year'){const nowY=new Date().getFullYear();const has=list.some(x=>x.year===nowY);return list.map(x=>opt(x.year,`${x.year} ${x.stem||''}${x.branch||''}${x.year===nowY?'（今年）':''}`,has?x.year===nowY:x===list.at(-1))).join('');}
+  return list.map((x,i)=>opt(i,`${x.label||x.date?.slice(5)||('第'+(i+1))} ${x.stem||''}${x.branch||''}`)).join('');
+ }
+ if(system==='ziwei'){
+  const ch=cs.ziwei?.chart||r.ziwei||{},birthYear=ch.effectiveDate?+ch.effectiveDate.slice(0,4):new Date().getFullYear();
+  // 流年选择须覆盖「今年及未来」；从出生年顺排会让中年用户只能选到童年年份。
+  const year=Math.max(birthYear,new Date().getFullYear()-2);
+  if(scope==='decadal'){const list=ch.decades||[];return list.map((x,i)=>opt(x.yearRange?.[0]||year+i*10,`${(x.ageRange||[]).join('–')}岁 ${(x.yearRange||[]).join('–')} · ${x.palaceName||''}`)).join('');}
+  if(scope==='yearly'){const nowY=new Date().getFullYear();return Array.from({length:12},(_,i)=>opt(year+i,`${year+i} 年${year+i===nowY?'（今年）':''}`,year+i===nowY)).join('');}
+  if(scope==='monthly'){const nowM=new Date().getMonth()+1;return Array.from({length:12},(_,i)=>opt(i+1,`第 ${i+1} 月${i+1===nowM?'（本月）':''}`,i+1===nowM)).join('');}
+  return Array.from({length:30},(_,i)=>opt(i+1,`第 ${i+1} 日`)).join('');
+ }
+ // vedic / west：以年+月为时点，转成 ISO
+ const y=new Date().getFullYear();
+ return Array.from({length:8},(_,i)=>opt(y-2+i,`${y-2+i} 年`)).join('');
+}
+function periodWorkbenchHtml(system){
+ const scopes=SCOPES[system]||[];
+ const rail=scopes.map(([id,label],i)=>btn(label,`class="period-scope${i===0?' on':''}" data-period-scope="${id}" aria-pressed="${i===0}"`)).join('');
+ const first=scopes[0]?.[0];
+ return `<section class="card liquid-glass period-workbench" data-period-workbench data-system="${esc(system)}">
+ <div class="spread"><h2>时点专项报告</h2><span class="chip">选时点 → 出盘 + 出详批</span></div>
+ <p class="thin">按大运 / 流年 / 流月 / 流日分别生成深度报告，报告里直接显示对应时点的命盘。字数不设上限。</p>
+ <div class="period-scope-rail" role="group" aria-label="时点类型">${rail}</div>
+ <div class="period-controls"><label>选择时点<select data-period-value>${periodOptions(system,first)}</select></label>
+ ${['vedic','west'].includes(system)?'<label>月份<select data-period-month>'+Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?'selected':''}>${i+1} 月</option>`).join('')+'</select></label>':''}
+ ${btn('生成专项报告','class="primary" data-period-generate')}</div>
+ <p class="thin" data-period-status role="status"></p></section>`;
+}
+function wirePeriodWorkbench(root,system){
+ const host=root.querySelector('[data-period-workbench]');if(!host)return;
+ const scopes=SCOPES[system]||[],valSel=host.querySelector('[data-period-value]'),monthSel=host.querySelector('[data-period-month]'),status=host.querySelector('[data-period-status]');
+ let scope=scopes[0]?.[0];
+ const scopeLabel=()=>scopes.find(([id])=>id===scope)?.[1]||scope;
+ const refresh=()=>{valSel.innerHTML=periodOptions(system,scope);};
+ for(const b of host.querySelectorAll('[data-period-scope]'))b.onclick=()=>{
+  scope=b.dataset.periodScope;
+  for(const x of host.querySelectorAll('[data-period-scope]')){const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',String(on));}
+  refresh();if(status)status.textContent='';
+ };
+ const gen=host.querySelector('[data-period-generate]');
+ gen.onclick=async()=>{
+  const raw=valSel.value;let selection={scope},label='';
+  try{
+   gen.disabled=true;if(status)status.textContent='正在按所选时点重算命盘与报告…';
+   if(system==='bazi'){
+    const key={luck:'luck',year:'year',month:'month',day:'day'}[scope];
+    selection={[key]:raw==='natal'?undefined:Number(raw)};
+    if(scope==='luck'){selection={};if(raw!=='natal')selection.luck=Number(raw);}
+    const d=state.chartState?.bazi?.data||state.reading?.bazi||{};
+    const list=scope==='year'?(d.years||[]):(d[{luck:'cycles',month:'months',day:'days'}[scope]]||[]);
+    const item=raw==='natal'?null:(scope==='year'?list.find(x=>String(x.year)===String(raw)):list[Number(raw)]);
+    label=raw==='natal'?'本命原局':`${scopeLabel()} ${item?(item.stem||'')+(item.branch||''):''}${scope==='year'&&item?' '+item.year:''}`.trim();
+   }else if(system==='ziwei'){
+    const yr=Number(raw);
+    selection={scope,year:yr,month:scope==='monthly'?Number(raw):undefined,day:scope==='daily'?Number(raw):undefined};
+    label=`${scopeLabel()} ${scope==='yearly'?yr+' 年':scope==='monthly'?raw+' 月':scope==='daily'?raw+' 日':(state.chartState?.ziwei?.chart?.decades||[]).find(x=>String(x.yearRange?.[0])===String(raw))?.palaceName||raw}`;
+   }else{
+    const yr=Number(raw),mo=monthSel?Number(monthSel.value):1;
+    const at=new Date(Date.UTC(yr,mo-1,15,12,0,0)).toISOString();
+    selection=system==='vedic'?{at,varga:1}:{at,mode:scope};
+    label=`${yr} 年 ${mo} 月 · ${scopeLabel()}`;
+   }
+   const report=await buildPeriodReport(ctx,system,scope,selection,label);
+   openFullReport(report);
+   if(status)status.textContent='已生成：'+label+'（报告里可复制 / 导出文档）';
+  }catch(e){if(status)status.textContent='生成失败：'+(e.message||e);}
+  finally{gen.disabled=false;}
+ };
 }
 function reportTitle(key){
  return {'w-persona':'性格与天赋','w-career':'事业方向','w-wealth':'资源与财富','w-love':'情感关系','w-health':'生活节奏','z-palaces':'紫微十二宫','z-mutagen':'生年四化','w-risks':'长期课题','v-dasha':'印度大运'}[key]||'综合观察';

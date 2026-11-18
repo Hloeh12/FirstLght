@@ -79,11 +79,23 @@ const XING_PAIRS=[['子','卯'],['辰','辰'],['午','午'],['酉','酉'],['亥'
 const HAI_PAIRS=[['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']];
 const PO_PAIRS=[['子','酉'],['卯','午'],['辰','丑'],['未','戌'],['寅','亥'],['巳','申']];
 
+/* 十神映射：与引擎 src/bazi.mjs tenGod() 完全同源（五行生克 + 阴阳同异）。
+   旧实现用 [s%2][diff/2] 索引查表，天干关系几乎全错且 diff>=6 返回 null，
+   直接导致格局判定误判（如把七杀格误报成「中和格格」）。标准十神：
+   同我=比肩/劫财、我生=食神/伤官、我克=偏财/正财、克我=七杀/正官、生我=偏印/正印。*/
+const STEM_ELEM={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
+const ELEM_GENERATE={木:'火',火:'土',土:'金',金:'水',水:'木'};
+const ELEM_CONTROL={木:'土',土:'水',水:'火',火:'金',金:'木'};
+const YIN_STEMS='乙丁己辛癸';
 function godOf(dayStem,stem){
- const d=STEMS.indexOf(dayStem),s=STEMS.indexOf(stem);
- if(s<0||d<0)return null;
- const diff=(s-d+10)%10,yin=d%2===s%2;
- return [[yin?'比肩':'劫财',yin?'正财':'偏财',yin?'食神':'伤官'],[yin?'正印':'偏印',yin?'正官':'七杀',yin?'正财':'偏财']][s%2][Math.floor(diff/2)]||null;
+ const de=STEM_ELEM[dayStem],oe=STEM_ELEM[stem];
+ if(!de||!oe)return null;
+ const same=YIN_STEMS.includes(dayStem)===YIN_STEMS.includes(stem);
+ if(oe===de)return same?'比肩':'劫财';
+ if(ELEM_GENERATE[de]===oe)return same?'食神':'伤官';
+ if(ELEM_CONTROL[de]===oe)return same?'偏财':'正财';
+ if(ELEM_CONTROL[oe]===de)return same?'七杀':'正官';
+ return same?'偏印':'正印';
 }
 const hidden={子:'癸',丑:'己癸辛',寅:'甲丙戊',卯:'乙',辰:'戊乙癸',巳:'丙庚戊',午:'丁己',未:'己丁乙',申:'庚壬戊',酉:'辛',戌:'戊辛丁',亥:'壬甲'};
 const tenGodOf=(dayStem,stem)=>godOf(dayStem,stem);
@@ -115,7 +127,7 @@ export function detectGege(pillars,natalStrength,sb){
   if(stems.some((s,i)=>i!==1&&s===h.stem))return {name:god.replace('劫财','比肩')+'格',basis:`月令${h.rank}${h.stem}（${god}）透出天干`,transparent:true};
  }
  const first=cang[0],firstGod=tenGodOf(day.stem,first.stem);
- return {name:(firstGod||'中和格').replace('劫财','比肩')+'格',basis:`月令${first.rank}${first.stem}当令而未透干，取本气暗格参断`,transparent:false};
+ return {name:(firstGod||'中和').replace(/格$/,'')+'格',basis:`月令${first.rank}${first.stem}当令而未透干，取本气暗格参断`,transparent:false};
 }
 function relationWithNatal(branch,pillars){
  const hits=[];

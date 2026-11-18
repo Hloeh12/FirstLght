@@ -43,7 +43,7 @@ function chartLine(d){
  const use=(st.useful||[]).join('、');
  return `本命${dm.stem||''}${dm.element||''}日主，生于${m.branch||''}月，${st.kind||'强弱待定'}${use?'，喜用'+use:''}；年柱${y.stem||''}${y.branch||''}。`;
 }
-function baziGrid(d){
+export function baziGrid(d){
  const ps=d.pillars,voids=d.voidBranches||[];const cl=chartLine(d);
  const cell=(cls,i,content,attrs='')=>`<div class="bg-cell ${cls}" data-pillar-index="${i}" ${attrs}>${content}</div>`;
  const dash='<span class="bg-unknown">待补</span>';

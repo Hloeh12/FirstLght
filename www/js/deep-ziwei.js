@@ -125,17 +125,31 @@ const SIHUA_EVENTS={
 };
 const PALACE_ORDER=['命宫','兄弟','夫妻','子女','财帛','疾厄','迁移','仆役','官禄','田宅','福德','父母'];
 // 十天干四化表（流年干/大限干通用：甲廉破武阳、乙机梁紫阴……）
-const GAN_SIHUA={
- 甲:{禄:'廉贞',权:'破军',科:'武曲',忌:'太阳'},
- 乙:{禄:'天机',权:'天梁',科:'紫微',忌:'太阴'},
- 丙:{禄:'天同',权:'天机',科:'文昌',忌:'廉贞'},
- 丁:{禄:'太阴',权:'天同',科:'天机',忌:'巨门'},
- 戊:{禄:'贪狼',权:'太阴',科:'右弼',忌:'天机'},
- 己:{禄:'武曲',权:'贪狼',科:'天梁',忌:'文曲'},
- 庚:{禄:'太阳',权:'武曲',科:'太阴',忌:'天同'},
- 辛:{禄:'巨门',权:'太阳',科:'文曲',忌:'文昌'},
- 壬:{禄:'天梁',权:'紫微',科:'左辅',忌:'武曲'},
- 癸:{禄:'破军',权:'巨门',科:'太阴',忌:'贪狼'}
+// 庚辛两干因派别而异（中州派 vs 全集北派同相/阴相），须与 src/ziwei-rules.mjs mutagensFor 完全同源。
+// 其余八干三派一致。旧版硬编码中州派，导致用户切北派后主盘按北派飞化、报告仍按中州派，自相矛盾。
+const GAN_SIHUA_BASE={
+ 甲:['廉贞','破军','武曲','太阳'],
+ 乙:['天机','天梁','紫微','太阴'],
+ 丙:['天同','天机','文昌','廉贞'],
+ 丁:['太阴','天同','天机','巨门'],
+ 戊:['贪狼','太阴','右弼','天机'],
+ 己:['武曲','贪狼','天梁','文曲'],
+ 庚:['太阳','武曲','太阴','天同'],
+ 辛:['巨门','太阳','文曲','文昌'],
+ 壬:['天梁','紫微','左辅','武曲'],
+ 癸:['破军','巨门','太阴','贪狼']
+};
+// 北派两口径只改庚、辛（与 ziwei-rules.mjs mutagensFor 一致）：
+// 庚：中州 太阳/武曲/太阴/天同；同相 太阳/武曲/天同/天相；阴相 太阳/武曲/太阴/天相
+// 辛：中州 巨门/太阳/文曲/文昌；北派 巨门/太阳/文昌/文曲
+const SIHUA_SCHOOL_OVERRIDE={
+ quanjiTong:{庚:['太阳','武曲','天同','天相'],辛:['巨门','太阳','文昌','文曲']},
+ quanjiYin:{庚:['太阳','武曲','太阴','天相'],辛:['巨门','太阳','文昌','文曲']}
+};
+const sihuaFor=(stem,school)=>{
+ const arr=(SIHUA_SCHOOL_OVERRIDE[school]?.[stem])||GAN_SIHUA_BASE[stem];
+ if(!arr)return null;
+ return {禄:arr[0],权:arr[1],科:arr[2],忌:arr[3]};
 };
 const STEMS='甲乙丙丁戊己庚辛壬癸';
 const BRANCHES='子丑寅卯辰巳午未申酉戌亥';
@@ -154,6 +168,9 @@ function starEntry(star,palaceName,gloss){
 }
 export function buildZiweiDeepReport(chart,flow){
  const gloss={};
+ // 四化口径跟随本盘/流曜所选派别：chart.school / flow.school 由 ziweiChart/ziweiFlow 返回 {id,...}。
+ // 缺省回退中州派（quanshu），保证旧数据/单测仍得到中州四化。
+ const school=(chart?.school?.id||flow?.school?.id||'quanshu');
  const palaces=chart?.palaces||[];
  const find=branch=>palaces.find(p=>p.branch===branch);
  const pnOf=n=>/宫$/.test(n||'')?n:(n+'宫'); // 命宫已带「宫」，其余宫名补「宫」，避免「命宫宫」
@@ -243,7 +260,7 @@ export function buildZiweiDeepReport(chart,flow){
   const stem=STEMS[stemIdx],branch=BRANCHES[branchIdx];
   const fPal=find(branchIdx);
   const fStars=fPal?(fPal.majorStars?.length?fPal.majorStars:(fPal.borrowedStars||[])):[];
-  const mut=GAN_SIHUA[stem];
+  const mut=sihuaFor(stem,school);
   const evs=[];
   for(const t of ['禄','权','科','忌']){
    const starName=mut[t];
@@ -303,7 +320,7 @@ const flowMonths=(()=>{
  return Array.from({length:12},(_,i)=>{
   const palIndex=(doujun+i)%12,pal=palaces[palIndex];
   const stem=STEMS[(MONTH_STEM_START[yearStem]+i)%10],branch=BRANCHES[(2+i)%12];
-  const mut=GAN_SIHUA[stem]||{};
+  const mut=sihuaFor(stem,school)||{};
   const events=[];
   for(const t of ['禄','权','科','忌']){
    const sp=findStarPalace(mut[t]);
@@ -337,7 +354,7 @@ const nowDate=new Date(),curY=nowDate.getFullYear(),curM=nowDate.getMonth()+1,cu
 const monthLen=new Date(Date.UTC(curY,curM,0)).getUTCDate();
 const flowDayRows=curMonth?Array.from({length:monthLen},(_,i)=>{
  const d=i+1,gz=dayGzOf(curY,curM,d),pal=palaces[(curMonth.palIndex+i)%12];
- const mut=GAN_SIHUA[gz[0]]||{};
+ const mut=sihuaFor(gz[0],school)||{};
  const hit=Object.entries(mut).map(([t,sn])=>{const sp=findStarPalace(sn);return sp&&sp.name===pal?.name?t:null;}).filter(Boolean);
  return {day:d,date:`${curY}-${String(curM).padStart(2,'0')}-${String(d).padStart(2,'0')}`,ganZhi:gz,palace:pal?.name||'—',mut,hit,isNow:d===curD};
 }):[];
@@ -346,7 +363,7 @@ const HOUR_LABEL=['子','丑','寅','卯','辰','巳','午','未','申','酉','�
 const dayStemOf=dayGzOf(curY,curM,curD)[0];
 const flowHours=Array.from({length:12},(_,i)=>{
  const stem=STEMS[(STEMS.indexOf(dayStemOf)*2+i)%10];
- const mut=GAN_SIHUA[stem]||{};
+ const mut=sihuaFor(stem,school)||{};
  const pal=curMonth?palaces[(curMonth.palIndex+(curD-1)+i)%12]:null;
  const events=Object.entries(mut).map(([t,sn])=>{const sp=findStarPalace(sn);return sp?`${sn}化${t}入${sp.name}`:null;}).filter(Boolean);
  return {label:HOUR_LABEL[i]+'时',stem,mut,palace:pal?.name||'—',events,isNow:i===Math.floor(((nowDate.getHours()+1)%24)/2)};

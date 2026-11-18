@@ -39,11 +39,25 @@ function baziReportData(state){
 function sectionHtml(report){
  return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}</h3>${sec.lines?.map(line=>`<p>${esc(line)}</p>`).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
 }
-/* 目录：章节锚点导航 + 滚动进度。让 7000+ 字报告可跳章节、可看读到哪。 */
+/* 目录：章节锚点导航 + 滚动进度 + 主题分区。让 7000+ 字报告可按区跳转、可看读到哪。 */
+function sectionGroup(title){
+ const t=String(title||'');
+ if(/格局|命局|总览|根基|三垣|力量|五行|性格|命宫|三方|十二宫/.test(t))return '命局基础';
+ if(/四化|飞星|神煞|Yoga|Shadbala|Ashtakavarga|相位|行星力量|分盘/.test(t))return '结构要件';
+ if(/事业|财富|婚姻|感情|健康|六亲|调候|领域|人生/.test(t))return '人生专题';
+ if(/大运|流年|流月|流日|小运|岁运|行运|Varshaphala|时点|逐运|逐月|逐年/.test(t))return '应期推演';
+ if(/建议|总结|总则|趋吉|综合|指南|经营/.test(t))return '结论与建议';
+ return '专项分析';
+}
 function tocHtml(report){
  if(!report.sections?.length)return '';
- const items=report.sections.map((s,i)=>`<button type="button" class="rpt-toc-item" data-toc="${i+1}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(i+1).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`).join('');
- return `<details class="rpt-toc" aria-label="报告目录" open><summary class="rpt-toc-head"><span>目录</span><span class="rpt-progress" data-rpt-progress>0%</span></summary><div class="rpt-toc-list">${items}</div></details>`;
+ let last=null,items='';
+ report.sections.forEach((s,i)=>{
+  const g=sectionGroup(s.title);
+  if(g!==last){items+=`<div class="rpt-toc-group">${esc(g)}</div>`;last=g;}
+  items+=`<button type="button" class="rpt-toc-item" data-toc="${i+1}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(i+1).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`;
+ });
+ return `<details class="rpt-toc" aria-label="报告目录" open><summary class="rpt-toc-head"><span>目录 · 分区导航</span><span class="rpt-progress" data-rpt-progress>0%</span></summary><div class="rpt-toc-list">${items}</div></details>`;
 }
 const stripTags=s=>String(s).replace(/<[^>]*>/g,'');
 const charactersOf=sections=>sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+stripTags(x.table||'').length+stripTags(x.html||'').length,0);
@@ -166,6 +180,7 @@ export function reportHtml(report){
    <p class="rpt-stamp">生成于 ${esc(report.cover.stamp)} ${wordLine}</p>
   </header>
   <p class="rpt-lead">${report.lead}</p>
+  ${report.chartHtml?`<section class="rpt-chart" aria-label="报告对应时点命盘"><h3 class="rpt-chart-title">${esc(report.chartTitle||'本报告的命盘快照')}</h3><div class="rpt-chart-stage">${report.chartHtml}</div>${report.chartCaption?`<p class="rpt-chart-caption">${esc(report.chartCaption)}</p>`:''}</section>`:''}
   ${tocHtml(report)}
   ${report.body}
   <footer class="rpt-foot">本报告依传统术数规则与当前命盘条件生成，仅作文化与自我观察参考，不构成事实预测、投资、法律或医疗建议。<br>留一束初光，照见当下的自己。</footer>

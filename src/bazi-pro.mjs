@@ -43,7 +43,9 @@ export function relations(pillars){
    天德月德。三合局表按年支起，学堂词馆按日干长生/临官定位（子平简化口径），见 shenshaMethod。 */
 const SHEN_SHA_JIN_YU={甲:'辰',乙:'巳',丙:'未',丁:'申',戊:'未',己:'申',庚:'戌',辛:'亥',壬:'丑',癸:'寅'};
 const SHEN_SHA_EVIL_DAYS=['甲辰','乙巳','丙申','丁亥','戊戌','己丑','庚辰','辛巳','壬申','癸亥'];
-const SHEN_SHA_TIAN_DE=['丁','申','壬','辛','亥','甲','癸','寅','丙','乙','巳','庚'];
+// 天德贵人按月支取：正丁二申三壬四辛五亥六甲七癸八寅九丙十乙子巳丑庚。
+// 索引以子月=0，故数组顺序为 [子巳,丑庚,寅丁,卯申,辰壬,巳辛,午亥,未甲,申癸,酉寅,戌丙,亥乙]。
+const SHEN_SHA_TIAN_DE=['巳','庚','丁','申','壬','辛','亥','甲','癸','寅','丙','乙'];
 const shenshaMethod='常用神煞：天乙/太极/文昌按年干或日干查；驿马/桃花/华盖/劫煞/将星/亡神/灾煞按年支三合局查；孤辰寡宿/红鸾天喜按年支查；天德按月支、月德按三合月查；金舆按年干查；魁罡/十恶大败仅看日柱；学堂按日干长生位、词馆按临官位（子平简化口径，与「年柱纳音学堂」派别不同）；天罗（戌）地网（辰）以年支或日支对照四柱地支。仅作传统取象参考，吉凶须与原局生克合冲同看。';
 function gods(p,year,day,month){
  const shensha=new Set();
@@ -60,8 +62,10 @@ function gods(p,year,day,month){
  }
  if(({甲:'卯',丙:'午',戊:'午',庚:'酉',壬:'子'})[day.stem]===p.branch)shensha.add('羊刃');
  if(branches[(branches.indexOf(month.branch)+11)%12]===p.branch)shensha.add('天医');
- // 孤辰寡宿：年支三会分组
- const gi=Math.floor(branches.indexOf(year.branch)/3);
+ // 孤辰寡宿：年支三会分组亥子丑/寅卯辰/巳午未/申酉戌。
+ // 旧式 Math.floor(idx/3) 会把亥(11)归入酉戌亥组、把寅(2)归入子丑寅组，四项全错；
+ // 正确分组须以「(idx+1)%12」对齐到「亥子丑」起始，故用 ((idx+1)%12)/3。
+ const gi=Math.floor(((branches.indexOf(year.branch)+1)%12)/3);
  if(['寅','巳','申','亥'][gi]===p.branch)shensha.add('孤辰');
  if(['戌','丑','辰','未'][gi]===p.branch)shensha.add('寡宿');
  // 红鸾起卯逆数生年支，天喜为其对冲

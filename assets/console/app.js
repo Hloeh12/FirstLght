@@ -20,6 +20,7 @@ import {baziView,baziTools,baziQuick} from './bazi.js';
 import {westernView,westernTools,astroHouse,houseOptions,houseLabels,setAstroHouse} from './western.js';
 import {extraView} from './extras.js';
 import {shareChart} from './share.js';
+import {exportReportDocument} from './report-export.js';
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
@@ -660,7 +661,7 @@ function openFullReport(){
   <div class="rpt-topbar"><button type="button" class="icon" data-rpt-close aria-label="关闭报告">×</button>
    <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
    <button type="button" class="rpt-act" data-rpt-copy>复制</button>
-   <button type="button" class="rpt-act primary" data-rpt-export>导出长图</button></div>
+   <button type="button" class="rpt-act primary" data-rpt-export>导出文档</button></div>
   <div class="sheet-body rpt-body" id="reportBody">${reportHtml(report)}<div class="scroll-clearance" aria-hidden="true"></div></div>
  </div>`;
  d.querySelector('[data-rpt-close]').onclick=()=>close(d);
@@ -669,11 +670,11 @@ function openFullReport(){
   const text=[doc.querySelector('h2')?.innerText,doc.querySelector('.rpt-owner')?.innerText,
    ...[...doc.querySelectorAll('.rpt-sec')].map(s=>s.innerText)].filter(Boolean).join('\n\n');
   try{await navigator.clipboard.writeText(text);tell('报告文本已复制。');}
-  catch{e=>tell('复制失败，请使用导出长图。');}
+  catch{e=>tell('复制失败，请使用导出文档。');}
  };
   d.querySelector('[data-rpt-export]').onclick=async e=>{
   const b=e.currentTarget;b.disabled=true;
-  try{await shareChart(d.querySelector('#reportBody'),`${report.cover.name} · ${report.title}`);tell('报告长图已生成，可在分享面板保存。');}
+  try{tell(exportReportDocument(report));}
   catch(err){tell('导出失败：'+(err.message||err));}
   finally{b.disabled=false;}
  };

@@ -275,3 +275,30 @@ test('iOS 输入框聚焦放大免疫：表单控件字号须 >=16px（含 ID �
  assert.match(design,/#inputSheet input,#inputSheet select,#screen form input,#screen form select[\s\S]{0,120}font-size:15px!important/,
    'design.css 原 15px 规则保留，由 liquid.css 覆盖');
 });
+
+test('深度报告导出改用自包含 HTML 文档，不再走 canvas 长图（根治上万字导出只剩封面空壳）',async()=>{
+ // 根因：完整报告 #reportBody 用 .rpt-sec 结构，shareChart 的内容选择器(.zi-detail p/.card p 等)
+ // 全部落空 → info=[]、visual=0 → canvas 只画封面(背景+标题+slogan)，正文空白，用户以为无法导出。
+ // 报告上万字本就不适合做成一张长图（canvas 超尺寸 + 模糊 + 难保存），改为导出文档。
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/import \{exportReportDocument\} from '\.\/report-export\.js'/, 'app.js 须引入文档导出模块');
+ assert.match(app,/data-rpt-export>导出文档<\/button>/,'报告导出按钮须改为「导出文档」');
+ assert.match(app,/tell\(exportReportDocument\(report\)\)/,'报告导出须调用文档导出，不再调 shareChart');
+ const exBlock=app.slice(app.indexOf("d.querySelector('[data-rpt-export]')"),app.indexOf('/* 目录交互'));
+ assert.doesNotMatch(exBlock,/shareChart\(/,'报告导出路径不得再出现 shareChart 长图调用');
+ // 文档导出模块：自包含样式 + 报告正文 + 交互静态化，不依赖 App 运行时 CSS
+ const mod=await read('../assets/console/report-export.js');
+ assert.match(mod,/import \{reportHtml\} from '\.\/full-report\.js'/,'须复用报告正文渲染');
+ assert.match(mod,/<style>'\+DOC_CSS\+'<\/style>/,'须把样式内联进文档（自包含）');
+ assert.match(mod,/querySelectorAll\('button\.rpt-toc-item'\)/,'目录按钮须静态化，离线文档无交互控件');
+ assert.match(mod,/querySelectorAll\('script'\)\.forEach\(n=>n\.remove\(\)\)/,'须移除脚本，保证文档纯净');
+ assert.match(mod,/shareDocument/,'须通过原生 shareDocument 通道分享');
+ assert.match(mod,/8_000_000/,'须限制文档大小');
+ // 原生侧：注册 shareDocument handler 并把文本写成 .html 文件交给分享面板
+ const swift=await read('../ios-src/AppDelegate.swift');
+ assert.match(swift,/add\(self, name: "shareDocument"\)/,'原生须注册 shareDocument 消息处理器');
+ assert.match(swift,/if message\.name == "shareDocument"/,'原生须处理 shareDocument 消息');
+ assert.match(swift,/func exportDocument\(text: String, name: String\)/,'须有文档落盘分享方法');
+ assert.match(swift,/appendingPathComponent\(file\)/,'文档须写成文件供分享面板保存');
+ assert.match(swift,/hasSuffix\("\.html"\)/,'须强制 .html 后缀并防路径穿越');
+});

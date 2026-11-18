@@ -77,6 +77,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         config.userContentController.add(self, name: "caseReminder")
         config.userContentController.add(self, name: "findLocation")
         config.userContentController.add(self, name: "caseBackup")
+        config.userContentController.add(self, name: "shareDocument")
         config.userContentController.add(self, name: "interactionHaptic")
         config.userContentController.add(self, name: "copyDiagnostics")
         config.preferences.javaScriptEnabled = true
@@ -308,6 +309,11 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             exportCaseBackup(json)
             return
         }
+        if message.name == "shareDocument", let payload = message.body as? [String: Any],
+           let name = payload["name"] as? String, let text = payload["text"] as? String {
+            exportDocument(text: text, name: name)
+            return
+        }
         guard message.name == "shareChart", presentedViewController == nil,
               let payload = message.body as? String, payload.count <= 12_000_000,
               payload.hasPrefix("data:image/png;base64,"),
@@ -336,6 +342,25 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             presentShare(file)
         } catch {
             reportReminder("暂时无法写入案例备份。")
+        }
+    }
+
+    // 深度报告文档导出：把自包含 HTML 写成临时文件交给系统分享面板。
+    // 文件名只保留安全字符并强制 .html 后缀，防止路径穿越；大小上限 8 MB。
+    private func exportDocument(text: String, name: String) {
+        guard presentedViewController == nil,
+              let data = text.data(using: .utf8), data.count <= 8_000_000 else { return }
+        let safe = name.replacingOccurrences(of: #"[/\\:*?"<>|\r\n]"#, with: "", options: .regularExpression)
+        let base = safe.isEmpty ? "FirstLight-report" : safe
+        let file = base.hasSuffix(".html") ? base : base + ".html"
+        do {
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let url = folder.appendingPathComponent(file)
+            try data.write(to: url, options: .atomic)
+            presentShare(url)
+        } catch {
+            reportReminder("暂时无法写入报告文档。")
         }
     }
 

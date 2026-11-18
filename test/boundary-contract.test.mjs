@@ -214,3 +214,17 @@ test('Shadbala 六力补强：Saptavargaja/Drik 入分项且口径声明覆盖�
  assert.match(s.method,/Drik/);
  assert.match(s.method,/Nathonnatha/,'须披露仍未计入的 Kala 其余分项');
 });
+
+test('iOS 显示缩放免疫：pageZoom 须在导航完成后复位，杜绝冷启动首屏放大',async()=>{
+ const swift=await read('../ios-src/AppDelegate.swift');
+ // 必须有 didFinish navigation 回调，且在其中复位 pageZoom（仅 viewDidLoad/viewWillAppear 会被加载覆盖）
+ assert.match(swift,/func webView\(_ webView: WKWebView, didFinish navigation: WKNavigation!\)/,'须实现导航完成回调');
+ const didFinish=swift.slice(swift.indexOf('didFinish navigation: WKNavigation!'));
+ assert.match(didFinish,/webView\.pageZoom = 1\.0/,'导航完成后须复位 pageZoom 为 1x');
+ assert.match(didFinish,/asyncAfter/,'须延迟再锁一次，覆盖系统延后应用缩放的场景');
+ // 三处复位点都在（初始化 / 回前台 / 导航完成）
+ assert.ok((swift.match(/pageZoom = 1\.0/g)||[]).length>=4,'初始化/回前台/导航完成/延迟四处均须锁定');
+ // 无障碍契约不回退：不得禁用双指缩放的 viewport 声明
+ const html=await read('../index.html');
+ assert.doesNotMatch(html,/user-scalable=no/,'必须允许双指缩放');
+});

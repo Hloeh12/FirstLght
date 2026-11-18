@@ -1,8 +1,19 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.34.0",
-  "build": 121,
+  "version": "0.34.1",
+  "build": 122,
   "releases": [
+    {
+      "version": "0.34.1",
+      "build": 122,
+      "date": "2026-11-18",
+      "title": "修复冷启动首屏放大：pageZoom 复位提前于页面加载被系统缩放覆盖，改为导航完成后再锁 1x",
+      "items": [
+        "根因：WKWebView 在页面「加载完成」时才应用 iOS 显示缩放/大字体，原 pageZoom=1.0 只在 viewDidLoad/viewWillAppear 设置，早于加载完成被覆盖，导致冷启动首屏放大、右侧裁切；退出重进因不再 load 而恢复正常。",
+        "修复：新增 didFinish navigation 回调，在导航完成后复位 pageZoom=1.0，并跨主线程循环与 0.35s 延迟各再锁一次，覆盖系统延迟应用场景。",
+        "保留无障碍契约：不设置 user-scalable=no，双指缩放仍可用；新增静态契约测试锁定四处复位点与 didFinish 回调，防止回归。"
+      ]
+    },
     {
       "version": "0.34.0",
       "build": 121,

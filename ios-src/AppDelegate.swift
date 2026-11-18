@@ -63,15 +63,26 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         // 免疫 iOS「显示缩放/大字体」：锁定页面缩放为 1x，避免 WebView 被系统放大后右侧内容被裁切
-        if #available(iOS 15.0, *) { webView.pageZoom = 1.0 }
+        resetPageZoom()
 
         view.addSubview(webView)
+    }
+
+    // WKWebView 会在「页面加载完成」时用系统显示缩放重新计算 pageZoom，
+    // 只在初始化 / viewWillAppear 设置会被这次重算覆盖 —— 这正是冷启动首屏放大、
+    // 退出重进（不再 load）才正常的原因。三处都复位，并在 didFinish 后延迟一帧锁死。
+    private func resetPageZoom() {
+        guard #available(iOS 15.0, *) else { return }
+        webView.pageZoom = 1.0
+        DispatchQueue.main.async { [weak self] in
+            self?.webView.pageZoom = 1.0
+        }
     }
 
     // 系统字体/显示缩放变化回到前台时，强制把页面缩放复位到 1x
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        if #available(iOS 15.0, *) { webView.pageZoom = 1.0 }
+        resetPageZoom()
     }
 
     private func loadContent() {
@@ -101,6 +112,19 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         }
 
         func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
+    }
+
+    // 页面加载完成的这一刻，系统才把「显示缩放/大字体」应用到 WKWebView；
+    // viewDidLoad/viewWillAppear 里的复位都早于此时，会被覆盖 —— 冷启动首屏放大即源于此。
+    // 这里在导航完成后复位，并跨下一次主线程循环再锁一次，覆盖系统延迟应用的场景。
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        resetPageZoom()
+        DispatchQueue.main.async { [weak self] in
+            self?.webView.pageZoom = 1.0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.webView.pageZoom = 1.0
+        }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {

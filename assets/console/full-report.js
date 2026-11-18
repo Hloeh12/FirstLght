@@ -37,7 +37,7 @@ function baziReportData(state){
  };
 }
 function sectionHtml(report){
- return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}</h3>${sec.lines?.map(line=>`<p>${esc(line)}</p>`).join('')||''}${sec.table||''}${sec.html||''}</section>`).join('');
+ return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}</h3>${sec.lines?.map(line=>`<p>${esc(line)}</p>`).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
 }
 /* 目录：章节锚点导航 + 滚动进度。让 7000+ 字报告可跳章节、可看读到哪。 */
 function tocHtml(report){
@@ -134,7 +134,7 @@ export function composeFullReport(state,names){
   const v=state.reading?.vedic||{};
   const report=withGlossary(buildVedicDeepReport(v));
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'vedic',
-   lead:`Lahiri 恒星黄道 · 整宫制。上升 ${esc(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗，Vimshottari 大运 ${(v.dashas||[]).length} 段，命格 ${esc((report.yogas||[]).length)} 组成立${v.varshaphala?`，岁运盘 ${v.varshaphala.year} 年已起`:`''`}。全文十一章：上升主轴、行星力量评级、Shadbala 六力审计、Yoga 命格、九曜落宫、大运逐运详批、小运细分、D9/D10 分盘、十二宫力量审计、岁运 Varshaphala、人生格局总结。`,
+   lead:`Lahiri 恒星黄道 · 整宫制。上升 ${esc(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗，Vimshottari 大运 ${(v.dashas||[]).length} 段，命格 ${esc((report.yogas||[]).length)} 组成立${v.varshaphala?`，岁运盘 ${v.varshaphala.year} 年已起`:`''`}。全文十二章：上升主轴、行星力量评级、Shadbala 六力审计、Ashtakavarga 八分点、Yoga 命格、九曜落宫、大运逐运详批、小运细分、D9/D10 分盘、十二宫力量审计、岁运 Varshaphala、人生格局总结。`,
    body:sectionHtml(report),sections:report.sections};
  }
  if(system==='synastry'){
@@ -144,7 +144,7 @@ export function composeFullReport(state,names){
   const otherName=syn.otherName||syn.name||otherCase?.name||'另一方';
   const report=withGlossary(buildSynastryDeepReport(result,profile.name,otherName));
   return {cover,title:report.title,characters:report.characters,kind:'synastry',
-   lead:`${esc(profile.name||'甲方')} 与 ${esc(otherName)} 的合盘：综合契合度 ${esc(result.fit?.percent??result.percent??'—')}%。全文七章：关系总览、日月金火五星对照、跨盘相位逐条详解、八科逐科化解、月亮星宿与 D9 互参、干支三镜合参、经营指南——每组相位都写明「剧情怎么上演、怎么接招」。`,
+   lead:`${esc(profile.name||'甲方')} 与 ${esc(otherName)} 的合盘：综合契合度 ${esc(result.fit?.percent??result.percent??'—')}%。全文九章：关系总览、日月金火五星对照、跨盘相位逐条详解、八科逐科化解、月亮星宿与 D9 互参、干支三镜合参、八字合婚专项、紫微合盘、经营指南——每组相位都写明「剧情怎么上演、怎么接招」。`,
    body:sectionHtml(report),sections:report.sections};
  }
  // west 及未知体系兜底：显式分支，避免未来新体系再误落本命模板

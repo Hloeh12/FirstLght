@@ -61,7 +61,9 @@ export const GEOGE_DEEP={
  伤官格:{gloss:'月令伤官当令——以锋芒才华立身之英格',text:'以才学与突破常规立身：聪明外露、不甘居人下，适合自由职业与专业个人品牌。伤官喜配财（技术变现）配印（收敛锋芒），忌见官。'},
  从弱格:{gloss:'日主无根无力，顺势弃身从势——借大环境成就自己',text:'顺势而为的格局：不与形势对抗，借力、依附平台与大势反而成就。忌逆势硬撑，喜行克泄耗之运。'},
  从强格:{gloss:'日主一气专旺，满盘同党——顺其气势而用',text:'专旺格局：气势极足，宜走纯粹路线把自己的一门天赋做到极致（如纯技术、纯创作、纯领导）。忌逆势之运强改方向。'},
- 中和格:{gloss:'月令本气未透，日主中和——以平衡稳健立身',text:'月令本气未透干，取本气为暗格参断：命局以平和中庸立身，不靠一偏之极，大运引动什么就成什么——后天选择权重高。'}
+ 中和格:{gloss:'月令本气未透，日主中和——以平衡稳健立身',text:'月令本气未透干，取本气为暗格参断：命局以平和中庸立身，不靠一偏之极，大运引动什么就成什么——后天选择权重高。'},
+ '正格·身弱':{gloss:'身弱但有根、未至于从——以帮扶为用',text:'日主偏弱而根气未绝，属身弱正格：取印比为喜用，靠平台、贵人与同辈借力；忌财官过旺之地硬撑，须先补底气再谈扩张。'},
+ '正格·身强':{gloss:'身强但未成一气专旺——以克泄耗为用',text:'日主偏旺而气势未纯，属身强正格：取财官食伤为喜用，宜主动任事、把精力投到事功与产出上；忌再添帮身之地而壅塞。'}
 };
 /* ---------- 调候（寒暖燥湿） ---------- */
 const TIAOHOU={子:'隆冬水旺，调候首取丙火暖局，无火则金寒水冷、谋定难行',丑:'冬土湿寒，先丙火后甲木，暖而后疏',寅:'初春余寒，丙火解冻为要，癸水滋木为辅',卯:'仲春木旺，阳和已至，察木多与否：多则庚金裁之',辰:'春末土湿，甲疏癸润，先暖后培',巳:'初夏火渐旺，湿土（辰丑）晦火生金为调',午:'仲夏火炎，专取壬水，水透为贵、无水燥烈',未:'夏末土燥而热，癸水为先，润土养金',申:'初秋金肃，丙火制金、癸水泄秀，观其配合',酉:'仲秋金旺，丁火炼金为要，甲木引丁',戌:'秋末土燥，甲疏为先，壬水滋培',亥:'初冬水寒，戊土堤防、丙火暖局为急'};
@@ -72,6 +74,10 @@ const STAR_BRANCH={子:'23:00–00:59',丑:'01:00–02:59',寅:'03:00–04:59',�
 const CLASH_MAP=Object.fromEntries(BRANCHES.split('').map((b,i)=>[b,BRANCHES[(i+6)%12]]));
 const LIUHE={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午'};
 const SANHE=['申子辰','寅午戌','巳酉丑','亥卯未'];
+// 刑冲合害破口径与引擎 src/bazi-pro.mjs rowRules 对齐，避免报告层与盘面层说法打架
+const XING_PAIRS=[['子','卯'],['辰','辰'],['午','午'],['酉','酉'],['亥','亥'],['寅','巳','申'],['丑','戌','未']];
+const HAI_PAIRS=[['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']];
+const PO_PAIRS=[['子','酉'],['卯','午'],['辰','丑'],['未','戌'],['寅','亥'],['巳','申']];
 
 function godOf(dayStem,stem){
  const d=STEMS.indexOf(dayStem),s=STEMS.indexOf(stem);
@@ -83,15 +89,25 @@ const hidden={子:'癸',丑:'己癸辛',寅:'甲丙戊',卯:'乙',辰:'戊乙癸
 const tenGodOf=(dayStem,stem)=>godOf(dayStem,stem);
 const elementOfStem=s=>({甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'})[s];
 
-/* 格局判定：月令藏干透干取格 + 从格检测 */
-export function detectGege(pillars,natalStrength){
+/* 格局判定：月令藏干透干取格 + 从格检测（须通根/透干/得令三重证据，不只看百分比）
+   sb = strengthBreakdown（通根 tongGen、透干 touGan、得令 deLing、得势 deShi） */
+export function detectGege(pillars,natalStrength,sb){
  const day=pillars[2],month=pillars[1]||{};
  const support=Number(natalStrength?.support??50);
  const stems=pillars.map(p=>p.stem);
- const rootsCount=pillars.filter(p=>p.branch&&p.branches?false:false).length; // roots 判定走外部字段
- const noRoot=!(natalStrength?.weights)||Object.entries(natalStrength.weights).every(([e,v])=>v>0);
- if(support<25)return {name:'从弱格',basis:'日主扶助不足 25%，弱到极处顺势而为'};
- if(support>75)return {name:'从强格',basis:'日主扶助超过 75%，一气专旺'};
+ const rootCount=Number(sb?.tongGen?.count??0);      // 地支同我之根
+ const touGanCount=Number(sb?.touGan?.count??0);     // 天干透出且地支有根
+ const deLingOk=!!sb?.deLing?.ok;                     // 月令得令（同我或生我）
+ const deShiCount=Number(sb?.deShi?.count??0);        // 天干帮身
+ // 从格四要素：扶助极性极端 + 无强根 + 不得令 + 天干无实透帮身。
+ // 缺一即按「偏旺/偏弱」的正格参断，不轻言从——这是从格最易误判之处。
+ const extremeWeak=support<25,extremeStrong=support>75;
+ const hasAnchor=rootCount>0||touGanCount>0||deLingOk||deShiCount>0;
+ if(extremeWeak&&!hasAnchor)return {name:'从弱格',basis:`扶助仅 ${support.toFixed(1)}%，四柱无同我之根、天干无实透帮身、月令不得令——弱无所依，顺势从势`,evidence:{support,rootCount,touGanCount,deLingOk,deShiCount}};
+ if(extremeStrong&&rootCount>=2&&deLingOk)return {name:'从强格',basis:`扶助 ${support.toFixed(1)}%，月令得令且地支 ${rootCount} 处同我强根——气势专一，顺其旺势`,evidence:{support,rootCount,touGanCount,deLingOk,deShiCount}};
+ // 极端但未满足从格要件：明确降级说明，避免把「身弱/身强」说成「从」。
+ if(extremeWeak)return {name:'正格·身弱',basis:`扶助 ${support.toFixed(1)}% 偏低，但${deLingOk?'月令得令':rootCount?'地支尚有根':touGanCount?'天干有实透帮身':'仍有帮身之气'}，未至无依——按身弱正格取用，不轻断从弱`,evidence:{support,rootCount,touGanCount,deLingOk,deShiCount}};
+ if(extremeStrong)return {name:'正格·身强',basis:`扶助 ${support.toFixed(1)}% 偏高，但${rootCount<2?'强根不足':'气势未纯'}，未成一气专旺——按身强正格取用，不轻断从强`,evidence:{support,rootCount,touGanCount,deLingOk,deShiCount}};
  const cang=(month.hidden?.length?month.hidden:[...hidden[month.branch||'子']].map((s,i)=>({stem:s,rank:['本气','中气','余气'][i]})));
  for(const h of cang){
   const god=tenGodOf(day.stem,h.stem);
@@ -103,15 +119,41 @@ export function detectGege(pillars,natalStrength){
 }
 function relationWithNatal(branch,pillars){
  const hits=[];
+ // 六冲 / 六合（一对一）
  pillars.forEach((p,i)=>{
   if(p.branch===CLASH_MAP[branch])hits.push({type:'六冲',pillar:p.name,branch:p.branch});
   else if(LIUHE[branch]===p.branch)hits.push({type:'六合',pillar:p.name,branch:p.branch});
  });
+ // 三合局（三支齐备）
  for(const tri of SANHE){
   if(tri.includes(branch)){
    const others=[...tri].filter(c=>c!==branch&&pillars.some(p=>p.branch===c));
    if(others.length===2)hits.push({type:'三合局',pillar:others.join(''),branch:others.join('')});
   }
+ }
+ // 相刑：无恩之刑(寅巳申)/恃势之刑(丑戌未)须三支齐；无礼之刑(子卯)与自刑(辰午酉亥)须两支见
+ for(const grp of XING_PAIRS){
+  if(!grp.includes(branch))continue;
+  if(grp.length===3){
+   const others=[...grp].filter(c=>c!==branch&&pillars.some(p=>p.branch===c));
+   if(others.length===2)hits.push({type:'相刑',pillar:grp.join(''),branch:grp.join(''),detail:grp.join('')+'三刑'});
+  }else if(grp[0]===grp[1]){
+   // 自刑：当前支本身算一支，原局再遇同支即成立
+   if(pillars.some(p=>p.branch===branch))hits.push({type:'相刑',pillar:branch,branch,detail:branch+'自刑'});
+  }else{
+   const other=grp.find(c=>c!==branch);
+   if(other&&pillars.some(p=>p.branch===other))hits.push({type:'相刑',pillar:other,branch:other,detail:grp.join('')+'相刑'});
+  }
+ }
+ // 相害（六害，一对一）
+ for(const [a,b] of HAI_PAIRS){
+  const other=a===branch?b:b===branch?a:null;
+  if(other&&pillars.some(p=>p.branch===other))hits.push({type:'相害',pillar:other,branch:other,detail:a+b+'相害'});
+ }
+ // 相破（一对一）
+ for(const [a,b] of PO_PAIRS){
+  const other=a===branch?b:b===branch?a:null;
+  if(other&&pillars.some(p=>p.branch===other))hits.push({type:'相破',pillar:other,branch:other,detail:a+b+'相破'});
  }
  return hits;
 }
@@ -121,14 +163,31 @@ function roleOfBranch(branch,natalStrength){
  const useful=natalStrength?.useful||[],caution=natalStrength?.caution||[];
  return useful.includes(e)?'useful':caution.includes(e)?'caution':'neutral';
 }
+/* 把一条地支关系翻译成行运断语：六冲/六合/三合/相刑/相害/相破各有不同象意，
+   不再把新增的刑害破误当「相合」。role 为该流支相对喜忌的角色。 */
+function relPhrase(h,role){
+ const who=`${h.pillar||h.branch||''}`;
+ switch(h.type){
+  case '六冲':return role==='caution'?'冲去忌神，旧阻松动，反而是变局之年':role==='useful'?'冲用神，根基有摇动，凡事留退路':'冲动平和之位，变动中性，重在适应';
+  case '六合':return `与${who}相合——聚力，人缘合作可借`;
+  case '三合局':return `与${who}成三合局——同气汇聚，做大事有助力`;
+  case '相刑':return `${h.detail||'相刑'}——彼此牵制、内耗或规矩约束，重要决定留缓冲`;
+  case '相害':return `${h.detail||'相害'}——暗耗与误会，合作宜把权责写清`;
+  case '相破':return `${h.detail||'相破'}——计划易松脱，关键环节备一手`;
+  default:return `${h.type}（${who}）`;
+ }
+}
 
 /* ---------- 深度详批生成器 ---------- */
 export function buildBaziDeepReport(data){
  const gloss={};
  const G=(term)=>{gloss[term]=TEN_GOD_DEEP[term]?.gloss||SHENSHA_DEEP[term]?.gloss||GEOGE_DEEP[term]?.gloss||null;return term;};
  const pillars=data.pillars||[],dm=data.dayMaster||{},ns=data.natalStrength||data.strength||{};
+ const sbData=data.strengthBreakdown||{};
  const dayStem=dm.stem||pillars[2]?.stem||'甲';
- const gege=detectGege(pillars,ns);
+ // 示例十神取自本盘真实天干，不再是写死的「正官」（脱离盘面即名不副实）
+ const sampleGod=pillars.map(p=>p.tenGod||tenGodOf(dayStem,p.stem)).find(g=>g&&g!=='日主')||'正官';
+ const gege=detectGege(pillars,ns,sbData);
  const gegeInfo=GEOGE_DEEP[gege.name]||GEOGE_DEEP.中和格;
  const useful=(ns.useful||[]).join('、'),caution=(ns.caution||[]).join('、');
  const strengthText=ns.kind==='身强'?'身强（自我与助力充足，能扛事也能担财）':ns.kind==='身弱'?'身弱（先天底气偏弱，贵在与人和、借势而行）':'中和（进可攻退可守，人生弹性大）';
@@ -139,7 +198,8 @@ export function buildBaziDeepReport(data){
   `命主日主为「${dayStem}${elementOfStem(dayStem)}」，${strengthText}，全局扶助度 ${Number(ns.support??50).toFixed(1)}%${useful?`。喜用之神为${G(useful)}（行运遇之多顺）`:''}${caution?`，忌神为${caution}（行运遇之多滞，须提前防守）`:''}。`,
   `月令为${pillars[1]?.branch||'—'}（${(pillars[1]?.branchElement)||'—'}），${TIAOHOU[pillars[1]?.branch||'子']}。`,
   `本命判定为${G(gege.name)}：${gege.basis}。${gegeInfo.text}`,
-  `四柱排布如上表：年柱看祖上与早年、月柱看父母与立业、日柱看自己与婚姻、时柱看子女与晚景。表内「十神」即每一柱天干与日主的关系，${TEN_GOD_DEEP.正官.gloss.slice(0,24)}……详见文末术语小词典。`,
+  ...(gege.name.includes('从')&&gege.evidence?[`从格证据核对：扶助 ${gege.evidence.support.toFixed(1)}% · 通根 ${gege.evidence.rootCount} 处 · 透干有根 ${gege.evidence.touGanCount} 个 · ${gege.evidence.deLingOk?'月令得令':'月令不得令'}。从格最忌误判——若这几项与盘面观感不符，请优先按「身强/身弱正格」参断。`]:[]),
+  `四柱排布如上表：年柱看祖上与早年、月柱看父母与立业、日柱看自己与婚姻、时柱看子女与晚景。表内「十神」即每一柱天干与日主的关系——例如「${sampleGod}」即${TEN_GOD_DEEP[sampleGod]?.gloss||'天干与日主的生克关系'}；详见文末术语小词典。`,
   ...(ns.approach?[`取用口径：${ns.approach}这是本盘得出「喜用什么、忌什么」的规则；换一套派别结论可能不同，换盘时请先核对这一行。`]:[]),
   ...(ns.roles?[`十神角色补全：喜用 ${ns.roles.useful.join('、')||'未单列'} · 忌神 ${ns.roles.avoid.join('、')||'未单列'} · 仇神 ${ns.roles.enemy.join('、')||'本盘无独立仇神'} · 闲神 ${ns.roles.idle.join('、')||'无'}。${ns.roles.note}`]:[])
  ];
@@ -205,7 +265,7 @@ const strengthSec=[
  const spouseHit=relationWithNatal(dayBranch||'',pillars.slice(0,2));
  const love=[
   `日支（婚姻宫）坐${dayBranch||'—'}，藏干${(pillars[2]?.hidden||[]).map(h=>`${h.stem}(${h.god})`).join(' ')}——配偶画像与相处之道以${G(spouseGod||'正财')}取象：${TEN_GOD_DEEP[spouseGod||'正财'].love}。`,
-  `婚姻宫与年月支的互动：${spouseHit.length?spouseHit.map(h=>`${h.type}（涉及${h.pillar}），关系有张力也有黏性，磨合即默契`).join('；'):'未见刑冲，感情以稳为主，贵在主动保鲜'}。`,
+  `婚姻宫与年月支的互动：${spouseHit.length?spouseHit.map(h=>`${h.type}（涉及${h.pillar}），${h.type==='六合'||h.type==='三合局'?'关系有黏性，磨合即默契':h.type==='六冲'?'聚少离多或节奏错位，靠沟通补位':'暗耗与牵制并存，权责与边界宜早讲清'}`).join('；'):'未见刑冲合害，感情以稳为主，贵在主动保鲜'}。`,
   `六亲取象：年柱${pillars[0]?.stem||''}${pillars[0]?.branch||''}（${pillars[0]?.tenGod||'—'}）看祖上与早年根基；月柱${pillars[1]?.stem||''}${pillars[1]?.branch||''}（${pillars[1]?.tenGod||'—'}）看父母与同辈；时柱${pillars[3]?.stem||''}${pillars[3]?.branch||''}（${pillars[3]?.tenGod||'—'}）看子女与晚运${pillars[3]?.unknown?'（时辰未知，子女晚运不参断）':''}。`,
   `感情应期参考：婚姻宫逢合（${Object.values(LIUHE).slice(0,3).join('、')}之类）或财官星透干之年，姻缘发动概率高；婚姻宫逢冲之年，聚少离多或关系重组，宜沟通勿冷战。`
  ];
@@ -243,10 +303,7 @@ const strengthSec=[
   const delta=support!=null?support-Number(ns.support??50):null;
   const trendText=delta==null?'':delta>2?`运势强度上行 ${delta.toFixed(1)} 点，顺势可进取`:delta<-2?`运势强度回落 ${Math.abs(delta).toFixed(1)} 点，宜守不宜攻`:'运势强度平稳';
   const deep=TEN_GOD_DEEP[god]||TEN_GOD_DEEP.正官;
-  const rel=hits.length?hits.map(h=>{
-   const role=roleOfBranch(c.branch,ns);
-   return h.type==='六冲'?(role==='caution'?'冲去忌神，旧阻松动，反而是变局之年':role==='useful'?'冲用神，根基有摇动，凡事留退路':'冲动平和之位，变动中性，重在适应'):'相合聚力，人缘合作可借';
-  }).join('；'):'与原局无明显刑冲合，行运平稳发挥';
+  const rel=hits.length?hits.map(h=>relPhrase(h,roleOfBranch(c.branch,ns))).join('；'):'与原局无明显刑冲合害，行运平稳发挥';
   return `<li><b>第${(c.index??0)+1}步 · ${c.age?`虚岁 ${c.age}–${c.age+9} · `:''}${c.startYear?c.startYear+'–'+(c.startYear+9)+' · ':''}${c.stem}${c.branch}（${G(god)}）</b><span>事业：${deep.career}。财运：${deep.wealth}。${trendText?'。':''}${trendText}。${rel}。</span></li>`;
  }).join('');
  const cycleSec=cycleLines?`<ul class="rpt-list">${cycleLines}</ul>`:'大运数据待排盘后生成——在排盘页选择任意一步大运，本报告会随盘面同步更新。';
@@ -259,7 +316,7 @@ const strengthSec=[
   const support=trend?.years?.find(x=>x.year===y.year)?.support;
   const delta=support!=null?support-Number(ns.support??50):null;
   const deep=TEN_GOD_DEEP[god]||TEN_GOD_DEEP.正官;
-  const clashText=hits.map(h=>h.type==='六冲'?'冲'+(hits[0]?.pillar||''):'合'+(hits[0]?.pillar||'')).join('、');
+  const clashText=hits.map(h=>({六冲:'冲',六合:'合',三合局:'三合',相刑:'刑',相害:'害',相破:'破'})[h.type]||h.type).join('、');
   const tone=delta==null?'':delta>3?'● 顺年':delta<-3?'▲ 慎年':'○ 平年';
   return `<li><b>${y.year}（${y.age??''}岁）${y.stem}${y.branch} · ${G(god)}${tone}</b><span>事业${deep.career.slice(0,30)}…；财 ${delta!=null&&delta>3?'可进取':delta!=null&&delta<-3?'先防守':'常规运转'}${clashText?`；与原局${clashText}`:''}；感情${deep.love.slice(0,26)}…；健康${deep.health}。</span></li>`;
  }).join('');
@@ -273,7 +330,7 @@ const strengthSec=[
   const role=roleOfBranch(m.branch,ns);
   const deep=TEN_GOD_DEEP[god];
   const roleText=role==='useful'?'月令五行为喜用——本月环境顺风，宜推进要事':role==='caution'?'月令五行为忌神——本月环境逆风，宜收尾守成、不宜开局':'月令五行中性——看个人动作，不看天吃饭';
-  const hitText=hits.length?hits.map(h=>h.type==='六冲'?`与${h.pillar}（${h.branch}）相冲——变动月：行程、合同、人事易反复，重要节点留缓冲`:`与${h.pillar}（${h.branch}）相合——聚力月：合作、签约、见贵人的好窗口`).join('；'):'与原局无明显刑冲——平顺月，按计划走';
+  const hitText=hits.length?hits.map(h=>relPhrase(h,role)).join('；'):'与原局无明显刑冲合害——平顺月，按计划走';
   const clashYear=months.length&&m.branch===CLASH_MAP[pillars[1]?.branch||'']?'；【冲提纲】此月动摇月令根基，大决策建议顺延':'';
   return `<li><b>${m.label||m.stem+m.branch} · ${m.stem}${m.branch} · ${G(god||'正官')}</b><span>${deep?deep.person.slice(0,20)+'式节奏；':''}${roleText}。${hitText}${clashYear}。</span></li>`;
  }).join('');
@@ -302,7 +359,7 @@ const dayTable=days.length?`<table class="rpt-table rpt-days"><thead><tr><th>日
  return `<tr><td>${(d.date||'').slice(5)}</td><td>${d.stem}${d.branch}</td><td>${d.tenGod||tenGodOf(dayStem,d.stem)||'—'}</td><td>${hits.map(h=>h.type+h.pillar).join('、')||'—'}</td></tr>`;
 }).join('')}</tbody></table>`:'';
 const daySec=days.length?[
- `流日是把「择时」落到天：日干十神定当天的做事手感，日支与原局的冲合定当天的剧情起伏。以下为所选流月内的全部日子。`,
+ `流日是把「择时」落到天：日干十神定当天的做事手感，日支与原局的冲合刑害定当天的剧情起伏。以下为所选流月内的全部日子。`,
  ...(dayFocusTop.length?[`【重点日】${dayFocusTop.map(d=>{
   const bits=[];
   if(d.clash.length){
@@ -348,7 +405,7 @@ const sections=[
  {title:'九、大运逐运详批（每步十年）',lines:[],list:cycles.length?undefined:undefined,html:cycles.length?cycleSec:undefined},
  {title:'十、流年逐年详批（未来十年）',lines:[],html:years.length?yearSec:undefined},
  {title:'十一、流月逐月详批（所选流年十二个月）',lines:months.length?[
-  `流月以节气为界换月（立春起寅月）。下表逐月给出：月干支对日主的十神（当月主气质）、月支五行对喜忌的顺逆（环境风力）、与原局四柱的刑冲合（剧情走向）。`,
+  `流月以节气为界换月（立春起寅月）。下表逐月给出：月干支对日主的十神（当月主气质）、月支五行对喜忌的顺逆（环境风力）、与原局四柱的刑冲合害破（剧情走向）。`,
   `用法：合月签约合作、冲月防守缓冲、喜用月推进要事、忌神月收尾复盘——把一年的大事排进对的月份，就是「择时而动」。`
  ]:[],html:months.length?monthSec:undefined},
  {title:'十二、流日与流时（择时落到日与时）',lines:daySec.length||hourSec.length?[...daySec,...hourSec]:['在排盘页选到具体流月后，此处将逐日列出流日干支与原局的冲合，并给出十二时辰的宜忌。'],html:dayHourHtml||undefined},

@@ -7,6 +7,7 @@ import {ziweiChart,ziweiFlow} from './ziwei.mjs';
 import {localTemplateReport} from './report-template.mjs';
 import {westernPro} from './western-pro.mjs';
 import {baziPro,reverseBazi,convertBirth,relations} from './bazi-pro.mjs';
+import {baziMatch,ziweiMatch} from './match-making.mjs';
 import {boneWeight,qizheng,yijing,almanac} from './traditions.mjs';
 import {searchPlaces,resolvePlace} from './geo.mjs';
 import {lunarToSolar} from './lunar.mjs';
@@ -29,7 +30,10 @@ function consoleReading({birth}){
 function pairReading({a,b,mode,config}){
  if(mode!==undefined&&!['synastry','composite','midpoint','davison'].includes(mode))throw Error('无效合盘类型');
  const ba=baziPro({birth:a}),bb=baziPro({birth:b});
- const result=synastry({...solarInput(a,ba),skipZiwei:true},{...solarInput(b,bb),skipZiwei:true},mode||'synastry');
+ const solarA=solarInput(a,ba),solarB=solarInput(b,bb);
+ const result=synastry({...solarA,skipZiwei:true},{...solarB,skipZiwei:true},mode||'synastry');
+ // 多体系合婚：八字干支/十神/喜用 + 紫微命宫夫妻宫互参（不虚构契合度，分数仍取八科）
+ const bm=baziMatch(ba,bb),zm=ziweiMatch(solarA,solarB);
  const {total:forward,max}=result.vedic.koota;
  const reverse=ashtakoota(result.vedic.b.d1,result.vedic.a.d1).total;
  const total=(forward+reverse)/2;
@@ -47,7 +51,7 @@ function pairReading({a,b,mode,config}){
  ];
  const fit={total,max,percent:Math.round(100*total/max),highlight:supportive?label(supportive):challenging?label(challenging):key?aspect(key):'',insights};
  const combined=mode==='composite'?compositePro({a,b,config}):null;
- return {ok:true,...result,western:combined?{...result.western,chart:combined.chart,composite:combined.chart}:result.western,fit,crossRelations:cross,composite:combined};
+ return {ok:true,...result,ziwei:zm,baziMatch:bm,ziweiMatch:zm,western:combined?{...result.western,chart:combined.chart,composite:combined.chart}:result.western,fit,crossRelations:cross,composite:combined};
 }
 export const consoleRoutes={
  '/api/console/vedic':vedicPro,'/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,

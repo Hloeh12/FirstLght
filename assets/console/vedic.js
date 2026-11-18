@@ -52,7 +52,7 @@ function vedicOverview(base,d,chosen){
  ${d9.lordHouse?`<p class="vr-line"><b>关系盘 D9：</b>上升${esc(short(d9.lagna))}，命主${esc(d9.lordName)}落第${d9.lordHouse}宫（${HOUSE_THEME[d9.lordHouse]}）。D9 与 D1 的命主不同宫时，说明对外表现与亲密关系里的自我不一致。</p>`:''}
  <h3 class="vr-title">分盘结论</h3>
  <ul class="vr-vargas">${vargas.map(r=>`<li><b>D${r.n} ${esc(r.label)}</b><span>${esc(vargaSentence(r))}</span></li>`).join('')}</ul>
- <p class="thin muted vr-note">计算范围：宫位按整宫制，分盘由本命度数的整数分割得出；行星力量已按 Shadbala 五项（Sthana、Dig、Kala 月相力、Cheshta、Naisargika）给出分数与位次，并起 Varshaphala 太阳返照岁运盘。仍未计算 Ashtakavarga（八分点）、Yogini 与 Jaimini 指标——这些领域只描述结构位置，不给分数与吉凶断言。</p>
+ <p class="thin muted vr-note">计算范围：宫位按整宫制，分盘由本命度数的整数分割得出；行星力量已按 Shadbala 六力（Sthana、Dig、Kala 月相力、Cheshta、Naisargika、Saptavargaja、Drik）给出分数与位次，另起 Ashtakavarga 八分点（校验位 337）与 Varshaphala 太阳返照岁运盘。仍未计算 Yogini 与 Jaimini 指标及 Kala 其余分项（Nathonnatha、Ayana）——这些领域不给无经典依据的分数与吉凶断言。</p>
 </article>`;
 }
 
@@ -72,13 +72,19 @@ export function vedicView(ctx){
  </section>${vedicOverview(base,d,chosen)}<section class="vedic-rest"><article class="card" data-vedic-nakshatra><h2>27 星宿与宿度</h2><p class="thin">以下为 D1 出生恒星黄道；分盘只改变上方宫位映射。宿主落1/5/9宫侧重支持，落6/8/12宫侧重磨练，需合参宫主与相位。</p>${table(['星体','星座 / 宫位','精确度数','星宿 / 宿度','宿主 / 分足'],[{key:'lagna',name:'上升 Lagna',sid:base.ascSid,house:1,nakIndex:Math.floor(base.ascSid/(360/27)),nakshatra:nakNames[Math.floor(base.ascSid/(360/27))],nakDegree:base.ascSid%(360/27),nakLord:base.sequence[Math.floor(base.ascSid/(360/27))%9],pada:Math.floor(base.ascSid/(360/108))%4+1,sign:base.lagna,degree:{degrees:Math.floor(base.ascSid%30),minutes:Math.floor(base.ascSid%1*60),seconds:Math.floor(base.ascSid%1*3600)%60}},...base.planets].map(p=>[p.name+' '+planetStates(p,base.planets).join(' / '),p.sign+' · '+p.house+'宫',dms(p.degree),(nakNames[p.nakIndex]||p.nakshatra)+' '+p.nakDegree.toFixed(4)+'°',p.nakLord+' · Pada '+p.pada+'（本命宿主落'+(base.planets.find(q=>q.name===p.nakLord)?.house||1)+'宫）']))}</article>
  <article class="card liquid-glass" data-vedic-states><h2>行星状态检视</h2><div class="chips">${d.planets.map(p=>term(p.name+' · '+(planetStates(p,d.planets).join(' / ')||'平常'),p.name+'落'+p.sign+'第'+p.house+'宫。'+(planetStates(p,d.planets).join('、')||'本模型未检出特殊状态')+'；仅按所选分盘观察宫位。')).join('')}</div><small>逆行、燃烧、行星战与尊贵状态按当前本地模型计算，传统象意不等于事件保证。</small></article>
  ${base.shadbala?`<article class="card liquid-glass" data-vedic-shadbala><h2>Shadbala 六力审计</h2>
- <p class="thin">七曜分项得分，60 virupa = 1 Rupa。本实现覆盖五项（位置/方向/时间月相/动势/自然力），未计 Saptavargaja、Drik 与完整 Kala，故看<strong>位次与短板</strong>，不设绝对达标线。</p>
- ${table(['行星','位置','方向','时间','动势','自然','Rupas','位次'],base.shadbala.rows.map(r=>[r.name+(r.retro?' ℞':''),String(r.sthana.toFixed(0)),String(r.dig.toFixed(0)),String(r.paksha.toFixed(0)),String(r.cheshta),String(r.naisargika.toFixed(0)),r.rupas.toFixed(2),r.rank+'/7']))}
+ <p class="thin">七曜分项得分，60 virupa = 1 Rupa。已覆盖位置/方向/时间月相/动势/自然力/七分友谊/相位七项，看<strong>位次与短板</strong>，不设绝对达标线。</p>
+ ${table(['行星','位置','方向','时间','动势','自然','七分','相位','Rupas','位次'],base.shadbala.rows.map(r=>[r.name+(r.retro?' ℞':''),String(r.sthana.toFixed(0)),String(r.dig.toFixed(0)),String(r.paksha.toFixed(0)),String(r.cheshta),String(r.naisargika.toFixed(0)),String(r.saptavargaja.toFixed(0)),String(r.drik.toFixed(0)),r.rupas.toFixed(2),r.rank+'/7']))}
  <p>最强 <b>${esc(base.shadbala.strongest)}</b> · 最弱 <b>${esc(base.shadbala.weakest)}</b>；各自短板：${base.shadbala.rows.map(r=>esc(r.name+'='+r.weakestPart[0])).join('、')}</p>
  <small>${esc(base.shadbala.method)}</small></article>`:''}
  ${base.bhavaBala?`<article class="card" data-vedic-bhava><h2>十二宫力量 · Bhava Bala</h2>
  ${table(['宫位','宫主','宫内','宫主力','评分','评级'],base.bhavaBala.rows.map(r=>[r.house+' · '+r.theme,r.lord,r.occupants.join('、')||'—',r.lordPower.toFixed(1),r.score.toFixed(1),r.grade]))}
  <p>最强三宫 ${base.bhavaBala.strongest.join('、')} · 最弱三宫 ${base.bhavaBala.weakest.join('、')}——用强宫的资源去补弱宫的缺口。</p><small>${esc(base.bhavaBala.method)}</small></article>`:''}
+ ${base.ashtakavarga?.valid?(()=>{const a=base.ashtakavarga;const themes=['自我与身体','财帛与家人','勇气与同辈','家宅与内心','子女与智慧','竞争与服务','婚姻与合作','转化与他财','运势与师长','事业与名望','收益与人脉','消耗与远行'];
+  return `<article class="card liquid-glass" data-vedic-ashtakavarga><h2>Ashtakavarga 八分点 · SAV ${a.total}</h2>
+  <p class="thin">七曜按 BPHS 吉宫表给十二星座记分（校验位 337，本盘 ${a.total} 校验通过）。SAV 是结构支撑度，均值约 28，非吉凶断言。</p>
+  ${table(['宫位','星座','SAV','结构支撑'],a.byHouse.map(r=>[r.house+' · '+themes[r.house-1],r.sign,String(r.points),r.points>=32?'强':r.points>=30?'较强':r.points>=28?'略高':r.points>=25?'中等':r.points>=22?'偏弱':'弱']))}
+  <p>最厚 <b>第${a.strongest.house}宫（${esc(a.strongest.sign)} ${a.strongest.points}）</b> · 最薄 <b>第${a.weakest.house}宫（${esc(a.weakest.sign)} ${a.weakest.points}）</b>——厚宫所主之事结构支撑足，薄宫宜后天补。</p>
+  <small>${esc(a.method)}</small></article>`;})():''}
  ${base.varshaphala?`<article class="card liquid-glass" data-vedic-varsha><h2>岁运 Varshaphala · ${base.varshaphala.year}</h2>
  <p>返照起盘 ${esc(localDisplayTime(base.varshaphala.returnUtc))}（本地） · 返照上升 <b>${esc(base.varshaphala.chart.lagna)}</b></p>
  <p>Muntha 落第 ${base.varshaphala.muntha.house} 宫（${esc(base.varshaphala.muntha.theme)}）—— 今年的实质变化多落在这个领域。</p>
@@ -115,12 +121,12 @@ export function southIndianChart(d,natal=d){
 
 export function vedicTools(ctx,host){
  const s=ctx.state.chartState.vedic??={data:ctx.state.reading.vedic,n:1,layout:'north',path:[]};
- const actions=[['分盘切换 D1–D60','varga'],['大运时序 · 四级','dasha'],['星宿全览 · 27宿/Pada','nakshatra'],['行星状态 · 燃烧/交战','states'],['力量审计 · Shadbala','shadbala'],['宫位力量 · Bhava','bhava'],['岁运 · Varshaphala','varsha']];
+ const actions=[['分盘切换 D1–D60','varga'],['大运时序 · 四级','dasha'],['星宿全览 · 27宿/Pada','nakshatra'],['行星状态 · 燃烧/交战','states'],['力量审计 · Shadbala','shadbala'],['宫位力量 · Bhava','bhava'],['八分点 · Ashtakavarga','ashtakavarga'],['岁运 · Varshaphala','varsha']];
  host.innerHTML=`<div class="tool-grid vedic-tools">${actions.map(([name,id])=>btn(name,`data-vedic-action="${id}"`)).join('')}</div><p class="thin">当前 D${s.n||1} · ${s.layout==='south'?'南印方格':'北印菱形'}。只在印度占星页显示本菜单。</p>`;
  for(const b of host.querySelectorAll('[data-vedic-action]'))b.onclick=()=>{
   const id=b.dataset.vedicAction;
   ctx.close(document.querySelector('#toolSheet'));
-  const target={varga:'[data-varga-select]',dasha:'.vedic-period',nakshatra:'[data-vedic-nakshatra]',states:'[data-vedic-states]',shadbala:'[data-vedic-shadbala]',bhava:'[data-vedic-bhava]',varsha:'[data-vedic-varsha]'}[id];
+  const target={varga:'[data-varga-select]',dasha:'.vedic-period',nakshatra:'[data-vedic-nakshatra]',states:'[data-vedic-states]',shadbala:'[data-vedic-shadbala]',bhava:'[data-vedic-bhava]',ashtakavarga:'[data-vedic-ashtakavarga]',varsha:'[data-vedic-varsha]'}[id];
   // 这些区块是 #vedic 的兄弟节点（位于 section.vedic-rest 内），不能在 #vedic 内查找，否则永远匹配不到。
   (ctx.root.querySelector(target)||document.querySelector(target))?.scrollIntoView({behavior:'smooth',block:'start'});
  };

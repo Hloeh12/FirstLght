@@ -150,8 +150,12 @@ test('深度合盘：真实双盘驱动——五星对照/跨盘相位/八科化
  const result=localRequest('/api/synastry/chart',{a:BIRTH,b:B,mode:'synastry'});
  const {buildSynastryDeepReport}=await import('../www/js/deep-synastry.js');
  const r=buildSynastryDeepReport(result,'甲','乙');
- assert.equal(r.sections.length,7);
+ assert.equal(r.sections.length,9,'合盘应为九章（含八字合婚与紫微合盘）');
  assert.ok(r.characters>=3000,'深度合盘应达 3000 字，实际 '+r.characters);
+ const bmSec=r.sections.find(x=>x.title.includes('八字合婚专项')),zmSec=r.sections.find(x=>x.title.includes('紫微合盘'));
+ assert.ok(bmSec&&zmSec,'应含八字合婚与紫微合盘两章');
+ assert.match(bmSec.lines.join(''),/日柱|生肖|十神|喜用/,'八字合婚应给结构化证据');
+ assert.match(zmSec.lines.join(''),/命宫|夫妻宫/,'紫微合盘应含命宫夫妻宫互参');
  const pairSec=r.sections.find(x=>x.title.startsWith('二、'));
  assert.ok((pairSec.html.match(/<li>/g)||[]).length===5,'五星对照应五条');
  const aspSec=r.sections.find(x=>x.title.startsWith('三、'));
@@ -219,7 +223,7 @@ test('印占小运细分：当前与下一大运各九段 Antardasha，合计恰
  const {buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
  const v=vedicPro({birth:{Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY,dateStr:'1990-06-15',timeStr:'14:30'}});
  const r=buildVedicDeepReport(v);
- const sec=r.sections.find(x=>x.title.startsWith('七、小运'));
+ const sec=r.sections.find(x=>x.title.includes('小运细分'));
  assert.ok(sec,'应存在小运细分章节');
  const html=sec.html||'';
  assert.ok((html.match(/<li/g)||[]).length>=18,'两大运各九段小运');
@@ -241,14 +245,16 @@ test('印占 Shadbala 六力：七曜分项齐全、位次唯一、口径不虚�
  assert.ok(s,'应输出 shadbala');
  assert.equal(s.rows.length,7,'七颗主星');
  for(const r of s.rows){
-  for(const k of ['uchcha','kendra','drek','dig','paksha','cheshta','naisargika','rupas','rank','weakestPart']){
+  for(const k of ['uchcha','kendra','drek','dig','paksha','cheshta','naisargika','saptavargaja','drik','rupas','rank','weakestPart']){
    assert.ok(Number.isFinite(r[k])||k==='weakestPart','分项 '+k+' 应为数值');
   }
+  assert.ok(r.saptavargaja>=0&&r.saptavargaja<=60,'七分友谊力应在 0–60 virupa');
+  assert.ok(r.drik>=-90&&r.drik<=90,'相位力应在 ±90 virupa');
   assert.ok(r.rupas>=0&&r.rupas<=12,'Rupas 应在合理区间');
  }
  const ranks=s.rows.map(r=>r.rank).sort((a,b)=>a-b);
  assert.deepEqual(ranks,[1,2,3,4,5,6,7],'位次应为 1–7 无重复');
- assert.match(s.method,/系统性偏低/,'口径须说明未覆盖项会拉低总分');
+ assert.match(s.method,/Nathonnatha|未计|仍未计入/,'口径须说明 Kala 其余分项仍未计入');
  // 报告里不得出现绝对达标断言
  const r=buildVedicDeepReport(v);
  const sec=r.sections.find(x=>x.title.includes('Shadbala'));
@@ -300,7 +306,7 @@ test('八字流月逐月详批：所选流年十二个月逐月成条',async()=>
  assert.equal((html.match(/<li/g)||[]).length,12,'十二个月应逐月成条，实际 '+(html.match(/<li/g)||[]).length);
  const txt=html.replace(/<[^>]*>/g,'');
  assert.match(txt,/立春/);
- assert.match(txt,/聚力月|变动月/,'应给出刑冲合判读');
+ assert.match(txt,/聚力|冲|相刑|相害|相破|三合局|平顺月/,'应给出刑冲合害破判读');
  assert.doesNotMatch(txt,/undefined/);
 });
 

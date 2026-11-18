@@ -1938,6 +1938,8 @@ dialog#reportSheet::backdrop{position:fixed;inset:0;z-index:999;background:rgba(
 .rpt-sec-no{flex:none;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:9px;background:linear-gradient(135deg,#ff8db8,#e2568f);color:#fff;font-size:12px;font-weight:800;box-shadow:0 6px 14px -8px rgba(190,50,110,.7)}
 .rpt-sec p{font-size:13px!important;line-height:1.9!important;color:#3a3036!important;margin:0 0 10px!important;text-align:justify}
 .rpt-table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}
+.rpt-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;margin:6px 0}
+.rpt-table-wrap .rpt-table{margin:0;min-width:max-content}
 .rpt-table th,.rpt-table td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;color:#4a3a44}
 .rpt-table th{color:#7a2350;font-weight:700;background:rgba(255,255,255,.5)}
 .rpt-foot{margin-top:24px;padding-top:16px;border-top:1px solid var(--line);font-size:11px!important;line-height:1.8!important;color:var(--muted)!important;text-align:center}

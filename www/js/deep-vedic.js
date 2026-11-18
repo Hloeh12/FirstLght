@@ -154,9 +154,11 @@ export function buildVedicDeepReport(v){
  /* 三、Shadbala 六力审计 */
 const shad=v?.shadbala||null;
 const housesOfPlanet=name=>SIGN_LIST.map((s,i)=>SIGN_LORD[i]===name?((i-lagnaIndex+12)%12)+1:null).filter(Boolean);
-gloss['Shadbala']='六力评分：位置、方向、时间、动势、自然（另含相位，本实现未计）——判断一颗行星「有没有力气把所主宫位兑现出来」的经典体系';
-gloss['Rupas']='Shadbala 的计分单位，60 virupa = 1 Rupa；每颗行星另有经典最低要求，达不到即判「力量不足」';
-const shadTable=shad?`<table class="rpt-table rpt-shad"><thead><tr><th>行星</th><th>位置</th><th>方向</th><th>时间</th><th>动势</th><th>自然</th><th>Rupas</th><th>位次</th></tr></thead><tbody>${shad.rows.map(r=>`<tr><td>${r.name}${r.retro?' ℞':''}</td><td>${r.sthana.toFixed(0)}</td><td>${r.dig.toFixed(0)}</td><td>${r.paksha.toFixed(0)}</td><td>${r.cheshta}</td><td>${r.naisargika.toFixed(0)}</td><td><b>${r.rupas.toFixed(2)}</b></td><td>${r.rank}/7</td></tr>`).join('')}</tbody></table>`:'';
+gloss['Shadbala']='六力评分：位置、方向、时间月相、动势、自然、七分友谊、相位——判断一颗行星「有没有力气把所主宫位兑现出来」的经典体系';
+gloss['Rupas']='Shadbala 的计分单位，60 virupa = 1 Rupa；每颗行星另有经典最低要求，本表不据此作绝对断言，按位次读取';
+gloss['Saptavargaja']='七分盘友谊力：行星在 D1/D2/D3/D7/D9/D10/D12 的星座主与它是友是敌，友则助力、敌则耗力';
+gloss['Drik']='相位力：火星/木星/土星的特殊相位及其它行星照到本星，吉星加分、凶星减分';
+const shadTable=shad?`<table class="rpt-table rpt-shad"><thead><tr><th>行星</th><th>位置</th><th>方向</th><th>时间</th><th>动势</th><th>自然</th><th>七分</th><th>相位</th><th>Rupas</th><th>位次</th></tr></thead><tbody>${shad.rows.map(r=>`<tr><td>${r.name}${r.retro?' ℞':''}</td><td>${r.sthana.toFixed(0)}</td><td>${r.dig.toFixed(0)}</td><td>${r.paksha.toFixed(0)}</td><td>${r.cheshta}</td><td>${r.naisargika.toFixed(0)}</td><td>${r.saptavargaja.toFixed(0)}</td><td>${r.drik.toFixed(0)}</td><td><b>${r.rupas.toFixed(2)}</b></td><td>${r.rank}/7</td></tr>`).join('')}</tbody></table>`:'';
 const shadWeak=shad?[...shad.rows].sort((a,b)=>a.rupas-b.rupas):[];
 const shadLines=shad?[
  `Shadbala 回答的是「这颗星有没有力气办事」：分数越高，它主管的宫位越能在现实里兑现。60 virupa = 1 Rupa——下表是七颗主星的分项得分与合计。`,
@@ -165,6 +167,18 @@ const shadLines=shad?[
  `读法：力量强而所主宫位一般的星，是「有余力可调用的资源」；力量弱而所主宫位关键的星，是「必须提前布防的短板」。两者合看，才是完整的资源调度图。`,
  `口径：${shad.method}`
 ]:['Shadbala 数据待排盘后生成。'];
+
+/* 三附、Ashtakavarga 八分点（SAV 校验位 337） */
+const astha=v?.ashtakavarga||null;
+const HOUSE_THEME_ZH=['自我与身体','财帛与家人','勇气与同辈','家宅与内心','子女与智慧','竞争与服务','婚姻与合作','转化与他财','运势与师长','事业与名望','收益与人脉','消耗与远行'];
+gloss['Ashtakavarga']='八分点：七曜按古典吉宫表给十二星座记分，叠加成 Sarvashtakavarga(SAV)，衡量每个宫位的「结构支撑度」——分数高表示承载该主题的资源厚，非吉凶断言';
+const asthaTable=astha?.valid?`<table class="rpt-table rpt-astha"><thead><tr><th>宫位</th><th>星座</th><th>SAV</th><th>结构支撑</th></tr></thead><tbody>${astha.byHouse.map(r=>`<tr><td>第${r.house}宫 · ${HOUSE_THEME_ZH[r.house-1]}</td><td>${r.sign}</td><td><b>${r.points}</b></td><td>${r.points>=32?'强':r.points>=30?'较强':r.points>=28?'略高':r.points>=25?'中等':r.points>=22?'偏弱':'弱'}</td></tr>`).join('')}</tbody></table>`:'';
+const asthaLines=astha?.valid?[
+ `Ashtakavarga 是印占自己的「结构评分」：七曜各自按 BPHS 吉宫表给十二星座记 1 分，叠加成 Sarvashtakavarga（SAV），本盘总分 ${astha.total}（校验位 337，已通过）。每宫基准约 28 分，高者结构厚、低者需后天补。`,
+ `最厚是第 ${astha.strongest.house} 宫（${astha.strongest.sign} ${astha.strongest.points} 分，主${HOUSE_THEME_ZH[astha.strongest.house-1]}）——这块领域天生的支撑资源较足，起步相对省力。最薄是第 ${astha.weakest.house} 宫（${astha.weakest.sign} ${astha.weakest.points} 分，主${HOUSE_THEME_ZH[astha.weakest.house-1]}）——不是凶，而是结构偏薄，宜以习惯、团队与长期经营补足。`,
+ `读法：SAV 为「结构支撑度」而非事件预测。行运行星经过高分星座时，传统认为所经之事较顺；经过低分星座时宜稳。它与 Shadbala（行星自身力气）互补——一个看「舞台厚不厚」，一个看「演员强不强」，合看才是完整判断。`,
+ `口径：${astha.method}`
+]:['Ashtakavarga 数据待排盘后生成，或本盘校验未通过（总分不等于 337）——校验不过不显示分数，避免错误查表误导。'];
 
 /* 四、Yoga 命格识别 */
  const yogaLines=yogas.map(k=>{const y=YOGA_LIB[k];gloss[y.name.split(' ')[0]]=y.form;return `【${y.name}】构成：${y.form}。判读：${y.text}`;});
@@ -287,14 +301,15 @@ const vsSec=vs?[
   {title:'一、上升与人生主轴',lines:overview},
   {title:'二、行星力量评级',lines:powerLines,table:powerTable},
   {title:'三、Shadbala 六力审计',lines:shadLines,table:shadTable},
-  {title:'四、Yoga 命格识别',lines:yogaSec},
-  {title:'五、九曜逐星落宫详解',lines:[],html:planetSec},
-  {title:'六、Vimshottari 大运逐运详批',lines:dashaIntro,html:dashaSec},
-  {title:'七、小运细分（当前与下一大运的九段 Antardasha）',lines:antarIntro,html:antarSec},
-  {title:'八、分盘专项（D9/D10）',lines:vargaSec},
-  {title:'九、十二宫力量审计（Bhava Bala）',lines:bhavaLines,table:bhavaTable},
-  {title:'十、岁运 Varshaphala（今年年度盘）',lines:vsSec},
-  {title:'十一、人生格局总结',lines:lifePattern}
+  {title:'四、Ashtakavarga 八分点（SAV 337 校验）',lines:asthaLines,table:asthaTable},
+  {title:'五、Yoga 命格识别',lines:yogaSec},
+  {title:'六、九曜逐星落宫详解',lines:[],html:planetSec},
+  {title:'七、Vimshottari 大运逐运详批',lines:dashaIntro,html:dashaSec},
+  {title:'八、小运细分（当前与下一大运的九段 Antardasha）',lines:antarIntro,html:antarSec},
+  {title:'九、分盘专项（D9/D10）',lines:vargaSec},
+  {title:'十、十二宫力量审计（Bhava Bala）',lines:bhavaLines,table:bhavaTable},
+  {title:'十一、岁运 Varshaphala（今年年度盘）',lines:vsSec},
+  {title:'十二、人生格局总结',lines:lifePattern}
  ];
  return {title:'印度占星 · Jyotish 终身详批',sections,glossary:gloss,kind:'vedic',yogas};
 }

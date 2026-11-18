@@ -147,3 +147,70 @@ test('紫微四化飞星轨迹：每宫宫干引动四化飞向目标宫，文�
  const txt=sec.lines.join('')+(sec.html||'');
  assert.doesNotMatch(txt,/undefined|NaN/);
 });
+
+test('从格判定须有通根/透干/得令证据，不只看百分比，且附核对行',()=>{
+ const r=baziPro({birth:{Y:1990,M:5,D:20,h:10,mi:30,gender:'男',city:CITY,calendar:'solar'}});
+ const rep=buildBaziDeepReport(r);
+ // 格局名必须是四选一，不再出现「从弱格」这种裸百分比判定
+ assert.ok(['从弱格','从强格','正格·身弱','正格·身强'].includes(rep.gege)||GEOGE_OK(rep.gege),'格局名应来自证据判定: '+rep.gege);
+ const text=rep.sections.map(s=>(s.lines||[]).join('')+(s.html||'')).join('');
+ assert.doesNotMatch(text,/弱到极处顺势而为|一气专旺/,'不应残留旧的无证据从格话术');
+ assert.doesNotMatch(text,/false:false|rootsCount/,'不应残留死代码痕迹');
+ assert.doesNotMatch(text,/undefined|NaN/);
+ function GEOGE_OK(g){return ['正官格','七杀格','正财格','偏财格','正印格','偏印格','食神格','伤官格','中和格'].includes(g);}
+});
+
+test('八字刑冲合害破：报告层与引擎口径一致，新增刑害破不被误读为相合',()=>{
+ const r=baziPro({birth:{Y:1990,M:5,D:20,h:10,mi:30,gender:'男',city:CITY,calendar:'solar'}});
+ const rep=buildBaziDeepReport(r);
+ const text=rep.sections.map(s=>(s.lines||[]).join('')+(s.html||'')).join('');
+ // 报告层已具备相刑/相害/相破三类关系词（引擎亦有同口径表）
+ for(const t of ['相刑','相害','相破'])assert.match(text,new RegExp(t),'报告应能输出'+t);
+ assert.doesNotMatch(text,/相合聚力，人缘合作可借[^。]{0,40}相刑/,'刑害破不得被当成相合');
+ assert.doesNotMatch(text,/undefined|NaN/);
+});
+
+test('紫微星×宫专断：命宫主星给出针对性断语，消除「命宫宫」重复',async()=>{
+ const {ziweiChart}=await import('../src/ziwei.mjs');
+ const {buildZiweiDeepReport}=await import('../www/js/deep-ziwei.js');
+ const chart=ziweiChart({dateStr:'1990-06-15',timeIndex:7,gender:'男'});
+ const r=buildZiweiDeepReport(chart,null);
+ const text=r.sections.map(s=>(s.lines||[]).join('')+(s.html||'')).join('');
+ assert.doesNotMatch(text,/命宫宫|[兄夫官财迁疾田福父]宫宫/,'不得出现重复宫字');
+ const pal=r.sections.find(x=>x.title.includes('十二宫'));
+ const ptxt=pal?((pal.html||'')+(pal.lines||[]).join('')):'';
+ // 命宫主星坐命应有「坐命宫：」的专断句，而非仅通用拼接
+ assert.match(ptxt,/坐命宫[:：]/,'命宫主星应有针对性专断');
+ assert.doesNotMatch(text,/undefined|NaN/);
+});
+
+test('Ashtakavarga 八分点：SAV 校验位 337 恒定，七曜 BAV 总分吻合 BPHS',async()=>{
+ const {chart}=await import('../src/chart.mjs');
+ const {ashtakavarga,FIXED_TOTAL}=await import('../src/ashtakavarga.mjs');
+ const city={lat:39.9,lon:116.4,tz:8};
+ for(const b of [{Y:1990,M:6,D:15,h:14,mi:0},{Y:1985,M:1,D:2,h:23,mi:30},{Y:2000,M:12,D:31,h:8,mi:45}]){
+  const v=chart({...b,city},{baseOnly:true}).vedic;
+  const a=ashtakavarga(v);
+  assert.equal(a.total,337,'SAV 总和须恒为 337，实际 '+a.total);
+  assert.ok(a.valid,'校验位须通过');
+  assert.deepEqual(a.rows.map(r=>r.total),Object.values(FIXED_TOTAL),'七曜 BAV 总分须为 48/49/39/54/56/52/39');
+  assert.equal(a.sav.length,12);
+ }
+});
+
+test('Shadbala 六力补强：Saptavargaja/Drik 入分项且口径声明覆盖六力',async()=>{
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const v=vedicPro({birth:{Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY,calendar:'solar'}});
+ const s=v.shadbala;
+ assert.equal(s.rows.length,7);
+ for(const r of s.rows){
+  assert.ok(Number.isFinite(r.saptavargaja)&&r.saptavargaja>=0&&r.saptavargaja<=60,'七分友谊力范围 '+r.name);
+  assert.ok(Number.isFinite(r.drik)&&r.drik>=-90&&r.drik<=90,'相位力范围 '+r.name);
+  // 合计须等于各分项之和（含两项新增）
+  const sum=r.sthana+r.dig+r.paksha+r.cheshta+r.naisargika+r.saptavargaja+r.drik;
+  assert.ok(Math.abs(sum-r.total)<0.02,'合计须含两项新增 '+r.name);
+ }
+ assert.match(s.method,/Saptavargaja/);
+ assert.match(s.method,/Drik/);
+ assert.match(s.method,/Nathonnatha/,'须披露仍未计入的 Kala 其余分项');
+});

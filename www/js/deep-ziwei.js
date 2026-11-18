@@ -17,6 +17,24 @@ const STAR_CORE={
  七杀:{gloss:'将星，肃杀与开创',person:'狠劲与魄力，敢冲敢当，孤独的强者',career:'宜开拓、竞技、创业、军警、手术',wealth:'险中求财，大开大合',love:'聚少离多式感情，需要独立空间',risk:'刚暴冲动，防意外与树敌'},
  破军:{gloss:'耗星，破旧与立新',person:'天生的破局者，人生不走寻常路',career:'宜创新、变革、海外、先破后立行业',wealth:'先破后聚，晚发之财',love:'感情多巨变重组，宜晚婚',risk:'破坏性强，人生起伏剧烈'}
 };
+/* 14 主星 × 关键宫位专断：文墨天机式「星曜坐宫」的具体断法。
+   未列宫位回退到 STAR_CORE 通用文案，并明示「以星性×宫性参断」，不臆造专条。 */
+const STAR_PALACE={
+ 紫微:{命宫:'帝星坐命，气度自成一格，宜掌权担纲、走管理或专业牵头路线；须防刚愎、好听奉承。',夫妻:'配偶多要强体面，婚姻重名分与尊重；宜找能独当一面又给足面子的人，忌两强争锋。',官禄:'适合在大机构、平台型组织担要职，越大的舞台越能显其统筹之才。',财帛:'财随名至，靠地位与资源调度生财，非锱铢必较型；忌为面子大意花钱。',迁移:'外出有贵人、见大局，越走动越能打开格局，宜向外发展。'},
+ 天机:{命宫:'机敏善谋、思虑深，宜策划参谋与技术咨询；须防想太多、反复变动。',夫妻:'伴侣聪慧善变，感情里易「想太多自己加戏」，沟通要直白别猜。',官禄:'宜参谋、企划、研发、顾问等动脑岗位，适合作军师不当一线莽夫。',财帛:'以智生财、脑力变现，财源随点子与专业判断而来，忌跟风投机。',疾厄:'注意神经紧绷、睡眠与消化，宜规律作息、少内耗。'},
+ 太阳:{命宫:'光明外放、乐于付出，天生想照亮别人；名先于利，须防操劳与锋芒招妒。',夫妻:'付出型伴侣，容易忽略自己；宜找懂得回应与珍惜的人。',官禄:'宜公职、管理、传媒教育等需公开露面、能积累声望的行业。',财帛:'先有名后有利，财随声誉来；忌为面子铺张。',迁移:'外出见光、声名远播，越公开越有利，宜向外发展。'},
+ 武曲:{命宫:'刚毅果决、重承诺、行动力强；财星坐命宜务实理财，须防过刚易折、不解风情。',夫妻:'重实际付出、不解风情，感情宜找务实型伴侣，用行动代替甜言。',官禄:'宜金融、工程、外科、军警、实业等要执行与决断的领域。',财帛:'正财星入财帛为最强配置之一，善守善攻，能积聚也能生财。',疾厄:'注意呼吸系统、外伤与过劳，运动狠了要收着。'},
+ 天同:{命宫:'随和乐观、有福气、孩子气；宜服务疗愈文教，须防惰性、小富即安。',夫妻:'情绪稳定、会享受生活，感情宜找能一起过日子的伴侣，忌一方过于进取。',官禄:'宜服务业、疗愈、文教、后勤等压力适中的岗位，抗压非其所长。',财帛:'衣食无忧型，不缺小钱难聚大富，宜稳中求进。',福德:'心境豁达、知足常乐，福气是天同的底色，须防安于现状。'},
+ 廉贞:{命宫:'外冷内热、讲原则又懂风情；才艺与魅力兼具，须防情绪两极与感情多折。',夫妻:'吸引力强但关系多转折，宜晚婚、重精神契合，忌一念之差。',官禄:'宜政法、纪检、公关、设计演艺等讲原则又用人情的领域。',财帛:'以专业与人脉生财，财路带几分才艺色彩。',疾厄:'注意心血循环与情绪，忌熬夜与情绪压抑。'},
+ 天府:{命宫:'稳重包容、天生的理财管家；守成有余开创不足，宜大机构与稳健经营。',夫妻:'配偶多半稳重顾家，婚姻重安稳与责任，宜门当户对。',官禄:'宜管理、金融、后勤总管，越大的机构越能发挥统筹之才。',财帛:'库星主积聚，越老越有钱，善守财、能积产。',田宅:'田宅宫得天府，家业根基厚，房产运佳，宜置产安居。'},
+ 太阴:{命宫:'温柔敏感、审美佳、夜型人；宜文创财务医护，须防多愁善感、优柔。',夫妻:'体贴入微型伴侣，感情细腻，宜找能读懂情绪的人。',官禄:'宜文创、房产、财务、医护及女性相关行业。',财帛:'细水长流式积财，田宅主星，宜长期稳健积累不动产。',田宅:'太阴入田宅，家宅安稳、房产运佳，宜居水边或安静处。'},
+ 贪狼:{命宫:'多才多艺、社交高手、好奇心重；才艺与桃花并重，宜晚婚、防欲望与应酬耗身。',夫妻:'桃花重、异性缘旺，宜晚婚并守界限，找能一起成长的人。',官禄:'宜业务、公关、娱乐、教培、命理玄学等人脉与才艺型行业。',财帛:'人脉即财源，应酬中见机会，须防为享乐破财。',福德:'欲望与才艺并存，兴趣广博，须防贪多与沉迷声色。'},
+ 巨门:{命宫:'口才锋利、善质疑、研究型人格；靠口与专业立身，须防多疑善辩、祸从口出。',夫妻:'口舌是非是感情头号课题，宜找能理性沟通的人，话前三思。',官禄:'宜律师、教师、主播、医师、心理等靠表达与专业判断的领域。',财帛:'以口才与专业立业，靠真本事赚钱，非投机之财。',疾厄:'注意口腔、消化与情绪性失眠，少吃辛辣、少纠结。'},
+ 天相:{命宫:'气质端方、天生的二把手；重名分与体面，须防过于方正、被人当枪使。',夫妻:'重视门当户对与名分，宜找品貌端正、能互相扶持的伴侣。',官禄:'宜幕僚、法务、HR、公职、品牌管理等辅佐与制度型岗位。',财帛:'稳定薪禄、衣食型财富，宜稳健理财，忌冒险。',迁移:'外出得贵人、重礼数，宜在规范有序的环境发展。'},
+ 天梁:{命宫:'老成持重、爱管闲事的大哥大姐；有荫庇与寿德，须防说教气重、倚老卖老。',夫妻:'照顾型伴侣，易把对方当孩子，宜找能独立又领情的人。',官禄:'宜医药、保险、公益、监察、教育等庇荫与监督型领域。',财帛:'先荫后财、稳中有余，宜靠专业口碑积累。',疾厄:'注意脾胃与慢性问题，宜规律养生、少操心。'},
+ 七杀:{命宫:'狠劲魄力、敢冲敢当、孤独的强者；宜开拓竞技创业，须防刚暴冲动、防意外。',夫妻:'聚少离多式感情，需要独立空间，宜找能各自精彩的伴侣。',官禄:'宜开拓、竞技、创业、军警、手术等高风险高回报领域。',财帛:'险中求财、大开大合，须设止损线、忌孤注一掷。',迁移:'外出闯荡见真章，宜向外发展、独当一面。'},
+ 破军:{命宫:'天生的破局者、人生不走寻常路；宜创新变革，须防破坏性强、起伏剧烈。',夫妻:'感情多巨变重组，宜晚婚、重磨合，忌冲动开始或结束。',官禄:'宜创新、变革、海外、先破后立的行业与岗位。',财帛:'先破后聚、晚发之财，忌大进大出、宜守住既得。',田宅:'田宅宫见破军，家宅多变动，宜晚置产、装修翻新可转运。'}
+};
 const MINOR_STAR={
  禄存:{gloss:'财禄庇荫之星',text:'禄存坐守，财禄有源，善于守住既得'},
  擎羊:{gloss:'刑星，锋锐与冲突',text:'擎羊入此宫，该领域多竞争与摩擦，宜化锋锐为执行力'},
@@ -127,12 +145,18 @@ function starEntry(star,palaceName,gloss){
  const core=STAR_CORE[star.name]||{gloss:'星曜',person:'',career:'',wealth:'',love:'',risk:''};
  const mod=BRIGHT_MOD[(star.brightness||'').slice(0,1)]||'';
  gloss[star.name]=core.gloss;
- return {name:star.name,core,mod,text:`${star.name}（${core.gloss}）${mod}坐${palaceName}宫。`}
+ const pn=/宫$/.test(palaceName||'')?palaceName:(palaceName+'宫'); // 避免「命宫宫」重复
+ const spec=STAR_PALACE[star.name]?.[palaceName];
+ const text=spec
+  ? `${star.name}（${core.gloss}）${mod}坐${pn}：${spec}`
+  : `${star.name}（${core.gloss}）${mod}坐${pn}——以${star.name}星性（${core.person||'见前述主星深解'}）与${PALACE_KEYWORD[palaceName]||'本宫主题'}相参：${core.career?`事业上${core.career}；`:''}${core.love?`感情上${core.love}。`:''}`;
+ return {name:star.name,core,mod,text,specific:!!spec};
 }
 export function buildZiweiDeepReport(chart,flow){
  const gloss={};
  const palaces=chart?.palaces||[];
  const find=branch=>palaces.find(p=>p.branch===branch);
+ const pnOf=n=>/宫$/.test(n||'')?n:(n+'宫'); // 命宫已带「宫」，其余宫名补「宫」，避免「命宫宫」
  const findName=n=>palaces.find(p=>p.name===n);
  const life=findName('命宫')||palaces[0];
  const bodyPalace=palaces.find(p=>p.isBodyPalace);
@@ -152,7 +176,7 @@ export function buildZiweiDeepReport(chart,flow){
  const triadPalaces=triad.map(b=>find(b)).filter(Boolean);
  const triadText=triadPalaces.map(p=>{
   const stars=[...(p.majorStars||[]),...(p.majorStars?.length?[]:p.borrowedStars||[])];
-  return `${p.name}宫（${PALACE_KEYWORD[p.name]}）：${stars.length?stars.map(s=>`${s.name}${brightnessOf(s)}${s.mutagen?'化'+s.mutagen:''}`).join('、'):'空宫'}${p.flying?.length?`；宫干飞化：${p.flying.map(f=>`${f.star}化${f.type}`).join('、')}`:''}`;
+  return `${pnOf(p.name)}（${PALACE_KEYWORD[p.name]}）：${stars.length?stars.map(s=>`${s.name}${brightnessOf(s)}${s.mutagen?'化'+s.mutagen:''}`).join('、'):'空宫'}${p.flying?.length?`；宫干飞化：${p.flying.map(f=>`${f.star}化${f.type}`).join('、')}`:''}`;
  });
  const sanction=[
   `三方四正（命宫+官禄+财帛+迁移）是紫微断事的骨架——命宫看是什么人，三方看这台机器的配置：`,
@@ -167,7 +191,7 @@ export function buildZiweiDeepReport(chart,flow){
   const minor=(p.minorStars||[]).slice(0,4).map(s=>MINOR_STAR[s.name]).filter(Boolean).map(m=>m.text).join('；');
   const sihua=(p.stars||[]).filter(s=>s.siHua).map(s=>`${s.name}化${s.siHua}`);
   const dec=p.decadal?`（大限${p.decadal.range?.join?.('–')||p.decadal.range}岁）`:'';
-  return `<li><b>${p.name}宫 · ${p.earthlyBranch}${dec}${stars.length?` · ${stars.map(s=>s.name+(s.brightness||'')).join('、')}`:' · 空宫'}</b><span>${PALACE_THEME[p.name]}。${starTexts.map(t=>t.text).join('')}${borrowed&&stars===p.borrowedStars?'（借星入宫，力道六成）':''}${sihua.length?` 生年四化：${sihua.join('、')}——${sihua.map(x=>SIHUA_EVENTS[x.slice(-1)][p.name]).join('；')}。`:''}${minor?' '+minor+'。':''}</span></li>`;
+  return `<li><b>${pnOf(p.name)} · ${p.earthlyBranch}${dec}${stars.length?` · ${stars.map(s=>s.name+(s.brightness||'')).join('、')}`:' · 空宫'}</b><span>${PALACE_THEME[p.name]}。${starTexts.map(t=>t.text).join('')}${borrowed&&stars===p.borrowedStars?'（借星入宫，力道六成）':''}${sihua.length?` 生年四化：${sihua.join('、')}——${sihua.map(x=>SIHUA_EVENTS[x.slice(-1)][p.name]).join('；')}。`:''}${minor?' '+minor+'。':''}</span></li>`;
  }).join('');
  const palacesSec=`<ul class="rpt-list rpt-palaces">${palaceLines||'<li>宫位数据待排盘后生成。</li>'}</ul>`;
 
@@ -175,7 +199,7 @@ export function buildZiweiDeepReport(chart,flow){
  const sihua=chart?.sihua||[];
  const sihuaLines=sihua.map(x=>{
   gloss['化'+x.type]=({禄:'福泽与机缘',权:'权力与担当',科:'名声与文书',忌:'执念与阻滞'})[x.type];
-  return `「${x.star}化${x.type}」入${x.palace}宫：${SIHUA_EVENTS[x.type][x.palace]||'见宫位主题参断'}——这是写入命盘的先天气质，一生围绕此课题展开；行运再逢同类化象时被再次引动。`;
+  return `「${x.star}化${x.type}」入${pnOf(x.palace)}：${SIHUA_EVENTS[x.type][x.palace]||'见宫位主题参断'}——这是写入命盘的先天气质，一生围绕此课题展开；行运再逢同类化象时被再次引动。`;
  });
  // 四化飞星轨迹：每宫的「干」引动四化，飞向对应星曜所在宫——文墨式可核的飞星连线文字版
  function findStarPalace(starName){return palaces.find(p=>['majorStars','minorStars','adjectiveStars','borrowedStars','stars'].some(k=>(p[k]||[]).some(s=>s.name===starName)));}
@@ -208,7 +232,7 @@ export function buildZiweiDeepReport(chart,flow){
   const yearRange=Array.isArray(d.yearRange)?d.yearRange.join('–'):d.yearRange;
   const isNow=Array.isArray(d.yearRange)&&d.yearRange[0]<=nowYear&&nowYear<d.yearRange[1];
   const flying=pal?.flying||[];
-  return `<li class="${isNow?'rpt-now':''}"><b>大限 ${ageRange}岁 · ${yearRange} · 走${d.palaceName}宫${isNow?' · 【当前十年】':''}</b><span>${PALACE_THEME[d.palaceName]}。${stars.length?`本限主星${stars.map(s=>s.name+(s.brightness||'')).join('、')}：${core.map(c=>c.career).join('；')}。`:'空宫借对宫参断，主题随环境而变。'}${flying.length?` 大限四化：${flying.map(f=>`${f.star}化${f.type}入${find(f.branch)?.name||'—'}宫${f.type==='忌'?'——此十年防该领域反复':''}`).join('、')}。`:''}${core.length?` 福气面：${core.map(c=>c.wealth).join('；')}。风险面：${core.map(c=>c.risk).join('；')}。`:''}</span></li>`;
+  return `<li class="${isNow?'rpt-now':''}"><b>大限 ${ageRange}岁 · ${yearRange} · 走${pnOf(d.palaceName)}${isNow?' · 【当前十年】':''}</b><span>${PALACE_THEME[d.palaceName]}。${stars.length?`本限主星${stars.map(s=>s.name+(s.brightness||'')).join('、')}：${core.map(c=>c.career).join('；')}。`:'空宫借对宫参断，主题随环境而变。'}${flying.length?` 大限四化：${flying.map(f=>`${f.star}化${f.type}入${pnOf(find(f.branch)?.name||'—')}${f.type==='忌'?'——此十年防该领域反复':''}`).join('、')}。`:''}${core.length?` 福气面：${core.map(c=>c.wealth).join('；')}。风险面：${core.map(c=>c.risk).join('；')}。`:''}</span></li>`;
  }).join('');
  const decadesSec=decadeLines?`<ul class="rpt-list rpt-decades">${decadeLines}</ul>`:'大限资料待排盘后生成——紫微的十年剧本按大限宫逐限展开，本报告在排盘后自动列出每限主题。';
 
@@ -236,11 +260,11 @@ export function buildZiweiDeepReport(chart,flow){
   };
   const stacks=Object.entries(mut).filter(([,sn])=>natalMap[sn]).map(([t,sn])=>stackText(sn,t,natalMap[sn]));
   const starText=fStars.length?`流年命宫主星${fStars.map(s=>s.name+(s.brightness||'')).join('、')}——${fStars.map(s=>STAR_CORE[s.name]?.person).filter(Boolean).join('；')}。全年气质据此：${fStars.map(s=>STAR_CORE[s.name]?.risk).filter(Boolean)[0]||'顺其自然，主动而不冒进'}。`:`流年命宫空宫（借对宫参断）——随环境而变的一年，主动权在「跟对人、上对船」。`;
-  return `<li class="${i===0?'rpt-now':''}"><b>${year}年 ${stem}${branch} · 流年命宫走${fPal?.name||'—'}宫${i===0?' · 【今年】':''}</b><span>${starText}${evs.length?`<br>流年四化：${evs.join('；')}。`:''}${stacks.length?`<br>叠化提示：${stacks.join('；')}。`:''}</span></li>`;
+  return `<li class="${i===0?'rpt-now':''}"><b>${year}年 ${stem}${branch} · 流年命宫走${pnOf(fPal?.name||'—')}${i===0?' · 【今年】':''}</b><span>${starText}${evs.length?`<br>流年四化：${evs.join('；')}。`:''}${stacks.length?`<br>叠化提示：${stacks.join('；')}。`:''}</span></li>`;
  }).join('');
  const flowDecadeSec=`<ul class="rpt-list rpt-decades">${flowDecadeLines}</ul>`;
  const flowDecadeIntro=[
-  `流年命宫＝该年地支所在之宫（如${BRANCHES[((nowYear-4)%12+12)%12]}年走${find(((nowYear-4)%12+12)%12)?.name||'—'}宫），宫内主星即全年主气质；流年四化＝以流年天干飞布禄权科忌，落宫即指向性事件。两者合看：命宫主星答「今年像什么样的一年」，四化落宫答「今年哪件事被点亮」。`,
+  `流年命宫＝该年地支所在之宫（如${BRANCHES[((nowYear-4)%12+12)%12]}年走${pnOf(find(((nowYear-4)%12+12)%12)?.name||'—')}），宫内主星即全年主气质；流年四化＝以流年天干飞布禄权科忌，落宫即指向性事件。两者合看：命宫主星答「今年像什么样的一年」，四化落宫答「今年哪件事被点亮」。`,
   `用法：把「忌入之宫」当作该年的防守科目提前布防；「禄入之宫」当作进攻窗口主动布局。吉化不等于躺着发生——没有对应动作（求职/签约/表白），禄也无处兑现。`
  ];
 
@@ -251,7 +275,7 @@ export function buildZiweiDeepReport(chart,flow){
    const p=find(m.branch);
    const ev=SIHUA_EVENTS[m.type]?.[p?.name];
    gloss['化'+m.type]=({禄:'福泽与机缘',权:'权力与担当',科:'名声与文书',忌:'执念与阻滞'})[m.type];
-   if(ev)flowEvents.push(`【指向事件】${m.star}化${m.type}入${p.name}宫（${flow.label||'流年'}${flow.ganZhi||''}）：${ev}。`);
+   if(ev)flowEvents.push(`【指向事件】${m.star}化${m.type}入${pnOf(p.name)}（${flow.label||'流年'}${flow.ganZhi||''}）：${ev}。`);
   }
  }
  const flowSec=[
@@ -297,7 +321,7 @@ const flowMonthLines=flowMonths.map(m=>{
  const action=m.events.some(e=>e.type==='忌')?'有忌化之月，先把该宫领域的老问题收尾，别开新战场。'
   :m.events.some(e=>e.type==='禄')?'有禄化之月，主动出击的成本最低——约人、递方案、谈条件都放在这时。'
   :'四化平缓之月，按年度计划推进即可，重在积累。';
- return `<li class="${m.isNow?'rpt-now':''}"><b>${m.label} · ${m.stem}${m.branch} · 流月命宫走${m.palaceName}宫${m.isNow?' · 【当前月】':''}</b><span>${m.stars.length?`主星${m.stars.map(s=>s.name).join('、')}：${core.map(c=>c.career).filter(Boolean).join('；')}。`:'空宫借对宫参断，本月主题随环境走。'}月四化：${mutText}。${action}</span></li>`;
+ return `<li class="${m.isNow?'rpt-now':''}"><b>${m.label} · ${m.stem}${m.branch} · 流月命宫走${pnOf(m.palaceName)}${m.isNow?' · 【当前月】':''}</b><span>${m.stars.length?`主星${m.stars.map(s=>s.name).join('、')}：${core.map(c=>c.career).filter(Boolean).join('；')}。`:'空宫借对宫参断，本月主题随环境走。'}月四化：${mutText}。${action}</span></li>`;
 }).join('');
 const flowMonthSec=flowMonthLines?`<ul class="rpt-list rpt-months">${flowMonthLines}</ul>`:'';
 const flowMonthIntro=flowMonths.length?[

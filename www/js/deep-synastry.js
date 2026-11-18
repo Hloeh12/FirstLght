@@ -176,6 +176,24 @@ export function buildSynastryDeepReport(result,aName,bName){
   `本报告由两人盘面的行星、宫位、相位、八科与干支数据逐条推导；合盘属传统术数与占星文化，供关系观察与沟通参考，不构成对关系走向、婚姻或法律事务的判断依据。`
  ];
 
+ /* 七、八字合婚专项（干支/十神/喜用/纳音证据） */
+ const bm=r.baziMatch||null;
+ const levelZh={support:'助力',challenge:'需磨合',neutral:'中性'};
+ const baziMatchLines=bm?.items?.length?[
+  `八字合婚不做单一分数，而是把传统婚配的几项依据逐条摊开——每一项都可核、可争辩，比一个「契合度 90%」更负责任。以下共 ${bm.items.length} 项，其中助力 ${bm.support} 项、需磨合 ${bm.challenge} 项。`,
+  ...bm.items.map(x=>`【${x.name}·${levelZh[x.level]||'中性'}】${x.text}`),
+  `口径：${bm.method}`
+ ]:['八字合婚数据待排盘后生成（需双方完整出生资料）。'];
+
+ /* 八、紫微合盘（命宫/夫妻宫互参） */
+ const zm=r.ziweiMatch||null;
+ const ziweiMatchLines=zm?.ok?[
+  `紫微合盘看两个人「各自是谁」与「在对方生命里扮演什么角色」：命宫是核心气质，夫妻宫是择偶偏好与关系课题，命宫互落宫则把抽象气质落到具体生活领域。`,
+  ...zm.items.map(x=>`【${x.name}】${x.text}`),
+  `命宫互落夫妻、官禄、财帛宫时，传统上视为关系更紧扣现实合作；落父母、兄弟等宫则偏向精神与生活层面的陪伴。互参只是视角，不是定论。`,
+  `口径：${zm.method}`
+ ]:['紫微合盘数据待排盘后生成，或任一方出生时辰不足——不做无依据的推断。'];
+
  const sections=[
   {title:'一、关系总览与读盘路线',lines:overview},
   {title:'二、日月金火水五星对照（互动模式）',lines:pairLines,html:pairSec},
@@ -183,7 +201,9 @@ export function buildSynastryDeepReport(result,aName,bName){
   {title:'四、印度八科逐科详解与化解',lines:kootaLines,table:kootaTable},
   {title:'五、月亮星宿与 D9 深层互参',lines:nakLines},
   {title:'六、八字干支互参（三镜合参）',lines:crossLines,table:crossTable},
-  {title:'七、关系经营指南',lines:advice}
+  {title:'七、八字合婚专项（干支·十神·喜用·纳音）',lines:baziMatchLines},
+  {title:'八、紫微合盘（命宫与夫妻宫互参）',lines:ziweiMatchLines},
+  {title:'九、关系经营指南',lines:advice}
  ];
  return {title:'双人合盘 · Synastry 深度详参',sections,glossary:gloss,kind:'synastry',
   characters:sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+(String(x.table||'')+String(x.html||'')).replace(/<[^>]*>/g,'').length,0)};

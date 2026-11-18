@@ -147,7 +147,7 @@ export function diagnosticsPanel(ctx){
    bodyScrollWidth:document.body.scrollWidth,
    textSizeAdjust:getComputedStyle(document.documentElement).webkitTextSizeAdjust||getComputedStyle(document.documentElement).textSizeAdjust||'n/a'
   };
-  output.value=JSON.stringify({app:'FirstLight',version:appBuild.version,build:appBuild.build,revision:appBuild.revision,at:new Date().toISOString(),zoom,viewport:{width:innerWidth,height:innerHeight},online:navigator.onLine,userAgent:navigator.userAgent,checks:ctx.state.lastDiagnostics||[],logs},null,2);
+  output.value=JSON.stringify({app:'FirstLight',version:appBuild.version,build:appBuild.build,revision:appBuild.revision,at:new Date().toISOString(),zoom,boot:window.__FL_BOOT__||null,viewport:{width:innerWidth,height:innerHeight},online:navigator.onLine,userAgent:navigator.userAgent,checks:ctx.state.lastDiagnostics||[],logs},null,2);
   status.textContent=await copyLogs(output)?'诊断包已复制。':'诊断包已选中，可以手动复制。';
  };
  $('[data-reset-cache]',d).onclick=async e=>{

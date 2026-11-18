@@ -235,3 +235,24 @@ test('iOS 显示缩放免疫：两套缩放( pageZoom + zoomScale )须同时锁�
  const html=await read('../index.html');
  assert.doesNotMatch(html,/user-scalable=no/,'必须允许双指缩放');
 });
+
+test('冷启动首屏：加载须等到 viewDidLayoutSubviews 拿到真实 frame，杜绝按错误视口渲染首帧',async()=>{
+ const swift=await read('../ios-src/AppDelegate.swift');
+ // 根因：viewDidLoad 时 view.bounds 可能 0×0，过早 load 会按错误视口排版首帧，
+ // 表现为「首屏放大/裁切、退出重进才正常」。加载必须延后到布局完成。
+ assert.match(swift,/override func viewDidLayoutSubviews/,'须实现布局完成回调');
+ assert.match(swift,/private func loadIfNeeded\(\)/,'须有「布局就绪后再加载」的守卫方法');
+ assert.match(swift,/guard !didInitialLoad, webView\.bounds\.width > 0/,'须等 webView 有非零 frame 才加载且只加载一次');
+ // viewDidLoad 里不得再直接 loadContent，必须走延迟守卫
+ const vdl=swift.slice(swift.indexOf('override func viewDidLoad'),swift.indexOf('override func viewDidLayoutSubviews'));
+ assert.doesNotMatch(vdl,/viewDidLoad\(\)[\s\S]*?\n\s*loadContent\(\)/,'viewDidLoad 内不得直接 loadContent');
+ assert.match(vdl,/loadIfNeeded\(\)/,'viewDidLoad 须通过 loadIfNeeded 延迟加载');
+ // 首屏在正确 frame 渲染前隐藏，且 didFinish 后才显现，杜绝错误瞬态
+ assert.match(swift,/webView\.alpha = 0/,'首屏须先隐藏');
+ assert.match(swift,/webView\.alpha = 1/,'导航完成后须显现');
+ // 首屏快照：文档最早时刻采样 + 诊断导出，供下次真机一次定位
+ assert.match(swift,/injectionTime: \.atDocumentStart/,'首屏采样须在文档最早时刻注入');
+ assert.match(swift,/window\.__FL_BOOT__/,'须记录首屏视口快照');
+ const diag=await read('../assets/console/diagnostics.js');
+ assert.match(diag,/boot:window\.__FL_BOOT__/,'诊断包须导出首屏快照');
+});

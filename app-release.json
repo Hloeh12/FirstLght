@@ -1,8 +1,20 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.34.2",
-  "build": 123,
+  "version": "0.34.3",
+  "build": 124,
   "releases": [
+    {
+      "version": "0.34.3",
+      "build": 124,
+      "date": "2026-11-18",
+      "title": "冷启动首屏放大·根因修复（三）：加载时机 + 首帧隐藏",
+      "items": [
+        "根因修复：加载从 viewDidLoad 延后到 viewDidLayoutSubviews，杜绝 WKWebView 按 0×0 错误视口渲染首帧",
+        "首屏在真实 frame 渲染前保持隐藏，导航完成后再显现，避免错误瞬态被看到",
+        "新增首屏视口快照（__FL_BOOT__）：文档最早时刻采样 innerWidth/scale 与原生 frame，诊断包可直接对比首帧与当前",
+        "保留两套缩放锁定与双指缩放无障碍能力"
+      ]
+    },
     {
       "version": "0.34.2",
       "build": 123,

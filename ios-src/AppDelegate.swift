@@ -27,6 +27,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     private var requestingLocation = false
     private var webView: WKWebView!
     private var statusView: UIView?
+    private var didInitialLoad = false
     private let appURL = URL(string: "firstlight://bundle/")!
 
     override func viewDidLoad() {
@@ -34,6 +35,23 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         view.backgroundColor = UIColor(red: 247/255, green: 247/255, blue: 251/255, alpha: 1.0)
         overrideUserInterfaceStyle = .light
         setupWebView()
+        // 不在 viewDidLoad 里加载：纯代码 VC 的 view.bounds 此时常为 0×0，
+        // WKWebView 会按错误视口渲染首帧（放大/裁切），重进后 frame 正确才恢复。
+        // 改为等 viewDidLayoutSubviews 拿到真实尺寸后再加载，并加超时兜底。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.loadIfNeeded()
+        }
+    }
+
+    // 首次布局完成后 webView 才有与屏幕一致的 frame，此时加载避免首帧按错误视口排版。
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        loadIfNeeded()
+    }
+
+    private func loadIfNeeded() {
+        guard !didInitialLoad, webView.bounds.width > 0, webView.bounds.height > 0 else { return }
+        didInitialLoad = true
         loadContent()
     }
 
@@ -47,6 +65,12 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             "var m=document.querySelector('meta[name=viewport]');if(m){m.setAttribute('content','width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover');}",
             injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         config.userContentController.addUserScript(viewportScript)
+        // 首屏视口快照：在文档最早时刻记录 innerWidth/scale，供诊断包对比「首帧 vs 当前」，
+        // 定位冷启动首屏是否按错误视口排版。仅采样，不改变页面行为。
+        let bootProbe = WKUserScript(source:
+            "(function(){var s=function(t){var v=window.visualViewport||{};return {tag:t,iw:innerWidth,ih:innerHeight,cw:document.documentElement&&document.documentElement.clientWidth,sw:screen.width,scale:v.scale,vvw:v.width,vvh:v.height};};window.__FL_BOOT__={start:s('start'),marks:[]};document.addEventListener('DOMContentLoaded',function(){window.__FL_BOOT__.marks.push(s('dom'));});window.addEventListener('load',function(){window.__FL_BOOT__.marks.push(s('load'));});})();",
+            injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        config.userContentController.addUserScript(bootProbe)
         config.setURLSchemeHandler(LocalResources(), forURLScheme: "firstlight")
         config.userContentController.add(self, name: "shareChart")
         config.userContentController.add(self, name: "caseReminder")
@@ -69,6 +93,8 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         webView.scrollView.isDirectionalLockEnabled = true
         webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
+        // 首屏在拿到正确 frame、渲染出第一帧前保持隐藏，杜绝任何错误视口的瞬态被看到。
+        webView.alpha = 0
         // 免疫 iOS「显示缩放/大字体」：锁定页面缩放为 1x，避免 WebView 被系统放大后右侧内容被裁切
         resetPageZoom()
 
@@ -98,6 +124,11 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         resetPageZoom()
+        // 兜底：万一 didFinish 未触发，也不能让页面一直隐藏成白屏。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            guard let self = self, self.webView.alpha < 1 else { return }
+            UIView.animate(withDuration: 0.12) { self.webView.alpha = 1 }
+        }
     }
 
     private func loadContent() {
@@ -134,7 +165,16 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     // 这里在导航完成后复位，并跨下一次主线程循环再锁一次，覆盖系统延迟应用的场景。
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         applyZoomLock()
-        DispatchQueue.main.async { [weak self] in self?.applyZoomLock() }
+        // 把原生实际 frame 写进首屏快照，供诊断对比（确认加载时视口是否与屏幕一致）。
+        let w = Int(webView.bounds.width), h = Int(webView.bounds.height)
+        let sw = Int(UIScreen.main.bounds.width), sh = Int(UIScreen.main.bounds.height)
+        webView.evaluateJavaScript("window.__FL_BOOT__&&(window.__FL_BOOT__.native={w:\(w),h:\(h),sw:\(sw),sh:\(sh)})")
+        // 下一帧再显示：此时布局已按正确 frame 完成，避免闪出按错误视口排版的中间态。
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.applyZoomLock()
+            UIView.animate(withDuration: 0.12) { self.webView.alpha = 1 }
+        }
         // 冷启动时系统显示缩放的应用可能晚于导航完成，用两道延迟兜底。
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in self?.applyZoomLock() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in self?.applyZoomLock() }

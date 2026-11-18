@@ -2088,6 +2088,8 @@ html[data-palette=pink]{--wood:#a44a86;--fire:#bd2d63;--earth:#92602d;--metal:#a
 .rpt-toc-item.on .rpt-toc-no{color:#ffe0ec}
 @media (prefers-color-scheme:dark){.rpt-toc{background:rgba(36,29,42,.8);border-color:rgba(255,164,206,.22)}.rpt-toc-head{color:#ff9fc9}.rpt-toc-head .rpt-progress{color:#c7a06a}.rpt-toc-item{background:rgba(46,38,54,.6);border-color:rgba(255,164,206,.2);color:#d8c8d4}.rpt-toc-item.on{background:linear-gradient(135deg,#ff77aa,#ff4f8b);color:#fff}}
 
+/* ===== Build 58: 免疫 iOS 系统显示缩放/大字体，防止 WebView 放大后右侧被裁 ===== */
+html{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important}
 /* ===== Build 57: 中宫脱流——锚位槽占格（无内容不参与行高），中宫绝对定位内部滚动，绝不撑高盘面 ===== */
 .zi-center-slot{grid-area:2/2/4/4;position:relative;min-width:0;min-height:0}
 .zi-center-slot .zi-center{position:absolute;inset:0;grid-area:auto;max-height:100%}

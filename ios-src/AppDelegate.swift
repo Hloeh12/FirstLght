@@ -62,8 +62,16 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         webView.scrollView.isDirectionalLockEnabled = true
         webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
+        // 免疫 iOS「显示缩放/大字体」：锁定页面缩放为 1x，避免 WebView 被系统放大后右侧内容被裁切
+        if #available(iOS 15.0, *) { webView.pageZoom = 1.0 }
 
         view.addSubview(webView)
+    }
+
+    // 系统字体/显示缩放变化回到前台时，强制把页面缩放复位到 1x
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if #available(iOS 15.0, *) { webView.pageZoom = 1.0 }
     }
 
     private func loadContent() {

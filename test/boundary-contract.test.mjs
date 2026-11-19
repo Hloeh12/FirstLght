@@ -318,28 +318,57 @@ test('视觉杂质清理：出生表单复选框用粉色主题自定义样式�
  assert.match(liquid,/input,select,textarea\{font-size:16px!important\}/,'16px 字号规则须保留（防聚焦放大回归）');
 });
 
-test('洞见页时点专项报告工作台：四体系分别生成报告 + 报告内嵌命盘快照',async()=>{
- // 用户要求对标专业 App：洞见页可按大运/流年/流月/流日分别生成详细报告，报告里直观显示对应时点命盘。
+test('时点专项独立 Tab + 工作台：四体系分别生成报告 + 两种报告形态 + 命盘快照',async()=>{
  const app=await read('../assets/console/app.js');
  assert.match(app,/import \{buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES\} from '\.\/period-report\.js'/,'须引入时点报告模块');
- assert.match(app,/class="card liquid-glass period-workbench"/,'洞见页须有时点报告工作台');
+ assert.match(app,/function periodDashboard\(\)/,'须有独立时点专项页（不再塞在洞见页）');
+ assert.match(app,/PERIOD_SYS_META=/,'须有四体系选择元数据');
+ assert.match(app,/\['cases','period','insights','me'\]/,'主导航须接受 period Tab');
+ assert.match(app,/state\.tab==='period'/,'render 须分发到时点页');
+ assert.match(app,/data-psys/,'须有排盘体系选择');
  assert.match(app,/data-period-scope/,'须有时点类型切换（大运/流年/流月/流日）');
+ assert.match(app,/data-pmode/,'须有报告形态切换（专属详批 / 本命全报告+时点章）');
  assert.match(app,/data-period-generate/,'须有生成按钮');
  assert.match(app,/openFullReport\(report\)/,'生成后须打开预生成的报告');
- assert.doesNotMatch(app,/洞见页不混入短期应期/,'旧的「应期不进洞见」声明须移除');
+ assert.match(app,/buildPeriodReport\(ctx,system,scope,selection,label,mode\)/,'须把报告形态传入生成器');
+ // 洞见页改为跳转入口，不再内嵌工作台
+ assert.match(app,/data-goto-period/,'洞见页须有跳到时点专项的入口');
+ assert.doesNotMatch(app,/periodWorkbenchHtml\(current\)/,'洞见页不得再内嵌时点工作台');
+ // 独立 Tab 已加入 index.html
+ const idx=await read('../www/index.html');
+ assert.match(idx,/data-tab="period"/,'底部导航须有时点 Tab');
  // openFullReport 须接受预生成 report
  assert.match(app,/function openFullReport\(prebuilt\)/,'报告弹层须接受预生成报告对象');
- // 报告渲染层须支持 chartHtml
  const full=await read('../assets/console/full-report.js');
  assert.match(full,/report\.chartHtml\?`<section class="rpt-chart"/,'报告 HTML 须渲染命盘快照区');
  const mod=await read('../assets/console/period-report.js');
  assert.match(mod,/export async function buildPeriodReport/,'须有四体系时点报告生成器');
+ assert.match(mod,/reportMode==='focus'/,'须支持时点专属详批模式');
  for(const s of ['bazi','ziwei','vedic'])assert.match(mod,new RegExp(`system==='${s}'`),`须支持 ${s} 体系`);
  assert.match(mod,/\/\/ west[\s\S]{0,200}buildWesternDeepReport/,'west 须作为兜底分支生成西洋报告');
  assert.match(mod,/ziweiSnapshot|baziGrid|northIndianChart|wheel/,'须内嵌四体系命盘渲染');
- assert.match(mod,/时点聚焦/,'报告须含时点聚焦专章，确保正文反映所选时点');
- assert.match(mod,/buildBaziDeepReport[\s\S]*buildZiweiDeepReport[\s\S]*buildVedicDeepReport[\s\S]*buildWesternDeepReport/,'须复用四体系深度知识库生成详细正文');
- // 报告导出文档样式须含命盘快照
+ assert.match(mod,/focusSections/,'正文须由差异化内核生成');
  const exp=await read('../assets/console/report-export.js');
  assert.match(exp,/\.snap-zi\{/,'导出文档样式须含紫微盘快照');
+});
+
+test('时点报告差异化：同一命盘不同流月的详批正文必须实质不同（杜绝换汤不换药）',async()=>{
+ const {focusSections}=await import('../assets/console/period-focus.mjs');
+ const birth={name:'差异测试',gender:'男',Y:1990,M:6,D:15,h:10,mi:30,calendar:'solar',city:CITY,useSolarTime:false,lateZishi:'next-day'};
+ const a=baziPro({birth,selection:{month:0}}),b=baziPro({birth,selection:{month:6}});
+ const flat=secs=>secs.map(s=>s.title+'::'+s.lines.join('|')).join('\n');
+ const ta=flat(focusSections('bazi','month','流月A',a)),tb=flat(focusSections('bazi','month','流月B',b));
+ assert.notEqual(ta,tb,'两个不同流月的详批正文不得相同');
+ const curA=a.selected.at(-1),curB=b.selected.at(-1);
+ assert.notEqual(curA.stem+curA.branch,curB.stem+curB.branch,'测试样本须为两个不同干支');
+ // 正文须真的引用到该时点的独有字段（十神 / 长生 / 纳音），而非固定话术
+ for(const [txt,cur] of [[ta,curA],[tb,curB]]){
+  assert.ok(txt.includes(cur.tenGod),'正文须含该流月十神 '+cur.tenGod);
+  assert.ok(txt.includes(cur.changsheng),'正文须含该流月长生 '+cur.changsheng);
+  assert.ok(txt.includes(cur.nayin),'正文须含该流月纳音 '+cur.nayin);
+ }
+ // 不得再出现旧的固定套话
+ assert.doesNotMatch(ta,/落地建议：把.*的资源、期限与可撤回选项写清/,'不得残留旧模板话术');
+ assert.ok(ta.includes('引动本命的具体关系'),'须含按刑冲落点展开的专章');
+ assert.ok(ta.includes('藏干与神煞'),'须含藏干神煞专章');
 });

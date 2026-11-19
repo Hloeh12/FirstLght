@@ -93,7 +93,7 @@ function switchTab(tab,system=state.system){
  active?.scrollIntoView?.({block:'nearest',inline:'center',behavior:'smooth'});
 }
 function switchNavTab(tabName,index){
- if(!['cases','chart','insights','me'].includes(tabName))return;
+ if(!['cases','chart','period','insights','me'].includes(tabName))return;
  const tabs=[...document.querySelectorAll('#bottomNav .nav-tab-item')];
  for(const [i,tab] of tabs.entries())tab.classList.toggle('active',i===index);
  switchTab(tabName);
@@ -511,7 +511,7 @@ async function instantChart(){
   state.instantAt=at.toISOString();state.tab='chart';state.system=system;render();
  }catch(error){tell(error.message);}
 }
-const PAGE_TITLES={cases:'案例库',chart:'排盘',insights:'洞见',me:'我的'};
+const PAGE_TITLES={cases:'案例库',chart:'排盘',period:'时点专项',insights:'洞见',me:'我的'};
 const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘',calendar:'历法'};
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
@@ -731,11 +731,11 @@ function insights(){
   natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p></article>`;
   lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
  }
- root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section>${periodWorkbenchHtml(current)}</section>`;
+ root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><button type="button" class="period-cta" data-goto-period><span class="period-cta-ico">◷</span><span><b>时点专项报告</b><small>流年 / 流月 / 流日 逐点出盘 + 专属详批 →</small></span><span class="period-cta-arrow">›</span></button></section>`;
  for(const x of root.querySelectorAll('[data-insight-system]'))x.onclick=()=>{state.system=x.dataset.insightSystem;render();};
  const or=root.querySelector('[data-open-report]');if(or)or.onclick=()=>openFullReport();
  const ex=root.querySelector('[data-share-current]');if(ex)ex.onclick=async()=>{ex.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前报告已生成，可在系统分享面板保存。');}catch(e){tell('导出失败：'+e.message);}finally{ex.disabled=false;}};
- wirePeriodWorkbench(root,current);
+ const gp=root.querySelector('[data-goto-period]');if(gp)gp.onclick=()=>switchTab('period');
  forceRefreshAllInsights();
 }
 
@@ -765,59 +765,79 @@ function periodOptions(system,scope){
  const y=new Date().getFullYear();
  return Array.from({length:8},(_,i)=>opt(y-2+i,`${y-2+i} 年`)).join('');
 }
-function periodWorkbenchHtml(system){
- const scopes=SCOPES[system]||[];
- const rail=scopes.map(([id,label],i)=>btn(label,`class="period-scope${i===0?' on':''}" data-period-scope="${id}" aria-pressed="${i===0}"`)).join('');
- const first=scopes[0]?.[0];
- return `<section class="card liquid-glass period-workbench" data-period-workbench data-system="${esc(system)}">
- <div class="spread"><h2>时点专项报告</h2><span class="chip">选时点 → 出盘 + 出详批</span></div>
- <p class="thin">按大运 / 流年 / 流月 / 流日分别生成深度报告，报告里直接显示对应时点的命盘。字数不设上限。</p>
- <div class="period-scope-rail" role="group" aria-label="时点类型">${rail}</div>
- <div class="period-controls"><label>选择时点<select data-period-value>${periodOptions(system,first)}</select></label>
- ${['vedic','west'].includes(system)?'<label>月份<select data-period-month>'+Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?'selected':''}>${i+1} 月</option>`).join('')+'</select></label>':''}
- ${btn('生成专项报告','class="primary" data-period-generate')}</div>
- <p class="thin" data-period-status role="status"></p></section>`;
-}
-function wirePeriodWorkbench(root,system){
- const host=root.querySelector('[data-period-workbench]');if(!host)return;
- const scopes=SCOPES[system]||[],valSel=host.querySelector('[data-period-value]'),monthSel=host.querySelector('[data-period-month]'),status=host.querySelector('[data-period-status]');
- let scope=scopes[0]?.[0];
- const scopeLabel=()=>scopes.find(([id])=>id===scope)?.[1]||scope;
- const refresh=()=>{valSel.innerHTML=periodOptions(system,scope);};
- for(const b of host.querySelectorAll('[data-period-scope]'))b.onclick=()=>{
-  scope=b.dataset.periodScope;
-  for(const x of host.querySelectorAll('[data-period-scope]')){const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',String(on));}
-  refresh();if(status)status.textContent='';
+/* 时点专项独立页：体系四选一 → 时点类型 → 具体时点 → 报告模式二选一 → 出盘+出详批。
+   与洞见页解耦，作为主导航第五个 Tab 存在。 */
+const PERIOD_SYS_META={
+ bazi:{name:'八字',desc:'四柱 · 十神 · 刑冲合会',ico:'干'},ziwei:{name:'紫微斗数',desc:'流命宫 · 四化飞星',ico:'微'},
+ vedic:{name:'印度占星',desc:'Dasha · 分盘 · 星宿',ico:'印'},west:{name:'西洋占星',desc:'行运 · 次限 · 返照',ico:'星'}
+};
+function periodDashboard(){
+ if(!state.profile||!state.reading){root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项</p><h1>时点</h1></div></header><p class="empty">请先激活一个案例并完成排盘，再生成时点专项报告。</p></section>`;return;}
+ const sysKeys=['bazi','ziwei','vedic','west'];
+ let system=PERIOD_SYS_META[state.system]?state.system:'bazi';
+ let mode='focus'; // focus=时点专属详批 / full=本命全报告+时点章
+ const draw=()=>{
+  const meta=PERIOD_SYS_META[system],scopes=SCOPES[system]||[];
+  const sysCards=sysKeys.map(k=>`<button type="button" class="period-sys${k===system?' on':''}" data-psys="${k}" aria-pressed="${k===system}"><span class="period-sys-ico">${PERIOD_SYS_META[k].ico}</span><b>${PERIOD_SYS_META[k].name}</b><small>${PERIOD_SYS_META[k].desc}</small></button>`).join('');
+  const rail=scopes.map(([id,label],i)=>btn(label,`class="period-scope${i===0?' on':''}" data-period-scope="${id}" aria-pressed="${i===0}"`)).join('');
+  const modes=[['focus','时点专属详批','只围绕所选时点逐条推导，不重复本命全文'],['full','本命全报告 + 时点章','完整本命报告，末章追加该时点聚焦']];
+  const modeCards=modes.map(([id,name,desc])=>`<button type="button" class="period-mode${id===mode?' on':''}" data-pmode="${id}" aria-pressed="${id===mode}"><b>${name}</b><small>${desc}</small></button>`).join('');
+  root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项报告</p><h1>时点</h1><p class="muted thin">${esc(state.profile.name)} · 指向性选择排盘与时点，各自生成专业报告</p></div></header>
+   <div class="period-step"><span class="period-step-no">1</span><span class="period-step-label">选择排盘体系</span></div>
+   <div class="period-sys-grid">${sysCards}</div>
+   <div class="period-step"><span class="period-step-no">2</span><span class="period-step-label">选择时点类型 · ${esc(meta.name)}</span></div>
+   <div class="period-scope-rail card liquid-glass" role="group" aria-label="时点类型">${rail}</div>
+   <div class="period-controls card liquid-glass"><label>具体时点<select data-period-value>${periodOptions(system,scopes[0]?.[0])}</select></label>
+    ${['vedic','west'].includes(system)?'<label>月份<select data-period-month>'+Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?'selected':''}>${i+1} 月</option>`).join('')+'</select></label>':''}
+   </div>
+   <div class="period-step"><span class="period-step-no">3</span><span class="period-step-label">选择报告形态</span></div>
+   <div class="period-mode-grid">${modeCards}</div>
+   <div class="period-action">${btn('生成专项报告 →','class="primary period-generate" data-period-generate')}<p class="thin" data-period-status role="status"></p></div>
+  </section>`;
+  wirePeriodPage();
  };
- const gen=host.querySelector('[data-period-generate]');
- gen.onclick=async()=>{
-  const raw=valSel.value;let selection={scope},label='';
-  try{
-   gen.disabled=true;if(status)status.textContent='正在按所选时点重算命盘与报告…';
-   if(system==='bazi'){
-    const key={luck:'luck',year:'year',month:'month',day:'day'}[scope];
-    selection={[key]:raw==='natal'?undefined:Number(raw)};
-    if(scope==='luck'){selection={};if(raw!=='natal')selection.luck=Number(raw);}
-    const d=state.chartState?.bazi?.data||state.reading?.bazi||{};
-    const list=scope==='year'?(d.years||[]):(d[{luck:'cycles',month:'months',day:'days'}[scope]]||[]);
-    const item=raw==='natal'?null:(scope==='year'?list.find(x=>String(x.year)===String(raw)):list[Number(raw)]);
-    label=raw==='natal'?'本命原局':`${scopeLabel()} ${item?(item.stem||'')+(item.branch||''):''}${scope==='year'&&item?' '+item.year:''}`.trim();
-   }else if(system==='ziwei'){
-    const yr=Number(raw);
-    selection={scope,year:yr,month:scope==='monthly'?Number(raw):undefined,day:scope==='daily'?Number(raw):undefined};
-    label=`${scopeLabel()} ${scope==='yearly'?yr+' 年':scope==='monthly'?raw+' 月':scope==='daily'?raw+' 日':(state.chartState?.ziwei?.chart?.decades||[]).find(x=>String(x.yearRange?.[0])===String(raw))?.palaceName||raw}`;
-   }else{
-    const yr=Number(raw),mo=monthSel?Number(monthSel.value):1;
-    const at=new Date(Date.UTC(yr,mo-1,15,12,0,0)).toISOString();
-    selection=system==='vedic'?{at,varga:1}:{at,mode:scope};
-    label=`${yr} 年 ${mo} 月 · ${scopeLabel()}`;
-   }
-   const report=await buildPeriodReport(ctx,system,scope,selection,label);
-   openFullReport(report);
-   if(status)status.textContent='已生成：'+label+'（报告里可复制 / 导出文档）';
-  }catch(e){if(status)status.textContent='生成失败：'+(e.message||e);}
-  finally{gen.disabled=false;}
+ const wirePeriodPage=()=>{
+  const host=root;
+  const scopes=SCOPES[system]||[],valSel=host.querySelector('[data-period-value]'),monthSel=host.querySelector('[data-period-month]'),status=host.querySelector('[data-period-status]');
+  let scope=scopes[0]?.[0];
+  const scopeLabel=()=>scopes.find(([id])=>id===scope)?.[1]||scope;
+  for(const b of host.querySelectorAll('[data-psys]'))b.onclick=()=>{system=b.dataset.psys;if(!PERIOD_SYS_META[system])system='bazi';draw();};
+  for(const b of host.querySelectorAll('[data-pmode]'))b.onclick=()=>{mode=b.dataset.pmode;for(const x of host.querySelectorAll('[data-pmode]'))x.classList.toggle('on',x===b);};
+  for(const b of host.querySelectorAll('[data-period-scope]'))b.onclick=()=>{
+   scope=b.dataset.periodScope;
+   for(const x of host.querySelectorAll('[data-period-scope]')){const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',String(on));}
+   valSel.innerHTML=periodOptions(system,scope);if(status)status.textContent='';
+  };
+  const gen=host.querySelector('[data-period-generate]');
+  gen.onclick=async()=>{
+   const raw=valSel.value;let selection={scope},label='';
+   try{
+    gen.disabled=true;if(status)status.textContent='正在按所选时点重算命盘与报告…';
+    if(system==='bazi'){
+     if(scope==='luck'){selection={};if(raw!=='natal')selection.luck=Number(raw);}
+     else selection={[scope]:Number(raw)};
+     const d=state.chartState?.bazi?.data||state.reading?.bazi||{};
+     const list=scope==='year'?(d.years||[]):(d[{luck:'cycles',month:'months',day:'days'}[scope]]||[]);
+     const item=raw==='natal'?null:(scope==='year'?list.find(x=>String(x.year)===String(raw)):list[Number(raw)]);
+     label=raw==='natal'?'本命原局':`${scopeLabel()} ${item?(item.stem||'')+(item.branch||''):''}${scope==='year'&&item?' '+item.year:''}`.trim();
+    }else if(system==='ziwei'){
+     const yr=Number(raw);
+     selection={scope,year:yr,month:scope==='monthly'?Number(raw):undefined,day:scope==='daily'?Number(raw):undefined};
+     label=`${scopeLabel()} ${scope==='yearly'?yr+' 年':scope==='monthly'?raw+' 月':scope==='daily'?raw+' 日':(state.chartState?.ziwei?.chart?.decades||[]).find(x=>String(x.yearRange?.[0])===String(raw))?.palaceName||raw}`;
+    }else{
+     const yr=Number(raw),mo=monthSel?Number(monthSel.value):1;
+     const at=new Date(Date.UTC(yr,mo-1,15,12,0,0)).toISOString();
+     selection=system==='vedic'?{at,varga:1}:{at,mode:scope};
+     label=`${yr} 年 ${mo} 月 · ${scopeLabel()}`;
+    }
+    const report=await buildPeriodReport(ctx,system,scope,selection,label,mode);
+    openFullReport(report);
+    if(status)status.textContent='已生成：'+label+'（报告里可复制 / 导出文档）';
+   }catch(e){if(status)status.textContent='生成失败：'+(e.message||e);}
+   finally{gen.disabled=false;}
+  };
  };
+ draw();
 }
 function reportTitle(key){
  return {'w-persona':'性格与天赋','w-career':'事业方向','w-wealth':'资源与财富','w-love':'情感关系','w-health':'生活节奏','z-palaces':'紫微十二宫','z-mutagen':'生年四化','w-risks':'长期课题','v-dasha':'印度大运'}[key]||'综合观察';
@@ -954,7 +974,7 @@ function modulePanel(){
  const sysIcons={qizheng:ico('<circle cx="10" cy="10" r="2.2" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="6.4"/><path d="M10 1.6v2.2M10 16.2v2.2M1.6 10h2.2M16.2 10h2.2"/>'),yijing:ico('<path d="M6 3.2h8v13.6H6zM10 3.2v13.6M6.6 7h1.4M12 7h1.4M6.6 13h1.4M12 13h1.4"/>'),calendar:ico('<rect x="3.4" y="4.6" width="13.2" height="12" rx="2.2"/><path d="M3.4 8.4h13.2M7 2.8v3M13 2.8v3"/>')};
  const sys=['bazi','ziwei','west','vedic'].map(id=>[id,SYSTEM_NAMES[id],MODULE_ICONS[id],state.system===id&&state.tab==='chart']);
  const extra=[['qizheng','七政四余',sysIcons.qizheng,state.system==='qizheng'&&state.tab==='chart'],['yijing','易经推命',sysIcons.yijing,state.system==='yijing'&&state.tab==='chart'],['calendar','万年历择日',sysIcons.calendar,state.system==='calendar'&&state.tab==='chart']];
- const pair=[['synastry','双人合盘',MODULE_ICONS.pair,state.tab==='chart'&&state.system==='synastry'],['report','深度报告',MODULE_ICONS.insights,false],['share','分享长图',MODULE_ICONS.share,false]];
+ const pair=[['synastry','双人合盘',MODULE_ICONS.pair,state.tab==='chart'&&state.system==='synastry'],['period','时点专项报告',MODULE_ICONS.insights,state.tab==='period'],['report','深度报告',MODULE_ICONS.insights,false],['share','分享长图',MODULE_ICONS.share,false]];
  const tabs=[['cases','案例库',MODULE_ICONS.cases,state.tab==='cases'],['insights','洞见',MODULE_ICONS.insights,state.tab==='insights'],['me','我的',MODULE_ICONS.me,state.tab==='me'],['birth','出生资料',MODULE_ICONS.birth,false]];
  const tools=[['diagnostics','运行诊断',MODULE_ICONS.diagnostics,false],['about','版本',MODULE_ICONS.about,false],['reset','回到首页',MODULE_ICONS.ziwei,false]];
  const group=(title,items)=>`<section class="mod-group"><h4>${esc(title)}</h4><div class="mod-grid">${items.map(([id,label,icon,on])=>`<button type="button" class="mod-item" data-module="${id}" aria-pressed="${on?'true':'false'}"><span class="mod-ico">${icon}</span><span class="mod-name">${esc(label)}</span></button>`).join('')}</div></section>`;
@@ -963,7 +983,7 @@ function modulePanel(){
   item.onclick=()=>{
    const id=item.dataset.module;close(d);
    if(['bazi','ziwei','west','vedic','synastry','qizheng','yijing','calendar'].includes(id)){switchTab('chart',id);return;}
-   if(['cases','insights','me'].includes(id)){switchTab(id);return;}
+   if(['cases','period','insights','me'].includes(id)){switchTab(id);return;}
    if(id==='birth'){birthSheet(state.profile);return;}
    if(id==='report'){openFullReport();return;}
    if(id==='share'){toolPanel();return;}
@@ -1011,6 +1031,7 @@ function render(){
  updateLiquidPill(state.tab);
  for(const b of $('#bottomNav').querySelectorAll('[data-tab]')){const active=b.dataset.tab===state.tab;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
  if(state.tab==='cases'){renderCases();return;}
+ if(state.tab==='period'){periodDashboard();return;}
  if(state.tab==='insights'){insights();return;}
  forceRefreshAllInsights();
  if(state.tab==='me'){preferences();return;}

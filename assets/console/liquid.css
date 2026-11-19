@@ -304,3 +304,36 @@ NaN
 .rpt-toc-group{margin:10px 0 3px;color:#a8326a;font-weight:800;font-size:12px;letter-spacing:.06em;border-left:3px solid #ff4f8b;padding-left:8px}
 .rpt-toc-item{padding-left:11px}
 @media (prefers-color-scheme:dark){.rpt-toc-group{color:#ff9cc4;border-color:#ff4f8b}}
+/* PERIOD TAB PAGE v0.36 */
+.period-cta{display:flex;align-items:center;gap:12px;width:100%;margin:14px 0 4px;padding:14px 16px;border:1px solid rgba(255,79,139,.35);border-radius:16px;background:linear-gradient(135deg,rgba(255,79,139,.10),rgba(255,255,255,.6));color:#a01e4e;text-align:left;cursor:pointer;transition:.18s}
+.period-cta:active{transform:scale(.985)}
+.period-cta-ico{font-size:24px;line-height:1;color:#ff4f8b}
+.period-cta b{display:block;font-size:15px}
+.period-cta small{display:block;font-size:12px;color:#8a6076;margin-top:2px}
+.period-cta-arrow{margin-left:auto;font-size:24px;color:#ff4f8b}
+.period-page{padding-bottom:28px}
+.period-step{display:flex;align-items:center;gap:9px;margin:18px 2px 9px}
+.period-step-no{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#ff4f8b;color:#fff;font-size:13px;font-weight:700}
+.period-step-label{font-size:15px;font-weight:700;color:#4a2d3d}
+.period-sys-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.period-sys{display:flex;flex-direction:column;gap:3px;align-items:flex-start;padding:13px 14px;border:1px solid rgba(255,79,139,.22);border-radius:15px;background:rgba(255,255,255,.62);color:#4a2d3d;text-align:left;cursor:pointer;transition:.18s}
+.period-sys.on{border-color:#ff4f8b;background:linear-gradient(135deg,rgba(255,79,139,.16),rgba(255,255,255,.7));box-shadow:0 3px 14px rgba(255,79,139,.18)}
+.period-sys-ico{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:#ff4f8b;color:#fff;font-size:14px;font-weight:700;margin-bottom:3px}
+.period-sys b{font-size:15px}
+.period-sys small{font-size:11.5px;color:#9a7286}
+.period-scope-rail{margin:0}
+.period-controls{margin:10px 0 0}
+.period-mode-grid{display:grid;grid-template-columns:1fr;gap:9px}
+.period-mode{display:flex;flex-direction:column;gap:3px;align-items:flex-start;padding:12px 14px;border:1px solid rgba(255,79,139,.22);border-radius:14px;background:rgba(255,255,255,.6);color:#4a2d3d;text-align:left;cursor:pointer;transition:.18s}
+.period-mode.on{border-color:#ff4f8b;background:rgba(255,79,139,.10)}
+.period-mode b{font-size:14.5px}
+.period-mode small{font-size:12px;color:#9a7286}
+.period-generate{width:100%;margin-top:16px;padding:13px;font-size:16px}
+.period-action{margin-top:4px}
+@media (prefers-color-scheme:dark){
+.period-cta{background:rgba(46,38,54,.8);color:#ff9cc4;border-color:rgba(255,79,139,.4)}
+.period-cta small,.period-sys small,.period-mode small{color:#c99ab0}
+.period-step-label,.period-sys,.period-mode{color:#f0d5e2}
+.period-sys,.period-mode{background:rgba(46,38,54,.7);border-color:rgba(255,138,184,.28)}
+.period-sys.on,.period-mode.on{background:rgba(255,79,139,.16);border-color:#ff4f8b}
+}

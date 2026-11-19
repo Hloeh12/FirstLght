@@ -9,6 +9,8 @@ import {baziGrid} from './bazi.js';
 import {northIndianChart} from './vedic.js';
 import {wheel} from './western.js';
 import {divisional} from '../../src/vargas.mjs';
+import {focusSections} from './period-focus.mjs';
+export {focusSections};
 import {$,btn,esc,table,selectedRails} from './ui.js';
 
 const NAMES={bazi:'八字',ziwei:'紫微斗数',vedic:'印度占星',west:'西洋占星'};
@@ -73,63 +75,44 @@ const escS=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const pick=(...v)=>v.find(x=>x!==undefined&&x!==null&&!(Array.isArray(x)&&!x.length))??v.at(-1);
 const textOf=sections=>sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+(x.html||'').replace(/<[^>]*>/g,'').length+(x.table||'').replace(/<[^>]*>/g,'').length,0);
 
-/* 时点聚焦章节：把所选大运/流年/流月/流日的证据写成专章，确保报告正文真正反映时点，
-   而不是只把本命报告换个封面。八字用所选干支+十神+与原局刑冲；紫微用流命落宫+四化；
-   印占用当前 Dasha 主星；西洋用推运类型与时刻。均为规则证据，不臆造事件。 */
+/* 时点聚焦章节：正文全部交给 period-focus.mjs 的差异化内核——每一句都由所选时点的
+   真实字段推导（八字干支/十神/长生/纳音/藏干/神煞/刑冲落点；紫微四化×落宫/禄存；
+   印占 Dasha 主星/分盘；西洋推运行星×相位×宫位）。不同时点必然产出不同文本。
+   本函数仅做数据整形与标题兼容（保留「时点聚焦」前缀供既有契约识别）。 */
 function focusSection(system,scope,label,data){
- const L=[];
- if(system==='bazi'){
-  const sel=data.selected||[],cur=sel[sel.length-1]||{};
-  const rel=(data.relationships||[]).slice(0,6).map(r=>r.pattern+r.type).join('、');
-  L.push(`【时点】${label}；当前落点 ${sel.map(p=>p.stem+p.branch).join(' → ')||'本命原局'}。`);
-  if(cur.tenGod)L.push(`透出十神为${cur.tenGod}：${cur.tenGod==='正官'?'责任、规则与名誉被点名，宜循正规渠道推进':cur.tenGod==='七杀'?'竞争与压力同步上升，宜设边界、忌硬扛':cur.tenGod==='正财'||cur.tenGod==='偏财'?'资源与现金流成为焦点，量入为出':cur.tenGod==='食神'||cur.tenGod==='伤官'?'表达与作品被激活，宜输出、忌口舌':cur.tenGod==='正印'||cur.tenGod==='偏印'?'学习与贵人支持增强，宜进修、忌空想':cur.tenGod==='比肩'||cur.tenGod==='劫财'?'同辈竞争与协作并行，合伙须先明权责':'主题随干支五行展开'}。`);
-  if(data.strength)L.push(`此步扶助权重 ${Number(data.strength.support||0).toFixed(1)}%（原局 ${Number(data.natalStrength?.support||data.strength.support||0).toFixed(1)}%），喜用参考 ${(data.strength.useful||[]).join('、')||'均衡'}——时点取舍仍以原局喜忌为准，不因单步干支改弦更张。`);
-  L.push(`原局干支关系：${rel||'未见直接刑冲合会'}。时点引动哪一支，就核对那一柱所主的人事，不把单一合冲当作结果。`);
-  L.push(`落地建议：把${label}的资源、期限与可撤回选项写清；冲合只是观察窗口，现实未见其应就不必牵强附会。`);
- }else if(system==='ziwei'){
-  const flow=data.flow||{};
-  const mut=(flow.mutagens||[]).slice(0,8).map(m=>`${m.star}化${m.type}入${data.palaceNameOf?.(m.branch)||'某宫'}`).join('、');
-  L.push(`【时点】${label}（${flow.ganZhi||''}${flow.date?' · '+flow.date:''}）；流命落本命${data.lifePalace||'待定'}宫。`);
-  if(mut)L.push(`四化飞布：${mut}。化禄看资源入口，化权看责任与执行，化科看文书与缓冲，化忌看反复与边界；须同看落宫、对宫与三方。`);
-  L.push(`读法：以流命宫为主星结构，叠看大限宫与本命命宫；流年是节奏、本命是底盘，不用一颗流年化忌否定本命根基。`);
-  L.push(`落地建议：把要事排进禄化之宫的领域，把收尾与核对排进忌化之宫；宫位主题是现实核对范围，不是事件必然发生。`);
- }else if(system==='vedic'){
-  const v=data.vedic||{};
-  const at=data.at||v.at;
-  const dasha=(v.dashas||[]).find(d=>d.active);
-  L.push(`【时点】${label}${at?' · '+String(at).slice(0,10):''}；Lahiri 恒星黄道 · 整宫制。`);
-  if(dasha)L.push(`当前主运 ${dasha.lord}（${String(dasha.start||'').slice(0,10)} 起），该运主题按主星所落宫位与其力量展开；副运切换时比较主星是否同指一宫，只在可核实的宫位重合上增强判断。`);
-  if(v.varshaphala)L.push(`岁运 Varshaphala 年 ${v.varshaphala.year||''} 已起——以太阳返照盘看该年重心，仍回扣 D1 本命根基。`);
-  L.push(`读法：D1 定底盘、D9 看关系成熟度、D10 看事业表达、分盘与岁运看阶段；不脱离 D1 单独以分盘断事。`);
- }else{
-  const w=data.western||{};
-  L.push(`【时点】${label}${data.at?' · '+String(data.at).slice(0,16).replace('T',' '):''}；推运类型 ${data.mode||'行运'}。`);
-  L.push(`读法：${data.mode==='secondary'?'次限一日推一年，看阶段性内在成长':data.mode==='solar'?'日返以生日太阳回归时刻立盘，管这一年':data.mode==='profection'?'小限按年龄轮值宫主星，看年度主题':data.mode==='transit'?'行运看当下行星过境本命宫位，看短期触发':'按所选推运法看该时点与本命的相位关系'}。推运星须对照本命星位，容许度内才计；单一相位不当事件。`);
-  L.push(`落地建议：把推运点到的宫位领域作为近期复盘重点，结合现实的资源、期限与关系核对，不据星象做重大决定。`);
- }
- L.push('本报告为传统术数的规则化观察，不构成事实预测、投资、法律或医疗意见。');
- return {title:`时点聚焦｜${label}`,lines:L};
+ const secs=focusSections(system,scope,label,data);
+ // 本命全报告模式：把多节压成一章专章（保留既有「时点聚焦」标题契约）
+ const lines=secs.flatMap(s=>[`【${s.title}】`,...s.lines]);
+ return {title:`时点聚焦｜${label}`,lines};
+}
+// 时点专属详批模式：把差异化章节作为独立章节铺开，不再重复本命全文。
+function focusedSections(system,scope,label,data){
+ return focusSections(system,scope,label,data).map(s=>({title:`${label} · ${s.title}`,lines:s.lines}));
 }
 
 /* 生成时点专项报告对象（供 openFullReport(report) 直接渲染/导出）。
-   ctx: app.js 的 ctx；system: 体系；scope: 时点类型；selection: 时点索引参数。 */
-export async function buildPeriodReport(ctx,system,scope,selection,label){
+   ctx: app.js 的 ctx；system: 体系；scope: 时点类型；selection: 时点索引参数；
+   mode: 'focus'=时点专属详批（正文按所选时点逐条推导，不重复本命全文）；
+         'full'=本命全报告 + 末章时点聚焦（默认，兼容旧调用）。 */
+export async function buildPeriodReport(ctx,system,scope,selection,label,reportMode='full'){
  const birth=ctx.birth,request=ctx.request;
  const who=ctx.state.profile||{};
+ const focus=reportMode==='focus';
  const cover={name:who.name||'命主',system:NAMES[system]||system,stamp:new Date().toLocaleString('zh-CN',{hour12:false})};
- let sections=[],chartHtml='',chartTitle='',chartCaption='',title='',lead='';
+ const compose=(sections,meta)=>{
+  const body=sectionsToHtml(sections);
+  if(focus)meta.lead=`【时点专属详批】只围绕「${escS(label)}」展开：盘面快照 + 该时点逐条推导，正文随所选时点变化，不重复本命全文。${meta.lead||''}`;
+  return {cover,...meta,body,sections,characters:textOf(sections)};
+ };
 
  if(system==='bazi'){
   const data=await request('/api/console/bazi',{birth,selection,combine:false});
   const rep=buildBaziDeepReport(data);
-  sections=rep.sections.slice();
-  chartHtml=baziSnapshot(data);
-  chartTitle=`八字四柱 · ${label}`;
-  chartCaption=`当前落点：${(data.selected||[]).map(p=>p.stem+p.branch).join(' → ')||'本命原局'}。时点分析见末章「时点聚焦」。`;
-  title=`八字 · ${label}专项详批`;
-  lead=`日主 ${escS(data.dayMaster?.stem||'—')}${escS(data.dayMaster?.element||'')} · ${escS(data.strength?.kind||'')}。全文 ${sections.length+1} 章：本命格局、力量来源、性格事业财富婚姻健康、大运流年流月流日逐层，以及本次所选「${escS(label)}」的时点聚焦——术语附白话。`;
-  sections.push(focusSection('bazi',scope,label,data));
-  return {cover,title,kind:'bazi',chartHtml,chartTitle,chartCaption,lead,body:sectionsToHtml(sections),sections,characters:textOf(sections),gege:rep.gege};
+  const sections=focus?focusedSections('bazi',scope,label,data):[...rep.sections.slice(),focusSection('bazi',scope,label,data)];
+  return compose(sections,{title:`八字 · ${label}${focus?' · 时点详批':''}`,kind:'bazi',
+   chartHtml:baziSnapshot(data),chartTitle:`八字四柱 · ${label}`,
+   chartCaption:`当前落点：${(data.selected||[]).map(p=>p.stem+p.branch).join(' → ')||'本命原局'}。${focus?'以下逐条推导该时点。':'时点分析见末章「时点聚焦」。'}`,
+   lead:`日主 ${escS(data.dayMaster?.stem||'—')}${escS(data.dayMaster?.element||'')} · ${escS(data.strength?.kind||'')}。`,gege:rep.gege});
  }
 
  if(system==='ziwei'){
@@ -138,43 +121,37 @@ export async function buildPeriodReport(ctx,system,scope,selection,label){
    ziweiSchool:birth.ziweiSchool||chart.school?.id,ziweiLeap:birth.ziweiLeap||chart.leapPolicy,
    flowYear:selection.year,scope:selection.scope||scope,month:selection.month,day:selection.day});
   const rep=buildZiweiDeepReport(chart,flow);
-  sections=rep.sections.slice();
-  const lifePalace=(chart.palaces||[]).find(p=>p.name==='命宫')?.name||'命宫';
-  chartHtml=ziweiSnapshot(chart,flow,who);
-  chartTitle=`紫微命盘 · ${label}`;
-  chartCaption=`${flow.ganZhi||''}${flow.date?' · '+flow.date:''} · 流命落${lifePalace}。四化落宫见盘面标记与末章时点聚焦。`;
-  title=`紫微斗数 · ${label}专项详批`;
-  lead=`命宫${escS((chart.palaces||[]).find(p=>p.name==='命宫')?.earthlyBranch||'待定')}宫 · ${escS(chart.fiveElementsClass||'')}。全文 ${sections.length+1} 章：命盘总览、三方四正、十二宫、四化、大限流年流月流日逐层，以及本次「${escS(label)}」的时点聚焦。`;
-  sections.push(focusSection('ziwei',scope,label,{flow,lifePalace,palaceNameOf:b=>(chart.palaces||[]).find(p=>p.branch===b)?.name}));
-  return {cover,title,kind:'ziwei',chartHtml,chartTitle,chartCaption,lead,body:sectionsToHtml(sections),sections,characters:textOf(sections)};
+  const fd={flow,chart,lifePalace:(chart.palaces||[]).find(p=>p.name==='命宫')?.name||'命宫',palaceNames:flow.palaceNames,palaceNameOf:b=>(chart.palaces||[]).find(p=>p.branch===b)?.name};
+  const sections=focus?focusedSections('ziwei',scope,label,fd):[...rep.sections.slice(),focusSection('ziwei',scope,label,fd)];
+  const lifePalace=fd.lifePalace;
+  return compose(sections,{title:`紫微斗数 · ${label}${focus?' · 时点详批':''}`,kind:'ziwei',
+   chartHtml:ziweiSnapshot(chart,flow,who),chartTitle:`紫微命盘 · ${label}`,
+   chartCaption:`${flow.ganZhi||''}${flow.date?' · '+flow.date:''} · 流命落${lifePalace}。四化落宫见盘面标记。`,
+   lead:`命宫${escS((chart.palaces||[]).find(p=>p.name==='命宫')?.earthlyBranch||'待定')}宫 · ${escS(chart.fiveElementsClass||'')}。`});
  }
 
  if(system==='vedic'){
   const at=selection.at||new Date().toISOString();
   const v=await request('/api/console/vedic',{birth,at});
   const rep=buildVedicDeepReport(v);
-  sections=rep.sections.slice();
-  chartHtml=vedicSnapshot(v,selection.varga||1);
-  chartTitle=`印度占星 D${selection.varga||1} · ${label}`;
-  chartCaption=`${String(at).slice(0,10)} · Lahiri 恒星黄道 · 整宫制。当前大运与岁运见末章时点聚焦。`;
-  title=`印度占星 · ${label}专项详批`;
-  lead=`上升 ${escS(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗。全文 ${sections.length+1} 章：上升主轴、行星力量、Shadbala、Ashtakavarga、Yoga、大运小运、分盘、岁运，以及本次「${escS(label)}」时点聚焦。`;
-  sections.push(focusSection('vedic',scope,label,{vedic:v,at}));
-  return {cover,title,kind:'vedic',chartHtml,chartTitle,chartCaption,lead,body:sectionsToHtml(sections),sections,characters:textOf(sections)};
+  const fd={vedic:v,at};
+  const sections=focus?focusedSections('vedic',scope,label,fd):[...rep.sections.slice(),focusSection('vedic',scope,label,fd)];
+  return compose(sections,{title:`印度占星 · ${label}${focus?' · 时点详批':''}`,kind:'vedic',
+   chartHtml:vedicSnapshot(v,selection.varga||1),chartTitle:`印度占星 D${selection.varga||1} · ${label}`,
+   chartCaption:`${String(at).slice(0,10)} · Lahiri 恒星黄道 · 整宫制。当前大运与岁运见正文。`,
+   lead:`上升 ${escS(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗。`});
  }
 
  // west
  const at=selection.at||new Date().toISOString(),mode=selection.mode||'transit';
  const w=await request('/api/console/western',{birth,mode,at});
  const rep=buildWesternDeepReport(w.chart||w);
- sections=rep.sections.slice();
- chartHtml=westSnapshot(w,mode,at);
- chartTitle=`西洋星盘 · ${label}`;
- chartCaption=`${String(at).slice(0,16).replace('T',' ')} · ${NAMES.west} ${mode} 推运。推运对照本命见末章时点聚焦。`;
- title=`西洋占星 · ${label}专项详批`;
- lead=`全文 ${sections.length+1} 章：核心三要素、逐星解读、相位格局、元素失衡、当下行运，以及本次「${escS(label)}」时点聚焦——逐条给可核的星历证据。`;
- sections.push(focusSection('west',scope,label,{western:w,mode,at}));
- return {cover,title,kind:'west',chartHtml,chartTitle,chartCaption,lead,body:sectionsToHtml(sections),sections,characters:textOf(sections)};
+ const fd={western:w,mode,at};
+ const sections=focus?focusedSections('west',scope,label,fd):[...rep.sections.slice(),focusSection('west',scope,label,fd)];
+ return compose(sections,{title:`西洋占星 · ${label}${focus?' · 时点详批':''}`,kind:'west',
+  chartHtml:westSnapshot(w,mode,at),chartTitle:`西洋星盘 · ${label}`,
+  chartCaption:`${String(at).slice(0,16).replace('T',' ')} · ${NAMES.west} ${mode} 推运。推运对照本命见正文。`,
+  lead:`推运法 ${escS(mode)}，逐条给可核的星历证据。`});
 }
 
 function sectionsToHtml(sections){

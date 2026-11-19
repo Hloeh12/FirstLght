@@ -334,8 +334,8 @@ test('时点专项独立 Tab + 工作台：四体系分别生成报告 + 两种�
  // 洞见页改为跳转入口，不再内嵌工作台
  assert.match(app,/data-goto-period/,'洞见页须有跳到时点专项的入口');
  assert.doesNotMatch(app,/periodWorkbenchHtml\(current\)/,'洞见页不得再内嵌时点工作台');
- // 独立 Tab 已加入 index.html
- const idx=await read('../www/index.html');
+ // 独立 Tab 已加入主 index.html（CI 无 www/ 目录，www 由 build 时生成）
+ const idx=await read('../index.html');
  assert.match(idx,/data-tab="period"/,'底部导航须有时点 Tab');
  // openFullReport 须接受预生成 report
  assert.match(app,/function openFullReport\(prebuilt\)/,'报告弹层须接受预生成报告对象');

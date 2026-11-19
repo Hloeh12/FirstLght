@@ -337,3 +337,23 @@ NaN
 .period-sys,.period-mode{background:rgba(46,38,54,.7);border-color:rgba(255,138,184,.28)}
 .period-sys.on,.period-mode.on{background:rgba(255,79,139,.16);border-color:#ff4f8b}
 }
+/* RPT BAZI GRID v0.36.1 */
+/* 报告内八字时点详盘：列数随所选时点动态变化，容器过窄时横向滚动，避免塌陷成竖排 */
+.rpt-chart-stage{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.rpt-chart-stage .snap-bazi{min-width:0}
+.bazi-grid.rpt-bazi-grid{grid-template-columns:34px repeat(var(--bg-cols,4),minmax(58px,1fr));min-width:calc(34px + var(--bg-cols,4) * 58px)}
+.bazi-grid.rpt-bazi-grid .bg-label{font-size:10px}
+.bazi-grid.rpt-bazi-grid .bg-cell{padding:5px 1px}
+.bazi-grid.rpt-bazi-grid .bg-hidden{min-height:46px}
+.rpt-chart .bazi-grid .term{cursor:pointer}
+@media (max-width:420px){.rpt-chart{padding:10px}.bazi-grid.rpt-bazi-grid{min-width:calc(34px + var(--bg-cols,4) * 48px)}}
+/* PMODE STATE v0.36.1 */
+.period-mode .pmode-title{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
+.period-mode .pmode-check{display:inline-flex;align-items:center;justify-content:center;flex:0 0 20px;width:20px;height:20px;border-radius:50%;font-size:13px;font-style:normal;font-weight:800;color:transparent;border:1.5px solid rgba(255,79,139,.4);transition:.18s}
+.period-mode.on .pmode-check{color:#fff;background:#ff4f8b;border-color:#ff4f8b}
+.period-mode.on{background:linear-gradient(135deg,rgba(255,79,139,.18),rgba(255,255,255,.7));border-color:#ff4f8b;box-shadow:0 3px 14px rgba(255,79,139,.16)}
+.period-mode.on b{color:#c2185b}
+@media (prefers-color-scheme:dark){
+.period-mode .pmode-check{border-color:rgba(255,138,184,.5)}
+.period-mode.on b{color:#ff9cc4}
+}

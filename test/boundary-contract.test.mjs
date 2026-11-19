@@ -372,3 +372,39 @@ test('时点报告差异化：同一命盘不同流月的详批正文必须实�
  assert.ok(ta.includes('引动本命的具体关系'),'须含按刑冲落点展开的专章');
  assert.ok(ta.includes('藏干与神煞'),'须含藏干神煞专章');
 });
+
+test('时点报告八字详盘：本命四柱+所选时点合成多列详盘，含完整行列且术语可点',async()=>{
+ const pr=await read('../assets/console/period-report.js');
+ // baziSnapshot 须合并本命 pillars 与所选大运/流年/流月，并用动态列数容器
+ assert.match(pr,/function baziSnapshot\(data\)[\s\S]*const pillars=\[\.\.\.natal,\.\.\.flow\]/,'须把本命四柱与所选时点合成多列');
+ assert.match(pr,/byName\('大运'\)[\s\S]*byName\('流年'\)[\s\S]*byName\('流月'\)/,'须合并大运/流年/流月三路时点');
+ assert.match(pr,/class="bazi-grid rpt-bazi-grid" style="--bg-cols:/,'须用动态列数容器避免塌陷为竖排');
+ assert.match(pr,/baziGrid\(gridData\)/,'须复用完整行列结构的 baziGrid');
+ // 报告弹层须给术语补委托（报告在 #screen 之外）
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/rptBody\?\.addEventListener\('click'[\s\S]*data-term[\s\S]*ctx\.explain/,'报告内术语须可点开解释卡');
+ // 报告内详盘与导出文档都须有自适应列数样式
+ const liq=await read('../assets/console/liquid.css');
+ assert.match(liq,/\.bazi-grid\.rpt-bazi-grid\{grid-template-columns:34px repeat\(var\(--bg-cols,4\)/,'报告弹层须有动态列数样式');
+ const exp=await read('../assets/console/report-export.js');
+ assert.match(exp,/\.bazi-grid\{display:grid;grid-template-columns:34px repeat\(var\(--bg-cols,4\)/,'导出文档须有详盘静态样式');
+});
+
+test('时点页报告形态按钮：点击须同步 on / aria-pressed / 对勾三态',async()=>{
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/data-pmode[\s\S]*pmode-check/,'按钮须含对勾元素');
+ assert.match(app,/x\.classList\.toggle\('on',on\);x\.setAttribute\('aria-pressed',String\(on\)\)/,'点击须同步 on 与 aria-pressed');
+ assert.match(app,/chk\.textContent=on\?'✓':''/,'点击须同步对勾显示');
+ const liq=await read('../assets/console/liquid.css');
+ assert.match(liq,/\.period-mode\.on \.pmode-check\{color:#fff;background:#ff4f8b/,'选中态须有可见对勾样式');
+});
+
+test('八字流年选项须覆盖今年及未来，不再停在起运后第10年',()=>{
+ const birth={name:'流年范围',gender:'男',Y:1990,M:6,D:15,h:10,mi:30,calendar:'solar',city:CITY,useSolarTime:false,lateZishi:'next-day'};
+ const d=baziPro({birth,selection:{}});
+ const ys=d.years.map(y=>y.year);
+ assert.ok(ys.length>=10,'流年列表至少10年');
+ assert.ok(ys.includes(new Date().getFullYear()),'流年列表须含今年');
+ assert.ok(ys.includes(new Date().getFullYear()+8),'流年列表须覆盖未来至少8年');
+ assert.ok(ys.every((y,i)=>i===0||y===ys[i-1]+1),'流年须逐年连续无断档');
+});

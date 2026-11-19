@@ -213,7 +213,11 @@ export function baziPro({birth,selection={},combine=false}){
   if(!cycle)throw Error('无效大运');
   selected.push(cycle);
  }
- const first=cycle?.startYear??Number(normal.Y),years=flowYears(first,10).map(p=>({...add({...p,name:'流年'}),age:p.year-normal.Y+1}));
+ // 流年列表须覆盖「起运年 → 今年及未来至少 10 年」：早年出生命盘若只生成起运后 10 年，
+ // 中老年用户会看到可选流年停在童年（如 1998 起运只到 2007）。故动态取较大跨度。
+ const first=cycle?.startYear??Number(normal.Y),nowY=new Date().getUTCFullYear();
+ const yearCount=Math.max(10,nowY-first+12);
+ const years=flowYears(first,yearCount).map(p=>({...add({...p,name:'流年'}),age:p.year-normal.Y+1}));
  let months=[],days=[];
  const termsOf=y=>[...solarTerms(y).filter(t=>t.lon!==285),...solarTerms(y+1).filter(t=>t.lon===285)].sort((a,b)=>a.date-b.date);
  const nowYear=new Date().getUTCFullYear();

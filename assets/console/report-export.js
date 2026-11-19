@@ -53,6 +53,25 @@ table.rpt-table{width:100%;border-collapse:collapse;font-size:13px}
 [data-e="木"]{color:#2c8c4b;font-weight:700}[data-e="火"]{color:#c0392b;font-weight:700}[data-e="土"]{color:#a8761a;font-weight:700}[data-e="金"]{color:#7a6a4c;font-weight:700}[data-e="水"]{color:#1f6fb2;font-weight:700}
 .rpt-foot{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:var(--sub);font-size:12px}
 .term{color:inherit}
+/* 八字时点详盘：完整行列结构，列数随 --bg-cols 变化 */
+.bazi-grid{display:grid;grid-template-columns:34px repeat(var(--bg-cols,4),minmax(0,1fr));gap:0;border:1px solid #ecdbe4;border-radius:10px;overflow:hidden;background:#fff}
+.bazi-grid .bg-row{display:contents}
+.bazi-grid .bg-label{display:flex;align-items:center;justify-content:center;font-size:10px;color:#8a6076;background:#faf4f8;border-bottom:1px solid #f0e4ec}
+.bazi-grid .bg-cell{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:5px 1px;border-bottom:1px solid #f0e4ec;border-left:1px solid #f6eef3;text-align:center}
+.bazi-grid .bg-cell-head{background:#fff0f6}
+.bazi-grid .bg-head{display:grid;place-items:center;gap:1px;width:100%}
+.bazi-grid .bg-head b{font-size:11px;color:#7a4a63}
+.bazi-grid .bg-god .term{font-size:11px;font-weight:700;color:#a8326a;border-bottom:0}
+.bazi-grid .bg-char .term{font-size:16px;font-weight:700;border-bottom:0}
+.bazi-grid .bg-hidden{display:flex;flex-wrap:wrap;justify-content:center;gap:1px 3px;min-height:42px;font-size:10px;line-height:1.3}
+.bazi-grid .hz2{display:flex;align-items:baseline;gap:2px}
+.bazi-grid .hz2 .term{font-size:10px;font-weight:600;border-bottom:0}
+.bazi-grid .hz2 i{font-size:9px;color:#a98aa0;font-style:normal}
+.bazi-grid .hz2.on .term{color:#a8326a}
+.bazi-grid .bg-stage .term,.bazi-grid .bg-nayin .term{font-size:10px;border-bottom:0}
+.bazi-grid .bg-shensha{font-size:10px;line-height:1.35;color:#7a4a63}
+.bazi-grid .bg-shensha .term{font-size:10px;border-bottom:0}
+.bazi-grid .bg-dash,.bazi-grid .bg-unknown{color:#b99aab}
 @media print{body{background:#fff}.doc{max-width:none;padding:0;box-shadow:none}.rpt-sec h3{break-after:avoid}.rpt-table-wrap{overflow:visible}table{font-size:11px}}
 `;
 

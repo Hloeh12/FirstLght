@@ -73,7 +73,10 @@ test('BaZi timeline, six tools, correction and reverse conversion use the same i
  const base=baziPro({birth}),timed=baziPro({birth,selection:{luck:2,year:2026,month:11},combine:true});
  assert.equal(base.pillars.length,4);
  assert(base.pillars.every(p=>p.changsheng&&p.nayin&&p.hidden.length&&Array.isArray(p.shensha)));
- assert.equal(timed.years.length,10);
+ // 流年列表须至少 10 年且覆盖今年（早年出生命盘不再停在起运后第 10 年）
+ assert(timed.years.length>=10);
+ assert(timed.years.some(y=>y.year===2026),'流年列表须覆盖今年 2026');
+ assert(timed.years.every((y,i)=>i===0||y.year===timed.years[i-1].year+1),'流年须逐年连续');
  assert.equal(timed.months.length,12);
  assert(timed.months.at(-1).date.startsWith('2027-01-'));
  assert.equal(timed.selected.length,3);

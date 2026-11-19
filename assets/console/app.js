@@ -685,9 +685,14 @@ function openFullReport(prebuilt){
  const rptDoc=d.querySelector('[data-full-report]');
  rptBody?.addEventListener('click',e=>{
   const t=e.target.closest('[data-toc]');
-  if(!t||!rptDoc)return;
-  const sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
-  sec?.scrollIntoView({behavior:'smooth',block:'start'});
+  if(t&&rptDoc){
+   const sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
+   sec?.scrollIntoView({behavior:'smooth',block:'start'});
+   return;
+  }
+  // 报告内命盘术语可点击查看解释（报告弹层在 #screen 之外，不共享 root 的术语委托）
+  const termEl=e.target.closest('[data-term]');
+  if(termEl){e.preventDefault();ctx.explain(termEl.dataset.term,termEl.dataset.explain,termEl.dataset.source);}
  });
  const rptProg=d.querySelector('[data-rpt-progress]');
  const rptOnScroll=()=>{
@@ -781,7 +786,7 @@ function periodDashboard(){
   const sysCards=sysKeys.map(k=>`<button type="button" class="period-sys${k===system?' on':''}" data-psys="${k}" aria-pressed="${k===system}"><span class="period-sys-ico">${PERIOD_SYS_META[k].ico}</span><b>${PERIOD_SYS_META[k].name}</b><small>${PERIOD_SYS_META[k].desc}</small></button>`).join('');
   const rail=scopes.map(([id,label],i)=>btn(label,`class="period-scope${i===0?' on':''}" data-period-scope="${id}" aria-pressed="${i===0}"`)).join('');
   const modes=[['focus','时点专属详批','只围绕所选时点逐条推导，不重复本命全文'],['full','本命全报告 + 时点章','完整本命报告，末章追加该时点聚焦']];
-  const modeCards=modes.map(([id,name,desc])=>`<button type="button" class="period-mode${id===mode?' on':''}" data-pmode="${id}" aria-pressed="${id===mode}"><b>${name}</b><small>${desc}</small></button>`).join('');
+  const modeCards=modes.map(([id,name,desc])=>`<button type="button" class="period-mode${id===mode?' on':''}" data-pmode="${id}" aria-pressed="${id===mode}"><span class="pmode-title"><b>${name}</b><i class="pmode-check" aria-hidden="true">${id===mode?'✓':''}</i></span><small>${desc}</small></button>`).join('');
   root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项报告</p><h1>时点</h1><p class="muted thin">${esc(state.profile.name)} · 指向性选择排盘与时点，各自生成专业报告</p></div></header>
    <div class="period-step"><span class="period-step-no">1</span><span class="period-step-label">选择排盘体系</span></div>
    <div class="period-sys-grid">${sysCards}</div>
@@ -802,7 +807,13 @@ function periodDashboard(){
   let scope=scopes[0]?.[0];
   const scopeLabel=()=>scopes.find(([id])=>id===scope)?.[1]||scope;
   for(const b of host.querySelectorAll('[data-psys]'))b.onclick=()=>{system=b.dataset.psys;if(!PERIOD_SYS_META[system])system='bazi';draw();};
-  for(const b of host.querySelectorAll('[data-pmode]'))b.onclick=()=>{mode=b.dataset.pmode;for(const x of host.querySelectorAll('[data-pmode]'))x.classList.toggle('on',x===b);};
+  for(const b of host.querySelectorAll('[data-pmode]'))b.onclick=()=>{
+   mode=b.dataset.pmode;
+   for(const x of host.querySelectorAll('[data-pmode]')){
+    const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',String(on));
+    const chk=x.querySelector('.pmode-check');if(chk)chk.textContent=on?'✓':'';
+   }
+  };
   for(const b of host.querySelectorAll('[data-period-scope]'))b.onclick=()=>{
    scope=b.dataset.periodScope;
    for(const x of host.querySelectorAll('[data-period-scope]')){const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',String(on));}

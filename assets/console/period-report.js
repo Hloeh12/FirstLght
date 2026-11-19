@@ -50,9 +50,21 @@ function ziweiSnapshot(chart,flow,profile){
  return `<div class="snap-board snap-zi">${cells}${center}</div>`;
 }
 
-// 八字四柱快照：复用 baziGrid（纯函数），入参即引擎数据。
+// 八字时点详盘：本命四柱 + 当前（或所选）大运/流年/流月，合成多列详细排盘，
+// 与排盘页一致的十神/天干/地支/藏干/星运/神煞/纳音完整行列；术语可点开解释。
+// 报告弹层内以 --bg-cols 动态列数覆盖 design.css 写死的 4 列，列多时横向滚动。
 function baziSnapshot(data){
- return `<div class="snap-bazi">${baziGrid(data)}</div>`;
+ const natal=(data?.pillars||[]).filter(Boolean);
+ const sel=data?.selected||[];
+ const byName=n=>sel.find(p=>p?.name===n);
+ const nowY=new Date().getFullYear();
+ const luck=byName('大运')||(data?.cycles||[])[0];
+ const year=byName('流年')||(data?.years||[]).find(y=>y.year===nowY)||(data?.years||[]).at(-1);
+ const month=byName('流月')||(data?.months||[])[0];
+ const flow=[luck,year,month].filter(p=>p&&p.stem&&p.branch);
+ const pillars=[...natal,...flow];
+ const gridData={...data,pillars};
+ return `<div class="snap-bazi"><div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${pillars.length}">${baziGrid(gridData)}</div></div>`;
 }
 
 // 印度盘快照：分盘 SVG（已导出纯函数）。

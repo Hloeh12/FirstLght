@@ -2,6 +2,7 @@
 // 行星力量评级（庙旺陷逆焦战）、Yoga 命格检测、九曜落宫 108 断语、
 // Vimshottari 大运逐运详批、D9/D10 分盘、人生格局四大领域结论——全部由盘面证据驱动。
 import {planetStates,divisional,VARGAS} from '../../src/vargas.mjs';
+import {EXALTATION} from '../../src/vedic-strong.mjs';
 
 const SIGN_LIST=['白羊座','金牛座','双子座','巨蟹座','狮子座','处女座','天秤座','天蝎座','射手座','摩羯座','水瓶座','双鱼座'];
 const SIGN_LORD=['火星','金星','水星','月亮','太阳','水星','金星','火星','木星','土星','土星','木星'];
@@ -74,6 +75,39 @@ function sameSign(a,b){
  return ia!=null&&ib!=null&&ia===ib;
 }
 
+const norm360=x=>((Number(x)%360)+360)%360;
+const relHouse=(from,to)=>(((to??1)-(from??1))%12+12)%12+1; // 从 from 宫起算 to 宫（1-12）
+// Neecha Bhanga（陷而复兴）：落陷星的守护星入角宫/同宫互照，或对宫有星照临，即构成解救。
+// 只在有恒星黄经（sid）时检测，缺数据时宁可不报——不凭落宫猜落陷。
+export function nechaBhanga(v){
+ const planets=v?.planets||[],byName=n=>planets.find(p=>p.name===n);
+ const moonHouse=byName('月亮')?.house;
+ const out=[];
+ for(const p of planets){
+  const ex=EXALTATION[p.name];
+  if(!Number.isFinite(ex)||!Number.isFinite(p.sid))continue;
+  const fallSign=Math.floor(norm360(ex+180)/30);
+  if(Math.floor(norm360(p.sid)/30)!==fallSign)continue;
+  const lord=SIGN_LORD[fallSign],lp=byName(lord),reasons=[];
+  let strong=false;
+  if(lp?.house){
+   const kendraLagna=[1,4,7,10].includes(lp.house);
+   const kendraMoon=moonHouse&&[1,4,7,10].includes(relHouse(moonHouse,lp.house));
+   const aspect=relHouse(p.house,lp.house);
+   if(kendraLagna||kendraMoon){reasons.push(`${lord}为落陷星座主，落${kendraLagna?'本命角宫':'自月亮起角宫'}第${lp.house}宫`);strong=true;}
+   else if(aspect===1||aspect===7){reasons.push(`${lord}与落陷星${aspect===1?'同宫':'对宫互照'}`);strong=true;}
+  }
+  const opposite=planets.filter(q=>q!==p&&!['罗睺','计都'].includes(q.name)&&relHouse(p.house,q.house)===7);
+  if(opposite.length){
+   const benefic=opposite.filter(q=>['月亮','木星','金星','水星'].includes(q.name));
+   reasons.push(`对宫有${opposite.map(q=>q.name).join('、')}照临${benefic.length?'（含吉星，解救有力）':''}`);
+   if(!strong&&benefic.length)strong=false; // 仅对宫照临按中等力度读取，不冒充角宫解救
+  }
+  if(reasons.length)out.push({name:p.name,fallSign,reasons,strength:strong?'强':'中'});
+ }
+ return out;
+}
+
 export function detectYogas(v){
  const planets=v?.planets||[];const byName=n=>planets.find(p=>p.name===n);
  const lagnaIndex=houseOfSign(v?.lagna)??0;
@@ -103,6 +137,8 @@ export function detectYogas(v){
   if(ka&&ta&&sameSign(ka,ta))raja=true;
  }
  if(raja)found.push('Raja');
+ // Neecha Bhanga：落陷星得守护星或对宫星解救——须有恒星黄经，缺数据不猜
+ if(nechaBhanga(v).length)found.push('NeechaBhanga');
  return found;
 }
 
@@ -155,15 +191,24 @@ export function buildVedicDeepReport(v){
 const shad=v?.shadbala||null;
 const housesOfPlanet=name=>SIGN_LIST.map((s,i)=>SIGN_LORD[i]===name?((i-lagnaIndex+12)%12)+1:null).filter(Boolean);
 gloss['Shadbala']='六力评分：位置、方向、时间月相、动势、自然、七分友谊、相位——判断一颗行星「有没有力气把所主宫位兑现出来」的经典体系';
-gloss['Rupas']='Shadbala 的计分单位，60 virupa = 1 Rupa；每颗行星另有经典最低要求，本表不据此作绝对断言，按位次读取';
+gloss['Rupas']='Shadbala 的计分单位，60 virupa = 1 Rupa；「参考线」是本实现按经典最低要求保留的对照值，非绝对吉凶分数线';
 gloss['Saptavargaja']='七分盘友谊力：行星在 D1/D2/D3/D7/D9/D10/D12 的星座主与它是友是敌，友则助力、敌则耗力';
 gloss['Drik']='相位力：火星/木星/土星的特殊相位及其它行星照到本星，吉星加分、凶星减分';
-const shadTable=shad?`<table class="rpt-table rpt-shad"><thead><tr><th>行星</th><th>位置</th><th>方向</th><th>时间</th><th>动势</th><th>自然</th><th>七分</th><th>相位</th><th>Rupas</th><th>位次</th></tr></thead><tbody>${shad.rows.map(r=>`<tr><td>${r.name}${r.retro?' ℞':''}</td><td>${r.sthana.toFixed(0)}</td><td>${r.dig.toFixed(0)}</td><td>${r.paksha.toFixed(0)}</td><td>${r.cheshta}</td><td>${r.naisargika.toFixed(0)}</td><td>${r.saptavargaja.toFixed(0)}</td><td>${r.drik.toFixed(0)}</td><td><b>${r.rupas.toFixed(2)}</b></td><td>${r.rank}/7</td></tr>`).join('')}</tbody></table>`:'';
+const shadTable=shad?`<table class="rpt-table rpt-shad"><thead><tr><th>行星</th><th>位置</th><th>方向</th><th>时间</th><th>动势</th><th>自然</th><th>七分</th><th>相位</th><th>Rupas/参考</th><th>位次</th><th>判定</th></tr></thead><tbody>${shad.rows.map(r=>`<tr><td>${r.name}${r.retro?' ℞':''}</td><td>${r.sthana.toFixed(0)}</td><td>${r.dig.toFixed(0)}</td><td>${r.paksha.toFixed(0)}</td><td>${r.cheshta}</td><td>${r.naisargika.toFixed(0)}</td><td>${r.saptavargaja.toFixed(0)}</td><td>${r.drik.toFixed(0)}</td><td><b>${r.rupas.toFixed(2)}</b><small>/${Number(r.minimum??0).toFixed(1)}</small></td><td>${r.rank}/7</td><td${r.meets?'':' class="rpt-warn"'}>${r.meets?'足':'补 '+(r.shortfall??0).toFixed(2)}</td></tr>`).join('')}</tbody></table>`:'';
 const shadWeak=shad?[...shad.rows].sort((a,b)=>a.rupas-b.rupas):[];
+const shadUnder=shad?shad.rows.filter(r=>!r.meets):[];
+const shadAllUnder=!!shad&&shad.rows.length>0&&shadUnder.length===shad.rows.length;
+const shadUnderText=shadAllUnder
+ ?`本盘七曜均未达经典参考线——这不是「全盘无力」的结论：本实现未计 Kala Bala 的 Nathonnatha/Ayana 等分项（合计约 2–4 Rupas），与经典满分口径不同。请按位次与分项短板读取；缺口最大的三颗：${[...shadUnder].sort((a,b)=>Number(b.shortfall)-Number(a.shortfall)).slice(0,3).map(r=>`${r.name} 差 ${Number(r.shortfall).toFixed(2)}（主管第 ${housesOfPlanet(r.name).join('、')||'—'} 宫，短板在${r.weakestPart?.[0]||'分项'}）`).join('；')}。`
+ :shadUnder.length
+ ?`低于参考线的行星：${shadUnder.map(r=>`${r.name} ${r.rupas.toFixed(2)}/${Number(r.minimum).toFixed(1)}（差 ${Number(r.shortfall).toFixed(2)}；主管第 ${housesOfPlanet(r.name).join('、')||'—'} 宫：${housesOfPlanet(r.name).map(h=>HOUSE_THEME[h]).join('、')||'无本命主管宫'}；短板在${r.weakestPart?.[0]||'分项'} ${Number(r.weakestPart?.[1]??0).toFixed(0)}/60）`).join('；')}。这些领域不是「没有」，而是兑现更依赖外部资源与长期训练——把强宫当杠杆去补，别在弱项上硬碰硬。`
+ :'七曜均达到本实现保留的参考线：整体底盘较均衡，仍以位次高低决定资源投放优先级。';
 const shadLines=shad?[
- `Shadbala 回答的是「这颗星有没有力气办事」：分数越高，它主管的宫位越能在现实里兑现。60 virupa = 1 Rupa——下表是七颗主星的分项得分与合计。`,
+ `Shadbala 回答的是「这颗星有没有力气办事」：分数越高，它主管的宫位越能在现实里兑现。60 virupa = 1 Rupa；表中每项为分项 virupa，末列「判定」以本实现保留的经典参考线作对照——它是量纲内的参照，不是绝对吉凶判决，须与位次和短板合看。`,
  `最强 ${shad.strongest}（${shad.rows.find(r=>r.name===shad.strongest)?.rupas.toFixed(2)} Rupas）——它主管的第 ${housesOfPlanet(shad.strongest).join('、')||'—'} 宫，是你本命最「不费力就比别人好」的领域，选赛道优先从这里出发。最弱 ${shad.weakest}（${shad.rows.find(r=>r.name===shad.weakest)?.rupas.toFixed(2)} Rupas），对应领域宜借力、宜后补，不宜强攻。`,
+ shadUnderText,
  `相对最弱的三颗，以及各自短在哪一项：${shadWeak.slice(0,3).map(r=>`${r.name}（${r.rupas.toFixed(2)}，第${r.rank}位，短板在${r.weakestPart[0]} ${r.weakestPart[1].toFixed(0)}/60，主管第 ${housesOfPlanet(r.name).join('、')||'—'} 宫——${housesOfPlanet(r.name).map(h=>HOUSE_THEME[h]).join('、')||'本命无主管宫位'}）`).join('；')}。短板项告诉你「该补什么」：庙旺度低宜换战场、方向力低宜借位置、月相力低宜养情绪、动势力低宜主动出击。`,
+ `位次与参考线交叉读：${shadAllUnder?'本盘整体低于参考线（量纲差异），位次是唯一可靠的横向刻度——把前三名当资源入口、后三名当预约补短板。':`${shad.rows.filter(r=>r.rank>=5&&r.meets).map(r=>r.name).length?`${shad.rows.filter(r=>r.rank>=5&&r.meets).map(r=>r.name).join('、')} 位次靠后但已过参考线——所主领域仍可用，只是不如头部星省力。`:''}${shadUnder.filter(r=>r.rank<=3).length?`${shadUnder.filter(r=>r.rank<=3).map(r=>r.name).join('、')} 排名靠前却未过参考线——说明全盘整体偏低，宜从命格与大运借势，不宜单靠某一颗星。`:''}${!shadUnder.length&&!shad.rows.filter(r=>r.rank>=5&&r.meets).length?'本盘位次与参考线一致，按排名调度即可。':''}`}`,
  `读法：力量强而所主宫位一般的星，是「有余力可调用的资源」；力量弱而所主宫位关键的星，是「必须提前布防的短板」。两者合看，才是完整的资源调度图。`,
  `口径：${shad.method}`
 ]:['Shadbala 数据待排盘后生成。'];
@@ -172,16 +217,28 @@ const shadLines=shad?[
 const astha=v?.ashtakavarga||null;
 const HOUSE_THEME_ZH=['自我与身体','财帛与家人','勇气与同辈','家宅与内心','子女与智慧','竞争与服务','婚姻与合作','转化与他财','运势与师长','事业与名望','收益与人脉','消耗与远行'];
 gloss['Ashtakavarga']='八分点：七曜按古典吉宫表给十二星座记分，叠加成 Sarvashtakavarga(SAV)，衡量每个宫位的「结构支撑度」——分数高表示承载该主题的资源厚，非吉凶断言';
-const asthaTable=astha?.valid?`<table class="rpt-table rpt-astha"><thead><tr><th>宫位</th><th>星座</th><th>SAV</th><th>结构支撑</th></tr></thead><tbody>${astha.byHouse.map(r=>`<tr><td>第${r.house}宫 · ${HOUSE_THEME_ZH[r.house-1]}</td><td>${r.sign}</td><td><b>${r.points}</b></td><td>${r.points>=32?'强':r.points>=30?'较强':r.points>=28?'略高':r.points>=25?'中等':r.points>=22?'偏弱':'弱'}</td></tr>`).join('')}</tbody></table>`:'';
+const savTable=astha?.valid?`<div class="rpt-table-wrap"><table class="rpt-table rpt-astha"><thead><tr><th>宫位</th><th>星座</th><th>SAV</th><th>结构支撑</th></tr></thead><tbody>${astha.byHouse.map(r=>`<tr><td>第${r.house}宫 · ${HOUSE_THEME_ZH[r.house-1]}</td><td>${r.sign}</td><td><b>${r.points}</b></td><td>${r.points>=32?'强':r.points>=30?'较强':r.points>=28?'略高':r.points>=25?'中等':r.points>=22?'偏弱':'弱'}</td></tr>`).join('')}</tbody></table></div>`:'';
+// 逐行星 BAV（Bhinnashtakavarga）：SAV 只是叠加结果，行运判断真正用的是「这颗星自己在哪些星座得分高」。
+const bavPeak=astha?.valid?astha.rows.map(r=>{
+ const top=r.bav.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).slice(0,2)
+  .map(x=>`${astha.byHouse[x.i].sign}${x.v}分（第${astha.byHouse[x.i].house}宫／SAV ${astha.byHouse[x.i].points}）`);
+ return {name:r.name,total:r.total,top:top.join('、')};
+}):[];
+const bavTable=astha?.valid?`<div class="rpt-table-wrap"><table class="rpt-table rpt-bav"><caption>逐行星 BAV：本盘七曜在十二星座的 bindu 数（≥5 高亮，≤2 低分），行运过境按各星自身一行读取</caption><thead><tr><th>行星</th>${astha.byHouse.map(r=>`<th>${r.sign}</th>`).join('')}<th>合计</th></tr></thead><tbody>${astha.rows.map(r=>`<tr><td>${r.name}</td>${r.bav.map(v=>`<td class="${v>=5?'rpt-bindu-hi':v<=2?'rpt-bindu-lo':''}">${v}</td>`).join('')}<td><b>${r.total}</b>/${r.expected}</td></tr>`).join('')}</tbody></table></div>`:'';
+const asthaHtml=savTable+bavTable;
 const asthaLines=astha?.valid?[
- `Ashtakavarga 是印占自己的「结构评分」：七曜各自按 BPHS 吉宫表给十二星座记 1 分，叠加成 Sarvashtakavarga（SAV），本盘总分 ${astha.total}（校验位 337，已通过）。每宫基准约 28 分，高者结构厚、低者需后天补。`,
+ `Ashtakavarga 是印占自己的「结构评分」：七曜各自按 BPHS 吉宫表给十二星座记 1 分，叠加成 Sarvashtakavarga（SAV），本盘总分 ${astha.total}（校验位 337，已通过）。每宫基准约 28 分，高者结构厚、低者需后天补。第一张表看结构，第二张表看逐星自身的得分分布。`,
  `最厚是第 ${astha.strongest.house} 宫（${astha.strongest.sign} ${astha.strongest.points} 分，主${HOUSE_THEME_ZH[astha.strongest.house-1]}）——这块领域天生的支撑资源较足，起步相对省力。最薄是第 ${astha.weakest.house} 宫（${astha.weakest.sign} ${astha.weakest.points} 分，主${HOUSE_THEME_ZH[astha.weakest.house-1]}）——不是凶，而是结构偏薄，宜以习惯、团队与长期经营补足。`,
- `读法：SAV 为「结构支撑度」而非事件预测。行运行星经过高分星座时，传统认为所经之事较顺；经过低分星座时宜稳。它与 Shadbala（行星自身力气）互补——一个看「舞台厚不厚」，一个看「演员强不强」，合看才是完整判断。`,
- `口径：${astha.method}`
+ `逐星 BAV 与行运落点：${bavPeak.map(x=>`${x.name} 的高分星座为 ${x.top}`).join('；')}。按 BPHS 过境用法，行运行星进入自己 BAV 高的星座时，其主管事项推进较顺；若该星座同时 SAV≥30，则是「自身助力 × 舞台支撑」叠加，优先把重要动作放在这类时段；落在自己 BAV≤2 的星座时宜守成、复核细节。`,
+ `两张表合看：SAV 回答「哪个宫的资源厚」，BAV 回答「哪颗星走到哪里能借力」。前者是长期底盘，后者是时机选择——只讲 SAV 不讲 BAV，就把印占最实用的一套过境工具丢掉了。`,
+ `读法：SAV/BAV 均为「结构支撑度与相对助力」而非事件预测。它与 Shadbala（行星自身力气）互补——一个看「舞台厚不厚」，一个看「演员强不强」，合看才是完整判断。`,
+ `口径：${astha.method}。本表只给 D1 的 BAV/SAV，未做 Prastara/Trikona/Ekadhipati 还原，故过境读法只作相对参考，不与还原后数值混用。`
 ]:['Ashtakavarga 数据待排盘后生成，或本盘校验未通过（总分不等于 337）——校验不过不显示分数，避免错误查表误导。'];
 
 /* 四、Yoga 命格识别 */
+ const nb=nechaBhanga(v);
  const yogaLines=yogas.map(k=>{const y=YOGA_LIB[k];gloss[y.name.split(' ')[0]]=y.form;return `【${y.name}】构成：${y.form}。判读：${y.text}`;});
+ if(yogas.includes('NeechaBhanga')&&nb.length)yogaLines.push(`本盘解救路径：${nb.map(x=>`${x.name}落陷于${SIGN_LIST[x.fallSign]}——${x.reasons.join('；')}（${x.strength}解救）`).join('；')}。即「跌到底反而弹起」有具体凭据，不是套话。`);
  const yogaSec=yogaLines.length?[...yogaLines,`Yoga 是印占「命格」的核心——多格成立时看相互是否同主题（同主星、同宫位）叠加；不同主题则各有兑现年份，随大运轮播。`]:['本盘按传统 12 式常见 Yoga 逐项检测：未检出成立条件。这不代表命差——无 Yoga 之盘成败更看行星力量评级与大运配合，后天选择权重更大。'];
 
  /* 四、九曜逐星落宫详解 */
@@ -301,7 +358,7 @@ const vsSec=vs?[
   {title:'一、上升与人生主轴',lines:overview},
   {title:'二、行星力量评级',lines:powerLines,table:powerTable},
   {title:'三、Shadbala 六力审计',lines:shadLines,table:shadTable},
-  {title:'四、Ashtakavarga 八分点（SAV 337 校验）',lines:asthaLines,table:asthaTable},
+  {title:'四、Ashtakavarga 八分点（SAV 337 校验）',lines:asthaLines,html:asthaHtml},
   {title:'五、Yoga 命格识别',lines:yogaSec},
   {title:'六、九曜逐星落宫详解',lines:[],html:planetSec},
   {title:'七、Vimshottari 大运逐运详批',lines:dashaIntro,html:dashaSec},

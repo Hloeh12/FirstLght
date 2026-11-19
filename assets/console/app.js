@@ -665,7 +665,19 @@ function openFullReport(prebuilt){
    <button type="button" class="rpt-act" data-rpt-copy>复制</button>
    <button type="button" class="rpt-act primary" data-rpt-export>导出文档</button></div>
   <div class="sheet-body rpt-body" id="reportBody">${reportHtml(report)}<div class="scroll-clearance" aria-hidden="true"></div></div>
+  <button type="button" class="rpt-nav-fab" data-rpt-nav aria-expanded="false" aria-controls="reportNavDrawer" aria-label="打开章节目录"><span class="rpt-nav-fab-ico" aria-hidden="true">☰</span><span data-rpt-fab-label>目录</span><span class="rpt-nav-pct" data-rpt-progress>0%</span></button>
+  <div class="rpt-nav-scrim" data-rpt-nav-close aria-hidden="true"></div>
+  <aside class="rpt-nav-drawer" id="reportNavDrawer" data-rpt-drawer role="dialog" aria-label="章节目录" aria-hidden="true">
+   <div class="rpt-nav-head"><div><b>章节目录</b><small>${esc(report.cover.system)} · ${report.sections?.length||0} 章</small></div><button type="button" class="icon" data-rpt-nav-close aria-label="收起目录">×</button></div>
+   <div class="rpt-nav-progress"><span>阅读进度</span><b data-rpt-progress>0%</b></div>
+   <div class="rpt-nav-list" data-rpt-nav-list></div>
+   <p class="rpt-nav-tip">点击章节可直接跳转，无需回滑到顶部目录。</p>
+  </aside>
  </div>`;
+ // 侧边目录直接复用内联目录的分区结构，保证两处高亮/分组同源，不维护第二份章节表。
+ const tocList=d.querySelector('[data-full-report] .rpt-toc-list');
+ const navList=d.querySelector('[data-rpt-nav-list]');
+ if(tocList&&navList)navList.appendChild(tocList.cloneNode(true));
  d.querySelector('[data-rpt-close]').onclick=()=>close(d);
  d.querySelector('[data-rpt-copy]').onclick=async()=>{
   const doc=d.querySelector('[data-full-report]');
@@ -680,31 +692,48 @@ function openFullReport(prebuilt){
   catch(err){tell('导出失败：'+(err.message||err));}
   finally{b.disabled=false;}
  };
- /* 目录交互：锚点跳转 + 滚动进度 */
+ /* 目录交互：顶部目录 + 侧边抽屉共用一套锚点跳转，滚动时两处同步高亮 */
  const rptBody=d.querySelector('#reportBody');
  const rptDoc=d.querySelector('[data-full-report]');
- rptBody?.addEventListener('click',e=>{
+ const rptContent=d.querySelector('.report-content');
+ const rptNav=d.querySelector('[data-rpt-nav]');
+ const setNav=on=>{
+  rptContent?.classList.toggle('rpt-nav-open',on);
+  if(rptNav)rptNav.setAttribute('aria-expanded',String(on));
+  const drawer=d.querySelector('[data-rpt-drawer]');
+  if(drawer)drawer.setAttribute('aria-hidden',String(!on));
+ };
+ rptNav?.addEventListener('click',()=>setNav(!rptContent?.classList.contains('rpt-nav-open')));
+ d.querySelectorAll('[data-rpt-nav-close]').forEach(b=>b.addEventListener('click',()=>setNav(false)));
+ d.addEventListener('click',e=>{
   const t=e.target.closest('[data-toc]');
   if(t&&rptDoc){
    const sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
    sec?.scrollIntoView({behavior:'smooth',block:'start'});
+   setNav(false);
    return;
   }
   // 报告内命盘术语可点击查看解释（报告弹层在 #screen 之外，不共享 root 的术语委托）
   const termEl=e.target.closest('[data-term]');
   if(termEl){e.preventDefault();ctx.explain(termEl.dataset.term,termEl.dataset.explain,termEl.dataset.source);}
  });
- const rptProg=d.querySelector('[data-rpt-progress]');
+ const rptProg=d.querySelectorAll('[data-rpt-progress]');
+ const rptFabLabel=d.querySelector('[data-rpt-fab-label]');
  const rptOnScroll=()=>{
   if(!rptBody||!rptDoc)return;
   const total=rptDoc.scrollHeight-rptBody.clientHeight;
   const p=total>0?Math.min(100,Math.round((rptBody.scrollTop/total)*100)):0;
-  if(rptProg)rptProg.textContent=p+'%';
+  rptProg.forEach(x=>x.textContent=p+'%');
   const cur=rptDoc.querySelectorAll('.rpt-sec');
   const at=rptBody.scrollTop;
   let active=0;
   for(let i=0;i<cur.length;i++){if(cur[i].offsetTop-rptBody.offsetTop<=at+80)active=i+1;}
-  rptDoc.querySelectorAll('[data-toc]').forEach(b=>b.classList.toggle('on',Number(b.dataset.toc)===active));
+  d.querySelectorAll('[data-toc]').forEach(b=>{
+   const on=Number(b.dataset.toc)===active;
+   b.classList.toggle('on',on);
+   if(on)b.setAttribute('aria-current','location');else b.removeAttribute('aria-current');
+   if(on&&rptFabLabel)rptFabLabel.textContent=(report.sections?.[active-1]?.title||'目录').replace(/^[一二三四五六七八九十]+、/,'');
+  });
  };
  rptBody?.addEventListener('scroll',rptOnScroll,{passive:true});
  rptOnScroll();

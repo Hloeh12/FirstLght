@@ -166,8 +166,16 @@ function starEntry(star,palaceName,gloss){
   : `${star.name}（${core.gloss}）${mod}坐${pn}——以${star.name}星性（${core.person||'见前述主星深解'}）与${PALACE_KEYWORD[palaceName]||'本宫主题'}相参：${core.career?`事业上${core.career}；`:''}${core.love?`感情上${core.love}。`:''}`;
  return {name:star.name,core,mod,text,specific:!!spec};
 }
-export function buildZiweiDeepReport(chart,flow){
+export function buildZiweiDeepReport(chart,flow,at){
  const gloss={};
+ // 时点锚：常规本命报告用今天；时点专项报告由 flow.year / at 指定，禁止用系统时钟冒充「所选时点」。
+ const clock=new Date();
+ const focusYear=Number(flow?.year)||clock.getFullYear();
+ const chosenDate=(()=>{
+  if(at){const d=new Date(at);if(!Number.isNaN(+d))return d;}
+  if(flow?.year&&flow?.month&&flow?.day)return new Date(Number(flow.year),Number(flow.month)-1,Number(flow.day),12);
+  return clock;
+ })();
  // 四化口径跟随本盘/流曜所选派别：chart.school / flow.school 由 ziweiChart/ziweiFlow 返回 {id,...}。
  // 缺省回退中州派（quanshu），保证旧数据/单测仍得到中州四化。
  const school=(chart?.school?.id||flow?.school?.id||'quanshu');
@@ -240,7 +248,7 @@ export function buildZiweiDeepReport(chart,flow){
 
  /* 五、大限逐限详批 */
  const decades=chart?.decades||[];
- const nowYear=new Date().getFullYear();
+ const nowYear=focusYear;
  const decadeLines=decades.map(d=>{
   const pal=findName(d.palaceName);
   const stars=pal?(pal.majorStars?.length?pal.majorStars:pal.borrowedStars||[]):[];
@@ -277,11 +285,11 @@ export function buildZiweiDeepReport(chart,flow){
   };
   const stacks=Object.entries(mut).filter(([,sn])=>natalMap[sn]).map(([t,sn])=>stackText(sn,t,natalMap[sn]));
   const starText=fStars.length?`流年命宫主星${fStars.map(s=>s.name+(s.brightness||'')).join('、')}——${fStars.map(s=>STAR_CORE[s.name]?.person).filter(Boolean).join('；')}。全年气质据此：${fStars.map(s=>STAR_CORE[s.name]?.risk).filter(Boolean)[0]||'顺其自然，主动而不冒进'}。`:`流年命宫空宫（借对宫参断）——随环境而变的一年，主动权在「跟对人、上对船」。`;
-  return `<li class="${i===0?'rpt-now':''}"><b>${year}年 ${stem}${branch} · 流年命宫走${pnOf(fPal?.name||'—')}${i===0?' · 【今年】':''}</b><span>${starText}${evs.length?`<br>流年四化：${evs.join('；')}。`:''}${stacks.length?`<br>叠化提示：${stacks.join('；')}。`:''}</span></li>`;
+  return `<li class="${i===0?'rpt-now':''}"><b>${year}年 ${stem}${branch} · 流年命宫走${pnOf(fPal?.name||'—')}${i===0?(flow?' · 【所选流年】':' · 【今年】'):''}</b><span>${starText}${evs.length?`<br>流年四化：${evs.join('；')}。`:''}${stacks.length?`<br>叠化提示：${stacks.join('；')}。`:''}</span></li>`;
  }).join('');
  const flowDecadeSec=`<ul class="rpt-list rpt-decades">${flowDecadeLines}</ul>`;
  const flowDecadeIntro=[
-  `流年命宫＝该年地支所在之宫（如${BRANCHES[((nowYear-4)%12+12)%12]}年走${pnOf(find(((nowYear-4)%12+12)%12)?.name||'—')}），宫内主星即全年主气质；流年四化＝以流年天干飞布禄权科忌，落宫即指向性事件。两者合看：命宫主星答「今年像什么样的一年」，四化落宫答「今年哪件事被点亮」。`,
+  `流年命宫＝该年地支所在之宫（如${BRANCHES[((nowYear-4)%12+12)%12]}年走${pnOf(find(((nowYear-4)%12+12)%12)?.name||'—')}），自 ${nowYear} 年起排十年${flow?'（按所选流年起算）':''}；流年四化＝以流年天干飞布禄权科忌，落宫即指向性事件。两者合看：命宫主星答「今年像什么样的一年」，四化落宫答「今年哪件事被点亮」。`,
   `用法：把「忌入之宫」当作该年的防守科目提前布防；「禄入之宫」当作进攻窗口主动布局。吉化不等于躺着发生——没有对应动作（求职/签约/表白），禄也无处兑现。`
  ];
 
@@ -347,10 +355,10 @@ const flowMonthIntro=flowMonths.length?[
  `用法：把年度要事排进「禄化之月」，把清账、收尾、体检排进「忌化之月」；流月是节奏工具，不是吉凶判决。`
 ]:['流月数据待完整命盘生成。'];
 
-/* 九、流日与流时（流日命宫顺行，日干四化取今日）——日干支由儒略日自推，不依赖排盘页选择 */
+/* 九、流日与流时（流日命宫顺行，日干四化取所选日）——日干支由儒略日自推，随所选时点重算 */
 const curMonth=flowMonths.find(m=>m.isNow)||flowMonths[0]||null;
 const dayGzOf=(y,m,d)=>{const j=Math.floor(Date.UTC(y,m-1,d)/86400000)+2440588;const i=((j+49)%60+60)%60;return STEMS[i%10]+BRANCHES[i%12];};
-const nowDate=new Date(),curY=nowDate.getFullYear(),curM=nowDate.getMonth()+1,curD=nowDate.getDate();
+const nowDate=chosenDate,curY=nowDate.getFullYear(),curM=nowDate.getMonth()+1,curD=nowDate.getDate();
 const monthLen=new Date(Date.UTC(curY,curM,0)).getUTCDate();
 const flowDayRows=curMonth?Array.from({length:monthLen},(_,i)=>{
  const d=i+1,gz=dayGzOf(curY,curM,d),pal=palaces[(curMonth.palIndex+i)%12];
@@ -370,7 +378,7 @@ const flowHours=Array.from({length:12},(_,i)=>{
 });
 const flowHourTable=`<table class="rpt-table rpt-hours"><thead><tr><th>时辰</th><th>时干</th><th>流时命宫</th><th>时干四化</th></tr></thead><tbody>${flowHours.map(h=>`<tr${h.isNow?' class="rpt-now"':''}><td>${h.label}${h.isNow?' · 今':''}</td><td>${h.stem}</td><td>${h.palace}</td><td>${h.events.join('、')||'—'}</td></tr>`).join('')}</tbody></table>`;
 const flowDaySec=[
- `流日命宫由流月命宫逐日顺行一位，日干四化看当天哪一宫被点亮。下表为本月（${curY}-${String(curM).padStart(2,'0')}，流月命宫${curMonth?.palaceName||'—'}）的整月流日；日干支由儒略日直接推算（(JDN+49) mod 60），与排盘页所选时点无关。`,
+ `流日命宫由流月命宫逐日顺行一位，日干四化看当天哪一宫被点亮。下表为本次时点所在月份（${curY}-${String(curM).padStart(2,'0')}，流月命宫${curMonth?.palaceName||'—'}）的整月流日；日干支由儒略日直接推算（(JDN+49) mod 60），随所选时点重算而非固定读系统日期。`,
  flowHourTable?`时干由今日日干（${dayStemOf}日）按五鼠遁推出，${dayStemOf}日起${STEMS[(STEMS.indexOf(dayStemOf)*2)%10]}子时。流时命宫沿流日命宫逐时辰顺行——把一天里最关键的一件事，放进「时干四化吉化入命/财/官」的时辰。`:'',
  `流日流时是「择日择时」的最细一层：它不能改变大势，但能在同一个月里帮你避开最硬的阻力、抓住最顺的窗口。`
 ];

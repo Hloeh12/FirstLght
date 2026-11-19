@@ -20,7 +20,10 @@ const ASPECT_MEANING={0:'合相（能量融合）',60:'六合（轻松协作）'
 const ELEMENT_OF={白羊座:'火',狮子座:'火',射手座:'火',金牛座:'土',处女座:'土',摩羯座:'土',双子座:'风',天秤座:'风',水瓶座:'风',巨蟹座:'水',天蝎座:'水',双鱼座:'水'};
 const SIGN_INDEX=Object.fromEntries(Object.keys(SIGN_TRAIT).map((s,i)=>[s,i]));
 
-export function buildWesternDeepReport(w){
+export function buildWesternDeepReport(w,at){
+ const transitAt=at?new Date(at):new Date();
+ const validTransitAt=!Number.isNaN(+transitAt)?transitAt:new Date();
+ const transitStamp=validTransitAt.toLocaleString('zh-CN',{hour12:false});
  const gloss={};
  const planets=w?.planets||[],aspects=w?.aspects||[];
  // 星座名归一：兼容「狮子」与「狮子座」两种输入，统一到含「座」的键
@@ -108,7 +111,7 @@ export function buildWesternDeepReport(w){
  const patternSec=topPatterns.length?topPatterns:['未检出经典格局（星群/大三角/T三角）——格局不是好命的必要条件，多数人的驱动力来自紧张相位而非天赋格局。'];
  patternSec.push(...elementLines);
 
- /* 五、当下行运触发点（星历实算） */
+ /* 五、所选时点行运触发点（星历实算） */
  const TRANSIT_INFO={
   jupiter:{name:'木星',theme:'扩张与机遇——所触之宫位进入放大期，机会窗口约一年'},
   saturn:{name:'土星',theme:'验收与结构——所触之宫位进入责任期，压力与成熟同来，约两年半'},
@@ -117,7 +120,7 @@ export function buildWesternDeepReport(w){
   pluto:{name:'冥王星',theme:'深层转化——所触之宫位旧结构连根拔起再重建，约二十年'}
  };
  const transitRows=[];
- const now=new Date();
+ const now=validTransitAt;
  try{
   const cusps=w?.cusps||[];
   const norm=x=>((x%360)+360)%360;
@@ -154,7 +157,7 @@ export function buildWesternDeepReport(w){
  }catch{transitRows.length=0;}
  const transitSec=transitRows.length?`<ul class="rpt-list">${transitRows.join('')}</ul>`:'行运数据待星历支持后生成。';
  const transitIntro=[
-  `行运（Transit）：天上行星此刻的真实位置与你本命盘的对话。上表由星历按当下时刻实算——每颗外行星现在的星座、进入你本命的哪一宫、正与你哪些本命行星成相位。这是「现在进行时」的一章。`,
+  `行运（Transit）：天上行星在所选时刻（${transitStamp}）的真实位置与你本命盘的对话。上表由星历按该时刻实算——每颗外行星当时的星座、进入你本命的哪一宫、正与你哪些本命行星成相位；换一个时点重算，这一段会随之改变。`,
   `用法：木星过境＝播种窗口（该宫领域主动争取）；土星过境＝验收期（该宫领域补结构、还旧账）；天海冥过境＝时代级课题（该宫领域的深层改版）。正激活（容许度≤2.5°）是当下最强音，临近（≤5°）是未来数月将进入的主题。`
  ];
 
@@ -173,7 +176,7 @@ export function buildWesternDeepReport(w){
   {title:'二、逐星解读（星座×宫位）',lines:planetIntro,html:planetSec},
   {title:'三、相位格局',lines:aspLines,table:aspTable},
   {title:'四、盘面格局与元素',lines:patternSec},
-  {title:'五、当下行运触发点（星历实算）',lines:transitIntro,html:transitSec},
+  {title:'五、所选时点行运触发点（星历实算）',lines:transitIntro,html:transitSec},
   {title:'六、领域速览与成长建议',lines:domains}
  ];
  return {title:'西洋占星 · 本命详批',sections,glossary:gloss,kind:'west'};

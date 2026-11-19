@@ -177,6 +177,62 @@ function roleOfBranch(branch,natalStrength){
 }
 /* 把一条地支关系翻译成行运断语：六冲/六合/三合/相刑/相害/相破各有不同象意，
    不再把新增的刑害破误当「相合」。role 为该流支相对喜忌的角色。 */
+const BRANCH_ELEM_MAP={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
+// 十神对应的五行（相对日主）：把「喜忌五行」落到「这个十神在当前行运是帮还是耗」。
+function elementOfGod(god,dayStem){
+ const de=STEM_ELEM[dayStem];if(!de||!god)return '';
+ if(god==='比肩'||god==='劫财')return de;
+ if(god==='食神'||god==='伤官')return ELEM_GENERATE[de];
+ if(god==='正财'||god==='偏财')return ELEM_CONTROL[de];
+ if(god==='正官'||god==='七杀')return Object.keys(ELEM_CONTROL).find(k=>ELEM_CONTROL[k]===de)||'';
+ if(god==='正印'||god==='偏印')return Object.keys(ELEM_GENERATE).find(k=>ELEM_GENERATE[k]===de)||'';
+ return '';
+}
+const ROLE_CODE={useful:'U',caution:'C',neutral:'N',idle:'N'};
+const TENOR_HEAD={
+ UU:'天干十神与地支五行同为喜用——主题与环境同向，本段是本命最省力的兑现窗口',
+ UC:'天干喜用、地支忌神——主题对但环境逆风，宜小步验证、先收成果再扩张',
+ CU:'天干忌神、地支喜用——环境给资源，但议题本身要重新校准，别把顺风当方向',
+ CC:'干支同为忌神——本段以守成、复盘、降杠杆为主，重大开局建议顺延',
+ UN:'天干喜用、地支中性——主题由自己推动，环境不添乱也不托举',
+ CN:'天干忌神、地支中性——主题偏耗，宜压缩投入、把主导权交回专业流程',
+ NU:'天干中性、地支喜用——顺势而为即可，具体主题看流月干支引出',
+ NC:'天干中性、地支忌神——环境偏耗，按计划收尾，不在此时立新目标',
+ NN:'干支皆中性——平段，按既有节奏推进，不靠运气也不必设防'
+};
+const ACTION_BY_GOD={
+ 正官:{good:'把流程、资质与权责一次讲清，用制度换位置',bad:'别为头衔背书，复核合同与口头承诺'},
+ 七杀:{good:'主动接硬仗，但先写好止损线与退出条件',bad:'不争强斗狠，高风险竞争本段避战'},
+ 正财:{good:'稳健报价、签长约，把现金流锁进账',bad:'不加杠杆、不替人担保，先把账目核清'},
+ 偏财:{good:'跑外勤、拓渠道，机会财可试但设上限',bad:'应酬与投机都压缩，先守住既有盈余'},
+ 食神:{good:'把作品做出来，用口碑换长期订单',bad:'别沉溺舒适区，设定交付节点'},
+ 伤官:{good:'提案、演讲、亮作品——用专业表达争取话语权',bad:'话到嘴边留三分，先写稿再发言，不硬碰权威'},
+ 正印:{good:'进修、考证、读合同，把资历变成可核证据',bad:'别只备考不落地，学一项就做一次实践'},
+ 偏印:{good:'钻冷门课题、复盘旧案，独门技能在这段最容易成型',bad:'少熬夜少内耗，把研究结论说出来让人校验'},
+ 比肩:{good:'同行协作、健身与自立项目同步推进',bad:'合伙先写清分益，别在情面上让利'},
+ 劫财:{good:'团队作战、抢时机——但钱账必须独立',bad:'借贷、担保、共同出资一律设上限'}
+};
+// 行运三元组：十神喜忌（天干）× 地支五行喜忌 × 与原局的刑冲合害，三者合参才定调。
+// 同一十神在不同喜忌角色下产出不同文本，替代过去「十神查表复读」。
+export function periodTenor(god,ns,dayStem,branch,delta){
+ const elem=elementOfGod(god,dayStem),roles=ns?.roles||{};
+ const gr=(roles.useful||[]).includes(elem)?'useful'
+  :((roles.avoid||[]).includes(elem)||(roles.enemy||[]).includes(elem))?'caution'
+  :(roles.idle||[]).includes(elem)?'idle'
+  :(ns?.useful||[]).includes(elem)?'useful'
+  :(ns?.caution||[]).includes(elem)?'caution':'neutral';
+ const be=BRANCH_ELEM_MAP[branch]||'';
+ const br=(ns?.useful||[]).includes(be)?'useful':(ns?.caution||[]).includes(be)?'caution':'neutral';
+ const deep=TEN_GOD_DEEP[god]||TEN_GOD_DEEP.正官;
+ const action=(ACTION_BY_GOD[god]||ACTION_BY_GOD.正官)[gr==='caution'?'bad':'good'];
+ const head=TENOR_HEAD[ROLE_CODE[gr]+ROLE_CODE[br]]||TENOR_HEAD.NN;
+ const trend=delta==null?'':delta>3?`运势强度较本命上行 ${delta.toFixed(1)} 点——可加速推进。`:delta<-3?`运势强度较本命回落 ${Math.abs(delta).toFixed(1)} 点——先收后攻。`:'运势强度接近本命基线，靠动作而非等时机。';
+ return {god,gr,br,head,trend,action,deep,
+  career:`${deep.career.split('，')[0]}；${action}。`,
+  wealth:gr==='caution'?`${deep.wealth}——本段忌神当令，只做已验证的现金流，不扩新战线。`:gr==='useful'?`${deep.wealth}——喜用得力，可把已验证的模式加密投入。`:`${deep.wealth}——维持既有结构，等干支引出明确信号再加码。`,
+  love:br==='caution'?`${deep.love}——地支偏耗，关系里少讲道理、多讲安排。`:`${deep.love}${gr==='useful'?'；本段主动经营，关系容易有实质推进。':''}`,
+  health:br==='caution'?`${deep.health}；本段地支为忌，作息与复查先行。`:deep.health};
+}
 function relPhrase(h,role){
  const who=`${h.pillar||h.branch||''}`;
  switch(h.type){
@@ -313,10 +369,9 @@ const strengthSec=[
   const hits=relationWithNatal(c.branch,pillars);
   const support=trend?.cycles?.find(x=>x.index===c.index)?.support;
   const delta=support!=null?support-Number(ns.support??50):null;
-  const trendText=delta==null?'':delta>2?`运势强度上行 ${delta.toFixed(1)} 点，顺势可进取`:delta<-2?`运势强度回落 ${Math.abs(delta).toFixed(1)} 点，宜守不宜攻`:'运势强度平稳';
-  const deep=TEN_GOD_DEEP[god]||TEN_GOD_DEEP.正官;
-  const rel=hits.length?hits.map(h=>relPhrase(h,roleOfBranch(c.branch,ns))).join('；'):'与原局无明显刑冲合害，行运平稳发挥';
-  return `<li><b>第${(c.index??0)+1}步 · ${c.age?`虚岁 ${c.age}–${c.age+9} · `:''}${c.startYear?c.startYear+'–'+(c.startYear+9)+' · ':''}${c.stem}${c.branch}（${G(god)}）</b><span>事业：${deep.career}。财运：${deep.wealth}。${trendText?'。':''}${trendText}。${rel}。</span></li>`;
+  const t=periodTenor(god,ns,dayStem,c.branch,delta);
+  const rel=hits.length?hits.map(h=>relPhrase(h,t.br)).join('；'):'与原局无明显刑冲合害，主题按本运节奏平稳发挥';
+  return `<li><b>第${(c.index??0)+1}步 · ${c.age?`虚岁 ${c.age}–${c.age+9} · `:''}${c.startYear?c.startYear+'–'+(c.startYear+9)+' · ':''}${c.stem}${c.branch}（${G(god)}）</b><span><b>${t.head}</b>。事业：${t.career}财运：${t.wealth}感情：${t.love}健康：${t.health}。${t.trend}${rel}。</span></li>`;
  }).join('');
  const cycleSec=cycleLines?`<ul class="rpt-list">${cycleLines}</ul>`:'大运数据待排盘后生成——在排盘页选择任意一步大运，本报告会随盘面同步更新。';
 
@@ -327,24 +382,22 @@ const strengthSec=[
   const hits=relationWithNatal(y.branch,pillars);
   const support=trend?.years?.find(x=>x.year===y.year)?.support;
   const delta=support!=null?support-Number(ns.support??50):null;
-  const deep=TEN_GOD_DEEP[god]||TEN_GOD_DEEP.正官;
+  const t=periodTenor(god,ns,dayStem,y.branch,delta);
   const clashText=hits.map(h=>({六冲:'冲',六合:'合',三合局:'三合',相刑:'刑',相害:'害',相破:'破'})[h.type]||h.type).join('、');
   const tone=delta==null?'':delta>3?'● 顺年':delta<-3?'▲ 慎年':'○ 平年';
-  return `<li><b>${y.year}（${y.age??''}岁）${y.stem}${y.branch} · ${G(god)}${tone}</b><span>事业${deep.career.slice(0,30)}…；财 ${delta!=null&&delta>3?'可进取':delta!=null&&delta<-3?'先防守':'常规运转'}${clashText?`；与原局${clashText}`:''}；感情${deep.love.slice(0,26)}…；健康${deep.health}。</span></li>`;
+  return `<li><b>${y.year}（${y.age??''}岁）${y.stem}${y.branch} · ${G(god)}${tone}</b><span><b>${t.head}</b>。事业：${t.career}财：${t.wealth}感情：${t.love}健康：${t.health}。${t.trend}${clashText?`与原局${clashText}——${hits.map(h=>relPhrase(h,t.br)).join('；')}。`:'与原局无明显刑冲合害，按下列动作推进。'}</span></li>`;
  }).join('');
  const yearSec=yearLines?`<ul class="rpt-list rpt-years">${yearLines}</ul>`:'流年数据待排盘后生成。';
 
  /* 十、流月逐月详批 + 趋吉避凶 */
  const months=data.months||[];
  const monthLines=months.map(m=>{
-  const god=m.tenGod||tenGodOf(dayStem,m.stem);
+  const god=m.tenGod||tenGodOf(dayStem,m.stem)||'正官';
   const hits=relationWithNatal(m.branch,pillars);
-  const role=roleOfBranch(m.branch,ns);
-  const deep=TEN_GOD_DEEP[god];
-  const roleText=role==='useful'?'月令五行为喜用——本月环境顺风，宜推进要事':role==='caution'?'月令五行为忌神——本月环境逆风，宜收尾守成、不宜开局':'月令五行中性——看个人动作，不看天吃饭';
-  const hitText=hits.length?hits.map(h=>relPhrase(h,role)).join('；'):'与原局无明显刑冲合害——平顺月，按计划走';
-  const clashYear=months.length&&m.branch===CLASH_MAP[pillars[1]?.branch||'']?'；【冲提纲】此月动摇月令根基，大决策建议顺延':'';
-  return `<li><b>${m.label||m.stem+m.branch} · ${m.stem}${m.branch} · ${G(god||'正官')}</b><span>${deep?deep.person.slice(0,20)+'式节奏；':''}${roleText}。${hitText}${clashYear}。</span></li>`;
+  const t=periodTenor(god,ns,dayStem,m.branch,null);
+  const hitText=hits.length?hits.map(h=>relPhrase(h,t.br)).join('；'):'与原局无明显刑冲合害——依下列动作推进即可';
+  const clashYear=m.branch===CLASH_MAP[pillars[1]?.branch||'']?'；【冲提纲】此月动摇月令根基，大决策建议顺延':'';
+  return `<li><b>${m.label||m.stem+m.branch} · ${m.stem}${m.branch} · ${G(god)}</b><span><b>${t.head}</b>。事业：${t.career}财：${t.wealth}感情：${t.love}。${hitText}${clashYear}。</span></li>`;
  }).join('');
  const monthSec=monthLines?`<ul class="rpt-list rpt-months">${monthLines}</ul>`:'';
 

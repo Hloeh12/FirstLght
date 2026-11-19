@@ -131,6 +131,21 @@ test('报告可用性：目录锚点、滚动进度与章节导航已接入',asy
  assert.match(app2,/reportHtml\(report\)/,'报告页渲染入口存在');
 });
 
+test('报告侧边目录：任意滚动位置唤出、与内联目录同源、跳转自动收起',async()=>{
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/data-rpt-nav/,'应有悬浮目录按钮');
+ assert.match(app,/data-rpt-drawer/,'应有侧边抽屉');
+ assert.match(app,/cloneNode\(true\)/,'抽屉应复用内联目录分区，避免两套章节表');
+ assert.match(app,/setNav\(false\)/,'点击章节后应自动收起');
+ assert.match(app,/d\.querySelectorAll\('\[data-toc\]'\)/,'两处目录须共用高亮同步');
+ const liquid=await read('../assets/console/liquid.css');
+ assert.match(liquid,/RPT SIDE NAV v0\.37\.0/);
+ assert.match(liquid,/\.rpt-nav-drawer\{/);
+ assert.match(liquid,/\.rpt-nav-list \.rpt-toc-item\.on/,'抽屉当前章高亮不能被普通条目覆盖');
+ const exp=await read('../assets/console/report-export.js');
+ assert.doesNotMatch(exp,/data-rpt-nav/,'离线导出文档不应带交互抽屉');
+});
+
 test('紫微四化飞星轨迹：每宫宫干引动四化飞向目标宫，文墨式可核',async()=>{
  const {ziweiChart,ziweiFlow}=await import('../src/ziwei.mjs');
  const {buildZiweiDeepReport}=await import('../www/js/deep-ziwei.js');
@@ -382,7 +397,7 @@ test('时点报告八字详盘：本命四柱+所选时点合成多列详盘，�
  assert.match(pr,/baziGrid\(gridData\)/,'须复用完整行列结构的 baziGrid');
  // 报告弹层须给术语补委托（报告在 #screen 之外）
  const app=await read('../assets/console/app.js');
- assert.match(app,/rptBody\?\.addEventListener\('click'[\s\S]*data-term[\s\S]*ctx\.explain/,'报告内术语须可点开解释卡');
+ assert.match(app,/d\.addEventListener\('click'[\s\S]*data-term[\s\S]*ctx\.explain/,'报告内术语须可点开解释卡');
  // 报告内详盘与导出文档都须有自适应列数样式
  const liq=await read('../assets/console/liquid.css');
  assert.match(liq,/\.bazi-grid\.rpt-bazi-grid\{grid-template-columns:34px repeat\(var\(--bg-cols,4\)/,'报告弹层须有动态列数样式');

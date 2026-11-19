@@ -47,6 +47,7 @@ table.rpt-table{width:100%;border-collapse:collapse;font-size:13px}
 .rpt-table th{background:#fff0f6;color:var(--accent);font-weight:700}
 .rpt-now{background:#fff1f7!important}
 .rpt-warn{color:#b23b2c}
+.rpt-table caption{padding:4px 8px 8px;text-align:left;font-size:12px;color:#8c6276}.rpt-bindu-hi{background:#e6f6ec!important;color:#1b7a49;font-weight:800;text-align:center}.rpt-bindu-lo{background:#fdeaea!important;color:#a3372c;font-weight:700;text-align:center}.rpt-shad td small{display:block;font-size:10px;color:#8c6276}
 .rpt-list{margin:10px 0;padding-left:0;list-style:none}
 .rpt-list li{margin:0 0 8px;padding:9px 12px;background:#fdf7fa;border-left:3px solid #f3b9d2;border-radius:7px}
 .rpt-group{margin:16px 0}

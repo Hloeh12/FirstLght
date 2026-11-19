@@ -62,55 +62,6 @@ function tocHtml(report){
 const stripTags=s=>String(s).replace(/<[^>]*>/g,'');
 const charactersOf=sections=>sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+stripTags(x.table||'').length+stripTags(x.html||'').length,0);
 
-/* ---------------- 双人合盘：四层成篇报告 ---------------- */
-export function buildSynastryKnowledgeReport(result,aName,bName){
- const r=result||{},fit=r.fit||r;
- const pct=pick(fit.percent,r.percent,'—');
- const insight=pick(fit.insights,r.insights,[]);
- const koota=r.vedic?.koota||r.koota||{};
- const kootaItems=pick(koota.items,r.kootaItems,[]);
- const inter=pick(r.western?.interAspects,r.interAspects,r.crossAspects,[]);
- const cross=pick(r.crossRelations,r.baziCross,[]);
- const composite=r.composite?.readings||r.composite||null;
- const A=aName||'甲方',B=bName||'乙方';
- const overview=[
-  `合盘比较两人的出生盘，观察能量如何互相激发、支持或牵动。${A} 与 ${B} 的综合契合度指标为 ${pct}${pct==='—'?'':'%'}（${pick(fit.total,r.total,'—')}/${pick(fit.max,r.max,'—')} 项）。契合度是结构性参考，不等同关系成败，更不代表感情必然走向。`,
-  fit.highlight?`当前最显著的契合线索：${fit.highlight}。`:'当前未给出单一最显著线索，须综合各层相位与导师核对。',
-  ...insight.map(x=>`${x.name||'观察点'}：${x.text||''}`),
-  `合盘的正确用法是"看互动模式"而非"定关系吉凶"：同一组相位在不同成熟度的人身上，可以表现为支持，也可以表现为摩擦。`
- ];
- const kootaRows=kootaItems.slice(0,8).map(x=>`<tr><td>${esc(x.zh||x.name||'—')}</td><td>${esc(x.score??'—')}</td><td>${esc((x.note||x.guidance||'').slice(0,60))}</td></tr>`).join('');
- const kootaTable=kootaRows?`<table class="rpt-table"><thead><tr><th>科目</th><th>得分</th><th>要点</th></tr></thead><tbody>${kootaRows}</tbody></table>`:'';
- const vedicLines=[
-  `印度合盘以 Ashtakoota（八科）计分，满分 36 分，从心灵、智识、脾性、财富、子女、健康、友谊、亲密等维度评估两人能量的相容性。综合分 ${pick(koota.total,pct,'—')}，宜逐项查看强弱，而非只看总分。`,
-  kootaItems.length?`上表列出得分较低的若干科目，这些是关系中需要更多经营与理解的领域；得分高的科目则是天然的资源与默契来源。`:'本盘未提供逐项八科明细，可在排盘页印度合盘视图核对。',
-  `八科之外，还须看双方月亮星宿的宿主关系、七宫宫主的互动与 D9 分盘的彼此落点；这些决定关系能否从吸引走向长期承诺。`
- ];
- const interSorted=[...inter].sort((a,b)=>Math.abs(a.orb??99)-Math.abs(b.orb??99)).slice(0,10);
- const interRows=interSorted.map(x=>`<tr><td>${esc((x.a||x.p1||'A')+' '+(x.type||meaningOf(x.angle))+' '+(x.b||x.p2||'B'))}</td><td>${esc(x.angle??'—')}°</td><td>${num(x.orb,2)}°</td><td>${esc(meaningOf(x.angle))}</td></tr>`).join('');
- const interTable=interRows?`<table class="rpt-table"><thead><tr><th>跨盘相位</th><th>角度</th><th>容许度</th><th>主题</th></tr></thead><tbody>${interRows}</tbody></table>`:'';
- const aspectLines=[
-  `跨盘相位（Synastry aspects）比较 ${A} 的行星与 ${B} 的行星之间的几何关系，是观察两人互动质感的核心。上表按容许度由紧到松列出主要跨盘相位及主题。`,
-  `一方的行星落入另一方的宫位同样重要：例如太阳落对方一宫强化自我存在感，月亮落对方四宫带来家的安全感，金星落对方七宫增添亲密吸引。落宫与相位须合看。`,
-  `张力相位（刑、冲）在合盘中往往表现为持续的吸引与摩擦并存，是关系活力的来源，但需要成熟的沟通来引导；和谐相位（六合、三合）带来自然的支持，也需主动经营才不致流于平淡。`,
-  `组合中点盘（Composite）把两人能量合成为一张"关系自身的星盘"，回答"这段关系作为一个整体是什么样"；它与跨盘相位互补，前者看互动，后者看关系本体。`
- ];
- const crossRows=cross.slice(0,8).map(x=>`<tr><td>${esc(x.type||x.a||x.name||'—')}</td><td>${esc(x.pattern||x.b||x.relation||'—')}</td><td>${esc((x.pillars||[]).join('／')||x.note||x.guidance||'')}</td></tr>`).join('');
- const crossTable=crossRows?`<table class="rpt-table"><thead><tr><th>甲</th><th>关系</th><th>说明</th></tr></thead><tbody>${crossRows}</tbody></table>`:'';
- const closing=[
-  cross.length?`八字跨盘关系补充了干支层面的互动线索（如天干五合、地支六冲），与占星星相互为参照：两者同时指向同一主题时，该主题的权重更高。`:'本盘未提供八字跨盘关系明细，可在排盘页合盘视图核对。',
-  composite?'组合中点盘已生成：它描述关系整体的性格与课题，适合两人共同面对未来时参考。':'组合中点盘数据待生成（切换至 composite 模式可查看）。',
-  `任何合盘指标都是"关系的可能性地图"，而非命运判决书。真实的关系质量取决于双方的沟通、尊重、边界与共同经营；本报告仅作传统文化与自我观察参考，不构成对关系走向的保证或心理、法律建议。`
- ];
- const sections=[
-  {title:'一、契合度与互动总览',lines:overview},
-  {title:'二、印度八科 compat 分析',lines:vedicLines,table:kootaTable},
-  {title:'三、跨盘相位与组合中点盘',lines:aspectLines,table:interTable},
-  {title:'四、干支互参与经营纲领',lines:closing,table:crossTable}
- ];
- return {title:'双人合盘 · 关系详参',sections,characters:charactersOf(sections)};
-}
-
 // 把生成器产出的 glossary 追加成文末「术语小词典」
 function withGlossary(report){
  const entries=Object.entries(report.glossary||{}).filter(([,v])=>v);

@@ -212,9 +212,10 @@ test('紫微流月流日：斗君起正月、十二月逐月成条、流日整�
   assert.match(daySec.lines.join(''),/五鼠遁/);
   assert.doesNotMatch(daySec.lines.join(''),/<table|<tr/,'lines 不得含表格标签');
   assert.doesNotMatch(dayHtml,/undefined/);
-  // 今日流日干支应与历库一致（(JDN+49) mod 60）
-  const today=new Date(),gz=Solar.fromYmd(today.getFullYear(),today.getMonth()+1,today.getDate()).getLunar().getDayInGanZhi();
-  assert.ok(dayHtml.includes(gz),'流日表应含今日干支 '+gz);
+  // 流日干支应与所选日期（或本命报告的默认今天）一致（(JDN+49) mod 60）
+  const d=f?new Date(f.year,f.month-1,f.day):new Date();
+  const gz=Solar.fromYmd(d.getFullYear(),d.getMonth()+1,d.getDate()).getLunar().getDayInGanZhi();
+  assert.ok(dayHtml.includes(gz),'流日表应含所选日期的干支 '+gz);
  }
 });
 
@@ -285,7 +286,7 @@ test('西洋行运触发点：星历实算外行星对落宫与相位',async()=>
  const {buildWesternDeepReport}=await import('../www/js/deep-west.js');
  const full=chart({Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY},{baseOnly:true});
  const r=buildWesternDeepReport(full.western);
- const sec=r.sections.find(x=>x.title.startsWith('五、当下行运'));
+ const sec=r.sections.find(x=>x.title.includes('行运触发点'));
  assert.ok(sec,'应存在行运触发点章节');
  const txt=(sec.html||'').replace(/<[^>]*>/g,'');
  for(const name of ['木星','土星','天王星','海王星','冥王星']){
@@ -428,4 +429,74 @@ test('报告渲染契约：sections.lines 必须为纯文本，表格只能放 h
    }
   }
  }
+});
+
+test('印占专业深度：Shadbala 参考线审计与 Ashtakavarga 逐星 BAV 过境读法',async()=>{
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const {buildVedicDeepReport,nechaBhanga,detectYogas}=await import('../www/js/deep-vedic.js');
+ const v=vedicPro({birth:{Y:1990,M:6,D:15,h:6,mi:30,city:{lat:39.9042,lon:116.4074,tz:8},calendar:'solar'},at:new Date().toISOString()});
+ const r=buildVedicDeepReport(v);
+ const shad=r.sections.find(s=>s.title.includes('Shadbala'));
+ assert.match(shad.table,/Rupas\/参考/,'六力表须列参考线');
+ assert.match(shad.table,/判定/,'六力表须列达标判定');
+ assert.ok(shad.lines.some(x=>x.includes('参考线')&&x.includes('量纲')),'全盘低于参考线时须说明量纲差异，不能误判全盘无力');
+ const astha=r.sections.find(s=>s.title.includes('Ashtakavarga'));
+ assert.ok(astha.html&&/rpt-bav/.test(astha.html),'须输出逐行星 BAV 表，不能只给 SAV 宫位总分');
+ assert.equal((astha.html.match(/rpt-bindu-hi/g)||[]).length>0,true,'BAV 高分须可辨识');
+ assert.ok(astha.lines.some(x=>x.includes('行运落点')&&x.includes('SAV≥30')),'须给出可执行的过境叠加规则');
+ assert.ok(astha.lines.some(x=>x.includes('Prastara')),'须披露未做还原的口径限制');
+ // 陷而复兴：太阳落陷天秤、守护星金星落本命角宫，须检出具体解救路径
+ const nb=nechaBhanga({lagna:'白羊',planets:[{name:'太阳',key:'sun',sign:'天秤',house:7,sid:190},{name:'金星',key:'venus',sign:'天蝎',house:4,sid:220}]});
+ assert.equal(nb.length,1,'应检出一组陷而复兴');
+ assert.ok(nb[0].reasons.join('').includes('金星')&&nb[0].strength==='强');
+ assert.ok(detectYogas({lagna:'白羊',planets:[{name:'太阳',key:'sun',sign:'天秤',house:7,sid:190},{name:'金星',key:'venus',sign:'天蝎',house:4,sid:220}]}).includes('NeechaBhanga'));
+});
+
+test('八字时点三章：十神×喜忌×刑冲三元组判定，同一十神不同喜忌不再复读',async()=>{
+ const {periodTenor,buildBaziDeepReport}=await import('../www/js/deep-bazi.js');
+ const good={roles:{useful:['金'],avoid:['木'],enemy:[],idle:[]},useful:['金','火'],caution:['木'],support:50};
+ const bad={roles:{useful:['木'],avoid:['金'],enemy:[],idle:[]},useful:['木'],caution:['金','火'],support:50};
+ // 甲日主：正官属金；巳属火。同一「正官×巳」在喜/忌两套取用下必须给出不同定性。
+ const a=periodTenor('正官',good,'甲','巳',5),b=periodTenor('正官',bad,'甲','巳',5);
+ assert.equal(a.gr,'useful');assert.equal(b.gr,'caution');
+ assert.equal(a.br,'useful');assert.equal(b.br,'caution');
+ assert.notEqual(a.head,b.head);assert.notEqual(a.career,b.career);assert.notEqual(a.wealth,b.wealth);
+ assert.match(a.career,/流程/);assert.match(b.career,/头衔/);
+ const base={dayMaster:{stem:'甲',element:'木'},natalStrength:good,pillars:[
+  {name:'年柱',stem:'丙',branch:'寅',hidden:[]},{name:'月柱',stem:'己',branch:'巳',hidden:[]},
+  {name:'日柱',stem:'甲',branch:'午',hidden:[]},{name:'时柱',stem:'庚',branch:'申',hidden:[]}
+ ],cycles:[{index:0,stem:'乙',branch:'丑',tenGod:'劫财'},{index:1,stem:'丙',branch:'寅',tenGod:'食神'}],
+ years:[{year:2025,stem:'乙',branch:'巳',tenGod:'劫财'},{year:2026,stem:'丙',branch:'午',tenGod:'食神'}],
+ months:[{label:'丙寅月',stem:'丙',branch:'寅',tenGod:'食神'},{label:'丁卯月',stem:'丁',branch:'卯',tenGod:'伤官'}]};
+ const r=buildBaziDeepReport(base);
+ const sec=n=>r.sections.find(s=>s.title.includes(n));
+ for(const name of ['大运逐运','流年逐年','流月逐月']){
+  const s=sec(name);
+  assert.ok(s?.html?.includes('同为喜用')||s?.html?.includes('主题')||s?.html?.includes('同为忌神'),name+' 须有三元组定性');
+  assert.doesNotMatch(s.html,/undefined|NaN/,name+' 不得有脏数据');
+ }
+ assert.notEqual(sec('流年逐年').html.match(/<li>[\s\S]*?<\/li>/g)[0],sec('流年逐年').html.match(/<li>[\s\S]*?<\/li>/g)[1],'不同流年不得逐字雷同');
+});
+
+test('时点敏感性：紫微十年起点与流日、西占行运随所选时点变化',async()=>{
+ const {ziweiChart,ziweiFlow}=await import('../src/ziwei.mjs');
+ const {buildZiweiDeepReport}=await import('../www/js/deep-ziwei.js');
+ const {chart}=await import('../src/chart.mjs');
+ const {buildWesternDeepReport}=await import('../www/js/deep-west.js');
+ const zc=ziweiChart({dateStr:'1990-06-15',timeIndex:7,gender:'男'});
+ const mk=(year,month,day)=>({dateStr:'1990-06-15',timeIndex:7,gender:'男',flowYear:year,scope:'daily',month,day});
+ const sec=(r,n)=>r.sections.find(s=>s.title.includes(n));
+ const a1=buildZiweiDeepReport(zc,ziweiFlow(mk(2026,6,10)),new Date(2026,5,10,12).toISOString());
+ const a2=buildZiweiDeepReport(zc,ziweiFlow(mk(2030,6,10)),new Date(2030,5,10,12).toISOString());
+ const a3=buildZiweiDeepReport(zc,ziweiFlow(mk(2030,7,18)),new Date(2030,6,18,12).toISOString());
+ assert.notEqual(sec(a1,'流年逐流年').html,sec(a2,'流年逐流年').html,'不同所选流年须重排十年');
+ assert.match(sec(a2,'流年逐流年').html,/2030年/);
+ assert.doesNotMatch(sec(a2,'流年逐流年').html,/【今年】/);
+ assert.notEqual(sec(a2,'流日与流时').html,sec(a3,'流日与流时').html,'不同所选日期须重排流日表');
+ assert.doesNotMatch(sec(a2,'流日与流时').lines.join(''),/与排盘页所选时点无关/);
+ const west=chart({Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY},{baseOnly:true}).western;
+ const t1=buildWesternDeepReport(west,new Date(Date.UTC(2010,0,1)).toISOString());
+ const t2=buildWesternDeepReport(west,new Date(Date.UTC(2030,0,1)).toISOString());
+ assert.notEqual(sec(t1,'行运触发点').html,sec(t2,'行运触发点').html,'不同时点的西占行运须实算重排');
+ assert.match(sec(t2,'行运触发点').lines.join(''),/2030/);
 });

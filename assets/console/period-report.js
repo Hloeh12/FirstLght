@@ -132,7 +132,8 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
   const flow=await request('/api/ziwei-flow',{dateStr:chart.effectiveDate,timeIndex:chart.effectiveTimeIndex??0,gender:birth.gender,astroType:chart.astroType,
    ziweiSchool:birth.ziweiSchool||chart.school?.id,ziweiLeap:birth.ziweiLeap||chart.leapPolicy,
    flowYear:selection.year,scope:selection.scope||scope,month:selection.month,day:selection.day});
-  const rep=buildZiweiDeepReport(chart,flow);
+  const atZiwei=new Date(Date.UTC(Number(flow?.year||selection.year||new Date().getFullYear()),Number(flow?.month||1)-1,Number(flow?.day||15),12)).toISOString();
+  const rep=buildZiweiDeepReport(chart,flow,atZiwei);
   const fd={flow,chart,lifePalace:(chart.palaces||[]).find(p=>p.name==='命宫')?.name||'命宫',palaceNames:flow.palaceNames,palaceNameOf:b=>(chart.palaces||[]).find(p=>p.branch===b)?.name};
   const sections=focus?focusedSections('ziwei',scope,label,fd):[...rep.sections.slice(),focusSection('ziwei',scope,label,fd)];
   const lifePalace=fd.lifePalace;
@@ -157,7 +158,7 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
  // west
  const at=selection.at||new Date().toISOString(),mode=selection.mode||'transit';
  const w=await request('/api/console/western',{birth,mode,at});
- const rep=buildWesternDeepReport(w.chart||w);
+ const rep=buildWesternDeepReport(w.chart||w,at);
  const fd={western:w,mode,at};
  const sections=focus?focusedSections('west',scope,label,fd):[...rep.sections.slice(),focusSection('west',scope,label,fd)];
  return compose(sections,{title:`西洋占星 · ${label}${focus?' · 时点详批':''}`,kind:'west',

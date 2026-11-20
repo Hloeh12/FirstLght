@@ -332,18 +332,50 @@ const asthaLines=astha?.valid?[
  ];
  /* 六、分盘与专项 */
  const vargaLines=[];
+ let vargaTable='';
+ // 十三种经典分盘各自的专项读法：命主落宫 × 该分盘主题，逐盘成句而非同一模板复读。
+ const VARGA_FOCUS={
+  2:'财帛的根基与家族资源——命主落宫定「钱从哪里长出来」',
+  3:'手足同侪与勇气——命主落宫定同辈助力还是竞争',
+  4:'不动产、家宅与母亲——命主落宫定安身之所的成色',
+  7:'子女、创作与智力——命主落宫定才华与子息的兑现',
+  9:'婚姻内在与后半生——命主落宫定亲密关系里的真我',
+  10:'事业与公众身份——命主落宫定事业表达的实际舞台',
+  12:'父母与传承——命主落宫定长辈缘与根基滋养',
+  16:'享乐、情感与床笫——命主落宫定愉悦能力与该守的分寸',
+  20:'灵修、解脱与因果——命主落宫定出离倾向与精神归处',
+  24:'学问、言语与记忆——命主落宫定学习能力与表达的厚度',
+  27:'潜能与内在力量——命主落宫定性格底色与暗藏的驱动力',
+  30:'灾厄与考验——命主落宫定易受冲击的领域与化解方向',
+  60:'因果与整体命格——命主落宫定全盘气势的落点（D60 亦用于校验各分盘）'
+ };
+ const VARGA_ORDER=[2,3,4,7,9,10,12,16,20,24,27,30,60];
  if(Number.isFinite(v?.ascSid)){
   try{
-   const d9=divisional(v,9),d10=divisional(v,10);
-   const d9LordName=SIGN_LORD[SIGN_INDEX[d9.lagna]],d9Lord=d9.planets.find(p=>p.name===d9LordName);
-   const d10LordName=SIGN_LORD[SIGN_INDEX[d10.lagna]],d10Lord=d10.planets.find(p=>p.name===d10LordName);
+   const vargaRows=[];
+   for(const n of VARGA_ORDER){
+    const d=divisional(v,n);
+    const lordName=SIGN_LORD[d.lagnaIndex];
+    const lordP=d.planets.find(p=>p.name===lordName);
+    const occ=d.planets.filter(p=>p.house===1&&!['罗睺','计都'].includes(p.name)).map(p=>p.name);
+    const vargottama=planets.filter(p=>{const q=d.planets.find(x=>x.key===p.key);return q&&houseOfSign(p.sign)===houseOfSign(q.sign);}).map(p=>p.name);
+    const grade=lordP?([1,4,7,10].includes(lordP.house)?'角宫·有力':[2,5,8,11].includes(lordP.house)?'续宫·中平':'果宫·偏弱'):'—';
+    vargaRows.push({n,lagna:d.lagna,lordName,lordHouse:lordP?.house??null,occ,vargottama,grade});
+   }
+   // 表格：十三盘一览（含当前高亮 D9/D10 两个重点盘）
+   vargaTable=`<table class="rpt-table rpt-varga"><thead><tr><th>分盘</th><th>主题</th><th>上升</th><th>命主·落宫</th><th>宫力</th><th>本宫星</th></tr></thead><tbody>${
+    vargaRows.map(r=>`<tr class="${r.n===9||r.n===10?'rpt-now':''}"><td><b>D${r.n}</b></td><td>${VARGAS[r.n]||'—'}</td><td>${r.lagna}</td><td>${r.lordName}${r.lordHouse?` · 第${r.lordHouse}宫`:''}</td><td>${r.grade}</td><td>${r.occ.join('、')||'—'}</td></tr>`).join('')
+   }</tbody></table>`;
    gloss['D9 分盘']='把每个星座九等分重排的盘，专看婚姻、内在成熟度与后半生兑现度';
    gloss['D10 分盘']='十等分重排，专看事业表达的盘';
-   vargaLines.push(`D9（${VARGAS[9]}）：上升${d9.lagna}，命主${d9LordName}${d9Lord?`落第${d9Lord.house}宫——${HOUSE_THEME[d9Lord.house]}`:''}。D9 与 D1 命主不同宫时，人前形象与亲密关系中的真我并不一致：伴侣认的是 D9 里那个你。`);
-   vargaLines.push(`D10（${VARGAS[10]}）：上升${d10.lagna}，命主${d10LordName}${d10Lord?`落第${d10Lord.house}宫——${HOUSE_THEME[d10Lord.house]}`:''}。事业表达的真正落点看 D10：D1 十宫定方向，D10 定成色。`);
-   // Vargottama 检测
-   const vg=planets.filter(p=>{const q=d9.planets.find(x=>x.key===p.key);return q&&houseOfSign(p.sign)===houseOfSign(q.sign);}).map(p=>p.name);
-   if(vg.length)vargaLines.push(`倍数升格 Vargottama：${vg.join('、')}在本命与 D9 同星座——力量加倍确认，所主领域「说到做到」。`);
+   gloss['Vargottama']='行星在本命与某分盘落在同一星座，力量在此领域「加倍确认」，说到做到';
+   // 重点盘 D9/D10 保留原有深解；其余盘按专项逐条成句
+   const d9=vargaRows.find(r=>r.n===9),d10=vargaRows.find(r=>r.n===10);
+   vargaLines.push(`D9（${VARGAS[9]}）：上升${d9.lagna}，命主${d9.lordName}${d9.lordHouse?`落第${d9.lordHouse}宫（${HOUSE_THEME[d9.lordHouse]}）`:''}。D9 与 D1 命主不同宫时，人前形象与亲密关系中的真我并不一致：伴侣认的是 D9 里那个你。`);
+   vargaLines.push(`D10（${VARGAS[10]}）：上升${d10.lagna}，命主${d10.lordName}${d10.lordHouse?`落第${d10.lordHouse}宫（${HOUSE_THEME[d10.lordHouse]}）`:''}。事业表达的真正落点看 D10：D1 十宫定方向，D10 定成色。`);
+   for(const r of vargaRows.filter(r=>r.n!==9&&r.n!==10)){
+    vargaLines.push(`D${r.n}（${VARGAS[r.n]}）：${VARGA_FOCUS[r.n]}——本盘上升${r.lagna}，命主${r.lordName}${r.lordHouse?`落第${r.lordHouse}宫（${HOUSE_THEME[r.lordHouse]}），${r.grade}`:'，落宫待考'}。${r.occ.length?`本宫坐${r.occ.join('、')}——该专项的核心动力就落在这里。`:'本宫无星，主题靠宫主星从别处牵引。'}${r.vargottama.length?`　${r.vargottama.join('、')}在本命与本盘同星座（Vargottama），此领域力量得到加倍确认。`:''}`);
+   }
   }catch{
    vargaLines.push('分盘计算异常，已跳过（不影响其余章节）。');
   }
@@ -364,6 +396,42 @@ const bhavaLines=bhava?[
  `用法：把「最强宫」当杠杆——用强宫的资源去补弱宫的缺口（例如十宫强而七宫弱，就以事业平台去经营关系）；这是印占里最实用的一条资源调度原则。`,
  `口径：${bhava.method}`
 ]:['宫位力量数据待排盘后生成。'];
+
+/* 八b、Yogini Dasha 八女神短周期运（与 Vimshottari 并行互参） */
+const yg=v?.yogini||null;
+const ygValid=!!(yg?.valid&&yg.list?.length);
+const ygCur=ygValid?yg.current:null;
+const ygCurIdx=ygCur?.i??-1;
+// 起运依据说明：把「宿序 +3 取余 8」与余额口径写成可核的步骤
+const ygIntro=ygValid?[
+ `Yogini Dasha（八女神大运）是与 Vimshottari 并行的一套短周期宿曜运：八位 Yogini 各主 1–8 年，一轮 36 年，终身反复。它同样从月亮出生星宿起排，但周期短、转段快，北印度许多师承拿它与 Vimshottari 交叉验证同一件事的应期——两套表在某年「指同一宫、同一星」时，那个时间点的分量就加重。`,
+ `本盘起运：月亮在${yg.nakNo}宿（${moon?.nakshatra||'—'}），宿序 ${yg.nakNo} + 3 = ${yg.nakNo+3}，除以 8 取余${yg.start.index===7?'为 0（当第 8 位 Sankata）':'得 '+((yg.nakNo+3)%8)}，故出生起运为${yg.start.zh}（${yg.start.name}，主${yg.start.lord}）。月亮在该宿内已行 ${yg.nakDegree}°／13°20′，尚余 ${(yg.remainRatio*100).toFixed(0)}%，折算出生后这段还余 ${yg.balanceYears.toFixed(2)} 年。`,
+ `判读方法：Yogini 主星决定这一段的「气质」，仍回到本命看它的落宫、力量与功能吉凶（同第七章四步法）；段内八小运（Antardasha）按时长比例再切，用来把 1–8 年缩小到月级窗口。它不取代 Vimshottari——两表一致处加权，冲突处各依自身口径，不混着套。`
+]:['Yogini 大运数据待排盘后生成。'];
+// 八段大运表（当前一轮 8 段，取含当前段的那一轮）
+const ygRound=ygValid?Math.floor(Math.max(0,ygCurIdx)/8):0;
+const ygSlice=ygValid?yg.list.slice(ygRound*8,ygRound*8+8):[];
+const ygRows=ygSlice.map(s=>{
+ const lordP=byName(s.lord),fn=functionalNature(s.lord,lagnaIndex);
+ const fnTag=fn.kind==='yogakaraka'?'★瑜伽主':fn.kind==='malefic'?'▲功能凶':fn.kind==='benefic'?'☆功能吉':fn.kind==='maraka'?'◇杀主':fn.kind==='lagna'?'◆命主':fn.label;
+ return `<tr class="${s.active?'rpt-now':''}"><td><b>${s.zh}</b></td><td>${s.name}</td><td>${s.lord}${lordP?` · 第${lordP.house}宫`:''}</td><td>${s.years} 年</td><td>${s.ageStart}–${s.ageEnd} 岁</td><td><span class="rpt-dasha-fn fn-${fn.kind}">${fnTag}</span></td></tr>`;
+}).join('');
+const ygTable=ygRows?`<table class="rpt-table rpt-yogini"><thead><tr><th>Yogini</th><th>名称</th><th>主星·落宫</th><th>年数</th><th>年龄区间</th><th>功能</th></tr></thead><tbody>${ygRows}</tbody></table>`:'';
+// 当前段与下一段的八小运
+const ygAntarHtml=ygValid?(()=>{
+ const picks=[ygCurIdx,ygCurIdx+1].filter(i=>i>=0&&i<yg.list.length);
+ return picks.map(mi=>{
+  const M=yg.list[mi];
+  const rows=M.antardashas.map(a=>`<li class="${a.active?'rpt-now':''}"><b>${a.zh}（${a.lord}）小运 · ${a.ageStart}–${a.ageEnd} 岁${a.active?' · 【当前小运】':''}</b><span>${a.years.toFixed(2)} 年。以${a.lord}的方式兑现${M.zh}（${M.lord}）这一段的主题。${M.lord===a.lord?'主运与小运同主——本段主题最强音。':''}</span></li>`).join('');
+  return `<li class="rpt-group"><b>${M.zh}（${M.name} · ${M.ageStart}–${M.ageEnd} 岁）段内八小运</b><ul class="rpt-list">${rows}</ul></li>`;
+ }).join('');
+})():'';
+const ygSecHtml=ygAntarHtml?`<ul class="rpt-list rpt-decades">${ygAntarHtml}</ul>`:'';
+const ygLines=ygValid&&ygCur?[
+ `当前 Yogini：${ygCur.zh}（${ygCur.name}，主${ygCur.lord}），${ygCur.ageStart}–${ygCur.ageEnd} 岁——${ygCur.theme}。把这段落到本命：${byName(ygCur.lord)?`主星${ygCur.lord}落第${byName(ygCur.lord).house}宫（${HOUSE_THEME[byName(ygCur.lord).house]}），力量${gradeOf({p:byName(ygCur.lord),st:states(byName(ygCur.lord))})[0]}`:'主星数据待排盘后生成'}，即这一段的主轴落点。`,
+ `对照 Vimshottari：${dashas.find(d=>d.active)?.lord||'当前大运'}大运（${(dashas.find(d=>d.active)?.start||'').slice(0,10)} 起）与${ygCur.zh}段并行。两表若都指向同一宫或同一主星，该主题的双重加持更明确；若指向不同领域，则以 Vimshottari 为主轴、Yogini 为节奏参照，勿强行合并。`,
+ `口径：${yg.method}`
+]:[];
 
 /* 九、岁运 Varshaphala */
 const vs=v?.varshaphala||null;
@@ -421,12 +489,15 @@ const vsSec=vs?[
   {title:'六、九曜逐星落宫详解',lines:[],html:planetSec},
   {title:'七、Vimshottari 大运逐运详批',lines:dashaIntro,html:dashaSec},
   {title:'八、小运细分（当前与下一大运的九段 Antardasha）',lines:antarIntro,html:antarSec},
-  {title:'九、分盘专项（D9/D10）',lines:vargaSec},
-  {title:'十、十二宫力量审计（Bhava Bala）',lines:bhavaLines,table:bhavaTable},
-  {title:'十一、岁运 Varshaphala（今年年度盘）',lines:vsSec},
-  {title:'十二、Jaimini 派专项（Karaka·Chara Dasha·Arudha）',lines:jaiminiLines,table:jKTable,html:jDashaTable},
-  {title:'十三、人生格局总结',lines:lifePattern}
+  {title:'九、Yogini Dasha 八女神短周期运',lines:[...ygIntro,...ygLines],table:ygTable,html:ygSecHtml},
+  {title:'十、分盘专项（十三盘 D2–D60）',lines:vargaSec,table:vargaTable},
+  {title:'十一、十二宫力量审计（Bhava Bala）',lines:bhavaLines,table:bhavaTable},
+  {title:'十二、岁运 Varshaphala（今年年度盘）',lines:vsSec},
+  {title:'十三、Jaimini 派专项（Karaka·Chara Dasha·Arudha）',lines:jaiminiLines,table:jKTable,html:jDashaTable},
+  {title:'十四、人生格局总结',lines:lifePattern}
  ];
+ gloss['Yogini Dasha']='八女神短周期大运：八位 Yogini 各主 1–8 年、一轮 36 年，同样从月亮出生宿起排，与 Vimshottari 交叉验证应期';
+ gloss['Antardasha']='小运/副运：每段大运内部再按比例切分的子时段，决定这一两年内的「波段剧情」，可下钻到月级窗口';
  gloss['Atma Karaka']='Jaimini 派「灵魂指标星」：七曜中恒星黄经最高者，代表此生的核心自我与方向，落入的宫位是最想活出的领域';
  gloss['Dara Karaka']='Jaimini 派「配偶指标星」：七曜中经度第 7 高者，与第 7 宫、D9 合看婚姻，单看不成定论';
  gloss['Chara Dasha']='Jaimini 星座大运：自 AK 星座起顺行或逆行逐宫轮转，每宫年数由该宫主的落点决定，与 Vimshottari 固定年数表不同';

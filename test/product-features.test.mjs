@@ -613,7 +613,54 @@ test('深挖v0.39：Jaimini Karaka 随盘变化 + AK/DK 落宫 + Chara Dasha 方
  assert.match(j.table,/rpt-jaimini/);
  assert.match(j.html,/rpt-charadasha/);
  assert.doesNotMatch(j.lines.join('')+j.table+j.html,/undefined|NaN|kaimini|creative|。。/,'不得有脏数据或双句号');
- assert.equal(rep.sections.length,13,'印占报告 13 章');
+ assert.equal(rep.sections.length,14,'印占报告 14 章');
+});
+
+test('深挖v0.40：Yogini 八女神运 8星36年 + 宿序+3取余起运 + 段连续 + 两路接线 + 报告第九章',async()=>{
+ const {yoginiDasha,YOGINIS}=await import('../src/yogini-dasha.mjs');
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const {buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
+ const CITY={lat:39.9042,lon:116.4074,tz:8};
+ const at='2026-11-20T04:00:00.000Z';
+ const mk=(Y,h)=>vedicPro({birth:{Y,M:6,D:15,h,mi:30,city:CITY,calendar:'solar'},at});
+ const v1=mk(1990,6),v2=mk(1985,14);
+ // 八星 36 年固定表
+ assert.equal(YOGINIS.length,8);
+ assert.equal(YOGINIS.reduce((a,x)=>a+x.years,0),36,'八星年数合计 36');
+ assert.deepEqual(YOGINIS.map(x=>x.years),[1,2,3,4,5,6,7,8]);
+ assert.deepEqual(YOGINIS.map(x=>x.lord),['月亮','太阳','木星','火星','水星','土星','金星','罗睺']);
+ // 起运口径：宿序 +3 取余 8，余 0 当第 8 位
+ const y1=v1.yogini;
+ assert.ok(y1?.valid,'vedicPro 须产出 yogini（初始 reading 与端点同一入口）');
+ assert.ok(y1.nakNo>=1&&y1.nakNo<=27);
+ const mod=(y1.nakNo+3)%8,expect=mod===0?7:mod-1;
+ assert.equal(y1.start.index,expect,'起运 index 须等于 (宿序+3)%8（余0当第8）');
+ assert.ok(y1.balanceYears>0&&y1.balanceYears<=YOGINIS[expect].years,'余额不超首段年数');
+ assert.match(y1.method,/加 3 除以 8|BPHS|Sankata/,'须披露流派口径');
+ // 段连续 + 每轮八段年数 = 36 + 当前唯一 + 小运连续
+ const L=y1.list;
+ assert.ok(L.length>=40,'须覆盖至少五轮');
+ for(let i=1;i<L.length;i++)assert.equal(Date.parse(L[i].start),Date.parse(L[i-1].end),'段首尾须连续');
+ for(let r=0;r<5;r++){
+  const sum=L.slice(r*8,r*8+8).reduce((a,s)=>a+s.years,0);
+  assert.equal(sum,36,'每轮八段须合计 36 年');
+ }
+ assert.equal(L.filter(s=>s.active).length,1,'当前时刻须唯一命中一段');
+ const cur=y1.current;
+ assert.ok(cur.antardashas.length===8,'段内八小运');
+ for(let i=1;i<cur.antardashas.length;i++)assert.equal(Date.parse(cur.antardashas[i].start),Date.parse(cur.antardashas[i-1].end),'小运须连续');
+ assert.equal(cur.antardashas.filter(a=>a.active).length,1,'当前小运唯一');
+ // 不同盘的起运/当前段随月亮宿变化（间隔多年，落宿不同）
+ assert.notEqual(y1.start.index,v2.yogini.start.index,'不同出生盘起运可不同');
+ // 报告第九章接入
+ const rep=buildVedicDeepReport(v1);
+ const ysec=rep.sections.find(s=>s.title.includes('Yogini'));
+ assert.ok(ysec,'须有 Yogini 章');
+ assert.match(ysec.table,/rpt-yogini/);
+ assert.match(ysec.html,/rpt-decades/);
+ assert.match(ysec.lines.join(''),/宿序|取余|交叉验证/);
+ assert.doesNotMatch(ysec.lines.join('')+ysec.table+ysec.html,/undefined|NaN|。。|待定待定|null/,'不得有脏数据');
+ assert.equal(rep.sections.length,14,'印占报告 14 章');
 });
 
 test('深挖v0.39：八字合婚用神↔忌神双向 + 日主强弱 + 相刑入 relOf',async()=>{
@@ -676,4 +723,54 @@ test('深挖v0.39：西占宫主星互融语义正确 + 本盘/跨盘接线',asy
  assert.doesNotMatch(sasp.lines.join(''),/undefined|NaN|的落在/,'跨盘互融文案不得有脏数据');
  const rp=sasp.lines.find(x=>x.includes('互融·'));
  if(rp)assert.match(rp,/甲|乙/,'跨盘互融须标明甲乙主体');
+});
+
+test('深挖v0.40：印占十三盘分盘专项（D2–D60）逐盘差异 + 表格 + 导出无转义',async()=>{
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const {buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
+ const {composeFullReport,reportHtml}=await import('../assets/console/full-report.js');
+ const CITY={lat:39.9042,lon:116.4074,tz:8};
+ const v=vedicPro({birth:{Y:1990,M:6,D:15,h:6,mi:30,city:CITY,calendar:'solar'},at:'2026-11-20T04:00:00.000Z'});
+ const rep=buildVedicDeepReport(v);
+ const vs=rep.sections.find(s=>s.title.includes('分盘专项'));
+ assert.ok(vs,'须有分盘专项章');
+ assert.match(vs.title,/十三盘/);
+ assert.ok((vs.table||'').includes('rpt-varga'),'须有十三盘表格');
+ assert.ok(((vs.table||'').match(/<tr/g)||[]).length>=14,'表格须含表头+13盘');
+ const focus=vs.lines.filter(x=>/^D\d+（/.test(x));
+ assert.equal(focus.length,13,'须逐盘成句（13 条），不得模板复读');
+ const ds=focus.map(x=>Number(x.match(/^D(\d+)/)[1])).sort((a,b)=>a-b);
+ assert.deepEqual(ds,[2,3,4,7,9,10,12,16,20,24,27,30,60]);
+ // 11 条新增专项盘（除手写的 D9/D10 深解外）的主题须各不相同，证明非模板复读
+ const themes=focus.filter(x=>!/^D9（|^D10（/.test(x)).map(x=>x.split('——')[1]);
+ assert.equal(themes.length,11);
+ assert.equal(new Set(themes).size,11,'十一条专项盘主题须各不相同');
+ assert.doesNotMatch(vs.lines.join('')+(vs.table||''),/undefined|NaN|。。|&amp;|异常|待考盘/,'不得有脏数据');
+ // 导出文档里表格是真实 HTML、未被二次转义
+ const full=composeFullReport({system:'vedic',profile:{name:'t'},reading:{vedic:v},chartState:{}},{vedic:'印度占星'});
+ const html=reportHtml(full);
+ assert.ok(html.includes('rpt-varga')&&html.includes('rpt-yogini'),'导出须含新表格');
+ assert.ok(!html.includes('&lt;table'),'表格标签不得被转义');
+});
+
+test('深挖v0.40：西占模式失衡（基本/固定/变动）接入格局章且无 analysis 时自足',async()=>{
+ const {chart}=await import('../src/chart.mjs');
+ const {analyze}=await import('../src/analysis.mjs');
+ const {buildWesternDeepReport}=await import('../www/js/deep-west.js');
+ const full=chart({Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY},{baseOnly:true});
+ const an=analyze(full.western);
+ assert.ok(an.modalities?.percentages,'analysis 须产出 modalities');
+ const withAn=buildWesternDeepReport(full.western,undefined,an);
+ const patSec=withAn.sections.find(s=>s.title.startsWith('四'));
+ const txt=patSec.lines.join('');
+ assert.match(txt,/模式分布/,'格局章须含模式分布');
+ assert.match(txt,/基本 \d+% · 固定 \d+% · 变动 \d+%/,'须给出三模式百分比');
+ assert.match(txt,/元素说的是|模式说的是/,'须说明元素与模式互补');
+ assert.match(txt,/主导|三种模式齐备/);
+ assert.doesNotMatch(txt,/undefined|NaN|step|。。/,'不得有脏数据');
+ // 无 analysis 时按本盘行星自行兜底，报告仍自足
+ const noAn=buildWesternDeepReport(full.western);
+ const noTxt=noAn.sections.find(s=>s.title.startsWith('四')).lines.join('');
+ assert.match(noTxt,/模式分布/,'无 analysis 时仍须自足给出模式分布');
+ assert.doesNotMatch(noTxt,/undefined|NaN/);
 });

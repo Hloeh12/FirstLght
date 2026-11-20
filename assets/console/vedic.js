@@ -52,7 +52,7 @@ function vedicOverview(base,d,chosen){
  ${d9.lordHouse?`<p class="vr-line"><b>关系盘 D9：</b>上升${esc(short(d9.lagna))}，命主${esc(d9.lordName)}落第${d9.lordHouse}宫（${HOUSE_THEME[d9.lordHouse]}）。D9 与 D1 的命主不同宫时，说明对外表现与亲密关系里的自我不一致。</p>`:''}
  <h3 class="vr-title">分盘结论</h3>
  <ul class="vr-vargas">${vargas.map(r=>`<li><b>D${r.n} ${esc(r.label)}</b><span>${esc(vargaSentence(r))}</span></li>`).join('')}</ul>
- <p class="thin muted vr-note">计算范围：宫位按整宫制，分盘由本命度数的整数分割得出；行星力量已按 Shadbala 六力（Sthana、Dig、Kala 月相力、Cheshta、Naisargika、Saptavargaja、Drik）给出分数与位次，另起 Ashtakavarga 八分点（校验位 337）与 Varshaphala 太阳返照岁运盘。仍未计算 Yogini 与 Jaimini 指标及 Kala 其余分项（Nathonnatha、Ayana）——这些领域不给无经典依据的分数与吉凶断言。</p>
+ <p class="thin muted vr-note">计算范围：宫位按整宫制，分盘由本命度数的整数分割得出；行星力量已按 Shadbala 六力（Sthana、Dig、Kala 月相力、Cheshta、Naisargika、Saptavargaja、Drik）给出分数与位次，另起 Ashtakavarga 八分点（校验位 337）、Yogini 八女神短周期运与 Varshaphala 太阳返照岁运盘。Jaimini 指标详见深度报告第十三章。仍未计算 Kala 其余分项（Nathonnatha、Ayana）——不给无经典依据的分数与吉凶断言。</p>
 </article>`;
 }
 
@@ -85,6 +85,13 @@ export function vedicView(ctx){
   ${table(['宫位','星座','SAV','结构支撑'],a.byHouse.map(r=>[r.house+' · '+themes[r.house-1],r.sign,String(r.points),r.points>=32?'强':r.points>=30?'较强':r.points>=28?'略高':r.points>=25?'中等':r.points>=22?'偏弱':'弱']))}
   <p>最厚 <b>第${a.strongest.house}宫（${esc(a.strongest.sign)} ${a.strongest.points}）</b> · 最薄 <b>第${a.weakest.house}宫（${esc(a.weakest.sign)} ${a.weakest.points}）</b>——厚宫所主之事结构支撑足，薄宫宜后天补。</p>
   <small>${esc(a.method)}</small></article>`;})():''}
+ ${base.yogini?.valid?(()=>{const yg=base.yogini;const cur=yg.current;
+  const round=Math.floor(Math.max(0,cur?.i??0)/8),slice=yg.list.slice(round*8,round*8+8);
+  return `<article class="card liquid-glass" data-vedic-yogini><h2>Yogini 八女神短周期运 · 36 年一轮</h2>
+  <p class="thin">月亮在第 ${yg.nakNo} 宿，宿序 +3 取余 8 定起运为 <b>${esc(yg.start.zh)}（${esc(yg.start.name)}，主${esc(yg.start.lord)}）</b>，出生尚余 ${yg.balanceYears.toFixed(2)} 年。当前：${cur?`<b>${esc(cur.zh)}</b> · ${cur.ageStart}–${cur.ageEnd} 岁`:'不在所列段内'}。与 Vimshottari 交叉验证，不单独断事。</p>
+  ${table(['Yogini','主星','年数','年龄区间','当前'],slice.map(s=>[s.zh+' · '+s.name,s.lord,String(s.years),s.ageStart+'–'+s.ageEnd+' 岁',s.active?'●':'']))}
+  <p class="thin">当前段八小运：${cur?cur.antardashas.map(a=>`${esc(a.zh)}(${a.years.toFixed(2)}年${a.active?'·当前':''})`).join('、'):'—'}</p>
+  <small>${esc(yg.method)}</small></article>`;})():''}
  ${base.varshaphala?`<article class="card liquid-glass" data-vedic-varsha><h2>岁运 Varshaphala · ${base.varshaphala.year}</h2>
  <p>返照起盘 ${esc(localDisplayTime(base.varshaphala.returnUtc))}（本地） · 返照上升 <b>${esc(base.varshaphala.chart.lagna)}</b></p>
  <p>Muntha 落第 ${base.varshaphala.muntha.house} 宫（${esc(base.varshaphala.muntha.theme)}）—— 今年的实质变化多落在这个领域。</p>
@@ -121,12 +128,12 @@ export function southIndianChart(d,natal=d){
 
 export function vedicTools(ctx,host){
  const s=ctx.state.chartState.vedic??={data:ctx.state.reading.vedic,n:1,layout:'north',path:[]};
- const actions=[['分盘切换 D1–D60','varga'],['大运时序 · 四级','dasha'],['星宿全览 · 27宿/Pada','nakshatra'],['行星状态 · 燃烧/交战','states'],['力量审计 · Shadbala','shadbala'],['宫位力量 · Bhava','bhava'],['八分点 · Ashtakavarga','ashtakavarga'],['岁运 · Varshaphala','varsha']];
+ const actions=[['分盘切换 D1–D60','varga'],['大运时序 · 四级','dasha'],['Yogini 八女神运','yogini'],['星宿全览 · 27宿/Pada','nakshatra'],['行星状态 · 燃烧/交战','states'],['力量审计 · Shadbala','shadbala'],['宫位力量 · Bhava','bhava'],['八分点 · Ashtakavarga','ashtakavarga'],['岁运 · Varshaphala','varsha']];
  host.innerHTML=`<div class="tool-grid vedic-tools">${actions.map(([name,id])=>btn(name,`data-vedic-action="${id}"`)).join('')}</div><p class="thin">当前 D${s.n||1} · ${s.layout==='south'?'南印方格':'北印菱形'}。只在印度占星页显示本菜单。</p>`;
  for(const b of host.querySelectorAll('[data-vedic-action]'))b.onclick=()=>{
   const id=b.dataset.vedicAction;
   ctx.close(document.querySelector('#toolSheet'));
-  const target={varga:'[data-varga-select]',dasha:'.vedic-period',nakshatra:'[data-vedic-nakshatra]',states:'[data-vedic-states]',shadbala:'[data-vedic-shadbala]',bhava:'[data-vedic-bhava]',ashtakavarga:'[data-vedic-ashtakavarga]',varsha:'[data-vedic-varsha]'}[id];
+  const target={varga:'[data-varga-select]',dasha:'.vedic-period',yogini:'[data-vedic-yogini]',nakshatra:'[data-vedic-nakshatra]',states:'[data-vedic-states]',shadbala:'[data-vedic-shadbala]',bhava:'[data-vedic-bhava]',ashtakavarga:'[data-vedic-ashtakavarga]',varsha:'[data-vedic-varsha]'}[id];
   // 这些区块是 #vedic 的兄弟节点（位于 section.vedic-rest 内），不能在 #vedic 内查找，否则永远匹配不到。
   (ctx.root.querySelector(target)||document.querySelector(target))?.scrollIntoView({behavior:'smooth',block:'start'});
  };

@@ -172,7 +172,11 @@ try{
   await page.locator('.vedic-chart').waitFor();assert.equal(await page.locator('[data-vedic-house]').count(),12);
   await page.locator('#moduleButton').click();
   await page.locator('#moduleSheet [data-module=share]').click();
-  assert.equal(await page.locator('[data-vedic-action]').count(),8);
+  assert.equal(await page.locator('[data-vedic-action]').count(),9);
+  await page.locator('[data-vedic-action=yogini]').click();
+  assert((await page.locator('[data-vedic-yogini]').textContent()).includes('36 年'),'yogini dasha panel must render');
+  await page.locator('#moduleButton').click();
+  await page.locator('#moduleSheet [data-module=share]').click();
   await page.locator('[data-vedic-action=states]').click();
   assert(await page.locator('[data-vedic-states] .term').count()>0);
   // 点击 action 会关闭 toolSheet，切换面板前须重新打开

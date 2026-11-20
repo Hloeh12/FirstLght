@@ -435,3 +435,11 @@ NaN
 .rpt-jaimini td:first-child{color:#ff9fc9}
 .rpt-charadasha tr.rpt-now td{background:rgba(255,79,139,.16);color:#ffb6d4}
 }
+/* V0.40.0 YOGINI + VARGA TABLES */
+.rpt-yogini td:first-child{font-weight:700;color:#8c2f5f}
+.rpt-varga td:first-child{font-weight:800;color:#c2185b}
+.rpt-yogini tr.rpt-now td,.rpt-varga tr.rpt-now td{background:rgba(255,79,139,.1);font-weight:700}
+@media (prefers-color-scheme:dark){
+.rpt-yogini td:first-child,.rpt-varga td:first-child{color:#ff9fc9}
+.rpt-yogini tr.rpt-now td,.rpt-varga tr.rpt-now td{background:rgba(255,79,139,.16);color:#ffb6d4}
+}

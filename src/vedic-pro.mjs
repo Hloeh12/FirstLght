@@ -2,6 +2,7 @@ import {chart} from './chart.mjs';
 import {TROPICAL_YEAR_MS} from './time-constants.mjs';
 import {shadbala,bhavaBala,varshaphala} from './vedic-strong.mjs';
 import {ashtakavarga} from './ashtakavarga.mjs';
+import {yoginiDasha} from './yogini-dasha.mjs';
 export const DASHA_LORDS=['计都','金星','太阳','月亮','火星','罗睺','木星','土星','水星'];
 const years=[7,20,6,10,7,18,16,19,17],mansion=360/27;
 const norm=x=>((x%360)+360)%360;
@@ -31,6 +32,7 @@ export function vedicPro({birth,at}){
  result.shadbala=strong;
  result.bhavaBala=bhavaBala(result,strong);
  result.ashtakavarga=ashtakavarga(result);
+ result.yogini=yoginiDasha(result,result.at);
  const year=new Date(result.at).getUTCFullYear();
  const tz=Number(birth.city?.tz??8);
  result.varshaphala=varshaphala({

@@ -143,9 +143,25 @@ export function buildWesternDeepReport(w,at,analysis){
   `元素分布：${entries.map(([e,n])=>`${e}${n}`).join(' · ')}。主导${dominant?.[0]}元素——${({火:'行动先于思考，节奏快',土:'务实稳重，重视可落地',风:'思维活跃，重信息与交流',水:'情感丰沛，凭直觉走'})[dominant?.[0]]||''}。`,
   missing.length?`缺${missing.join('、')}元素——${missing.map(m=>({火:'行动力需要刻意练习：先做再想',土:'落地需要外挂系统：清单、日程、账本',风:'观点需要碰撞：主动找人聊',水:'情绪需要出口：艺术、水、冥想'})[m]).join('；')}。缺什么就外挂什么，不必自责。`:'四元素齐备——能量类型全面，弹性大。'
  ];
+ // 模式（基本/固定/变动）失衡：古典三分法，描述「人怎么推进事情」，与元素（能量类型）互补。
+ // analysis.modalities 由 src/analysis.mjs 统计；缺失时按本盘行星自行兜底，保证报告自足。
+ const MOD_TRAIT={基本:'开创与启动——善于起头、抓时机，弱项是虎头蛇尾',固定:'坚持与守成——耐力与定力强，弱项是抗拒改变',变动:'适应与流转——灵活善变、擅长收尾，弱项是难以持久'};
+ const MODE_OF={'白羊座':'基本','巨蟹座':'基本','天秤座':'基本','摩羯座':'基本','金牛座':'固定','狮子座':'固定','天蝎座':'固定','水瓶座':'固定','双子座':'变动','处女座':'变动','射手座':'变动','双鱼座':'变动'};
+ const modeStat=analysis?.modalities?.percentages
+  ?{percentages:analysis.modalities.percentages,dominant:analysis.modalities.dominant||[],missing:analysis.modalities.missing||[]}
+  :(()=>{const c={基本:0,固定:0,变动:0};for(const p of planets){const m=MODE_OF[signName(p.sign)];if(m)c[m]++;}const total=Object.values(c).reduce((a,b)=>a+b,0)||1;
+     return {percentages:Object.fromEntries(Object.entries(c).map(([k,v])=>[k,100*v/total])),dominant:Object.keys(c).filter(k=>c[k]===Math.max(...Object.values(c))),missing:Object.keys(c).filter(k=>!c[k])};})();
+ const mPct=modeStat.percentages;
+ const mDom=modeStat.dominant||[];
+ const modeLines=[
+  `模式分布（人怎么推进事情）：基本 ${(mPct['基本']||0).toFixed(0)}% · 固定 ${(mPct['固定']||0).toFixed(0)}% · 变动 ${(mPct['变动']||0).toFixed(0)}%。${mDom.length?`主导「${mDom.join('、')}」模式——${mDom.map(m=>MOD_TRAIT[m]).join('；')}。`:''}元素说的是「能量是什么」，模式说的是「能量怎么动」，两者合看才完整。`,
+  modeStat.missing?.length
+   ? `缺${modeStat.missing.join('、')}模式——${modeStat.missing.map(m=>({基本:'起头需要外力推动或刻意立项：先定一个明确的第一步',固定:'持久力需外挂结构：承诺、期限、问责伙伴',变动:'灵活度需刻意留白：别把计划排满，预留调整空间'})[m]).join('；')}。缺的不是能力，是可借力的习惯。`
+   : '三种模式齐备——启动、坚持、收尾都能自我供给，面对不同阶段切换弹性大。'
+ ];
  const topPatterns=patterns.slice(0,8);
  const patternSec=topPatterns.length?topPatterns:['未检出经典格局（星群/大三角/T三角）——格局不是好命的必要条件，多数人的驱动力来自紧张相位而非天赋格局。'];
- patternSec.push(...elementLines);
+ patternSec.push(...elementLines,...modeLines);
 
  /* 五、所选时点行运触发点（星历实算） */
  const TRANSIT_INFO={

@@ -57,7 +57,9 @@ function tocHtml(report){
   if(g!==last){items+=`<div class="rpt-toc-group">${esc(g)}</div>`;last=g;}
   items+=`<button type="button" class="rpt-toc-item" data-toc="${i+1}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(i+1).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`;
  });
- return `<details class="rpt-toc" aria-label="报告目录" open><summary class="rpt-toc-head"><span>目录 · 分区导航</span><span class="rpt-progress" data-rpt-progress>0%</span></summary><div class="rpt-toc-list">${items}</div></details>`;
+ // v0.41.0：目录默认收起为「点按展开」的液态玻璃入口条，不再占正文大幅篇幅；
+ // 展开后与右下角悬浮按钮唤出的侧边抽屉同源（抽屉由 app.js clone 本 list）。四体系共用本函数。
+ return `<details class="rpt-toc" aria-label="报告目录"><summary class="rpt-toc-head"><span class="rpt-toc-entry"><span class="rpt-toc-entry-ico" aria-hidden="true">☰</span><span class="rpt-toc-entry-txt">目录 · 分区导航<small>点按展开 · 选择章节</small></span></span><span class="rpt-progress" data-rpt-progress>0%</span></summary><div class="rpt-toc-list">${items}</div></details>`;
 }
 const stripTags=s=>String(s).replace(/<[^>]*>/g,'');
 const charactersOf=sections=>sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+stripTags(x.table||'').length+stripTags(x.html||'').length,0);

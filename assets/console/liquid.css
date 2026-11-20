@@ -388,6 +388,15 @@ NaN
 }
 .rpt-nav-list .rpt-toc-item.on{background:linear-gradient(135deg,#ff77aa,#ff4f8b)!important;border-color:#ff8fb6!important;color:#fff!important;box-shadow:0 4px 12px -6px rgba(255,79,139,.7)}
 .rpt-nav-list .rpt-toc-item.on .rpt-toc-no{color:#ffe0ec!important}
+/* RPT GLASS v0.41.0: 抽屉与内联目录入口的液态玻璃高光强化 */
+.rpt-nav-drawer::before{content://;position:absolute;inset:0 0 auto;height:120px;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));border-radius:18px 0 0 0}
+.rpt-nav-drawer{box-shadow:-18px 0 48px -24px rgba(112,40,76,.85),inset 1px 0 0 rgba(255,255,255,.5)!important}
+.rpt-toc>summary{cursor:pointer;transition:opacity .15s}
+.rpt-toc>summary:active{opacity:.65}
+@media (prefers-color-scheme:dark){
+.rpt-nav-drawer::before{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,0))}
+.rpt-nav-drawer{box-shadow:-18px 0 48px -24px rgba(0,0,0,.9),inset 1px 0 0 rgba(255,200,225,.14)!important}
+}
 /* VEDIC DEPTH v0.37.0 */
 .rpt-table caption{padding:4px 8px 8px;text-align:left;font-size:11.5px;line-height:1.5;color:#8c6276}
 .rpt-table td.rpt-bindu-hi{background:rgba(46,160,102,.14)!important;color:#1b7a49;font-weight:800;text-align:center}

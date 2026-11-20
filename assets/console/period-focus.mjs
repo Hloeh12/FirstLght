@@ -1,6 +1,7 @@
 // 时点专项报告的「差异化正文内核」：纯函数、无 DOM 依赖，浏览器与测试共用。
 // 设计原则：每一句都由所选时点的真实字段推导，不同时点必然产出不同文本；
 // 只做规则证据与可核对的观察，不臆造事件、不承诺结果。
+import {classicsReading} from '../../src/bazi-classics.mjs';
 
 const S = v => String(v ?? '');
 const pct = n => Number(n || 0).toFixed(1);
@@ -65,6 +66,29 @@ function bazi(scope,label,data){
   `喜用参考 ${(st.useful||[]).join('、')||'均衡'}，忌偏参考 ${(st.caution||[]).join('、')||'未单列'}；时点取舍仍以原局喜忌为准，不因一步干支改弦更张。`,
   st.roles?.note?`角色划分：${S(st.roles.note)}`:''
  ]});
+ // 4.5) v0.41.0 古籍深挖：以五部子平原著为据，按十神配置分别推事业/正财/偏财/感情与应期。
+ //      凡古籍无据者不妄断——内核对条件不足的主题只列观察点，不造事件。
+ {
+  const byName=n=>sel.find(p=>S(p.name)===n);
+  const luck=byName('大运'),year=byName('流年'),day=byName('流日');
+  const curElem=S(cur.stemElement||cur.branchElement||'');
+  const curBranchElem=S(cur.branchElement||'');
+  const useful=st.useful||nat.useful||[],caution=st.caution||nat.caution||[];
+  const avoid=st.roles?.avoid||[],enemy=st.roles?.enemy||[];
+  // 仇神(enemy)/忌神(avoid)与忌神同侧；比劫idle归中性。干支任一落喜用即按喜用论。
+  const bad=[...caution,...avoid,...enemy];
+  const role=(useful.includes(curElem)||useful.includes(curBranchElem))?'useful'
+   :(bad.includes(curElem)||bad.includes(curBranchElem))?'caution':'neutral';
+  const natalPillars=data.pillars||[];
+  out.push(...classicsReading({
+   god:S(cur.tenGod||'正官'),role,strengthKind:S(st.kind||nat.kind||'中和'),
+   gz:S(cur.stem)+S(cur.branch),monthBranch:S(natalPillars[1]?.branch||''),
+   luckName:'大运',luckGZ:luck?S(luck.stem)+S(luck.branch):'',
+   yearName:'流年',yearGZ:year?S(year.stem)+S(year.branch):'',
+   dayName:'流日',dayGZ:day?S(day.stem)+S(day.branch):'',
+   tiaoHouNote:data.tiaoHouNote||''
+  }));
+ }
  // 5~7) 事业 / 财帛 / 情缘，直接取按时点喜忌定制的建议
  for(const a of (guide.advice||[]))out.push({title:S(a.topic||'专项建议'),lines:[S(a.text)]});
  // 8) 分层时点：多步同选时逐层

@@ -343,10 +343,12 @@ test('八字流日流时：逐日成表、十二时辰带宜忌、重点日不�
  assert.match(txt,/重点日/);
  assert.ok((txt.match(/时<br>|时辰/g)||[]).length>=0);
  const html=sec.html||'';
- const hours=(html.match(/<table[^>]*rpt-hours[\s\S]*?<\/table>/)||[''])[0];
- assert.equal((hours.match(/<tr/g)||[]).length,13,'应为 1 行表头 + 十二时辰');
- const days=(html.match(/<table[^>]*rpt-days[\s\S]*?<\/table>/)||[''])[0];
- assert.ok((days.match(/<tr>/g)||[]).length>=28,'流日表应覆盖整月');
+ // v0.41.0：长表改为图像化卡片栏目（横滑流日卡 + 十二时辰卡），信息不减但直观可读
+ assert.ok((html.match(/class="rhour-card/g)||[]).length>=12,'应给出十二时辰卡片');
+ assert.ok((html.match(/class="rday-card/g)||[]).length>=28,'流日卡片应覆盖整月');
+ assert.match(html,/rpt-day-cards|rpt-hour-cards/,'须用图像化卡片容器');
+ assert.match(html,/rday-rel|rday-god/,'卡片须含十神与关系色签');
+ assert.doesNotMatch(html,/<table|<tr/,'卡片栏目不应再有长表');
  assert.doesNotMatch(txt,/undefined/);
  assert.doesNotMatch(txt,/冲日柱——[\s\S]{0,40}冲日柱/,'冲日柱不应在同一句重复出现');
  assert.doesNotMatch(txt,/<table|<tr/,'lines 不得含表格标签，否则会被渲染转义');
@@ -773,4 +775,58 @@ test('深挖v0.40：西占模式失衡（基本/固定/变动）接入格局章�
  const noTxt=noAn.sections.find(s=>s.title.startsWith('四')).lines.join('');
  assert.match(noTxt,/模式分布/,'无 analysis 时仍须自足给出模式分布');
  assert.doesNotMatch(noTxt,/undefined|NaN/);
+});
+
+test('深挖v0.41：时点详批以五部子平古籍立论，事业/正财/偏财/感情分述且古籍无据者不妄断',async()=>{
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const {focusSections}=await import('../assets/console/period-focus.mjs');
+ const {classicsReading}=await import('../src/bazi-classics.mjs');
+ const birth={name:'古籍测试',gender:'男',Y:1990,M:6,D:15,h:10,mi:30,calendar:'solar',city:CITY,useSolarTime:false,lateZishi:'next-day'};
+ const d=baziPro({birth,selection:{year:2026,month:6}});
+ const secs=focusSections('bazi','year','流年2026',d);
+ const all=secs.map(s=>s.lines.join('')).join('');
+ // 五部古籍须全部可核对引用
+ for(const book of ['滴天髓','子平真诠','穷通宝鉴','三命通会','渊海子平'])
+  assert.ok(all.includes(book),'须引用古籍 '+book);
+ // 事业/正财/偏财/感情四主题各自成章，正偏财须分开
+ for(const k of ['事业','正财','偏财','感情'])
+  assert.ok(secs.some(s=>s.title.includes(k)+' · 古籍立论'),'须有'+k+'专章');
+ assert.notEqual(secs.find(s=>s.title.includes('正财 ·')).lines[0],secs.find(s=>s.title.includes('偏财 ·')).lines[0],'正财与偏财断语不得雷同');
+ // 每条须带「古籍依据·书名·篇名」与「本盘对照」「应期观察」三段
+ const career=secs.find(s=>s.title.includes('事业 ·'));
+ assert.match(career.lines[0],/【古籍依据·[^】]+·[^】]+】/,'须标明书名·篇名');
+ assert.match(career.lines[1],/【本盘对照】/);
+ assert.match(career.lines[2],/【应期观察】/);
+ // 应期须分运/年/日三层且不承诺具体事件
+ const tm=secs.find(s=>s.title.includes('应期窗口'));
+ assert.ok(tm,'须有应期窗口章');
+ assert.match(tm.lines.join(''),/大运|流年|流日/);
+ assert.doesNotMatch(tm.lines.join(''),/流年流年|大运大运/,'不得重复标签');
+ // 内核直测：偏印旺夺食主题须有「不妄断」口径（古籍无据处）
+ const yin=classicsReading({god:'偏印',role:'caution',strengthKind:'身弱',gz:'丁卯'});
+ assert.ok(yin.some(s=>s.lines.join('').includes('不妄断')),'偏印求财须标注不妄断');
+ // 无脏数据、无英文夹杂
+ assert.doesNotMatch(all,/undefined|NaN|classic|relationships| star /,'不得有脏数据或英文夹杂');
+ // 不同十神须产出不同断语（不换汤不换药）
+ const a=classicsReading({god:'正官',role:'useful',strengthKind:'身强',gz:'丙申'});
+ const b=classicsReading({god:'七杀',role:'caution',strengthKind:'身弱',gz:'庚寅'});
+ assert.notEqual(a.map(s=>s.lines.join('')).join(''),b.map(s=>s.lines.join('')).join(''),'不同十神断语须不同');
+});
+
+test('v0.41 目录入口与防跳动：内联目录默认收起为点按展开、体系条只滚自身、骨架固定高度',async()=>{
+ const fr=await readFile(new URL('../assets/console/full-report.js',import.meta.url),'utf8');
+ assert.match(fr,/class="rpt-toc"[^>]*>/,'目录仍用 details.rpt-toc');
+ assert.doesNotMatch(fr,/<details class="rpt-toc"[^>]*\sopen>/,'内联目录不得默认展开（占大幅篇幅），须点按展开');
+ assert.match(fr,/点按展开/,'须有点击展开提示文案');
+ assert.match(fr,/rpt-toc-entry/,'须有液态玻璃入口条结构');
+ const app=await readFile(new URL('../assets/console/app.js',import.meta.url),'utf8');
+ assert.match(app,/function centerRail\(/,'体系切换条须有独立居中函数');
+ assert.match(app,/rail\.scrollLeft=Math\.max\(0,target\)/,'体系条只滚自身 scrollLeft');
+ // switchTab 内不得再对 rail 用 scrollIntoView（会连带滚动主容器导致跳动）
+ const sw=app.match(/function switchTab\([\s\S]*?\n\}/)[0];
+ assert.doesNotMatch(sw,/scrollIntoView/,'switchTab 不得用 scrollIntoView 滚祖先容器');
+ assert.match(app,/class=\"chart-loading\"/,'pending 须用固定高度骨架');
+ const css=await readFile(new URL('../assets/console/design.css',import.meta.url),'utf8');
+ assert.match(css,/\.chart-loading\{[^}]*min-height:/,'骨架须有固定最小高度避免高度突变');
+ assert.match(css,/RPT GLASS|\.rpt-toc/,'须有目录样式');
 });

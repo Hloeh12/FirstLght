@@ -81,16 +81,27 @@ function sheet(id,title,body){
  open(d);
  return d;
 }
+// v0.41.0 跳动修复：体系切换条只滚自身 scrollLeft，绝不用 scrollIntoView——
+// scrollIntoView 会连带滚动所有祖先滚动容器（含 #mainScrollView / dialog），
+// 与紧邻的 scrollTo(0,0) 相互打架，正是「输出排盘时界面跳动」的主因。
+function centerRail(){
+ const rail=$('#chartSystemSwitch');
+ if(!rail||rail.hidden)return;
+ const active=rail.querySelector('[data-system-switch][aria-pressed=true]');
+ if(!active)return;
+ const target=active.offsetLeft-(rail.clientWidth-active.offsetWidth)/2;
+ if(Math.abs(rail.scrollLeft-target)>1)rail.scrollLeft=Math.max(0,target);
+}
 function switchTab(tab,system=state.system){
  if(!['chart','insights'].includes(tab))restoreInstant();
  for(const d of document.querySelectorAll('dialog'))close(d);
  state.tab=tab;state.system=system;
  render();
+ // 同步瞬时归位，避免 smooth 滚动与随后 DOM 重建争抢滚动位置造成跳动。
  $('#mainScrollView').scrollTo?.(0,0);
  const screenEl=$('#screen');
  if(screenEl){screenEl.classList.remove('fl-swap');void screenEl.offsetWidth;screenEl.classList.add('fl-swap');}
- const rail=$('#chartSystemSwitch'),active=rail&&rail.querySelector('[data-system-switch][aria-pressed=true]');
- active?.scrollIntoView?.({block:'nearest',inline:'center',behavior:'smooth'});
+ centerRail();
 }
 function switchNavTab(tabName,index){
  if(!['cases','chart','period','insights','me'].includes(tabName))return;
@@ -1076,7 +1087,11 @@ function render(){
  forceRefreshAllInsights();
  if(state.tab==='me'){preferences();return;}
  if(!state.reading&&state.system!=='calendar'&&!(state.system==='west'&&state.chartState.west?.birthOverride)){
-  root.innerHTML=`<p class="empty">${esc(state.pending?'正在读取命盘…':state.error||'点按顶部命主气泡开始排盘。')}</p>${state.error&&state.profile?btn('重试','data-retry'):''}`;
+  // v0.41.0 跳动修复：pending 时用固定高度的骨架占位（近似盘面高度），
+  // 避免「一行加载字 → 整页盘面」的高度突变把页面顶一下。真实内容就绪后一次性替换。
+  root.innerHTML=state.pending
+   ? `<div class="chart-loading" role="status" aria-live="polite"><span class="chart-loading-ring" aria-hidden="true"></span><span>正在排盘，稍候…</span></div>`
+   : `<p class="empty">${esc(state.error||'点按顶部命主气泡开始排盘。')}</p>${state.error&&state.profile?btn('重试','data-retry'):''}`;
   const retry=$('[data-retry]',root);if(retry)retry.onclick=()=>activate(state.profile);
   return;
  }

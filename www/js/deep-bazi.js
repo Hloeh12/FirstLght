@@ -419,10 +419,34 @@ const dayFocus=days.map(d=>{
   score:(clashDay?3:0)+(clashMonth?2:0)+clash.length+(merge.some(h=>h.pillar==='日柱')?1.5:0)};
 }).filter(d=>d.clash.length||d.merge.length).sort((a,b)=>b.score-a.score);
 const dayFocusTop=dayFocus.slice(0,6).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-const dayTable=days.length?`<table class="rpt-table rpt-days"><thead><tr><th>日期</th><th>干支</th><th>十神</th><th>与原局</th></tr></thead><tbody>${days.map(d=>{
+// v0.41.0 图像化栏目：把「日期/干支/十神/与原局」长表改造成可横滑的流日卡片条。
+// 每卡：干支大字（带五行色）+ 十神徽章 + 与原局关系色签（冲=红/合=绿/刑害=橙）+ 重点日角标，
+// 信息量与表格一致，但像四柱盘面一样一眼可读，不再是一长串看不懂的字。
+const REL_TONE={六冲:'clash',六合:'merge',三合局:'merge',相刑:'warn',相害:'warn',相破:'warn'};
+const dayCards=days.length?`<div class="rpt-day-cards" role="list" aria-label="流日干支卡片">${days.map(d=>{
  const hits=relationWithNatal(d.branch,pillars);
- return `<tr><td>${(d.date||'').slice(5)}</td><td>${d.stem}${d.branch}</td><td>${d.tenGod||tenGodOf(dayStem,d.stem)||'—'}</td><td>${hits.map(h=>h.type+h.pillar).join('、')||'—'}</td></tr>`;
-}).join('')}</tbody></table>`:'';
+ const god=d.tenGod||tenGodOf(dayStem,d.stem)||'—';
+ const se=STEM_ELEM[d.stem]||'',be=BRANCH_ELEM_MAP[d.branch]||'';
+ const badges=hits.map(h=>{const tone=REL_TONE[h.type]||'warn';return `<span class="rday-rel ${tone}">${h.type}${h.pillar||''}</span>`;}).join('');
+ const key=hits.some(h=>h.type==='六冲'&&(h.pillar==='日柱'||h.pillar==='月柱'));
+ return `<div class="rday-card${key?' key':''}" role="listitem" data-e="${se}">
+  <div class="rday-top"><span class="rday-date">${(d.date||'').slice(5)}</span>${key?'<span class="rday-flag">重点</span>':''}</div>
+  <div class="rday-gz"><b data-e="${se}">${d.stem}</b><b data-e="${be}">${d.branch}</b></div>
+  <div class="rday-god">${G(god)}</div>
+  <div class="rday-rels">${badges||'<span class="rday-rel calm">平</span>'}</div>
+ </div>`;
+}).join('')}</div>`:'';
+const hourCards=hours.length?`<div class="rpt-hour-cards" role="list" aria-label="十二时辰卡片">${hours.map((h,i)=>{
+ const god=h.tenGod||tenGodOf(dayStem,h.stem);
+ const clash=relationWithNatal(h.branch,pillars).some(x=>x.type==='六冲');
+ const se=STEM_ELEM[h.stem]||'';
+ return `<div class="rhour-card${clash?' clash':''}" role="listitem" data-e="${se}">
+  <div class="rhour-label">${h.label||'—'}<small>${h.clock||''}</small></div>
+  <div class="rhour-gz"><b data-e="${se}">${h.stem}</b><b data-e="${BRANCH_ELEM_MAP[h.branch]||''}">${h.branch}</b></div>
+  <div class="rhour-god">${G(god||'正官')}</div>
+  <div class="rhour-use">${clash?'冲原局·忌硬推':(HOUR_USE[god]||'按当日主题推进')}</div>
+ </div>`;
+}).join('')}</div>`:'';
 const daySec=days.length?[
  `流日是把「择时」落到天：日干十神定当天的做事手感，日支与原局的冲合刑害定当天的剧情起伏。以下为所选流月内的全部日子。`,
  ...(dayFocusTop.length?[`【重点日】${dayFocusTop.map(d=>{
@@ -442,13 +466,8 @@ const hourSec=hours.length?[
  `流时以两小时为一个时辰，时干由当日日干按五鼠遁推出。同样的日子，挑对时辰做事，阻力会小一档。`,
  `用法：把一天里最难的那件事，放进「十神对口且不冲原局」的时辰；把纯执行的杂事，放进冲时——反正都要做，不如放在阻力本来就大的时段。`
 ]:[];
-// 表格必须走 html 字段：lines 在渲染时会被转义，塞进去只会显示成标签字面量。
-const hourTable=hours.length?`<table class="rpt-table rpt-hours"><thead><tr><th>时辰</th><th>干支</th><th>十神</th><th>宜</th></tr></thead><tbody>${hours.map((h,i)=>{
- const god=h.tenGod||tenGodOf(dayStem,h.stem);
- const clash=relationWithNatal(h.branch,pillars).some(x=>x.type==='六冲');
- return `<tr${i===Math.floor(((new Date().getHours()+1)%24)/2)?' class="rpt-now"':''}><td>${h.label||'—'}<br><small>${h.clock||''}</small></td><td>${h.stem}${h.branch}</td><td>${G(god||'正官')}</td><td>${HOUR_USE[god]||'按当日主题推进'}${clash?'；<b>此时辰冲原局，忌硬推</b>':''}</td></tr>`;
-}).join('')}</tbody></table>`:'';
-const dayHourHtml=`${dayTable||''}${hourTable||''}`;
+// 卡片栏目必须走 html 字段：lines 在渲染时会被转义，塞进去只会显示成标签字面量。
+const dayHourHtml=`${dayCards?`<div class="rday-sec"><p class="rday-sec-t">所选流月 · 流日一览（横滑查看，红=冲、绿=合、橙=刑害）</p>${dayCards}</div>`:''}${hourCards?`<div class="rday-sec"><p class="rday-sec-t">当日 · 十二时辰（择时卡片）</p>${hourCards}</div>`:''}`;
 
  const monthWindows=data.guidance?.monthWindows||[];
  const advice=[

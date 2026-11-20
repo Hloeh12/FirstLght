@@ -847,13 +847,14 @@ function periodOptions(system,scope){
   // 流年选择须覆盖「今年及未来」；从出生年顺排会让中年用户只能选到童年年份。
   const year=Math.max(birthYear,new Date().getFullYear()-2);
   if(scope==='decadal'){const list=ch.decades||[];return list.map((x,i)=>opt(x.yearRange?.[0]||year+i*10,`${(x.ageRange||[]).join('–')}岁 ${(x.yearRange||[]).join('–')} · ${x.palaceName||''}`)).join('');}
-  if(scope==='yearly'){const nowY=new Date().getFullYear();return Array.from({length:12},(_,i)=>opt(year+i,`${year+i} 年${year+i===nowY?'（今年）':''}`,year+i===nowY)).join('');}
+  if(scope==='yearly'){const nowY=new Date().getFullYear();return Array.from({length:23},(_,i)=>opt(year+i,`${year+i} 年${year+i===nowY?'（今年）':''}`,year+i===nowY)).join('');}
   if(scope==='monthly'){const nowM=new Date().getMonth()+1;return Array.from({length:12},(_,i)=>opt(i+1,`第 ${i+1} 月${i+1===nowM?'（本月）':''}`,i+1===nowM)).join('');}
   return Array.from({length:30},(_,i)=>opt(i+1,`第 ${i+1} 日`)).join('');
  }
- // vedic / west：以年+月为时点，转成 ISO
+ // vedic / west：以年+月为时点，转成 ISO。
+ // 覆盖今年往前 2 年、往后 20 年（原 length:8 只到 +5，用户反馈「西洋占只能选到 2031」）。
  const y=new Date().getFullYear();
- return Array.from({length:8},(_,i)=>opt(y-2+i,`${y-2+i} 年`)).join('');
+ return Array.from({length:23},(_,i)=>opt(y-2+i,`${y-2+i} 年${y-2+i===y?'（今年）':''}`,y-2+i===y)).join('');
 }
 /* 时点专项独立页：体系四选一 → 时点类型 → 具体时点 → 报告模式二选一 → 出盘+出详批。
    与洞见页解耦，作为主导航第五个 Tab 存在。 */
@@ -947,6 +948,9 @@ function preferences(){
  <section><h3>运行维护</h3><div class="tool-grid">${btn('运行诊断与日志','data-diagnostics')}${btn('清除排盘缓存','data-maintenance-cache')}</div><p class="thin" data-maintenance-status role="status"></p></section></div></details>
  <footer class="soul-footer"><p>缘分不过天时地利 承诺不过逝水轻浅</p><a href="/assets/console/credits.html">来源与许可</a></footer></section>`;
  wireSoul(ctx);
+ // SOUL PALETTE 卡片底部 CTA：跳到洞见页看完整深度报告（增加功能性，不改动其他入口）
+ const soulCta=$('[data-goto-insights]',root);
+ if(soulCta)soulCta.onclick=()=>switchTab('insights');
  $('[data-release-history]',root).onclick=()=>releaseHistory(ctx);
  $('[data-diagnostics]',root).onclick=()=>diagnosticsPanel(ctx);
  $('[data-maintenance-cache]',root).onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{$('[data-maintenance-status]',root).textContent=await resetCaches();}catch(error){tell(error.message);}finally{b.disabled=false;}};

@@ -56,21 +56,30 @@ export function galaxy(profile,links,page=0){
  <small>契合度取印度八项合盘双向平均分，再折算为百分比；干支与相位另列为观察线索。</small></div>`;
 }
 
+// 五行气质：优势用「擅长」，课题用「留意」——都给可落地的行动建议，取代旧版单句空泛 motto。
 const soul={
- 木:['向外生长','先给自己一小片可持续生长的空间。'],
- 火:['温暖明亮','把热情留给真正想照亮的事。'],
- 土:['安定有序','用一个能重复的习惯，让愿望落到地面。'],
- 金:['清醒有界','做减法，让重要的东西有名字。'],
- 水:['细察善变','允许方向调整，同时守住自己的节奏。']
+ 木:{t:'向外生长',edge:'擅长规划与开拓：适合从零搭框架、带新方向',watch:'留意半途换目标：给自己一小片可持续生长的空间，先深耕一处'},
+ 火:{t:'温暖明亮',edge:'擅长感染与表达：适合台前、传播与凝聚人气',watch:'留意热度分配：把热情留给真正想照亮的事，别处处点火'},
+ 土:{t:'安定有序',edge:'擅长落实与守成：适合流程、财务与长期项目',watch:'留意过度求稳：用一个能重复的习惯，让愿望分步落到地面'},
+ 金:{t:'清醒有界',edge:'擅长判断与定型：适合规则、审美与质量把关',watch:'留意过硬过冷：做减法，让重要的东西有名字，也给关系留余地'},
+ 水:{t:'细察善变',edge:'擅长洞察与应变：适合研究、策略与复杂信息',watch:'留意方向反复：允许调整，同时守住自己的节奏与主线'}
 };
+const W5=['木','火','土','金','水'];
+const W5COLOR={木:'var(--wood)',火:'var(--fire)',土:'var(--earth)',金:'var(--metal)',水:'var(--water)'};
 export function soulCard(reading,name){
  if(!reading)return '<article class="card"><h2>本命守护气质图腾</h2><p class="muted">起盘或激活案例后解锁。</p></article>';
  const {dayMaster,strength}=reading.bazi;
- const ranked=Object.entries(strength.percentages).sort((a,b)=>b[1]-a[1]);
- const [element,pct]=ranked[0],[temperament,motto]=soul[element];
- const sun=reading.western.planets.find(p=>p.key==='sun'),moon=reading.western.planets.find(p=>p.key==='moon');
- return `<article class="card soul-card liquid-glass"><span class="kicker">SOUL PALETTE · ${esc(name)}</span><h2>${esc(dayMaster.stem+dayMaster.element)} · ${temperament}</h2>
- <p>日${esc(sun?.sign)}月${esc(moon?.sign)} · 本命五行权重 ${element} ${pct.toFixed(1)}%</p><blockquote>${motto}</blockquote></article>`;
+ const pcts=strength?.percentages||{};
+ const ranked=Object.entries(pcts).sort((a,b)=>b[1]-a[1]);
+ const [element,pct]=ranked[0]||['木',0],weak=ranked.at(-1)?.[0]||'水';
+ const info=soul[element]||soul.木,weakInfo=soul[weak]||soul.水,weakPct=ranked.at(-1)?.[1]||0;
+ const sun=reading.western?.planets?.find(p=>p.key==='sun'),moon=reading.western?.planets?.find(p=>p.key==='moon');
+ const bar=W5.map(w=>`<span class="soul-w5-seg" style="flex:${Math.max(2,Number(pcts[w]||0))};background:${W5COLOR[w]}" title="${w} ${Number(pcts[w]||0).toFixed(1)}%"></span>`).join('');
+ return `<article class="card soul-card liquid-glass"><span class="kicker">SOUL PALETTE · ${esc(name||'命主')}</span><h2>${esc(dayMaster?.stem||'')}${esc(dayMaster?.element||'')} · ${esc(info.t)}</h2>
+ <p class="soul-meta">日${esc(sun?.sign||'—')}月${esc(moon?.sign||'—')} · ${esc(strength?.kind||'')} · 主导 ${esc(element)} ${Number(pct).toFixed(1)}%</p>
+ <div class="soul-w5" role="img" aria-label="五行权重分布">${bar}</div>
+ <div class="soul-mini"><div><b>天生优势 · ${esc(element)}</b><p>${esc(info.edge)}</p></div><div><b>成长课题 · ${esc(weak)} ${Number(weakPct).toFixed(1)}%</b><p>${esc(weakInfo.watch)}</p></div></div>
+ <button type="button" class="soul-cta" data-goto-insights>看完整深度报告 <span aria-hidden="true">→</span></button></article>`;
 }
 
 export function mergeBackup(data,state,space){

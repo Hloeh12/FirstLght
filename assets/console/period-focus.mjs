@@ -137,55 +137,110 @@ function ziwei(scope,label,data){
  return out;
 }
 
+/* 宫位主题 / 行星性质：时点盘的逐行星解读字典（精简副本，独立于 deep-vedic 的前端实现） */
+const V_HOUSE={1:'自我与体魄',2:'财货与家声',3:'勇气与同业',4:'居所与心境',5:'智识与子女',6:'竞争与债务',7:'伴侣与合作',8:'隐秘与转化',9:'信念与远行',10:'事业与名誉',11:'社群与收益',12:'损耗与灵修'};
+const V_NATURE={太阳:'生命力、自我与权威',月亮:'心智、情绪与记忆',火星:'行动、竞争与胆识',水星:'智力、表达与商业',木星:'智慧、扩张与贵人',金星:'美、爱与享受',土星:'纪律、时间与考验',罗睺:'欲望、颠覆与外来机遇',计都:'超脱、灵性与旧业'};
+const W_HOUSE=['自我与形象','财帛与价值','沟通与同辈','家宅与根基','创造与表达','工作与健康','伴侣与合作','转化与共财','信念与远行','事业与名望','社群与收益','潜意识与幕后'];
+const W_NATURE={太阳:'自我与生命力',月亮:'情绪与安全感',水星:'思维与沟通',金星:'爱与审美',火星:'行动与欲望',木星:'扩张与信念',土星:'结构与考验',天王星:'变革与突破',海王星:'梦想与消融',冥王星:'转化与掌控',北交点:'成长方向',南交点:'旧有惯性'};
+
 function vedic(scope,label,data){
  const v=data.vedic||{},at=S(data.at||v.at||'').slice(0,10);
  const active=v.active||null,dasha=(v.dashas||[]).find(d=>d.active)||active;
+ const transit=v.atChart||null; // 该时点的行运 D1（随所选时刻变化）
  const out=[];
+ // 1) 时点定性：本命 vs 时点行运盘，随时点变化
  out.push({title:`时点定性 · ${S(label)}`,lines:[
-  `参考时刻 ${at||'当前'}；Lahiri 恒星黄道 · 整宫制，上升 ${S(v.lagna||'—')}。`,
-  dasha?`当前主运 ${S(dasha.lord)}（${S(dasha.start||'').slice(0,10)} 起，约 ${S(dasha.years)} 年），为这一阶段的总体背景。`:'当前未定位到主运，先以本命 D1 为准。'
+  `参考时刻 ${at||'当前'}；口径为 Lahiri 恒星黄道 · 整宫制。本命上升 ${S(v.lagna||'—')} 终身不变。`,
+  transit?`该时刻在出生地另起一张行运盘：时点上升 ${S(transit.lagna||'—')}。行运盘回答「此刻天象落在我哪一宫」，本命盘回答「我是谁」，两张必须叠看，不能只看行运。`:'本次未取得时点行运盘，以下以本命盘与主运为准。'
  ]});
- // 主星落宫与力量：不同 Dasha 主星落宫与 Shadbala 不同
- if(dasha){const lord=(v.planets||[]).find(p=>p.name===dasha.lord||p.key===dasha.lord);
-  out.push({title:`主运星 · ${S(dasha.lord)}`,lines:[
-   lord?`${S(lord.name)}在本命第 ${S(lord.house)} 宫、${S(lord.sign)}，${lord.retro?'逆行，表达更反复、需反复核对':'顺行'}；星宿 ${S(lord.nakshatra||'')} Pada ${S(lord.pada||'')}。`:'主运星落宫数据未列全，先以宫主关系推断。',
-   v.shadbala?`力量参考见 Shadbala 六力：主运星强弱决定这运「能否顺畅表达」，弱则宜蓄力、借制度与贵人，强则宜主动承担。`:''
+ // 2) 时点行运盘逐行星落宫：每颗星给落宫主题、星座、逆行、宿
+ if(transit&&(transit.planets||[]).length){
+  const rows=transit.planets.map(p=>{
+   const h=Number(p.house)||0;
+   return `${S(p.name)}${p.retro?'℞':''}落第 ${S(p.house)} 宫（${V_HOUSE[h]||'—'}）· ${S(p.sign)}${p.nakshatra?' · '+S(p.nakshatra)+'宿':''}${p.nakLord?'（宿主'+S(p.nakLord)+'）':''}`;
+  });
+  out.push({title:'时点行运盘 · 逐行星落宫',lines:[
+   ...rows,
+   `读法：行星落宫指出「此刻哪块生活被点亮」；${V_NATURE['木星']}落宫多为助力，${V_NATURE['土星']}、${V_NATURE['火星']}落宫多带考验与行动压力，影曜（罗睺/计都）落宫则强调非常规的牵引。逆行表示主题反复、宜核对不宜急定。`
   ]});
  }
- if(v.varshaphala)out.push({title:'岁运 Varshaphala',lines:[
-  `${S(v.varshaphala.year||at.slice(0,4))} 年太阳返照盘已起：以返照盘看该年重心，并以 D1 本命为根，不脱离本命单独以岁运断事。`
- ]});
- out.push({title:'分盘与读法',lines:[
-  `D1 定底盘、D9 看关系成熟度、D10 看事业表达；分盘与岁运看阶段，吉凶须回扣 D1 宫主与行星力量。`,
-  `本报告依传统 Parmesari/Vimshottari 与分盘规则生成，不构成事实预测、投资或医疗意见。`
+ // 3) 过境对照：本命行星与时点行星的宫位差异，指出「哪颗星换了宫」
+ if(transit&&(v.planets||[]).length&&(transit.planets||[]).length){
+  const moved=(transit.planets||[]).map(tp=>{
+   const bp=(v.planets||[]).find(p=>p.key===tp.key||p.name===tp.name);
+   if(!bp||Number(bp.house)===Number(tp.house))return null;
+   return `${S(tp.name)} 从本命第 ${S(bp.house)} 宫（${V_HOUSE[Number(bp.house)]||'—'}）过境到时点第 ${S(tp.house)} 宫（${V_HOUSE[Number(tp.house)]||'—'}）`;
+  }).filter(Boolean);
+  out.push({title:'过境对照 · 换宫的行星',lines: moved.length
+   ? [...moved.slice(0,9),`换宫的行星是本次时点最值得关注的触发点：过境到角宫（1/4/7/10）主题更外显，过境到续宫（2/5/8/11）多关乎资源与积累，过境到果宫（3/6/9/12）偏日常与幕后。`]
+   : ['本次时点盘的行星落宫与本命相同，未见明显换宫；此阶段以主运与岁运为主题，过境触发相对平静。']
+  });
+ }
+ // 4) 主运星深度：落宫 + Shadbala 力量 + 功能吉凶
+ if(dasha){const lord=(v.planets||[]).find(p=>p.name===dasha.lord||p.key===dasha.lord);
+  const sb=(v.shadbala?.rows||[]).find(r=>r.name===dasha.lord);
+  out.push({title:`主运星深度 · ${S(dasha.lord)}`,lines:[
+   lord?`${S(dasha.lord)}在本命第 ${S(lord.house)} 宫（${V_HOUSE[Number(lord.house)]||'—'}）、${S(lord.sign)}，${lord.retro?'逆行，主题反复且需多次核对':'顺行'}；星宿 ${S(lord.nakshatra||'')} Pada ${S(lord.pada||'')}，宿主 ${S(lord.nakLord||'—')}。`:'主运星本命落宫数据未列全，以宫主关系推断。',
+   `时段 ${S(dasha.start||'').slice(0,10)} 至 ${S(dasha.end||'').slice(0,10)}（约 ${S(dasha.years)} 年）。主运星所落之宫，是这一阶段持续兑现的主战场。`,
+   sb?`力量参考 Shadbala：${S(dasha.lord)}合计 ${Number(sb.rupas||0).toFixed(2)} Rupa（参考线 ${Number(sb.minimum||0).toFixed(1)}，${sb.meets?'达标':'略低'}；短板在${S(sb.weakestPart?.[0]||'—')}）。${sb.meets?'力量足，此运主题较能主动兑现。':'力量偏弱，宜借制度、贵人与长期积累，不宜硬碰硬。'}`:'本盘未提供 Shadbala 分项，力量强弱以庙旺与宫主关系定性。'
+  ]});
+ }
+ // 5) 岁运 Varshaphala：返照盘上升与关键落宫
+ if(v.varshaphala){
+  const vc=v.varshaphala.chart||{},vp=vc.planets||[];
+  out.push({title:`岁运 Varshaphala · ${S(v.varshaphala.year||at.slice(0,4))} 年`,lines:[
+   `${S(v.varshaphala.year||'')} 年太阳返照盘：上升 ${S(vc.lagna||'—')}，虚岁 ${S(v.varshaphala.age||'—')}。返照盘看该年重心，D1 本命为根，不脱离本命单独以岁运断事。`,
+   vp.length?`返照盘要点：${vp.slice(0,6).map(p=>`${S(p.name)}第${S(p.house)}宫（${V_HOUSE[Number(p.house)]||'—'}）`).join('、')}。与行运盘、主运同主题处，是该年较明确的着力点。`:'返照盘未列出行星落宫细项，以返照上升与 D1 叠看为主。'
+  ]});
+ }
+ out.push({title:'读法与边界',lines:[
+  `三盘叠看：D1 定「我是谁」、时点行运盘定「此刻触发哪一宫」、Varshaphala 定「这一年主轴」；主运星定「这一阶段的大背景」。四者同指向的主题最值得核对，冲突处宜保守。`,
+  `本报告依 Lahiri 恒星黄道整宫制、Vimshottari 主运与 Shadbala 规则生成，只作传统术数文化观察，不构成事实预测、投资或医疗意见。`
  ]});
  return out;
 }
 
 function west(scope,label,data){
  const w=data.western||{},mode=S(data.mode||w.mode||'transit'),at=S(data.at||'').slice(0,16).replace('T',' ');
+ const outer=w.outer||w.chart||null; // 行运盘（随时点变化）；本命盘为 w.chart
+ const natal=w.chart||null;
  const out=[];
  const modeText={secondary:'次限（一日推一年，看阶段性内在成长）',solar:'太阳返照（生辰太阳回归时刻立盘，主一年）',
   profection:'小限（按年龄轮值宫主星，看年度主题）',transit:'行运（当下行星过境本命宫位，看短期触发）',
   lunar:'月亮返照（月度情绪与生活节奏）',firdaria:'法达（按行星主时分段）'}[mode]||'推运';
  out.push({title:`时点定性 · ${S(label)}`,lines:[
   `参考时刻 ${at||'当前'}；推运法 ${modeText}。`,
-  `推运盘须与本命同看：推运星落到本命哪一宫、与本命星成何相位，才构成可核对的时点证据。`
+  natal?`本命盘为根（终身不变），行运盘为「此刻天象」：两者叠看才构成可核对的证据——行运星落到本命哪一宫、与本命星成何相位，才是本时点的重点。`:'本次未取得本命盘细项，以下以行运盘与相位为准。'
  ]});
- // 推运相位：逐条列出，随时刻变化
- const cross=(w.cross||w.natalCross||[]).filter(a=>a&&a.type).slice(0,10);
+ // 2) 行运行星逐颗落本命宫：每颗给宫位主题、星座、逆行、尊贵度
+ if(outer&&(outer.planets||[]).length){
+  const rows=(outer.planets||[]).filter(p=>p&&p.key&&p.key!=='northnode'&&p.key!=='southnode').map(p=>{
+   const h=Number(p.house)||0;
+   return `${S(p.name)}${p.retro?'℞':''}落本命第 ${S(p.house)} 宫（${W_HOUSE[h-1]||'—'}）· ${S(p.sign)}${p.degree?' '+p.degree.degrees+'°'+p.degree.minutes+'′':''}${p.dignity&&p.dignity!=='中性'?' · '+S(p.dignity):''}`;
+  });
+  out.push({title:'行运行星 · 逐颗落本命宫',lines:[
+   ...rows,
+   `读法：行运星落宫指出「此刻被点亮的领域」；${W_NATURE['木星']}、${W_NATURE['金星']}过境多带助力与舒缓，${W_NATURE['土星']}、${W_NATURE['火星']}过境多带结构压力与行动要求，外行星（天王/海王/冥王）过境主长期背景转变。逆行表示该主题反复，宜复盘不宜急定。`
+  ]});
+ }
+ // 3) 推运相位逐条：星×相位×角度×容许度×性质×进/出相位
+ const cross=(w.cross||w.natalCross||[]).filter(a=>a&&a.type);
+ const harm=cross.filter(a=>/[合三分六分拱]/.test(S(a.type))).length,tens=cross.filter(a=>/[刑冲四分对分]/.test(S(a.type))).length;
  out.push({title:'推运相位 · 星×宫×容许度',lines: cross.length
-  ? cross.map(a=>`${S(a.a||'')} 与 ${S(a.b||'')} 成${S(a.type)}（${S(a.angle)}°，容许度 ${Number(a.orb||0).toFixed(1)}°）${crossTone(a)}。`)
-  : [`本步容许度内未检出显著推运相位；以宫位与宫主星为主，不制造相位。`]});
- if(w.profection)out.push({title:'小限宫主',lines:[
-  `本年小限落第 ${S(w.profection.house)} 宫（${S(w.profection.sign)}），宫主星 ${S(w.profection.ruler)}${w.profection.lordHouse?'（本命第'+S(w.profection.lordHouse)+'宫）':''}；小限看年度主题，须与行运触发同参。`
+  ? [...cross.slice(0,12).map(a=>`${S(a.a)} 与 ${S(a.b)} 成${S(a.type)}（${Number(a.angle)}°，容许度 ${Number(a.orb||0).toFixed(1)}°）${crossTone(a)}${a.applying===true?'，正在形成（ applying，能量上升）':a.applying===false?'，正在分离（出相位，余波）':''}。`),
+     `本次共 ${cross.length} 条推运相位：和谐相 ${harm} 条、张力相 ${tens} 条。${harm>tens?'整体以支持与顺势为主，宜主动推进。':tens>harm?'整体以压力与调整为底，宜先立边界、分步走。':'支持与压力相当，按宫位领域分别核对。'}单一相位不定事件，须容许度内且多证据同向才计。`]
+  : ['本步容许度内未检出显著推运相位；以行运落宫与宫主星为主，不制造相位。']});
+ if(w.profection)out.push({title:'小限宫主 · 年度主题',lines:[
+  `本年小限落第 ${S(w.profection.house)} 宫（${S(w.profection.sign)}，主${W_HOUSE[Number(w.profection.house)-1]||'—'}），宫主星 ${S(w.profection.ruler)}${w.profection.lordHouse?'（本命第'+S(w.profection.lordHouse)+'宫）':''}。`,
+  `小限定「今年的主题领域」，行运定「何时触发」；宫主星所落宫位指出该主题的现实落点，两者同宫时主题最集中。`
  ]});
  if(w.firdaria)out.push({title:'法达主时',lines:[
-  `当前法达主星 ${S(w.firdaria.active?.lord||'—')}，为该阶段的生活方式底色；主星所落宫位与相位决定表达方式。`
+  `当前法达主星 ${S(w.firdaria.active?.lord||'—')}，为该阶段的生活方式底色${w.firdaria.sub?'，副主星 '+S(w.firdaria.sub?.lord||''):''}；主星所落宫位与相位决定表达方式。`,
+  `法达看「较长时段的底色」，与行运的「当下触发」叠加：底色星与行运星同性质时，该主题更集中显现。`
  ]});
  out.push({title:'读法与边界',lines:[
-  `把推运点到的宫位领域作为近期复盘重点，结合现实的资源、期限与关系核对；单一相位不当事件，容许度内才计。`,
-  `本报告依传统占星推运规则生成，不构成事实预测、投资、法律或医疗意见。`
+  `三件事叠看：行运行星「落在哪一宫」＝被点亮的领域；推运相位「哪两颗星成什么角」＝以何种方式互动；小限/法达「值年星是谁」＝年度或阶段主题。三者同指一处，才是最值得核对的时点重点。`,
+  `本报告依古典占星推运与容许度规则生成，只作传统术数文化观察，不构成事实预测、投资、法律或医疗意见。`
  ]});
  return out;
 }

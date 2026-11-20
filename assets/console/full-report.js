@@ -80,10 +80,10 @@ function tocHtml(report){
   if(g!==last){items+=`<div class="rpt-toc-group">${esc(g)}</div>`;last=g;}
   items+=`<button type="button" class="rpt-toc-item" data-toc="${i+1}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(i+1).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`;
  });
- // v0.43.0：目录入口条默认收起，点击后由 app.js 唤起「从底部升起的液态玻璃章节面板」。
- // 不再就地展开横向 rail。保留 details.rpt-toc / data-toc / 点按展开 等契约钩子，
- // 内联 list 作为唯一章节数据源，被 app.js clone 到底部面板，两处高亮同源。
- return `<details class="rpt-toc" aria-label="报告目录"><summary class="rpt-toc-head"><span class="rpt-toc-entry"><span class="rpt-toc-entry-ico" aria-hidden="true">☰</span><span class="rpt-toc-entry-txt">目录 · 分区导航<small>点按展开 · 玻璃面板选章</small></span></span><span class="rpt-progress" data-rpt-progress>0%</span></summary><div class="rpt-toc-list" role="group" aria-label="章节选择">${items}</div></details>`;
+ // v0.46：按用户要求取消正文中间的「目录 · 分区导航」入口条，目录改为只由右下角 FAB 唤起。
+ // 这里保留隐藏的 details.rpt-toc 作为唯一章节数据源：app.js 克隆其中的 .rpt-toc-list 到浮层，
+ // 两处高亮同源、契约钩子（details.rpt-toc / data-toc）不破，但正文不再出现可见入口条。
+ return `<details class="rpt-toc" hidden aria-label="报告目录"><div class="rpt-toc-list" role="group" aria-label="章节选择">${items}</div></details>`;
 }
 const stripTags=s=>String(s).replace(/<[^>]*>/g,'');
 const charactersOf=sections=>sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+stripTags(x.table||'').length+stripTags(x.html||'').length,0);

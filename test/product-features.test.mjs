@@ -815,10 +815,9 @@ test('深挖v0.41：时点详批以五部子平古籍立论，事业/正财/偏�
 
 test('v0.41 目录入口与防跳动：内联目录默认收起为点按展开、体系条只滚自身、骨架固定高度',async()=>{
  const fr=await readFile(new URL('../assets/console/full-report.js',import.meta.url),'utf8');
- assert.match(fr,/class="rpt-toc"[^>]*>/,'目录仍用 details.rpt-toc');
- assert.doesNotMatch(fr,/<details class="rpt-toc"[^>]*\sopen>/,'内联目录不得默认展开（占大幅篇幅），须点按展开');
- assert.match(fr,/点按展开/,'须有点击展开提示文案');
- assert.match(fr,/rpt-toc-entry/,'须有液态玻璃入口条结构');
+ assert.match(fr,/<details class="rpt-toc" hidden/,'v0.46 正文目录入口条已取消，目录数据源须隐藏保留供浮层克隆');
+ assert.doesNotMatch(fr,/<summary class="rpt-toc-head"/,'不得再有可见的正文目录入口条');
+ assert.match(fr,/rpt-toc-list/,'隐藏数据源仍须含 rpt-toc-list 供 app.js 克隆到浮层');
  const app=await readFile(new URL('../assets/console/app.js',import.meta.url),'utf8');
  assert.match(app,/function centerRail\(/,'体系切换条须有独立居中函数');
  assert.match(app,/rail\.scrollLeft=Math\.max\(0,target\)/,'体系条只滚自身 scrollLeft');

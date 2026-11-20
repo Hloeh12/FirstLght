@@ -446,3 +446,22 @@ test('八字七列详盘：默认七列完全可见（minmax(0,1fr) 不把流年
  const app=await read('../assets/console/app.js');
  assert.match(app,/cap\.textContent=`当前落点/,'切换器须同步更新盘内 caption');
 });
+
+test('v0.46 目录条取消/年份扩展/浮层深色/时点详批/SOUL块',async()=>{
+ const fr=await read('../assets/console/full-report.js');
+ assert.match(fr,/<details class="rpt-toc" hidden/,'正文中间目录入口条须取消，仅保留隐藏数据源供浮层克隆');
+ assert.doesNotMatch(fr,/<summary class="rpt-toc-head"/,'不得再有可见的 rpt-toc 入口条');
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/length:23/,'vedic/west 时点年份须扩到今年前后 23 年（不再只到 +5）');
+ assert.match(app,/data-goto-insights/,'SOUL 卡片 CTA 须接到洞见页');
+ const liq=await read('../assets/console/liquid.css');
+ assert.match(liq,/\.rpt-nav-drawer\{[\s\S]{0,400}background:linear-gradient\(160deg,rgba\(48,38,56/,'目录浮层须深色玻璃，不得纯白外框');
+ assert.match(liq,/\.soul-w5\{/,'SOUL 五行权重条样式须在包内');
+ const pf=await read('../assets/console/period-focus.mjs');
+ assert.match(pf,/function vedic\([\s\S]{0,4000}逐行星落宫/,'印占时点详批须含逐行星落宫详细解释');
+ assert.match(pf,/function vedic\([\s\S]{0,5000}过境对照/,'印占时点详批须含过境对照');
+ assert.match(pf,/function west\([\s\S]{0,4000}逐颗落本命宫/,'西占时点详批须含逐颗行运行星落宫');
+ assert.match(pf,/apply|applying/,'西占相位须区分形成中/出相位');
+ const cs=await read('../assets/console/case-space.js');
+ assert.match(cs,/soul-mini[\s\S]{0,300}天生优势[\s\S]{0,300}成长课题/,'SOUL 卡片须有优势/课题双栏取代单句 motto');
+});

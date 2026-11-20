@@ -565,10 +565,11 @@ input,select,textarea{font-size:16px!important}
  position:absolute!important;top:auto!important;left:auto!important;right:12px!important;bottom:70px!important;
  width:min(300px,calc(100% - 24px))!important;max-width:none!important;height:auto!important;
  max-height:min(44vh,380px)!important;max-height:min(44dvh,380px)!important;
- border-radius:20px!important;border:1px solid rgba(255,255,255,.9)!important;
- background:linear-gradient(160deg,rgba(255,255,255,.99),rgba(255,247,252,.985) 46%,rgba(249,243,255,.99))!important;
- backdrop-filter:blur(40px) saturate(220%)!important;-webkit-backdrop-filter:blur(40px) saturate(220%)!important;
- box-shadow:0 20px 48px -18px rgba(112,40,76,.5),inset 0 1.5px 0 rgba(255,255,255,.98),inset 0 -1px 0 rgba(255,158,198,.2)!important;
+ border-radius:20px!important;border:1px solid rgba(255,255,255,.14)!important;
+ background:linear-gradient(160deg,rgba(48,38,56,.97),rgba(34,27,44,.965) 46%,rgba(40,30,50,.97))!important;
+ backdrop-filter:blur(40px) saturate(200%)!important;-webkit-backdrop-filter:blur(40px) saturate(200%)!important;
+ box-shadow:0 20px 48px -18px rgba(30,12,24,.62),inset 0 1.5px 0 rgba(255,255,255,.12),inset 0 -1px 0 rgba(255,158,198,.1)!important;
+ color:#f3e8f0!important;
  transform:translateY(10px) scale(.97);transform-origin:bottom right;opacity:0;pointer-events:none;
  transition:transform .26s cubic-bezier(.22,1,.36,1),opacity .22s ease!important;
  padding:6px 0 8px!important;overflow:hidden;z-index:60;
@@ -576,8 +577,8 @@ input,select,textarea{font-size:16px!important}
 .report-content.rpt-nav-open .rpt-nav-drawer{transform:translateY(0) scale(1)!important;opacity:1!important;pointer-events:auto!important}
 /* 浮层小尖角指向 FAB */
 .rpt-nav-drawer::after{content:"";position:absolute;right:22px;bottom:-7px;width:14px;height:14px;
- background:rgba(255,250,252,.96);border-right:1px solid rgba(255,255,255,.9);border-bottom:1px solid rgba(255,158,198,.2);
- transform:rotate(45deg);box-shadow:3px 3px 8px -5px rgba(112,40,76,.3)}
+ background:rgba(40,31,48,.97);border-right:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,158,198,.12);
+ transform:rotate(45deg);box-shadow:3px 3px 8px -5px rgba(20,8,16,.6)}
 /* 浮层无需底部把手 */
 .rpt-nav-grip{display:none!important}
 .rpt-nav-drawer::before{height:70px!important;border-radius:20px 20px 0 0!important}
@@ -586,11 +587,17 @@ input,select,textarea{font-size:16px!important}
 .rpt-nav-head{padding:7px 12px 4px!important}.rpt-nav-head small{font-size:10px!important}
 .rpt-nav-progress{padding:3px 12px 5px!important;font-size:10.5px!important}
 /* 章节：单列紧凑小卡片（图标圆盘 + 文字），像系统菜单 */
-.rpt-nav-list{padding:0 7px!important;max-height:min(28vh,232px)!important;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(255,253,254,.9),rgba(255,249,253,.9));border-radius:12px}
+.rpt-nav-list{padding:0 7px!important;max-height:min(28vh,232px)!important;overflow-y:auto;-webkit-overflow-scrolling:touch;background:transparent!important;border-radius:12px}
 .rpt-nav-list .rpt-toc-list{display:flex;flex-direction:column;gap:4px}
-.rpt-nav-list .rpt-toc-group{margin:6px 5px 1px!important;font-size:10px}
-.rpt-nav-list .rpt-toc-item{min-height:32px!important;padding:5px 9px!important;font-size:11.5px!important;border-radius:10px!important;gap:7px}
-.rpt-nav-list .rpt-toc-item .rpt-toc-no{min-width:20px;height:20px;border-radius:7px;font-size:10px}
+.rpt-nav-list .rpt-toc-group{margin:6px 5px 1px!important;font-size:10px;color:#ff9fc9!important}
+.rpt-nav-list .rpt-toc-item{min-height:32px!important;padding:5px 9px!important;font-size:11.5px!important;border-radius:10px!important;gap:7px;
+ background:linear-gradient(150deg,rgba(58,46,68,.92),rgba(44,35,56,.88))!important;border:1px solid rgba(255,164,206,.18)!important;color:#f0d5e2!important}
+.rpt-nav-list .rpt-toc-item .rpt-toc-no{min-width:20px;height:20px;border-radius:7px;font-size:10px;background:rgba(255,164,206,.14);color:#ff9fc9!important}
+/* 目录头部文字随深色浮层反白 */
+.rpt-nav-head b{color:#f7e9f1!important}.rpt-nav-head small{color:#c9a9bd!important}
+.rpt-nav-drawer .icon{color:#f7e9f1!important;background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.18)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.16)!important}
+.rpt-nav-progress{color:#c9a9bd!important}.rpt-nav-progress b{color:#ff9fc9!important}
+.rpt-nav-tip{color:#b99bad!important}
 .rpt-nav-tip{padding:6px 12px 2px!important;font-size:10px!important}
 @media (prefers-color-scheme:dark){
 .rpt-nav-drawer{background:linear-gradient(160deg,rgba(44,36,52,.96),rgba(32,26,40,.94))!important;border-color:rgba(255,255,255,.14)!important;color:#eee4ec}
@@ -625,3 +632,25 @@ input,select,textarea{font-size:16px!important}
 @media (prefers-color-scheme:dark){
 .rpt-sec p .rp-key{color:#f7a9cd;background:linear-gradient(180deg,transparent 68%,rgba(255,120,178,.24) 68%)}
 }
+
+/* ============================================================
+   SOUL PALETTE v0.46 —— 五行权重小块 + 优势/课题双栏 + 深度报告入口
+   用可核对的五行权重取代旧版单句空泛说明，功能上接洞见页。
+   ============================================================ */
+.soul-card .soul-meta{margin:2px 0 8px!important;font-size:11.5px!important;color:var(--muted)!important}
+.soul-w5{display:flex;gap:2px;height:8px;border-radius:6px;overflow:hidden;margin:2px 0 12px;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
+.soul-w5-seg{display:block;min-width:6px;opacity:.82}
+.soul-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+.soul-mini>div{padding:8px 9px;border-radius:12px;background:linear-gradient(150deg,rgba(255,255,255,.7),rgba(255,240,247,.55));border:1px solid rgba(255,182,206,.3)}
+.soul-mini b{display:block;font-size:11px;font-weight:800;color:#a8326a;margin-bottom:3px}
+.soul-mini p{margin:0;font-size:11.5px;line-height:1.6;color:var(--ink-secondary)}
+.soul-cta{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:38px;border:1px solid rgba(255,255,255,.85);border-radius:12px;
+ background:linear-gradient(135deg,#ff7cb0,#ff4f8b);color:#fff;font-weight:750;font-size:12px;box-shadow:0 8px 18px -10px rgba(196,42,105,.85)}
+.soul-cta span{font-size:15px;line-height:1}
+@media (prefers-color-scheme:dark){
+.soul-mini>div{background:linear-gradient(150deg,rgba(52,42,62,.9),rgba(42,34,52,.85));border-color:rgba(255,164,206,.2)}
+.soul-mini b{color:#ff9fc9}
+.soul-mini p{color:#e7d8e2}
+.soul-card .soul-meta{color:#bfa9bb!important}
+}
+@media (max-width:360px){.soul-mini{grid-template-columns:1fr}}

@@ -41,3 +41,39 @@ export const zodiacNames=['白羊','金牛','双子','巨蟹','狮子','处女',
 export function periodSections(report){
  return report.sections.map(section=>`<section><h4>${esc(section.title)}</h4>${section.lines.map(line=>'<p>'+esc(line)+'</p>').join('')}</section>`).join('');
 }
+
+// 报告正文读感优化：把超长段在中点断句处拆成两段；每段只高亮开头一个「短结论短语」，
+// 而不是整句。中文长句靠逗号/顿号串联，若按整句高亮会几乎把整段染成粉色，反而更刺眼
+// （旧实现的问题）。这里只取开头到第一个语义停顿（：。！？；，）、且长度不超过 22 字
+// 的片段作为强调；若开头就是长并列短语（逗号隔断），只取第一个顿号/逗号前的短词。
+// 仅处理纯文本，保留 esc 转义与术语按钮的 data-term 委托。
+const RP_BREAK=/[：:。！？；;，,]/;
+function rpEmphasis(text){
+ // 取开头短结论：优先到第一个语义标点；否则硬截到 22 字（在就近空格/顿号处收尾）。
+ const m=text.match(RP_BREAK);
+ let end=m?m.index+1:Math.min(text.length,22);
+ if(end<2)end=Math.min(text.length,22); // 标点在开头（如引号后）时退化为硬截
+ if(end>22){
+  const sub=text.slice(0,22);
+  const cut=Math.max(sub.lastIndexOf('、'),sub.lastIndexOf(' '));
+  end=cut>8?cut+1:22;
+ }
+ return end>=text.length?{key:text,rest:''}:{key:text.slice(0,end),rest:text.slice(end)};
+}
+export function renderReportPara(line){
+ const text=String(line??"");
+ if(!text.trim())return "";
+ const sents=text.match(/[^。；！？]+[。；！？]?/g)||[text];
+ let splitAt=-1;
+ if(sents.length>1&&text.length>108){
+  let acc=0,best=Infinity;
+  for(let i=0;i<sents.length-1;i++){acc+=sents[i].length;const d=Math.abs(acc-text.length/2);if(d<best){best=d;splitAt=i;}}
+ }
+ const para=seg=>{
+  if(!seg||!seg.trim())return "";
+  const {key,rest}=rpEmphasis(seg);
+  return `<p><strong class="rp-key">${esc(key)}</strong>${esc(rest)}</p>`;
+ };
+ if(splitAt<0)return para(text);
+ return para(sents.slice(0,splitAt+1).join(''))+para(sents.slice(splitAt+1).join(''));
+}

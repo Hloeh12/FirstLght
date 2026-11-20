@@ -337,16 +337,24 @@ input,select,textarea{font-size:16px!important}
 .period-sys,.period-mode{background:rgba(46,38,54,.7);border-color:rgba(255,138,184,.28)}
 .period-sys.on,.period-mode.on{background:rgba(255,79,139,.16);border-color:#ff4f8b}
 }
-/* RPT BAZI GRID v0.36.1 */
-/* 报告内八字时点详盘：列数随所选时点动态变化，容器过窄时横向滚动，避免塌陷成竖排 */
+/* RPT BAZI GRID v0.45 —— 七列自适应平分容器，默认完整可见（含流年/流月），不再强制最小宽把列顶出屏幕 */
 .rpt-chart-stage{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .rpt-chart-stage .snap-bazi{min-width:0}
-.bazi-grid.rpt-bazi-grid{grid-template-columns:34px repeat(var(--bg-cols,4),minmax(58px,1fr));min-width:calc(34px + var(--bg-cols,4) * 58px)}
-.bazi-grid.rpt-bazi-grid .bg-label{font-size:10px}
-.bazi-grid.rpt-bazi-grid .bg-cell{padding:5px 1px}
+.bazi-grid.rpt-bazi-grid{grid-template-columns:26px repeat(var(--bg-cols,4),minmax(0,1fr));min-width:0;width:100%;table-layout:fixed}
+.bazi-grid.rpt-bazi-grid .bg-label{font-size:9.5px;letter-spacing:0}
+.bazi-grid.rpt-bazi-grid .bg-cell{padding:4px 0;overflow-wrap:anywhere}
 .bazi-grid.rpt-bazi-grid .bg-hidden{min-height:46px}
+/* 七列时压缩单元格字号/间距，保证十神、藏干在窄列里仍可读 */
+.bazi-grid.rpt-bazi-grid[style*="--bg-cols:7"] .hz2,
+.bazi-grid.rpt-bazi-grid[style*="--bg-cols:6"] .hz2{flex-direction:column;gap:0;font-size:10px}
+.bazi-grid.rpt-bazi-grid[style*="--bg-cols:7"] .hz2 .term,
+.bazi-grid.rpt-bazi-grid[style*="--bg-cols:6"] .hz2 .term{font-size:10.5px!important}
+.bazi-grid.rpt-bazi-grid[style*="--bg-cols:7"] .bg-head b,
+.bazi-grid.rpt-bazi-grid[style*="--bg-cols:6"] .bg-head b{font-size:9.5px;letter-spacing:0}
 .rpt-chart .bazi-grid .term{cursor:pointer}
-@media (max-width:420px){.rpt-chart{padding:10px}.bazi-grid.rpt-bazi-grid{min-width:calc(34px + var(--bg-cols,4) * 48px)}}
+.bf-snap-caption{margin:10px 2px 0!important;font-size:11px!important;line-height:1.6!important;color:#9a6b86!important;text-align:center!important}
+@media (prefers-color-scheme:dark){.bf-snap-caption{color:#c99bb4!important}}
+@media (max-width:420px){.rpt-chart{padding:8px}}
 /* PMODE STATE v0.36.1 */
 .period-mode .pmode-title{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
 .period-mode .pmode-check{display:inline-flex;align-items:center;justify-content:center;flex:0 0 20px;width:20px;height:20px;border-radius:50%;font-size:13px;font-style:normal;font-weight:800;color:transparent;border:1.5px solid rgba(255,79,139,.4);transition:.18s}
@@ -362,7 +370,7 @@ input,select,textarea{font-size:16px!important}
 .report-content{position:relative}
 .rpt-nav-fab{position:absolute;z-index:12;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:9px 13px;border:1px solid rgba(255,255,255,.85)!important;border-radius:999px!important;background:linear-gradient(135deg,#ff7cb0,#ff4f8b)!important;color:#fff!important;font-size:12px!important;font-weight:700!important;box-shadow:0 10px 26px -10px rgba(196,42,105,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .rpt-nav-fab-ico{font-size:14px;line-height:1}
-.rpt-nav-fab [data-rpt-fab-label]{max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rpt-nav-fab [data-rpt-fab-label]{flex:0 1 auto;min-width:0;max-width:clamp(88px,34vw,148px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rpt-nav-pct{font-variant-numeric:tabular-nums;font-size:11px;padding-left:6px;border-left:1px solid rgba(255,255,255,.5)}
 .rpt-nav-scrim{position:absolute;inset:0;z-index:20;background:rgba(38,18,31,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
 .rpt-nav-drawer{position:absolute;top:0;right:0;bottom:0;z-index:21;width:min(84%,320px);display:flex;flex-direction:column;min-height:0;transform:translateX(105%);transition:transform .26s cubic-bezier(.22,.82,.24,1);background:rgba(255,252,253,.96)!important;border-left:1px solid rgba(255,182,206,.5);border-radius:18px 0 0 18px;box-shadow:-14px 0 40px -22px rgba(112,40,76,.75);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);padding:calc(10px + env(safe-area-inset-top,0px)) 0 calc(10px + env(safe-area-inset-bottom,0px));visibility:hidden}
@@ -534,4 +542,86 @@ input,select,textarea{font-size:16px!important}
 .rpt-nav-list .rpt-toc-item .rpt-toc-no{background:rgba(255,164,206,.12);color:#ff9fc9}
 .rpt-nav-list .rpt-toc-group{color:#ff9fc9}
 .rpt-nav-list .rpt-toc-group::after{background:linear-gradient(90deg,rgba(255,164,206,.4),transparent)}
+}
+/* 七列八字盘时点切换器：对标专业盘的「选运→出盘」交互 */
+.bazi-flow-picker{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border-radius:16px}
+.bazi-flow-picker label{display:flex;flex-direction:column;gap:4px;flex:1 1 120px;min-width:104px;font-size:10.5px;font-weight:800;letter-spacing:.06em;color:#a8326a}
+.bazi-flow-picker select{width:100%;appearance:none;-webkit-appearance:none;min-height:38px;padding:7px 26px 7px 10px;border-radius:11px;font-size:12.5px;font-weight:600;color:#5c3348;
+ background:linear-gradient(150deg,rgba(255,255,255,.96),rgba(255,240,247,.9))!important;border:1px solid rgba(255,255,255,.9)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 5px 12px -8px rgba(168,44,94,.4);
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23b06a8a' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")!important;
+ background-repeat:no-repeat!important;background-position:right 9px center!important;cursor:pointer}
+.bazi-flow-picker select:active{transform:scale(.985)}
+@media (prefers-color-scheme:dark){
+.bazi-flow-picker label{color:#ff9fc9}
+.bazi-flow-picker select{color:#f0d5e2!important;background:linear-gradient(150deg,rgba(52,42,62,.94),rgba(42,34,52,.9))!important;border-color:rgba(255,164,206,.22)!important}
+}
+/* ============================================================
+   LIQUID GLASS v0.44.0 —— 目录改成锚点小浮层（对标图1微信长按菜单观感）
+   点击右下 FAB 或正文目录条 → FAB 上方弹出一小块毛玻璃浮层，不升起半屏面板
+   ============================================================ */
+.report-content{position:relative}
+.rpt-nav-drawer{
+ position:absolute!important;top:auto!important;left:auto!important;right:12px!important;bottom:70px!important;
+ width:min(300px,calc(100% - 24px))!important;max-width:none!important;height:auto!important;
+ max-height:min(44vh,380px)!important;max-height:min(44dvh,380px)!important;
+ border-radius:20px!important;border:1px solid rgba(255,255,255,.9)!important;
+ background:linear-gradient(160deg,rgba(255,255,255,.99),rgba(255,247,252,.985) 46%,rgba(249,243,255,.99))!important;
+ backdrop-filter:blur(40px) saturate(220%)!important;-webkit-backdrop-filter:blur(40px) saturate(220%)!important;
+ box-shadow:0 20px 48px -18px rgba(112,40,76,.5),inset 0 1.5px 0 rgba(255,255,255,.98),inset 0 -1px 0 rgba(255,158,198,.2)!important;
+ transform:translateY(10px) scale(.97);transform-origin:bottom right;opacity:0;pointer-events:none;
+ transition:transform .26s cubic-bezier(.22,1,.36,1),opacity .22s ease!important;
+ padding:6px 0 8px!important;overflow:hidden;z-index:60;
+}
+.report-content.rpt-nav-open .rpt-nav-drawer{transform:translateY(0) scale(1)!important;opacity:1!important;pointer-events:auto!important}
+/* 浮层小尖角指向 FAB */
+.rpt-nav-drawer::after{content:"";position:absolute;right:22px;bottom:-7px;width:14px;height:14px;
+ background:rgba(255,250,252,.96);border-right:1px solid rgba(255,255,255,.9);border-bottom:1px solid rgba(255,158,198,.2);
+ transform:rotate(45deg);box-shadow:3px 3px 8px -5px rgba(112,40,76,.3)}
+/* 浮层无需底部把手 */
+.rpt-nav-grip{display:none!important}
+.rpt-nav-drawer::before{height:70px!important;border-radius:20px 20px 0 0!important}
+/* 遮罩改为极淡，不遮挡正文阅读 */
+.rpt-nav-scrim{background:rgba(38,18,31,.28)!important;backdrop-filter:blur(5px) saturate(110%)!important;-webkit-backdrop-filter:blur(5px) saturate(110%)!important}
+.rpt-nav-head{padding:7px 12px 4px!important}.rpt-nav-head small{font-size:10px!important}
+.rpt-nav-progress{padding:3px 12px 5px!important;font-size:10.5px!important}
+/* 章节：单列紧凑小卡片（图标圆盘 + 文字），像系统菜单 */
+.rpt-nav-list{padding:0 7px!important;max-height:min(28vh,232px)!important;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,rgba(255,253,254,.9),rgba(255,249,253,.9));border-radius:12px}
+.rpt-nav-list .rpt-toc-list{display:flex;flex-direction:column;gap:4px}
+.rpt-nav-list .rpt-toc-group{margin:6px 5px 1px!important;font-size:10px}
+.rpt-nav-list .rpt-toc-item{min-height:32px!important;padding:5px 9px!important;font-size:11.5px!important;border-radius:10px!important;gap:7px}
+.rpt-nav-list .rpt-toc-item .rpt-toc-no{min-width:20px;height:20px;border-radius:7px;font-size:10px}
+.rpt-nav-tip{padding:6px 12px 2px!important;font-size:10px!important}
+@media (prefers-color-scheme:dark){
+.rpt-nav-drawer{background:linear-gradient(160deg,rgba(44,36,52,.96),rgba(32,26,40,.94))!important;border-color:rgba(255,255,255,.14)!important;color:#eee4ec}
+.rpt-nav-drawer::after{background:rgba(40,32,48,.97);border-color:rgba(255,255,255,.12)}
+}
+/* ============================================================
+   LIQUID GLASS v0.44.0 —— 全部模块弹层改为紧凑不突兀的浮层
+   ============================================================ */
+#moduleSheet .dialog-content{
+ max-height:min(72vh,680px)!important;max-height:min(72dvh,680px)!important;
+ border-radius:24px 24px 0 0!important;
+ background:linear-gradient(165deg,rgba(255,255,255,.985),rgba(255,247,252,.975) 50%,rgba(249,243,255,.985))!important;
+ backdrop-filter:blur(40px) saturate(200%)!important;-webkit-backdrop-filter:blur(40px) saturate(200%)!important;
+ box-shadow:0 -16px 44px -20px rgba(112,40,76,.45),inset 0 2px 0 rgba(255,255,255,.98)!important;
+}
+#moduleSheet .sheet-body{padding-top:2px!important}
+#moduleSheet .mod-group{margin:0 0 12px!important}
+#moduleSheet .mod-group h4{font-size:11px!important;margin:8px 2px 7px!important;letter-spacing:.08em!important;color:#b05685!important}
+#moduleSheet .mod-grid{grid-template-columns:repeat(4,1fr);gap:9px 6px!important}
+#moduleSheet .mod-item{min-height:66px!important;padding:8px 3px 6px!important;border-radius:14px!important}
+#moduleSheet .mod-ico{width:38px!important;height:38px!important;margin:0 auto 5px!important;border-radius:12px!important}
+#moduleSheet .mod-ico svg{width:18px!important;height:18px!important}
+#moduleSheet .mod-name{font-size:10.5px!important}
+#moduleSheet .mod-hint{margin:6px 2px 2px!important;font-size:10.5px!important}
+@media (prefers-color-scheme:dark){
+#moduleSheet .dialog-content{background:linear-gradient(165deg,rgba(44,36,52,.97),rgba(32,26,40,.96))!important;border-color:rgba(255,255,255,.14)!important}
+#moduleSheet .mod-group h4{color:#ff9fc9!important}
+}
+/* 报告段落读感：只强调开头短结论短语，弱化描边避免整段染粉 */
+.rpt-sec p .rp-key{color:#8a2b58;font-weight:650;background:linear-gradient(180deg,transparent 68%,rgba(255,160,200,.22) 68%);border-radius:2px;padding:0 1px}
+.rpt-sec p{margin:0 0 12px!important;line-height:1.95!important}
+@media (prefers-color-scheme:dark){
+.rpt-sec p .rp-key{color:#f7a9cd;background:linear-gradient(180deg,transparent 68%,rgba(255,120,178,.24) 68%)}
 }

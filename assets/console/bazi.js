@@ -44,6 +44,8 @@ function chartLine(d){
  return `本命${dm.stem||''}${dm.element||''}日主，生于${m.branch||''}月，${st.kind||'强弱待定'}${use?'，喜用'+use:''}；年柱${y.stem||''}${y.branch||''}。`;
 }
 export function baziGrid(d){
+ // 挂载到全局供报告内联脚本重建七列盘（时点报告可点切换大运/流年/流月）。
+ globalThis.__FL_BAZI_GRID__=baziGrid;
  const ps=d.pillars,voids=d.voidBranches||[];const cl=chartLine(d);
  const cell=(cls,i,content,attrs='')=>`<div class="bg-cell ${cls}" data-pillar-index="${i}" ${attrs}>${content}</div>`;
  const dash='<span class="bg-unknown">待补</span>';

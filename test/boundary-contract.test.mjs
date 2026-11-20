@@ -390,17 +390,18 @@ test('时点报告差异化：同一命盘不同流月的详批正文必须实�
 
 test('时点报告八字详盘：本命四柱+所选时点合成多列详盘，含完整行列且术语可点',async()=>{
  const pr=await read('../assets/console/period-report.js');
- // baziSnapshot 须合并本命 pillars 与所选大运/流年/流月，并用动态列数容器
- assert.match(pr,/function baziSnapshot\(data\)[\s\S]*const pillars=\[\.\.\.natal,\.\.\.flow\]/,'须把本命四柱与所选时点合成多列');
- assert.match(pr,/byName\('大运'\)[\s\S]*byName\('流年'\)[\s\S]*byName\('流月'\)/,'须合并大运/流年/流月三路时点');
+ // baziSnapshot 须合并本命 pillars 与大运/流年/流月七列，并用动态列数容器
+ assert.match(pr,/function baziSnapshot\(data[\s\S]*cycles\[l\],years\[y\],months\[m\]/,'须把本命四柱与大运/流年/流月合成七列');
+ assert.match(pr,/data-bf="luck"[\s\S]*data-bf="year"[\s\S]*data-bf="month"/,'须提供大运/流年/流月三组切换控件');
  assert.match(pr,/class="bazi-grid rpt-bazi-grid" style="--bg-cols:/,'须用动态列数容器避免塌陷为竖排');
- assert.match(pr,/baziGrid\(gridData\)/,'须复用完整行列结构的 baziGrid');
+ assert.match(pr,/baziGrid\(g\.base\)|baziGrid\(gridData\)/,'须复用完整行列结构的 baziGrid');
  // 报告弹层须给术语补委托（报告在 #screen 之外）
  const app=await read('../assets/console/app.js');
  assert.match(app,/d\.addEventListener\('click'[\s\S]*data-term[\s\S]*ctx\.explain/,'报告内术语须可点开解释卡');
+ assert.match(app,/d\.onchange[\s\S]*data-bf[\s\S]*__FL_BAZI_FLOW__[\s\S]*baziGrid\(/,'切换器须由事件委托重绘七列盘');
  // 报告内详盘与导出文档都须有自适应列数样式
  const liq=await read('../assets/console/liquid.css');
- assert.match(liq,/\.bazi-grid\.rpt-bazi-grid\{grid-template-columns:34px repeat\(var\(--bg-cols,4\)/,'报告弹层须有动态列数样式');
+ assert.match(liq,/\.bazi-grid\.rpt-bazi-grid\{grid-template-columns:26px repeat\(var\(--bg-cols,4\),minmax\(0,1fr\)\);min-width:0/,'报告弹层须有动态列数样式且七列自适应不溢出');
  const exp=await read('../assets/console/report-export.js');
  assert.match(exp,/\.bazi-grid\{display:grid;grid-template-columns:34px repeat\(var\(--bg-cols,4\)/,'导出文档须有详盘静态样式');
 });
@@ -422,4 +423,26 @@ test('八字流年选项须覆盖今年及未来，不再停在起运后第10年
  assert.ok(ys.includes(new Date().getFullYear()),'流年列表须含今年');
  assert.ok(ys.includes(new Date().getFullYear()+8),'流年列表须覆盖未来至少8年');
  assert.ok(ys.every((y,i)=>i===0||y===ys[i-1]+1),'流年须逐年连续无断档');
+});
+
+test('报告正文高亮：只强调开头短结论短语，不得整句/整段染粉',async()=>{
+ const ui=await read('../assets/console/ui.js');
+ assert.match(ui,/function rpEmphasis\(text\)[\s\S]*RP_BREAK/,'ui.js 须用短短语强调逻辑');
+ assert.match(ui,/end>22|Math\.min\(text\.length,22\)/,'强调片段须有长度上限（≤22字），避免整句染粉');
+ assert.match(ui,/rp-key/,'仍保留 rp-key 强调类');
+ const fr=await read('../assets/console/full-report.js');
+ assert.match(fr,/function rpEmphasis\(text\)[\s\S]*function renderPara/,'full-report.js 须与 ui.js 同口径');
+ const liq=await read('../assets/console/liquid.css');
+ assert.match(liq,/\.rpt-sec p \.rp-key\{[^}]*font-weight:650[^}]*background/,'rp-key 样式须弱化（非 700 加粗整块粉底）');
+});
+
+test('八字七列详盘：默认七列完全可见（minmax(0,1fr) 不把流年/流月顶出屏幕），caption 单行且可更新',async()=>{
+ const liq=await read('../assets/console/liquid.css');
+ assert.match(liq,/\.bazi-grid\.rpt-bazi-grid\{grid-template-columns:26px repeat\(var\(--bg-cols,4\),minmax\(0,1fr\)\);min-width:0/,'须用 minmax(0,1fr)+min-width:0 让七列自适应容器，不得用 58px 最小宽');
+ assert.doesNotMatch(liq,/\.bazi-grid\.rpt-bazi-grid\{grid-template-columns:34px repeat\(var\(--bg-cols,4\),minmax\(58px/,'不得再用 58px 最小宽把七列顶出屏幕');
+ const pr=await read('../assets/console/period-report.js');
+ assert.match(pr,/chartCaption:''/,'盘内已有 caption 时外层须留空，避免重复两行');
+ assert.match(pr,/data-bf-caption/,'盘内须有可更新的 caption 元素');
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/cap\.textContent=`当前落点/,'切换器须同步更新盘内 caption');
 });

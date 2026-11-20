@@ -41,8 +41,26 @@ function baziReportData(state){
   selected
  };
 }
+// 报告段落读感：超长段在中点断句处拆两段，每段只高亮开头短结论短语（与 ui.js 同口径）。
+// 旧实现按「整句」高亮，中文长句靠逗号串联会把整段染粉，故改为短短语强调。
+const RP_BREAK=/[：:。！？；;，,]/;
+function rpEmphasis(text){
+ const m=text.match(RP_BREAK);
+ let end=m?m.index+1:Math.min(text.length,22);
+ if(end<2)end=Math.min(text.length,22);
+ if(end>22){const sub=text.slice(0,22);const cut=Math.max(sub.lastIndexOf('、'),sub.lastIndexOf(' '));end=cut>8?cut+1:22;}
+ return end>=text.length?{key:text,rest:''}:{key:text.slice(0,end),rest:text.slice(end)};
+}
+function renderPara(line){
+ const text=String(line??'');if(!text.trim())return '';
+ const sents=text.match(/[^。；！？]+[。；！？]?/g)||[text];
+ let splitAt=-1;
+ if(sents.length>1&&text.length>108){let acc=0,best=Infinity;for(let i=0;i<sents.length-1;i++){acc+=sents[i].length;const d=Math.abs(acc-text.length/2);if(d<best){best=d;splitAt=i;}}}
+ const para=seg=>{if(!seg||!seg.trim())return '';const{key,rest}=rpEmphasis(seg);return `<p><strong class="rp-key">${esc(key)}</strong>${esc(rest)}</p>`;};
+ return splitAt<0?para(text):para(sents.slice(0,splitAt+1).join(''))+para(sents.slice(splitAt+1).join(''));
+}
 function sectionHtml(report){
- return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}</h3>${sec.lines?.map(line=>`<p>${esc(line)}</p>`).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
+ return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}</h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
 }
 /* 目录：章节锚点导航 + 滚动进度 + 主题分区。让 7000+ 字报告可按区跳转、可看读到哪。 */
 function sectionGroup(title){

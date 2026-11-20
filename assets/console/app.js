@@ -16,7 +16,7 @@ import {soulWidgets,wireSoul} from './soul-home.js';
 import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
 import {ziweiView,ziweiTools,ziweiPatterns,ziweiPeriodEvidence} from './ziwei.js';
-import {baziView,baziTools,baziQuick} from './bazi.js';
+import {baziView,baziTools,baziQuick,baziGrid} from './bazi.js';
 import {westernView,westernTools,astroHouse,houseOptions,houseLabels,setAstroHouse} from './western.js';
 import {extraView} from './extras.js';
 import {shareChart} from './share.js';
@@ -700,6 +700,22 @@ function openFullReport(prebuilt){
  const tocList=d.querySelector('[data-full-report] .rpt-toc-list');
  const navList=d.querySelector('[data-rpt-nav-list]');
  if(tocList&&navList)navList.appendChild(tocList.cloneNode(true));
+ // v0.44.0 七列八字盘：时点切换器 change 委托（innerHTML 注入的 script 不会执行，故用委托）。
+ // 数据由 period-report.js 的 baziSnapshot 挂到 __FL_BAZI_FLOW__[uid]，这里按当前选择重绘七列盘。
+ d.onchange=e=>{
+  const s=e.target.closest?.('[data-bf]');if(!s)return;
+  const box=s.closest('[data-bazi-flow]'),uid=box?.dataset.baziFlow;
+  const P=globalThis.__FL_BAZI_FLOW__?.[uid];if(!P)return;
+  P.sel[s.dataset.bf]=Number(s.value);
+  const host=box.querySelector('[data-bf-grid]');if(!host)return;
+  const flow=[P.cycles[P.sel.luck],P.years[P.sel.year],P.months[P.sel.month]].filter(p=>p&&p.stem&&p.branch);
+  const pillars=[...P.natal,...flow];
+  const g={...P.meta,pillars};
+  host.innerHTML=`<div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${pillars.length}">${baziGrid(g)}</div>`;
+  // 同步更新盘下 caption，让切换有明显反馈（如「小寒 辛丑」→「清明 壬辰」）。
+  const cap=box.querySelector('[data-bf-caption]');
+  if(cap){const m=P.months[P.sel.month];cap.textContent=`当前落点：${m?.label||''} ${m?.stem||''}${m?.branch||''}。以下逐条推导该时点。`;}
+ };
  d.querySelector('[data-rpt-close]').onclick=()=>close(d);
  d.querySelector('[data-rpt-copy]').onclick=async()=>{
   const doc=d.querySelector('[data-full-report]');

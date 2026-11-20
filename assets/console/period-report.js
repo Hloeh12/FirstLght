@@ -11,7 +11,7 @@ import {wheel} from './western.js';
 import {divisional} from '../../src/vargas.mjs';
 import {focusSections} from './period-focus.mjs';
 export {focusSections};
-import {$,btn,esc,table,selectedRails} from './ui.js';
+import {$,btn,esc,table,selectedRails,renderReportPara} from './ui.js';
 
 const NAMES={bazi:'八字',ziwei:'紫微斗数',vedic:'印度占星',west:'西洋占星'};
 const SCOPES={bazi:[['luck','大运'],['year','流年'],['month','流月'],['day','流日']],
@@ -50,21 +50,51 @@ function ziweiSnapshot(chart,flow,profile){
  return `<div class="snap-board snap-zi">${cells}${center}</div>`;
 }
 
-// 八字时点详盘：本命四柱 + 当前（或所选）大运/流年/流月，合成多列详细排盘，
-// 与排盘页一致的十神/天干/地支/藏干/星运/神煞/纳音完整行列；术语可点开解释。
-// 报告弹层内以 --bg-cols 动态列数覆盖 design.css 写死的 4 列，列多时横向滚动。
-function baziSnapshot(data){
+// 八字时点七列详盘：本命四柱 + 大运 + 流年 + 流月，完整十神/藏干/星运/神煞/纳音。
+// 对标专业盘的「上方选时点、下方出七列盘」交互：三组 select 可点切换，
+// 切换时用内联脚本按当前 data 重算七列并重绘盘面（导出文档场景下退化为静态快照）。
+// 关键修复：不再依赖后端返回的 data.selected（时点页只传 {month:N} 时它只有流月一列），
+// 而是始终用 data.cycles/years/months 自组完整七列，默认取当前运/年/月。
+function baziSnapshot(data,selection={}){
  const natal=(data?.pillars||[]).filter(Boolean);
- const sel=data?.selected||[];
- const byName=n=>sel.find(p=>p?.name===n);
+ const cycles=data?.cycles||[],years=data?.years||[],months=data?.months||[];
  const nowY=new Date().getFullYear();
- const luck=byName('大运')||(data?.cycles||[])[0];
- const year=byName('流年')||(data?.years||[]).find(y=>y.year===nowY)||(data?.years||[]).at(-1);
- const month=byName('流月')||(data?.months||[])[0];
- const flow=[luck,year,month].filter(p=>p&&p.stem&&p.branch);
- const pillars=[...natal,...flow];
- const gridData={...data,pillars};
- return `<div class="snap-bazi"><div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${pillars.length}">${baziGrid(gridData)}</div></div>`;
+ const defLuck=(()=>{ // 当前大运：startYear <= 今年 < endYear
+  const i=cycles.findIndex(c=>(c.startYear??9999)<=nowY&&nowY<(c.endYear??c.startYear+10));
+  return i<0?0:i;
+ })();
+ const defYear=(()=>{const i=years.findIndex(y=>y.year===nowY);return i<0?Math.max(0,years.length-1):i;})();
+ const defMonth=Math.max(0,months.findIndex(m=>m.date?.slice(0,10)<=new Date().toISOString().slice(0,10)));
+ const li=Number.isInteger(selection.luck)?Math.min(selection.luck,cycles.length-1):defLuck;
+ const yi=(selection.year!=null?years.findIndex(y=>y.year===Number(selection.year)):-1);
+ const yIdx=yi<0?defYear:yi;
+ const mIdx=Number.isInteger(selection.month)?Math.min(selection.month,months.length-1):defMonth;
+ const pickFlow=(l,y,m)=>[cycles[l],years[y],months[m]].filter(p=>p&&p.stem&&p.branch).map(p=>({...p}));
+ const build=(l,y,m)=>{
+  const flow=pickFlow(l,y,m);
+  return {base:{...data,pillars:[...natal,...flow]},cols:[...natal,...flow].length};
+ };
+ const b0=build(li,yIdx,mIdx);
+ const gridHtml=g=>`<div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${g.cols}">${baziGrid(g.base)}</div>`;
+ const opt=(list,sel,fmt)=>list.map((x,i)=>`<option value="${i}"${i===sel?' selected':''}>${esc(fmt(x,i))}</option>`).join('');
+ const cOpts=cycles.length?opt(cycles,li,(c,i)=>`第${i+1}步 ${c.stem||''}${c.branch||''}`):'<option>无大运</option>';
+ const yOpts=years.length?opt(years,yIdx,(y)=>`${y.year} ${y.stem||''}${y.branch||''}`):'<option>无流年</option>';
+ const mOpts=months.length?opt(months,mIdx,(m)=>`${m.label||m.date?.slice(5)||''} ${m.stem||''}${m.branch||''}`):'<option>无流月</option>';
+ // 内联脚本所需的数据：本命四柱 + 三组运柱 + data 元字段（供 baziGrid 用）。
+ // 数据挂全局，由 app.js 的事件委托负责重绘（innerHTML 注入的 <script> 不会执行）。
+ const payload={natal,cycles,years,months,sel:{luck:li,year:yIdx,month:mIdx},
+  meta:{voidBranches:data.voidBranches||[],dayMaster:data.dayMaster,strength:data.strength,relationships:data.relationships}};
+ const uid='bf'+Math.random().toString(36).slice(2,8);
+ (globalThis.__FL_BAZI_FLOW__||= {})[uid]=payload;
+ return `<div class="snap-bazi" data-bazi-flow="${uid}">
+  <div class="bazi-flow-picker card liquid-glass" role="group" aria-label="切换八字时点">
+   <label>大运<select data-bf="luck" aria-label="切换大运">${cOpts}</select></label>
+   <label>流年<select data-bf="year" aria-label="切换流年">${yOpts}</select></label>
+   <label>流月<select data-bf="month" aria-label="切换流月">${mOpts}</select></label>
+  </div>
+  <div class="bf-grid-host" data-bf-grid>${gridHtml(b0)}</div>
+  <p class="bf-snap-caption" data-bf-caption>当前落点：${esc(months[mIdx]?.label||'')} ${esc(months[mIdx]?.stem||'')}${esc(months[mIdx]?.branch||'')}。以下逐条推导该时点。</p>
+ </div>`;
 }
 
 // 印度盘快照：时点行运盘为主、本命 D1 作对照。分盘 SVG（已导出纯函数）。
@@ -137,8 +167,9 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
   const rep=buildBaziDeepReport(data);
   const sections=focus?focusedSections('bazi',scope,label,data):[...rep.sections.slice(),focusSection('bazi',scope,label,data)];
   return compose(sections,{title:`八字 · ${label}${focus?' · 时点详批':''}`,kind:'bazi',
-   chartHtml:baziSnapshot(data),chartTitle:`八字四柱 · ${label}`,
-   chartCaption:`当前落点：${(data.selected||[]).map(p=>p.stem+p.branch).join(' → ')||'本命原局'}。${focus?'以下逐条推导该时点。':'时点分析见末章「时点聚焦」。'}`,
+   chartHtml:baziSnapshot(data,selection),chartTitle:`八字七列详盘 · ${label}`,
+   // 说明文字放在盘内的 [data-bf-caption]，随切换器实时更新；此处留空避免重复两行。
+   chartCaption:'',
    lead:`日主 ${escS(data.dayMaster?.stem||'—')}${escS(data.dayMaster?.element||'')} · ${escS(data.strength?.kind||'')}。`,gege:rep.gege});
  }
 
@@ -188,7 +219,7 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
 }
 
 function sectionsToHtml(sections){
- return sections.map((s,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${escS(s.title)}</h3>${(s.lines||[]).map(l=>`<p>${escS(l)}</p>`).join('')}${s.table?`<div class="rpt-table-wrap">${s.table}</div>`:''}${s.html||''}</section>`).join('');
+ return sections.map((s,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${escS(s.title)}</h3>${(s.lines||[]).map(renderReportPara).join('')}${s.table?`<div class="rpt-table-wrap">${s.table}</div>`:''}${s.html||''}</section>`).join('');
 }
 
 export {SCOPES,NAMES};

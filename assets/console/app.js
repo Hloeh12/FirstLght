@@ -433,12 +433,22 @@ function birthSheet(profile,seed={}){
     timeUnknown:fields.unknown.checked,useSolarTime:fields.solar.checked,lateZishi:setting.lateZishi||'next-day',city:{lat,lon,tz,label:fields.city.value.trim()||'手动坐标'}}};
   const submit=$('[type=submit]',form);submit.disabled=true;feedback.textContent='正在排盘…';
   const token=++generation;flight?.abort();flight=new AbortController();
+  let settled=false; // v0.44.0：骨架过渡已接管 pending，finally 不再提前清掉
   try{
    const reading=await request('/api/console/reading',{birth:normalized(next)},flight.signal);
    if(token!==generation||!d.open||!form.isConnected)return;
-   state.pending=false;installReading(next,reading);switchTab('chart');playSuccessSound();
+   // v0.44.0 防跳动：先关表单并切到排盘页显示固定高度骨架，下一帧再装盘面。
+   // 原先「关表单 + 装数据 + 渲染整块盘面」同帧完成，#screen 高度 74px→1280px 瞬间暴涨，
+   // 底部体系栏同时弹出——这就是「排盘打开跳一下」。骨架过渡把这次突变拆成两步。
+   state.profile=next;state.reading=null;state.chartState={};state.activeTimeSystem=null;state.error='';state.pending=true;
+   switchTab('chart');
+   requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(token!==generation)return;
+    installReading(next,reading);state.pending=false;render();playSuccessSound();
+   }));
+   settled=true;
   }catch(error){if(token===generation)feedback.textContent=error.message;}
-  finally{if(token===generation){state.pending=false;submit.disabled=false;}}
+  finally{if(token===generation&&!settled)state.pending=false;submit.disabled=false;}
  };
 }
 function settingsForm(){

@@ -2133,7 +2133,7 @@ html{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important}
 .zi-board + .time-basis-note{margin:6px 2px 0}
 
 /* CHART STABLE v0.41.0: 排盘输出防跳动——固定高度骨架 + 瞬时归位 */
-.chart-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:min(62vh,520px);color:var(--muted);font-size:.86rem;letter-spacing:.03em}
+.chart-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:min(84vh,760px);color:var(--muted);font-size:.86rem;letter-spacing:.03em}
 .chart-loading-ring{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,79,139,.18);border-top-color:#ff4f8b;animation:chartSpin .8s linear infinite}
 @keyframes chartSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.chart-loading-ring{animation-duration:2s}}

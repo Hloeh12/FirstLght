@@ -201,15 +201,37 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         let pz: Double
         if #available(iOS 15.0, *) { pz = webView.pageZoom } else { pz = -1 }
         webView.evaluateJavaScript("window.__FL_BOOT__&&(window.__FL_BOOT__.native={w:\(w),h:\(h),sw:\(sw),sh:\(sh),zs:\(zs),pz:\(pz)})")
-        // 下一帧再显示：此时布局已按正确 frame 完成，避免闪出按错误视口排版的中间态。
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.applyZoomLock()
-            UIView.animate(withDuration: 0.12) { self.webView.alpha = 1 }
-        }
+        // v0.44.0：淡入前先确认视口已收敛到设备宽度且缩放为 1x。
+        // 系统「显示缩放/大字体」可能晚于 didFinish 才作用到 WKWebView，
+        // 若此刻就淡入，用户会看到内容先按放大视口排版、随后被 applyZoomLock 拉回 —— 即冷启动跳动。
+        DispatchQueue.main.async { [weak self] in self?.revealWhenReady() }
         // 冷启动时系统显示缩放的应用可能晚于导航完成，用两道延迟兜底。
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in self?.applyZoomLock() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in self?.applyZoomLock() }
+    }
+
+    // 淡入门控：轮询到 JS 视口宽度等于屏幕宽度、visualViewport.scale≈1 时才让内容可见，
+    // 把显示时机推迟到布局真正稳定之后；系统缩放晚应用也不会露出放大的中间态。
+    private func revealWhenReady(_ attempt: Int = 0) {
+        webView.evaluateJavaScript("JSON.stringify({iw:innerWidth,sc:(window.visualViewport&&window.visualViewport.scale)||1})") { [weak self] result, _ in
+            guard let self = self else { return }
+            var ready = false
+            if let str = result as? String, let data = str.data(using: .utf8),
+               let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+               let iw = obj["iw"] as? Int, let sc = obj["sc"] as? Double {
+                ready = abs(iw - Int(UIScreen.main.bounds.width)) <= 1 && abs(sc - 1.0) < 0.01
+            }
+            if ready || attempt >= 40 {  // 最多 40×50ms=2s 兜底，绝不长期白屏
+                self.applyZoomLock()
+                if self.webView.alpha < 1 {
+                    UIView.animate(withDuration: 0.12) { self.webView.alpha = 1 }
+                }
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    self.revealWhenReady(attempt + 1)
+                }
+            }
+        }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {

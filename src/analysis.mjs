@@ -40,7 +40,41 @@ export function analyze(w){
  for(const [s,list] of Object.entries(bySign))if(list.length>=3)patterns.push({type:'星群',planets:list,sign:s});
  const seen=new Set(),uniq=patterns.filter(p=>{const k=p.type+'|'+p.planets.slice().sort().join(',');if(seen.has(k))return false;seen.add(k);return true;});
  const distribution=c=>{const total=Object.values(c).reduce((a,b)=>a+b,0);return {percentages:Object.fromEntries(Object.entries(c).map(([k,v])=>[k,100*v/total])),dominant:Object.keys(c).filter(k=>c[k]===Math.max(...Object.values(c))),missing:Object.keys(c).filter(k=>!c[k])};};
- return {elements:distribution(counts.element),modalities:distribution(counts.mode),planets,dignitiesSummary:{入庙:planets.filter(p=>p.dignity==='入庙').length,旺相:planets.filter(p=>p.dignity==='旺相').length,入弱:planets.filter(p=>p.dignity==='入弱').length,落陷:planets.filter(p=>p.dignity==='落陷').length},chartRuler:{planet:ruler,ascendantSign:w.asc.sign,sign:rulerPlanet?.sign,dignity:rulerPlanet?dignity(rulerPlanet):null,house:rulerPlanet?rulerPlanet.house:null,retro:rulerPlanet?rulerPlanet.retro:null},counts,patterns:uniq,notice:'庙旺落陷与格局为古典占星常见定义的结构化标注，不构成预测。'};
+ return {elements:distribution(counts.element),modalities:distribution(counts.mode),planets,dignitiesSummary:{入庙:planets.filter(p=>p.dignity==='入庙').length,旺相:planets.filter(p=>p.dignity==='旺相').length,入弱:planets.filter(p=>p.dignity==='入弱').length,落陷:planets.filter(p=>p.dignity==='落陷').length},chartRuler:{planet:ruler,ascendantSign:w.asc.sign,sign:rulerPlanet?.sign,dignity:rulerPlanet?dignity(rulerPlanet):null,house:rulerPlanet?rulerPlanet.house:null,retro:rulerPlanet?rulerPlanet.retro:null},counts,patterns:uniq,receptions:findReceptions(w.planets),notice:'庙旺落陷与格局为古典占星常见定义的结构化标注，不构成预测。'};
+}
+
+/* 宫主星互融（Reception）：A 落在 B 守护的星座＝B 在家里接待 A（A 被 B 接收）。
+ * 双方互落对方守护星座＝互融(mutual)；仅一方＝单方接收(single)。
+ * 采用古典七政守护表 RULER；天海冥无古典守护星，只可能被接收、不充当接收方。
+ * 仅列有相位关系的星对才判读互动，无相位则列本盘结构互融供参考。 */
+export function findReceptions(planets,aspects){
+ const out=[];
+ const list=(planets||[]).filter(p=>p&&p.name&&p.sign);
+ const lordOf=p=>RULER[SIGN.indexOf(p.sign)];
+ for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+  const a=list[i],b=list[j];
+  if(a.name===b.name)continue;                       // 排除同名（如南北交点）
+  const la=lordOf(a),lb=lordOf(b);
+  if(!la||!lb||la===lb)continue;                     // 无守护或同守一星，不构成互融判定
+  // A 落在 B 守护的星座 ⟺ A 所在星座的守护星是 B（lordOf(A)===B.name）
+  const aInBHouse=(la===b.name);                     // a 在 b 守护的星座 → a 被 b 接收（b 是主人）
+  const bInAHouse=(lb===a.name);                     // b 在 a 守护的星座 → b 被 a 接收（a 是主人）
+  if(!aInBHouse&&!bInAHouse)continue;
+  const asp=(aspects||[]).find(x=>((x.a===a.name&&x.b===b.name)||(x.a===b.name&&x.b===a.name)));
+  const mutual=aInBHouse&&bInAHouse;
+  const kind=mutual?'mutual':'single';
+  // single：客人落在主人守护的星座（客人自己的星座即被主人守护的那个）
+  const guest=mutual?null:aInBHouse?a:b;
+  const host=mutual?null:aInBHouse?b:a;
+  out.push({a:a.name,b:b.name,kind,
+   aSign:a.sign,bSign:b.sign,
+   aspect:asp?{angle:asp.angle,type:asp.type,orb:asp.orb}:null,
+   guest:guest?.name||null,host:host?.name||null,
+   text:mutual
+    ?`${a.name}在${a.sign}（${b.name}守护），${b.name}在${b.sign}（${a.name}守护）——两星互在对方「家」中，古典称互融(mutual reception)：彼此给力、遇事互相援手，是行星关系里最稳的良性结构${asp?`，且两星成${asp.angle}°相位，这份支援会被相位「接通」而更明显`:'（本盘无相位接通，属结构性的互相支撑）'}。`
+    :`${guest.name}落在${host.name}守护的${guest.sign}——${host.name}在自己家里接待${guest.name}，古典称单方接收：${guest.name}较容易得到${host.name}的资源与配合，但回报不对等，宜主动回馈以免关系失衡${asp?`（两星成${asp.angle}°相位，互动被接通）`:''}。`});
+ }
+ return out;
 }
 
 

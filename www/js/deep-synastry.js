@@ -61,6 +61,32 @@ const KOOTA_LIB={
  nadi:{zh:'脉轮体质',why:'看能量构成的深相容度——传统认为与健康与子嗣相关',fix:'nadi 低分是传统提醒而非判决：健康与生育问题以现代医学检查为准。'}
 };
 const DASHING={}; // 占位避免 lint 未用告警
+// 古典七政星座守护表（索引对应 signIndex）；天海冥无古典守护，只作客人不作主人。
+const SIGN_LORD_ZH=['火星','金星','水星','月亮','太阳','水星','金星','火星','木星','土星','土星','木星'];
+/* 跨盘互融：A 的星落在 B 的星守护的星座（双向＝互融，单向＝接收）。
+ * 只看真实相位星对，作为「谁在什么议题上容易被对方接住」的结构证据，不折算分数。 */
+function crossReceptions(aw,bw,inter,A,B){
+ A=A||'甲方';B=B||'乙方';
+ const out=[];
+ const lord=p=>{const i=signIndex(p?.sign);return i==null?null:SIGN_LORD_ZH[i];};
+ for(const x of inter||[]){
+  const pa=[...(aw||[])].find(p=>p.name===x.a),pb=[...(bw||[])].find(p=>p.name===x.b);
+  if(!pa||!pb)continue;
+  // A 的 x.a 落在 B 的 x.b 守护星座？（A 行星所在星座的守护星＝B 行星之名）
+  const aInB=lord(pa)===pb.name;
+  // B 的 x.b 落在 A 的 x.a 守护星座？
+  const bInA=lord(pb)===pa.name;
+  if(!aInB&&!bInA)continue;
+  const mutual=aInB&&bInA;
+  const guest=mutual?null:aInB?pa:pb,host=mutual?null:aInB?pb:pa;
+  const guestWho=guest?(guest===pa?A:B):'',hostWho=host?(host===pb?B:A):'';
+  out.push({a:x.a,b:x.b,angle:x.angle,mutual,
+   text:mutual
+    ?`${A}的${x.a}（${pa.sign}）与${B}的${x.b}（${pb.sign}）互落对方守护星座——跨盘互融：你俩在这两颗星管的议题上互相给力、彼此接得住，是最稳的正向结构。`
+    :`${guestWho}的${guest.name}（${guest.sign}）落在${hostWho}的${host.name}守护的星座——${hostWho}的${host.name}是主人，更容易在这个议题上接住${guestWho}、给到资源与配合；宜有来有往，避免长期单向。`});
+ }
+ return out;
+}
 
 function byKey(planets,k){return (planets||[]).find(p=>p.key===k);}
 function signIndex(sign){
@@ -125,6 +151,14 @@ export function buildSynastryDeepReport(result,aName,bName){
   `跨盘相位（${A} 的行星 × ${B} 的行星）按容许度从紧到松排列——越紧的相位越像「关系里的固定剧情」。上表每组都给出：两星各自管什么、这个角度如何在你俩之间上演、怎么接招。`,
   `判读铁则：同一主题（如金星-火星、月亮-月亮）在多组相位中重复出现时，该主题就是这段关系的核心课题；张力相位不是「不合」，而是「需要规则」——把规则谈成，张力相位的关系反而比全和谐相位的关系更有生命力。`
  ];
+ // 跨盘互融：比相位更稳的结构性「谁接住谁」，只看有相位的星对
+ const recps=crossReceptions(aw,bw,inter,A,B);
+ if(recps.length){
+  gloss['跨盘互融']='一方行星落在另一方行星守护的星座：后者在自己「家」中接待前者，前者更易得到后者配合；双方互落即互融，是比相位更稳的良性结构';
+  aspectIntro.push(...recps.map(r=>`【互融·${r.angle}°相位】${r.text}`));
+  const mu=recps.filter(r=>r.mutual).length;
+  aspectIntro.push(`互融小结：上列 ${recps.length} 组接收关系${mu?`，其中 ${mu} 组为双向互融`:'（本盘无双向互融，多为单向接收）'}。相位说「剧情怎么上演」，互融说「谁更容易接住谁」——两者叠看：带接收的相位，那份配合会落到实处；纯张力又无接收的相位，最需要靠规则补位。互融只看星座守护，与吉凶无关。`);
+ }
 
  /* 四、印度八科逐科详解 */
  const kootaRows=kootaItems.map(x=>{

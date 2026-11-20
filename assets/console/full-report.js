@@ -99,7 +99,7 @@ export function composeFullReport(state,names){
   const v=state.reading?.vedic||{};
   const report=withGlossary(buildVedicDeepReport(v));
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'vedic',
-   lead:`Lahiri 恒星黄道 · 整宫制。上升 ${esc(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗，Vimshottari 大运 ${(v.dashas||[]).length} 段，命格 ${esc((report.yogas||[]).length)} 组成立${v.varshaphala?`，岁运盘 ${v.varshaphala.year} 年已起`:`''`}。全文十二章：上升主轴、行星力量评级、Shadbala 六力审计、Ashtakavarga 八分点、Yoga 命格、九曜落宫、大运逐运详批、小运细分、D9/D10 分盘、十二宫力量审计、岁运 Varshaphala、人生格局总结。`,
+   lead:`Lahiri 恒星黄道 · 整宫制。上升 ${esc(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗，Vimshottari 大运 ${(v.dashas||[]).length} 段，命格 ${esc((report.yogas||[]).length)} 组成立${v.varshaphala?`，岁运盘 ${v.varshaphala.year} 年已起`:`''`}。全文十三章：上升主轴、行星力量评级、Shadbala 六力审计、Ashtakavarga 八分点、Yoga 命格、九曜落宫、大运逐运详批、小运细分、D9/D10 分盘、十二宫力量审计、岁运 Varshaphala、Jaimini 派专项（Karaka·Chara Dasha·Arudha）、人生格局总结。`,
    body:sectionHtml(report),sections:report.sections};
  }
  if(system==='synastry'){

@@ -3,6 +3,7 @@
 // Vimshottari 大运逐运详批、D9/D10 分盘、人生格局四大领域结论——全部由盘面证据驱动。
 import {planetStates,divisional,VARGAS} from '../../src/vargas.mjs';
 import {EXALTATION} from '../../src/vedic-strong.mjs';
+import {jaiminiKarakas,karakaHouseReading,charaDasha,arudhaLagna} from '../../src/jaimini.mjs';
 
 const SIGN_LIST=['白羊座','金牛座','双子座','巨蟹座','狮子座','处女座','天秤座','天蝎座','射手座','摩羯座','水瓶座','双鱼座'];
 const SIGN_LORD=['火星','金星','水星','月亮','太阳','水星','金星','火星','木星','土星','土星','木星'];
@@ -94,6 +95,8 @@ export function dashaBavWindow(lord,lagnaIndex,astha){
   lowSign:SIGN_LIST[low],lowHouse:((low-lagnaIndex+12)%12)+1,lowBav:row.bav[low],sav,
   support:!Number.isFinite(sav)?'na':sav>=30?'strong':sav>=28?'mid':'weak'};
 }
+// Jaimini 新增层的安全包装：任一子项异常都不拖垮整份报告。
+function jaiminiSafe(fn){try{return fn();}catch{return null;}}
 function planetsInHouse(planets,h){return planets.filter(p=>p.house===h);}
 function sameSign(a,b){
  const ia=houseOfSign(a?.sign),ib=houseOfSign(b?.sign);
@@ -388,6 +391,27 @@ const vsSec=vs?[
   `本报告由盘面行星、宫位、星宿、Yoga 与大运数据逐条推导。Jyotish 为传统术数文化，供自我观察与时机参考，不构成事实预测、投资、医疗或婚姻决策依据。`
  ];
 
+ /* 十二·五、Jaimini 派专项：Karaka / Chara Dasha / Arudha Lagna（与 Parashari 并行的另一套读法） */
+ const jK=jaiminiSafe(()=>jaiminiKarakas(planets));
+ const jReading=jaiminiSafe(()=>karakaHouseReading(jK,lagnaIndex));
+ const jDasha=jaiminiSafe(()=>charaDasha(jK,planets,lagnaIndex));
+ const jAL=jaiminiSafe(()=>arudhaLagna(lagnaIndex,planets));
+ const jKRows=(jK?.list||[]).map(k=>{
+  const rd=jReading?.find(x=>x.karaka===k.karaka);
+  return `<tr><td><b>${k.karaka}</b></td><td>${k.name.replace(' Karaka','')}</td><td>${k.name&&k.karaka==='AK'?'灵魂':k.karaka==='DK'?'配偶':k.theme.split('/')[0].trim()}</td><td>${k.name} ${k.sign||'—'}${k.retro?' ℞':''}</td><td>第${rd?.house??k.house??'—'}宫</td></tr>`;
+ }).join('');
+ const jKTable=jKRows?`<table class="rpt-table rpt-jaimini"><thead><tr><th>代号</th><th>karaka</th><th>主管</th><th>落星·星座</th><th>落宫</th></tr></thead><tbody>${jKRows}</tbody></table>`:'';
+ const jDashaRows=(jDasha?.sequence||[]).slice(0,12).map((s,i)=>`<tr class="${s.sign===jDasha?.akSign?'rpt-now':''}"><td>第${i+1}段</td><td>${s.sign}</td><td>${s.lord}</td><td>${s.ageStart}–${s.ageEnd} 岁</td><td>${s.years} 年</td></tr>`).join('');
+ const jDashaTable=jDashaRows?`<table class="rpt-table rpt-charadasha"><thead><tr><th>段</th><th>星座大运</th><th>宫主</th><th>年龄区间</th><th>年数</th></tr></thead><tbody>${jDashaRows}</tbody></table>`:'';
+ const akRead=jReading?.find(x=>x.karaka==='AK'),dkRead=jReading?.find(x=>x.karaka==='DK');
+ const jaiminiLines=[
+  `Jaimini 是印占另一套独立方法，与前面用的 Parashari（Vimshottari 大运、功能吉凶）不是一回事——它不看月亮宿主的固定大运表，而是按「哪颗星度数最高」定角色，再按星座轮转定阶段。两派结论可互参，冲突时以各自口径自洽为先，不混着套。`,
+  jK?.ak?`Atma Karaka（AK，灵魂指标星）为${jK.ak.name}，落${jK.ak.sign}第${akRead?.house??jK.ak.house??'—'}宫——${String(akRead?.text||'AK 落宫定此生主轴').replace(/。$/,'')}。AK 是整盘的「我是谁、为何而来」，它的落宫与落座是 Jaimini 读盘的第一锚点。`:'AK 数据待排盘后生成。',
+  jK?.dk?`Dara Karaka（DK，配偶指标星）为${jK.dk.name}，落${jK.dk.sign}第${dkRead?.house??jK.dk.house??'—'}宫——${String(dkRead?.text||'DK 定关系课题').replace(/。$/,'')}。DK 与第 7 宫、D9 合看，才是 Jaimini 的婚姻判法；单看 DK 不成定论。`:'DK 数据待排盘后生成。',
+  jDasha?`Chara Dasha（星座大运）自 AK 所在${jDasha.akSign}起，${jDasha.direction}，一轮 ${jDasha.totalYears} 年。方向依据：AK 宫主${jDasha.l1}落${jDasha.l1Sign}、第 7 宫主${jDasha.l7}落${jDasha.l7Sign}，两者阴阳${jDasha.direction.startsWith('逆')?'相同':'相异'}故取${jDasha.direction}。每宫年数由「该宫主落点」决定，与 Vimshottari 的固定年数表不同——下表为前 12 段（一轮）的年龄区间。`:'Chara Dasha 数据待排盘后生成。',
+  jAL?`Arudha Lagna（AL，社会呈现像）落${jAL.sign}第${jAL.house}宫：上升主${jAL.lord}落${jAL.steps===1?'本宫':`第 ${jAL.steps} 步`}，自该处${jAL.direction} ${jAL.steps} 宫得 AL${jAL.halo?'（落点触上升/对宫，已按 halo 修正移一位）':''}。AL 说的是「别人眼中的你、你的社会身份」，与本命上升的「真实的我」并读——两者不一致时，往往一生都在学习把外在角色与内在自我对齐。`:'Arudha Lagna 数据待排盘后生成。'
+ ];
+
  const sections=[
   {title:'一、上升与人生主轴',lines:overview},
   {title:'二、行星力量评级',lines:powerLines,table:powerTable},
@@ -400,7 +424,12 @@ const vsSec=vs?[
   {title:'九、分盘专项（D9/D10）',lines:vargaSec},
   {title:'十、十二宫力量审计（Bhava Bala）',lines:bhavaLines,table:bhavaTable},
   {title:'十一、岁运 Varshaphala（今年年度盘）',lines:vsSec},
-  {title:'十二、人生格局总结',lines:lifePattern}
+  {title:'十二、Jaimini 派专项（Karaka·Chara Dasha·Arudha）',lines:jaiminiLines,table:jKTable,html:jDashaTable},
+  {title:'十三、人生格局总结',lines:lifePattern}
  ];
+ gloss['Atma Karaka']='Jaimini 派「灵魂指标星」：七曜中恒星黄经最高者，代表此生的核心自我与方向，落入的宫位是最想活出的领域';
+ gloss['Dara Karaka']='Jaimini 派「配偶指标星」：七曜中经度第 7 高者，与第 7 宫、D9 合看婚姻，单看不成定论';
+ gloss['Chara Dasha']='Jaimini 星座大运：自 AK 星座起顺行或逆行逐宫轮转，每宫年数由该宫主的落点决定，与 Vimshottari 固定年数表不同';
+ gloss['Arudha Lagna']='Jaimini「社会呈现像」：由上升主落宫反推，代表他人眼中的你与社会身份，与本命上升的「真实自我」并读';
  return {title:'印度占星 · Jyotish 终身详批',sections,glossary:gloss,kind:'vedic',yogas};
 }

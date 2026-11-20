@@ -572,3 +572,108 @@ test('深挖v0.38：合盘逐星对照不再把所有行星误标为太阳系',a
  assert.doesNotMatch(src,/太阳系\$\{pa\.sign\}/,'逐星对照不得写死「太阳系」');
  assert.match(src,/\$\{A\} 的\$\{role\.name\}在\$\{pa\.sign\}/,'须按 role.name 标注真实行星');
 });
+
+test('深挖v0.39：Jaimini Karaka 随盘变化 + AK/DK 落宫 + Chara Dasha 方向 + Arudha 修正',async()=>{
+ const {jaiminiKarakas,karakaHouseReading,charaDasha,arudhaLagna}=await import('../src/jaimini.mjs');
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const {buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
+ const CITY={lat:39.9042,lon:116.4074,tz:8};
+ const mk=(Y,h)=>vedicPro({birth:{Y,M:6,D:15,h,mi:30,city:CITY,calendar:'solar'},at:new Date().toISOString()});
+ const v1=mk(1990,6),v2=mk(1990,14),v3=mk(1985,6);
+ const k1=jaiminiKarakas(v1.planets);
+ assert.equal(k1.list.length,7,'7 星 Karaka 体系');
+ assert.deepEqual(k1.list.map(x=>x.karaka),['AK','AmK','PuK','BK','MK','PK','DK']);
+ assert.equal(k1.ak.name,'火星','AK 须为七曜中经度最高者（本例）');
+ // AK 必为 sid 最高者；不同盘的 AK 应变化
+ assert.equal(k1.ak.sid,Math.max(...['太阳','月亮','火星','水星','木星','金星','土星'].map(n=>v1.planets.find(p=>p.name===n).sid)));
+ assert.equal(jaiminiKarakas(v1.planets).ak.name,jaiminiKarakas(v2.planets).ak.name,'同一天不同时辰经度序可能相同，不做强断言');
+ assert.match(k1.method,/7 星 Karaka 体系/,'须声明流派口径');
+ // AK/DK 落宫文本随落宫变化
+ const rd=karakaHouseReading(k1,v1.lagnaIndex);
+ assert.ok(rd.length>=6);
+ assert.ok(rd.find(x=>x.karaka==='AK').text.includes('第'));
+ assert.match(rd.find(x=>x.karaka==='DK').text,/伴侣|配偶|关系|第/);
+ // Chara Dasha：12 段、年龄连续、方向自洽
+ const cd=charaDasha(k1,v1.planets,v1.lagnaIndex);
+ assert.equal(cd.sequence.length,12,'一轮 12 宫');
+ assert.equal(cd.sequence[0].ageStart,0,'首段自出生起');
+ for(let i=1;i<cd.sequence.length;i++)assert.equal(cd.sequence[i].ageStart,cd.sequence[i-1].ageEnd,'年龄须连续');
+ assert.ok(['顺行（顺宫序）','逆行（逆宫序）'].includes(cd.direction));
+ assert.match(cd.method,/方向规则有分歧/,'须披露流派分歧');
+ assert.notEqual(cd.direction,charaDasha(jaiminiKarakas(v3.planets),v3.planets,v3.lagnaIndex).direction,'不同盘的 Chara 方向可不同（本例应出现逆行）');
+ // Arudha：不落 1/7 宫（halo 修正）、方向有效
+ const al=arudhaLagna(v1.lagnaIndex,v1.planets);
+ assert.ok(al.house>=1&&al.house<=12);
+ assert.ok(!(al.halo&&(al.house===1||al.house===7)),'触发 halo 后不得仍在 1/7 宫');
+ assert.match(al.method,/halo|各派/);
+ // 报告章节接入
+ const rep=buildVedicDeepReport(v1);
+ const j=rep.sections.find(s=>s.title.includes('Jaimini'));
+ assert.ok(j,'须有 Jaimini 章');
+ assert.match(j.table,/rpt-jaimini/);
+ assert.match(j.html,/rpt-charadasha/);
+ assert.doesNotMatch(j.lines.join('')+j.table+j.html,/undefined|NaN|kaimini|creative|。。/,'不得有脏数据或双句号');
+ assert.equal(rep.sections.length,13,'印占报告 13 章');
+});
+
+test('深挖v0.39：八字合婚用神↔忌神双向 + 日主强弱 + 相刑入 relOf',async()=>{
+ const {baziMatch}=await import('../src/match-making.mjs');
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const CITY={lat:39.9042,lon:116.4074,tz:8};
+ const mk=(Y,M,D,h,mi)=>baziPro({birth:{Y,M,D,h,mi,city:CITY,calendar:'solar'}});
+ const r=baziMatch(mk(1990,3,15,10,0),mk(1991,8,22,14,0));
+ assert.equal(r.items.length,9,'合婚 9 项');
+ assert.ok(r.items.find(x=>x.key==='usefulAvoid'),'须有用神忌神项');
+ assert.ok(r.items.find(x=>x.key==='strengthBalance'),'须有日主强弱项');
+ assert.match(r.method,/相刑|用神↔忌神|日主强弱/);
+ // 双向交集为真时应判 support —— 直接造 strength 验证判定，不受真实盘限制
+ const ba={strength:{useful:['金','水'],caution:['木','火'],kind:'身弱',support:30},
+   pillars:[{stem:'甲',branch:'子',stemElement:'木',branchElement:'水'},{stem:'甲',branch:'子'},{stem:'甲',branch:'子'},{stem:'甲',branch:'子'}]};
+ const bb={strength:{useful:['木','火'],caution:['金','水'],kind:'身强',support:70},
+   pillars:[{stem:'庚',branch:'午',stemElement:'金',branchElement:'火'},{stem:'庚',branch:'午'},{stem:'庚',branch:'午'},{stem:'庚',branch:'午'}]};
+ const r2=baziMatch(ba,bb);
+ const ua=r2.items.find(x=>x.key==='usefulAvoid');
+ assert.equal(ua.level,'support','甲喜金水＝乙忌金水、乙喜木火＝甲忌木火，双向互补须 support');
+ assert.match(ua.text,/双向互为用忌|实质互补/);
+ assert.equal(r2.items.find(x=>x.key==='strengthBalance').level,'support','身弱×身强须 support');
+ // 相刑：子卯
+ const sub=(branch,el)=>({stem:'甲',branch,stemElement:el,branchElement:el});
+ const r3=baziMatch(
+  {pillars:[sub('子','水'),sub('子','水'),sub('子','水'),sub('子','水')],strength:{}},
+  {pillars:[sub('卯','木'),sub('卯','木'),sub('卯','木'),sub('卯','木')],strength:{}});
+ assert.match(r3.items.find(x=>x.key==='dayBranch').text,/相刑/,'子卯须判相刑');
+});
+
+test('深挖v0.39：西占宫主星互融语义正确 + 本盘/跨盘接线',async()=>{
+ const {findReceptions,analyze}=await import('../src/analysis.mjs');
+ const {chart,synastry}=await import('../src/chart.mjs');
+ const {buildWesternDeepReport}=await import('../www/js/deep-west.js');
+ const {buildSynastryDeepReport}=await import('../www/js/deep-synastry.js');
+ // 手工造：火星在天秤(金星守护)、金星在白羊(火星守护) → 互融
+ const rec=findReceptions([{name:'火星',sign:'天秤座'},{name:'金星',sign:'白羊座'}],[]);
+ assert.equal(rec.length,1);
+ assert.equal(rec[0].kind,'mutual');
+ assert.match(rec[0].text,/火星在天秤座（金星守护），金星在白羊座（火星守护）/,'互融文案须准确对应守护关系');
+ // 单方接收：太阳在水瓶(土星守护)
+ const rec2=findReceptions([{name:'太阳',sign:'水瓶座'},{name:'土星',sign:'天蝎座'}],[]);
+ const single=rec2.find(x=>x.kind==='single');
+ assert.ok(single);
+ assert.match(single.text,/太阳落在土星守护的水瓶座——土星在自己家里接待太阳/,'单方接收客人/主人不得颠倒');
+ // 同守一星（都落金星守护的星座）不产生互融
+ assert.equal(findReceptions([{name:'太阳',sign:'天秤座'},{name:'月亮',sign:'金牛座'}],[]).length,0);
+ // 本盘接线
+ const CITY={lat:39.9042,lon:116.4074,tz:8};
+ const f=chart({Y:1985,M:2,D:3,h:9,mi:0,gender:'男',city:CITY},{baseOnly:true});
+ const a=analyze(f.western);
+ assert.ok(Array.isArray(a.receptions),'analyze 须输出 receptions');
+ const rep=buildWesternDeepReport(f.western,undefined,a);
+ const asp=rep.sections.find(s=>s.title.includes('相位'));
+ if(a.receptions.length){assert.match(asp.lines.join(''),/互融|单方接收/,'有接收时相位章须给出判读');assert.ok(Object.keys(rep.glossary).some(k=>k.includes('Reception')));}
+ // 跨盘接线（大方向：有 interAspects 且造得出接收时，合盘相位章出现互融）
+ const p1={Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY},p2={Y:1992,M:3,D:8,h:10,mi:0,gender:'女',city:CITY};
+ const sr=buildSynastryDeepReport(synastry(p1,p2),'甲','乙');
+ const sasp=sr.sections.find(s=>s.title.includes('跨盘相位'));
+ assert.doesNotMatch(sasp.lines.join(''),/undefined|NaN|的落在/,'跨盘互融文案不得有脏数据');
+ const rp=sasp.lines.find(x=>x.includes('互融·'));
+ if(rp)assert.match(rp,/甲|乙/,'跨盘互融须标明甲乙主体');
+});

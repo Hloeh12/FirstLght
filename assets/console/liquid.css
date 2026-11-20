@@ -427,3 +427,11 @@ NaN
 .fn-yogakaraka{color:#8ce0b0}.fn-benefic{color:#8fcaf0}.fn-lagna{color:#ff9fc9}
 .fn-malefic{color:#ff9f9f}.fn-maraka{color:#f0c46a}.fn-kendra,.fn-neutral{color:#b8b8c8}
 }
+/* JAIMINI v0.39.0 */
+.rpt-jaimini td:first-child{font-weight:800;color:#c2185b}
+.rpt-jaimini td:first-child,.rpt-charadasha td{white-space:nowrap}
+.rpt-charadasha tr.rpt-now td{background:rgba(255,79,139,.12);font-weight:700;color:#8c2f5f}
+@media (prefers-color-scheme:dark){
+.rpt-jaimini td:first-child{color:#ff9fc9}
+.rpt-charadasha tr.rpt-now td{background:rgba(255,79,139,.16);color:#ffb6d4}
+}

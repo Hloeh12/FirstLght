@@ -93,6 +93,14 @@ export function buildWesternDeepReport(w,at,analysis){
   `入相位（applying）＝两星仍在接近精确角度，能量上升、议题趋于事件化，权重加一档；出相位（separating）＝已过精确点正在远离，能量退潮、议题转为内化沉淀。同一组相位，入与出的读法不同（本盘若未标注出入相位，则仅按容许度判读）。`,
   `和谐相位（六合/拱）是天赋的顺水推舟；张力相位（刑/冲）是成长的心脏压——两者都要「用」才会兑现。多相位指向同一主题时才形成稳定行为模式——单相位不定人格。`
  ];
+ // 宫主星互融（Reception）：A 落在 B 守护的星座＝B 在家接待 A，比单纯相位更稳的结构性支援。
+ const recps=analysis?.receptions||[];
+ const mutual=recps.filter(r=>r.kind==='mutual'),single=recps.filter(r=>r.kind==='single');
+ if(recps.length){
+  gloss['互融 Reception']='古典占星概念：A 星落在 B 星守护的星座，等于 B 在自己家里接待 A，A 较易得到 B 的配合；双方互落对方守护星座即互融(mutual reception)，是比相位更稳定的良性结构';
+  aspLines.push(...recps.map(r=>`【${r.kind==='mutual'?'互融':'单方接收'}】${r.text}`));
+  aspLines.push(`互融读法：${mutual.length?`本盘有 ${mutual.length} 组互融——这些行星彼此给力，遇事能互相援手，是最可靠的良性结构，值得优先用来成事。`:'本盘无严格互融（没有两星互在对方守护星座）——支援关系多为单向或须靠相位接通。'}${single.length?`另有 ${single.length} 组单方接收：客星易得主星资源，但回报不对等，长久相处宜主动回馈。`:''}互融只看星座守护关系，与吉凶无关——它回答的是「这两股能量配不配合」，不预测具体事件。`);
+ }
 
  /* 四、格局检测 */
  const patterns=[];

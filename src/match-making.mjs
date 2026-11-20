@@ -10,6 +10,8 @@ const LIUHE={子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',辰:'�
 const SANHE=[['申','子','辰','水'],['寅','午','戌','火'],['巳','酉','丑','金'],['亥','卯','未','木']];
 const HAI=[['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']];
 const PO=[['子','酉'],['卯','午'],['辰','丑'],['未','戌'],['寅','亥'],['巳','申']];
+// 相刑：子卯无礼刑、寅巳申无恩刑（二元取寅巳/巳申）、丑戌未恃势刑（二元取丑戌/戌未）、辰午酉亥自刑
+const XING=[['子','卯'],['寅','巳'],['巳','申'],['丑','戌'],['戌','未'],['辰','辰'],['午','午'],['酉','酉'],['亥','亥']];
 const STEM_HE={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
 const STEM_EL={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
 // 日主阴阳：甲丙戊庚壬为阳、乙丁己辛癸为阴——传统合婚看「阴阳相济」
@@ -37,6 +39,7 @@ function relOf(a,b){
  if(CLASH[a]===b)return '六冲';
  if(LIUHE[a]===b)return '六合';
  for(const t of SANHE)if(t.includes(a)&&t.includes(b))return '三合局('+t[3]+')';
+ if(XING.some(p=>p[0]===a&&p[1]===b))return '相刑';
  if(HAI.some(p=>p.includes(a)&&p.includes(b)))return '相害';
  if(PO.some(p=>p.includes(a)&&p.includes(b)))return '相破';
  return null;
@@ -78,17 +81,29 @@ export function baziMatch(ba,bb){
  const bNeedFromA=(ba.pillars||[]).some(p=>ub.includes(p.stemElement)||ub.includes(p.branchElement));
  items.push({key:'useful',name:'喜用互补',level:shared.length||(aNeedFromB&&bNeedFromA)?'support':'neutral',
   text:`甲方喜用 ${ua.join('、')||'中和未单列'}，乙方喜用 ${ub.join('、')||'中和未单列'}。${shared.length?'共同喜用为 '+shared.join('、')+'，两人可往同一五行环境借力':aNeedFromB&&bNeedFromA?'对方的命局恰含自己所需之五行，传统视为互补':'喜用不显式互补，以各自行运调节为主'}。`});
- // 5 纳音五行生克（此前写死 neutral，有数据不判定）
+ // 5 用神↔忌神双向克耗：甲喜用∩乙忌神（甲需乙之五行被乙命压制）、反之亦然
+ // 双向皆真＝实质互补（彼此能卸掉对方的忌神）；单向＝一方付出型；皆假＝无明显克耗
+ const ca=ba.strength?.caution||ba.strength?.roles?.avoid||[],cb=bb.strength?.caution||bb.strength?.roles?.avoid||[];
+ const aNeed=ua.filter(e=>cb.includes(e)),bNeed=ub.filter(e=>ca.includes(e));
+ const uaLevel=aNeed.length&&bNeed.length?'support':(aNeed.length||bNeed.length)?'challenge':'neutral';
+ items.push({key:'usefulAvoid',name:'用神↔忌神',level:uaLevel,
+  text:`甲方喜用 ${ua.join('、')||'—'} 对乙方忌神 ${cb.join('、')||'—'}：交集${aNeed.length?'【'+aNeed.join('、')+'】':''}；乙方喜用 ${ub.join('、')||'—'} 对甲方忌神 ${ca.join('、')||'—'}：交集${bNeed.length?'【'+bNeed.join('、')+'】':''}。${aNeed.length&&bNeed.length?'双向互为用忌——传统视为「彼此能卸掉对方忌神」的实质互补，两人在一起反而各自松绑，是较稀缺的结构':aNeed.length?`仅甲方喜用落在乙方忌神（${aNeed.join('、')}）——乙方需为这段关系克制自身忌神之性，付出感偏多，宜有来有往`:bNeed.length?`仅乙方喜用落在甲方忌神（${bNeed.join('、')}）——甲方承担较多克制与成全，长期须防失衡`:'双方喜用与对方忌神无明显交集，不必靠「互相克制」维系，相处更看共同目标'}。此为扶抑模型内的取象，非吉凶判定。`});
+ // 6 日主强弱互补：身强×身弱为一泄一补（传统视为分工互补）；两强/两弱各有课题
+ const ka=ba.strength?.kind,kb=bb.strength?.kind;
+ const balanceLevel=ka&&kb&&ka!==kb&&ka!=='中和'&&kb!=='中和'?'support':ka==='中和'||kb==='中和'?'neutral':'challenge';
+ items.push({key:'strengthBalance',name:'日主强弱',level:balanceLevel,
+  text:`甲方日主${ka||'—'}（扶助 ${Number(ba.strength?.support||0).toFixed(0)}%），乙方${kb||'—'}（扶助 ${Number(bb.strength?.support||0).toFixed(0)}%）。${ka&&kb&&ka!=='中和'&&kb!=='中和'?(ka!==kb?'一强一弱——传统合婚视为「一泄一补」的分工型组合：强者主导开拓、弱者守成滋养，宜明确角色而非争同一位置':`同为${ka}——两强易争主导权、两弱易相互依赖，宜各自保留独立空间与决策边界`):'有一方近中和——强弱不成为相处主轴，看其它结构项'}。日主强弱仅为扶抑模型结论，不是性格判决。`});
+ // 7 纳音五行生克（此前写死 neutral，有数据不判定）
  const naEl=nayinElement(dayA.nayin),nbEl=nayinElement(dayB.nayin),naRel=nayinRelation(naEl,nbEl);
  items.push({key:'nayin',name:'日柱纳音',level:naRel.kind==='support'?'support':naRel.kind==='challenge'?'challenge':'neutral',
   text:`甲方日柱纳音 ${dayA.nayin||'—'}${naEl?'（'+naEl+'）':''}，乙方 ${dayB.nayin||'—'}${nbEl?'（'+nbEl+'）':''}——${naRel.text}。纳音婚配为传统取象，只作相处风格的旁证，不据此断吉凶。`});
- // 6 日主阴阳（此前完全未用）
+ // 8 日主阴阳（此前完全未用）
  const yyA=yinYangOf(dayA.stem),yyB=yinYangOf(dayB.stem);
  const yyLevel=yyA&&yyB&&yyA!==yyB?'support':'neutral';
  items.push({key:'yinyang',name:'日主阴阳',level:yyLevel,
   text:`甲方日干 ${dayA.stem||'—'}${yyA?'（'+yyA+'）':''}，乙方 ${dayB.stem||'—'}${yyB?'（'+yyB+'）':''}。${yyA&&yyB?(yyA!==yyB?'阴阳相异——传统合婚讲「阴阳相济」，一刚一柔、一外一内，互补性强，宜各自发挥所长而非争同一角色。':`同为${yyA}——气质同频、易互相理解，但刚性或柔性叠加时易一边倒，须刻意保留对方的表达空间。`):'日主阴阳未取到，不据此判读。'}`});
  const support=items.filter(x=>x.level==='support').length,challenge=items.filter(x=>x.level==='challenge').length;
- return {items,support,challenge,method:'八字合婚取日支刑冲合害、日干五合与阴阳、生肖三合六合、十神财官互象、喜用互补、日柱纳音五行生克，逐项给结构化证据；不把这些取象折算成契合度分数，契合度仍以印度八科单向口径为准。'};
+ return {items,support,challenge,method:'八字合婚取日支刑冲合害（含相刑）、日干五合与阴阳、生肖三合六合、十神财官互象、喜用互补、用神↔忌神双向克耗、日主强弱互补、日柱纳音五行生克，逐项给结构化证据；不把这些取象折算成契合度分数，契合度仍以印度八科单向口径为准。'};
 }
 
 /* 紫微合盘：双方命宫/夫妻宫互参 */

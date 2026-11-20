@@ -158,7 +158,7 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
  // west
  const at=selection.at||new Date().toISOString(),mode=selection.mode||'transit';
  const w=await request('/api/console/western',{birth,mode,at});
- const rep=buildWesternDeepReport(w.chart||w,at);
+ const rep=buildWesternDeepReport(w.chart||w,at,w.chart?.analysis||w.analysis);
  const fd={western:w,mode,at};
  const sections=focus?focusedSections('west',scope,label,fd):[...rep.sections.slice(),focusSection('west',scope,label,fd)];
  return compose(sections,{title:`西洋占星 · ${label}${focus?' · 时点详批':''}`,kind:'west',

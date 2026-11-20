@@ -2,6 +2,14 @@
 // 行运触发点由星历实算（木土天海冥当前行度对本命行星的相位与落宫）。
 import {bodyAt} from '../../src/ephemeris.mjs';
 const GLOSS={};
+// 行星尊贵度（dignity）差异化判读：同一颗星在庙/旺/弱/陷的表达质量不同，不再对所有盘输出同一句模板。
+const DIGNITY_TONE={
+ 入庙:{tag:'入庙',text:'行星回到自己的星座，能量「在家」——表达纯粹、自主性高，能以建设性的方式稳定发挥，是这颗星最可靠的实力区。'},
+ 旺相:{tag:'旺相',text:'行星处于最有力的星座，能量被放大到最佳——天赋突出、表现亮眼；须防过度扩张与「用力过猛」。'},
+ 入弱:{tag:'入弱',text:'行星落在与本性相悖的星座，如同「客场作战」——表达别扭、易内耗或与场域规范冲突，须靠后天刻意练习找回节奏。'},
+ 落陷:{tag:'落陷',text:'行星处于最不舒适的表达状态——课题感重、能量易受压抑或扭曲，恰是后天修炼与成熟度的主要来源，不宜当作缺陷看。'}
+};
+const ORB_TIER=o=>{const a=Math.abs(o??9);return a<=2?'极紧':a<=4?'紧':a<=6?'宽':'松';};
 const PLANET_CORE={
  sun:'自我意志与生命力的核心——你想成为什么样的人',moon:'情绪需求与安全感的来源——你需要什么才能安心',
  mercury:'思维方式与表达风格——你如何思考与沟通',venus:'爱与美的取向——你被什么吸引、如何去爱',
@@ -20,12 +28,16 @@ const ASPECT_MEANING={0:'合相（能量融合）',60:'六合（轻松协作）'
 const ELEMENT_OF={白羊座:'火',狮子座:'火',射手座:'火',金牛座:'土',处女座:'土',摩羯座:'土',双子座:'风',天秤座:'风',水瓶座:'风',巨蟹座:'水',天蝎座:'水',双鱼座:'水'};
 const SIGN_INDEX=Object.fromEntries(Object.keys(SIGN_TRAIT).map((s,i)=>[s,i]));
 
-export function buildWesternDeepReport(w,at){
+export function buildWesternDeepReport(w,at,analysis){
  const transitAt=at?new Date(at):new Date();
  const validTransitAt=!Number.isNaN(+transitAt)?transitAt:new Date();
  const transitStamp=validTransitAt.toLocaleString('zh-CN',{hour12:false});
  const gloss={};
  const planets=w?.planets||[],aspects=w?.aspects||[];
+ // 尊贵度与命主星来自 analysis（chart() 已算好，此前被丢弃）；按行星名匹配，缺失时降级为中性，不影响旧调用
+ const dignBy=new Map((analysis?.planets||[]).map(x=>[x.name,x.dignity]));
+ const dignOf=p=>dignBy.get(p?.name)||p?.dignity||null;
+ const rulerName=analysis?.chartRuler?.planet||null;
  // 星座名归一：兼容「狮子」与「狮子座」两种输入，统一到含「座」的键
  const signName=v=>{const s=typeof v==='string'?v:(v?.sign||v?.name||'—');return SIGN_TRAIT[s]?s:(SIGN_TRAIT[s+'座']?s+'座':s);};
  const asc=signName(w?.asc),mc=signName(w?.mc);
@@ -48,22 +60,38 @@ export function buildWesternDeepReport(w,at){
   gloss[p.name]=core2;
   const style=SIGN_TRAIT[signName(p.sign)]||'';
   const field=HOUSE_THEME[p.house]||'';
-  return `<li><b>${p.name}${p.retro?' ℞':''} · ${p.sign} · 第${p.house}宫</b><span>${core2}。以${style}的方式，展现在${field}之中${p.retro?'（逆行：能量内收，先内化再外放，不宜急于一次性兑现）':''}。</span></li>`;
+  const dg=dignOf(p),dgTone=DIGNITY_TONE[dg];
+  const isRuler=rulerName&&p.name===rulerName;
+  const quality=dgTone?`<b class="rpt-dignity rpt-dig-${dg}">【${dgTone.tag}】</b>${dgTone.text}`:'';
+  const ruler=isRuler?' <b class="rpt-ruler">命主星</b>（上升的守护者）：它的状态是全盘的推进主力，落宫与相位尤其值得优先看。':'';
+  return `<li><b>${p.name}${p.retro?' ℞':''} · ${p.sign} · 第${p.house}宫${isRuler?' · ★命主':''}</b><span>${core2}。以${style}的方式，展现在${field}之中${p.retro?'（逆行：能量内收，先内化再外放，不宜急于一次性兑现）':''}。${quality}${ruler}</span></li>`;
  }).join('');
  const planetSec=`<ul class="rpt-list">${planetLines||'<li>行星数据待排盘后生成。</li>'}</ul>`;
+ const rulerLine=analysis?.chartRuler?`命主星（上升守护者）${rulerName||'—'}落${analysis.chartRuler.sign||'—'}第${analysis.chartRuler.house||'—'}宫${analysis.chartRuler.dignity?`（${analysis.chartRuler.dignity}）`:''}——它掌舵全盘的能量走向，是理解「哪颗星最该被优先照顾」的关键。`:null;
+ const dignCount=analysis?.dignitiesSummary||null;
  const planetIntro=[
-  `行星是「什么能量」，星座是「什么风格」，宫位是「哪个场域」——三星合读，一颗行星才读完整。上表按个人行星（日月水金火：日常人格）→社会行星（木土：成长课题）→外行星（天海冥：世代背景）顺序理解。`,
+  `行星是「什么能量」，星座是「什么风格」，宫位是「哪个场域」，尊贵度（庙旺弱陷）是「这颗星状态好不好」——四者合读才算读完整。上表按个人行星（日月水金火：日常人格）→社会行星（木土：成长课题）→外行星（天海冥：世代背景）顺序理解。`,
+  `尊贵度判读：入庙＝能量在家、发挥最稳；旺相＝力量放大、天赋突出；入弱＝客场作战、需后天练习；落陷＝课题最重、成熟度的主要来源，不是缺陷标签。同一颗星落在庙与落在陷，表达质量天差地别，不可只看星座与宫位。`,
+  ...(rulerLine?[rulerLine]:[]),
+  ...(dignCount?[`本盘庙旺弱陷分布：入庙 ${dignCount.入庙||0}、旺相 ${dignCount.旺相||0}、入弱 ${dignCount.入弱||0}、落陷 ${dignCount.落陷||0}。庙旺多者天赋资源足、起跑省力；弱陷多者课题感重但后发空间大——两者无好坏，只是能量的调度方式不同。`]:[]),
   `空宫不是缺失：没有行星的宫位，看它的守护星（星座守护者）落在哪一宫、与谁成相位——议题由宫主星承接。`
  ];
 
  /* 三、相位格局 */
+ const NATURE_OF=a=>[60,120].includes(a)?'和谐':[90,180].includes(a)?'张力':a===0?'融合':'次要';
+ const phaseState=x=>typeof x.applying==='boolean'?(x.applying?'入相位':'出相位'):null;
  const sorted=[...aspects].sort((a,b)=>(a.orb??99)-(b.orb??99)).slice(0,12);
- const aspRows=sorted.map(x=>`<tr><td>${x.a} ${ASPECT_MEANING[x.angle]?.slice(0,3)||x.type||''} ${x.b}</td><td>${x.angle??'—'}°</td><td>${(x.orb??0).toFixed(1)}°</td><td>${ASPECT_MEANING[x.angle]?.replace(/（.*/,'')||'综合判读'}</td></tr>`).join('');
- const aspTable=aspRows?`<table class="rpt-table"><thead><tr><th>相位</th><th>角度</th><th>容许度</th><th>类型</th></tr></thead><tbody>${aspRows}</tbody></table>`:'';
+ const aspRows=sorted.map(x=>{
+  const tier=ORB_TIER(x.orb),nature=NATURE_OF(x.angle),state=phaseState(x);
+  const weight=tier==='极紧'?'权重最高':tier==='紧'?'权重偏高':tier==='宽'?'中等权重':'轻度影响';
+  const dynamic=state==='入相位'?'能量正在聚拢、议题趋于显性':state==='出相位'?'能量正在退潮、议题转入内化':'未标注出入相位，按容许度判读';
+  return `<tr><td>${x.a} ${ASPECT_MEANING[x.angle]?.slice(0,3)||x.type||''} ${x.b}</td><td>${x.angle??'—'}°</td><td>${(x.orb??0).toFixed(1)}°<small class="rpt-orb-${tier}">${tier}</small></td><td>${nature}${state?' · '+state:''}<small>${weight}；${dynamic}</small></td></tr>`;
+ }).join('');
+ const aspTable=aspRows?`<table class="rpt-table"><thead><tr><th>相位</th><th>角度</th><th>容许度</th><th>性质与动态</th></tr></thead><tbody>${aspRows}</tbody></table>`:'';
  const aspLines=[
-  `相位是行星之间的「对话」。容许度（orb，即与精确角度的偏差）越小，对话声音越大——上表按紧到松排列，前几条是你人格中最响的内部对话。`,
-  `读法：和谐相位（六合/拱）是天赋的顺水推舟；紧张相位（刑/冲）是成长的心脏压——两者都要「用」才会兑现，顺境须落实，逆境须整合。`,
-  `多相位指向同一主题（同一行星被反复触及，或同主题宫位被反复强调）时，才会形成稳定的行为模式——单相位不定人格。`
+  `相位是行星之间的「对话」。容许度（orb，与精确角度的偏差）越小，对话声音越大——上表按紧到松排列，每行列明松紧等级与权重：极紧／紧是人格里最响的主旋律，宽／松是背景和声。`,
+  `入相位（applying）＝两星仍在接近精确角度，能量上升、议题趋于事件化，权重加一档；出相位（separating）＝已过精确点正在远离，能量退潮、议题转为内化沉淀。同一组相位，入与出的读法不同（本盘若未标注出入相位，则仅按容许度判读）。`,
+  `和谐相位（六合/拱）是天赋的顺水推舟；张力相位（刑/冲）是成长的心脏压——两者都要「用」才会兑现。多相位指向同一主题时才形成稳定行为模式——单相位不定人格。`
  ];
 
  /* 四、格局检测 */

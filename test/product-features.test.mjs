@@ -500,3 +500,75 @@ test('时点敏感性：紫微十年起点与流日、西占行运随所选时�
  assert.notEqual(sec(t1,'行运触发点').html,sec(t2,'行运触发点').html,'不同时点的西占行运须实算重排');
  assert.match(sec(t2,'行运触发点').lines.join(''),/2030/);
 });
+
+test('深挖v0.38：西占 dignity/命主星接线，相位按容许度分级，不再通用模板',async()=>{
+ const {chart}=await import('../src/chart.mjs');
+ const {buildWesternDeepReport}=await import('../www/js/deep-west.js');
+ const CITY={lat:39.9042,lon:116.4074,tz:8};
+ const f=chart({Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY},{baseOnly:true});
+ const r=buildWesternDeepReport(f.western,undefined,f.analysis);
+ const planetSec=r.sections.find(s=>s.title.includes('逐星'));
+ assert.ok((planetSec.html.match(/rpt-dig-/g)||[]).length>=1,'逐星须带庙旺弱陷标记，数据不可再被丢弃');
+ assert.match(planetSec.lines.join(''),/命主星（上升守护者）/,'须点出命主星落宫');
+ assert.match(planetSec.lines.join(''),/尊贵度判读/,'须给庙旺弱陷的差异化读法');
+ const noAnalysis=buildWesternDeepReport(f.western);
+ assert.equal((noAnalysis.sections.find(s=>s.title.includes('逐星')).html.match(/rpt-dig-/g)||[]).length,0,'未传 analysis 时降级为中性，不伪造尊严度');
+ const aspSec=r.sections.find(s=>s.title.includes('相位'));
+ assert.ok((aspSec.table.match(/rpt-orb-/g)||[]).length>=1,'相位表须按容许度分级');
+ assert.match(aspSec.table,/性质与动态/,'相位表须给出性质与动态判读，而非仅角度查表');
+ // westernPro 带 applying，须显示入/出相位
+ const {westernPro}=await import('../src/western-pro.mjs');
+ const wp=westernPro({birth:{Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY}});
+ const rp=buildWesternDeepReport(wp.chart||wp,undefined,wp.chart?.analysis);
+ const aspP=rp.sections.find(s=>s.title.includes('相位'));
+ assert.match(aspP.table,/入相位|出相位/,'有 applying 数据时须标注入/出相位');
+});
+
+test('深挖v0.38：八字合婚纳音五行生克 + 日主阴阳真判，不再写死中性',async()=>{
+ const {baziMatch}=await import('../src/match-making.mjs');
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const CITY={lat:39.9042,lon:116.4074,tz:8};
+ const mk=(Y,M,D,h,mi)=>baziPro({birth:{Y,M,D,h,mi,city:CITY,calendar:'solar'}});
+ const r=baziMatch(mk(1990,3,15,10,0),mk(1991,8,22,14,0));
+ const na=r.items.find(x=>x.key==='nayin'),yy=r.items.find(x=>x.key==='yinyang');
+ assert.ok(na,'须有纳音项');
+ assert.notEqual(na.level,undefined);
+ assert.match(na.text,/生|克|同|无明显/,'纳音须给五行关系判读而非空话');
+ assert.match(na.text,/（[金木水火土]）/,'纳音须标注提取的五行');
+ assert.ok(yy,'须有日主阴阳项');
+ assert.match(yy.text,/阳|阴/,'阴阳须实际判定');
+ assert.match(r.method,/阴阳|纳音五行/,'方法说明须更新');
+ // 同为木纳音 → 同气相求的中性判定
+ const same=baziMatch(mk(1988,11,2,6,0),mk(1993,5,17,20,0));
+ assert.match(same.items.find(x=>x.key==='nayin').text,/同为/,'同五行纳音须判为比和');
+});
+
+test('深挖v0.38：印占功能吉凶随上升变化 + BAV/SAV 兑现窗口 + 小运锚点跟随时点',async()=>{
+ const {functionalNature,dashaBavWindow,buildVedicDeepReport}=await import('../www/js/deep-vedic.js');
+ // 土星对金牛/天秤上升（主9+10或4+5）为瑜伽主，对巨蟹上升（主6+7）为功能凶——同一颗星不同上升结论不同
+ assert.equal(functionalNature('土星',1).kind,'yogakaraka','金牛上升土星须为瑜伽主');
+ assert.equal(functionalNature('土星',6).kind,'yogakaraka','天秤上升土星须为瑜伽主');
+ assert.equal(functionalNature('土星',3).kind,'malefic','巨蟹上升土星须为功能凶');
+ assert.notEqual(functionalNature('金星',1).label,functionalNature('金星',3).label,'金星在不同上升判读须不同');
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const birth={Y:1990,M:6,D:15,h:6,mi:30,city:{lat:39.9042,lon:116.4074,tz:8},calendar:'solar'};
+ const v=vedicPro({birth,at:new Date().toISOString()});
+ const bw=dashaBavWindow('土星',v.lagnaIndex,v.ashtakavarga);
+ assert.ok(bw&&bw.peakHouse>=1&&bw.peakHouse<=12,'BAV 窗口须给出有效宫位');
+ assert.ok(bw.support==='strong'||bw.support==='mid'||bw.support==='weak'||bw.support==='na','须给支撑度分级');
+ const r=buildVedicDeepReport(v);
+ const dasha=r.sections.find(s=>s.title.includes('Vimshottari'));
+ assert.match(dasha.html,/rpt-dasha-fn/,'大运须带功能吉凶标签');
+ assert.match(dasha.html,/兑现窗口|影曜/,'大运须给兑现窗口或影曜口径');
+ const antar=r.sections.find(s=>s.title.includes('小运细分'));
+ assert.ok((antar.html.match(/兑现波段/g)||[]).length>=1,'小运须标注兑现波段');
+ // 时点自洽：v.at 改成过去年份，当前小运标记须随之移动（不再取系统 Date.now）
+ const vPast=vedicPro({birth,at:new Date(Date.UTC(2005,0,1)).toISOString()});
+ assert.equal(typeof vPast.at,'string','vedicPro 须输出 at 锚点供报告读取');
+});
+
+test('深挖v0.38：合盘逐星对照不再把所有行星误标为太阳系',async()=>{
+ const src=await readFile(new URL('../www/js/deep-synastry.js',import.meta.url),'utf8');
+ assert.doesNotMatch(src,/太阳系\$\{pa\.sign\}/,'逐星对照不得写死「太阳系」');
+ assert.match(src,/\$\{A\} 的\$\{role\.name\}在\$\{pa\.sign\}/,'须按 role.name 标注真实行星');
+});

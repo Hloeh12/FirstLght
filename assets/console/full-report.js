@@ -114,7 +114,8 @@ export function composeFullReport(state,names){
  }
  // west 及未知体系兜底：显式分支，避免未来新体系再误落本命模板
  const w=state.reading?.western||{};
- const report=withGlossary(buildWesternDeepReport(w));
+ // 传入 analysis：dignity（庙旺弱陷）与命主星此前算了却被丢弃，接线后逐星判读不再是通用模板
+ const report=withGlossary(buildWesternDeepReport(w,undefined,state.reading?.analysis||w.analysis));
  const ascText=typeof w.asc==='string'?w.asc:(w.asc?.sign||'待定');
  return {cover,title:report.title,characters:charactersOf(report.sections),kind:'west',
   lead:`太阳在${esc(w.planets?.find(p=>p.key==='sun')?.sign||'待定')}、月亮在${esc(w.planets?.find(p=>p.key==='moon')?.sign||'待定')}、上升${esc(ascText)}。全文五章：核心三要素、逐星解读、相位格局、盘面格局与元素失衡检测、领域速览——逐星成段、格局可核。`,

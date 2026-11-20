@@ -104,7 +104,7 @@ export function buildSynastryDeepReport(result,aName,bName){
   const role=STAR_ROLE[k];
   gloss[role.name+'（合盘）']=role.role;
   const rel=pa&&pb?elementRel(pa.sign,pb.sign):'无';
-  return `<li><b>${role.name} · ${pa?.sign||'—'} × ${pb?.sign||'—'} · ${({同:'同元素',和:'三合',磨:'刑',拉:'对冲',半:'六合',无:'细读'})[rel]}</b><span>${role.text}${pa&&pb?` 对照实况：${A} 太阳系${pa.sign}、${B} 系${pb.sign}——${ELEMENT_REL[rel]}`:''}${role.a?` 经营问句：${role.a}`:''}</span></li>`;
+  return `<li><b>${role.name} · ${pa?.sign||'—'} × ${pb?.sign||'—'} · ${({同:'同元素',和:'三合',磨:'刑',拉:'对冲',半:'六合',无:'细读'})[rel]}</b><span>${role.text}${pa&&pb?` 对照实况：${A} 的${role.name}在${pa.sign}、${B} 的${role.name}在${pb.sign}——${ELEMENT_REL[rel]}`:''}${role.a?` 经营问句：${role.a}`:''}</span></li>`;
  }).join('');
  const pairSec=`<ul class="rpt-list">${pairRows||'<li>行星数据待生成。</li>'}</ul>`;
  const ascRel=ascA&&ascB?elementRel(typeof ascA==='string'?ascA:ascA.sign,typeof ascB==='string'?ascB:ascB.sign):null;

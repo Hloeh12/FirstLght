@@ -69,6 +69,31 @@ function lordOfHouse(house,lagnaIndex){
  const sign=SIGN_LIST[(lagnaIndex+house-1+12)%12];
  return SIGN_LORD[SIGN_INDEX[sign]];
 }
+// 功能吉凶（Functional Nature）：按行星所主宫位相对上升判定，古典 Parashari 口径。
+// 瑜伽主＝同主角宫(4/10)与三角宫(5/9)；命主＝主 1；功能凶＝只主浊宫(6/8/12)；杀主＝主 2/7 而无三角。
+export function functionalNature(name,lagnaIndex){
+ const ruled=SIGN_LIST.map((s,i)=>SIGN_LORD[i]===name?((i-lagnaIndex+12)%12)+1:null).filter(Boolean);
+ if(!ruled.length)return {kind:'shadow',label:'影曜（无本命宫主，按自然吉凶读）',houses:[],detail:'罗睺计都不主星座，吉凶依落宫、相位与所影响之星而定'};
+ const has=h=>ruled.includes(h),karma=[4,10].some(has),trikona=[5,9].some(has),dust=[6,8,12].filter(has);
+ if(karma&&trikona)return {kind:'yogakaraka',label:'瑜伽主（功能大吉）',houses:ruled,detail:'同主角宫与三角宫——平台（角）与福报（三角）联手，是本盘最可靠的助力星'};
+ if(has(1))return {kind:'lagna',label:'本命主（命主星）',houses:ruled,detail:'第一宫之主，自我与人生主轴；它的强弱直接决定「自我发力」的难易度'};
+ if(dust.length&&!trikona&&!karma)return {kind:'malefic',label:'功能凶',houses:ruled,detail:`主 ${dust.join('/')} 宫（浊宫）——所主领域多耗损与课题，宜守成、忌猛攻`};
+ if(trikona)return {kind:'benefic',label:'功能吉',houses:ruled,detail:`主 ${ruled.filter(h=>[5,9].includes(h)).join('/')} 宫（三角宫）——福报与信念之星，所主领域较易得助`};
+ if([2,7].some(has))return {kind:'maraka',label:'杀主（关系宫之主）',houses:ruled,detail:`主 ${ruled.filter(h=>[2,7].includes(h)).join('/')} 宫——关系与合伙议题的开关，主得失转折，非一「凶」字可尽`};
+ if(karma)return {kind:'kendra',label:'功能吉（角宫主）',houses:ruled,detail:`主 ${ruled.filter(h=>[4,10].includes(h)).join('/')} 宫（角宫）——掌平台与责任，吉凶随其力量与是否兼主他宫而定`};
+ return {kind:'neutral',label:'中性（成长宫主）',houses:ruled,detail:`主 ${ruled.join('/')} 宫——3/11 成长宫，靠主动经营兑现，非天生助力或阻力`};
+}
+// 大运主星的 Ashtakavarga 兑现窗口：BAV 峰值星座→对应宫位→该宫 SAV 支撑度。
+// 规则可核：BAV 峰值＝该星自身得分最高的星座；SAV≥30＝该宫结构支撑充足；行运触发该宫或进入同主小运＝兑现窗口。
+export function dashaBavWindow(lord,lagnaIndex,astha){
+ const row=astha?.valid&&astha.rows?.find(r=>r.name===lord);
+ if(!row?.bav||row.bav.length!==12)return null;
+ let peak=0,low=0;for(let i=1;i<12;i++){if(row.bav[i]>row.bav[peak])peak=i;if(row.bav[i]<row.bav[low])low=i;}
+ const sav=astha.sav?.[peak];
+ return {peakSign:SIGN_LIST[peak],peakHouse:((peak-lagnaIndex+12)%12)+1,peakLord:SIGN_LORD[peak],peakBav:row.bav[peak],
+  lowSign:SIGN_LIST[low],lowHouse:((low-lagnaIndex+12)%12)+1,lowBav:row.bav[low],sav,
+  support:!Number.isFinite(sav)?'na':sav>=30?'strong':sav>=28?'mid':'weak'};
+}
 function planetsInHouse(planets,h){return planets.filter(p=>p.house===h);}
 function sameSign(a,b){
  const ia=houseOfSign(a?.sign),ib=houseOfSign(b?.sign);
@@ -251,12 +276,16 @@ const asthaLines=astha?.valid?[
   const lordP=byName(d.lord),theme=DASHA_THEME[d.lord]||{};
   const house=lordP?.house,houseTheme=HOUSE_THEME[house]||'';
   const dign=lordP?gradeOf({p:lordP,st:states(lordP)})[0]:'—';
-  return `<li class="${d.active?'rpt-now':''}"><b>${d.lord}大运 · ${(d.start||'').slice(0,10)} 至 ${(d.end||'').slice(0,10)} · ${d.years||''}年${d.active?' · 【当前大运】':''}</b><span>主星落第${house||'—'}宫（${houseTheme}），力量评级${dign}。该运主轴：${theme.best||''}${theme.watch?'；须防：'+theme.watch:''}。大运兑现方式＝主星宫位主题×主星状态×行运当时年龄：${lordP?(PLANET_HOUSE[d.lord]?.[(house||1)-1]||''):''}${dign==='弱'?'（主星偏弱，此运主题打折呈现，宜稳不宜攻）':''}。</span></li>`;
+  const fn=functionalNature(d.lord,lagnaIndex),bw=dashaBavWindow(d.lord,lagnaIndex,astha);
+  const fnTag=fn.kind==='yogakaraka'?'★瑜伽主':fn.kind==='malefic'?'▲功能凶':fn.kind==='benefic'?'☆功能吉':fn.kind==='maraka'?'◇杀主':fn.kind==='lagna'?'◆命主':fn.label;
+  const savText=bw?`【兑现窗口】${d.lord}在本命 BAV 峰值落${bw.peakSign}（${bw.peakBav}分，满分7），对应第${bw.peakHouse}宫（${HOUSE_THEME[bw.peakHouse]}），该宫 SAV ${bw.sav??'—'}${bw.support==='strong'?'（≥30，结构支撑厚，此运主题较易落地）':bw.support==='mid'?'（中等支撑，兑现须借流年触发）':bw.support==='weak'?'（＜30，结构偏薄，主题打折、宜放低预期）':''}；行运行星过${bw.peakSign}或入${bw.peakLord}小运时，是该运主题的高概率触发点。`:'';
+  return `<li class="${d.active?'rpt-now':''}"><b>${d.lord}大运 · ${(d.start||'').slice(0,10)} 至 ${(d.end||'').slice(0,10)} · ${d.years||''}年${d.active?' · 【当前大运】':''}</b><span>主星落第${house||'—'}宫（${houseTheme}），力量评级${dign}。该运主轴：${theme.best||''}${theme.watch?'；须防：'+theme.watch:''}。<b class="rpt-dasha-fn fn-${fn.kind}">${fnTag}</b>：${fn.detail}${fn.houses.length?`（${d.lord}主第${fn.houses.join('、')}宫）`:''}。${savText}${dign==='弱'?'　主星偏弱，此运主题打折呈现，宜稳不宜攻。':''}</span></li>`;
  }).join('');
  const dashaSec=dashaRows?`<ul class="rpt-list rpt-decades">${dashaRows}</ul>`:'大运数据待排盘后生成。';
  const dashaIntro=[
   `Vimshottari（毗姆沙达里）大运：以月亮出生星宿起排，九曜轮值共 120 年——印占最重要的「人生时刻表」。当前余额：出生大运还余 ${Number(v?.balanceYears||0).toFixed(2)} 年（按月亮在宿内的位置折算）。`,
-  `大运判读三步：①主星本命落宫＝此运舞台；②主星力量评级＝演出质量；③副运（Antar）主星落宫＝该运内的波段。排盘页可四级下钻到细运（Pratyantar）与微运（Sookshma）。`
+  `大运判读四步：①主星本命落宫＝此运舞台；②主星力量评级＝演出质量；③功能吉凶（瑜伽主/功能凶/杀主）＝这颗星「站在哪一边」，由它所主宫位相对上升决定；④Ashtakavarga 兑现窗口＝主星 BAV 峰值星座对应的宫位、该宫 SAV 支撑度，指出此运主题最可能落地的领域与触发点。副运（Antar）主星再定该运内的波段，可四级下钻到细运与微运。`,
+  `功能吉凶不是自然吉凶：木星「自然吉」，但若它主上升的 6/8/12 宫，在本盘就是功能凶——判运以「为这个上升做了什么」为准，不背经典标签。瑜伽主（同主角宫与三角宫）是公认最稳的助力配置；杀主（主 2/7 宫）司关系与得失转折。`
  ];
 
  /* 五b、当前与下一大运的 Antardasha（小运）细分 */
@@ -279,11 +308,15 @@ const asthaLines=astha?.valid?[
     return {lord,start:new Date(s+T*prev),end:new Date(s+T*(prev+ratio)),years:(T*ratio)/(365.2425*86400000)};
    });
    const subLordP=byName(subs[0].lord);
+   // 当前小运锚点：优先跟随所选时点 v.at，避免时点报告出现「当前大运=所选时点、当前小运=系统现在」的自相矛盾
+   const anchorMs=v?.at?Date.parse(v.at):Date.now();
+   const now2=Number.isFinite(anchorMs)?anchorMs:Date.now();
+   const dBw=dashaBavWindow(M.lord,lagnaIndex,astha);
    const rows=subs.map(x=>{
     const lp=byName(x.lord),theme=DASHA_THEME[x.lord]||{};
-    const now2=Date.now();
     const isNow=x.start.getTime()<=now2&&now2<x.end.getTime();
-    return `<li class="${isNow?'rpt-now':''}"><b>${M.lord}运之${x.lord}小运 · ${fmt(x.start)} 至 ${fmt(x.end)}${isNow?' · 【当前小运】':''}</b><span>${x.lord}主星${lp?`落第${lp.house}宫（${HOUSE_THEME[lp.house]}）`:''}。主轴：${theme.best||''}${theme.watch?'；防：'+theme.watch:''}。判读＝大运舞台（${M.lord}）×小运波段（${x.lord}）：${M.lord===x.lord?`小运与大运同主——该波段大运主题以最强音呈现，是整段大运的定点年。`:`以${x.lord}的方式兑现${M.lord}的议题（如${M.lord}运遇${x.lord}小运：${theme.best||'见上'}）。`}</span></li>`;
+    const isWindow=!!(dBw&&x.lord===dBw.peakLord);
+    return `<li class="${isNow?'rpt-now':''}"><b>${M.lord}运之${x.lord}小运 · ${fmt(x.start)} 至 ${fmt(x.end)}${isNow?' · 【当前小运】':''}${isWindow?' · ★兑现波段':''}</b><span>${x.lord}主星${lp?`落第${lp.house}宫（${HOUSE_THEME[lp.house]}）`:''}。主轴：${theme.best||''}${theme.watch?'；防：'+theme.watch:''}。判读＝大运舞台（${M.lord}）×小运波段（${x.lord}）：${M.lord===x.lord?`小运与大运同主——该波段大运主题以最强音呈现，是整段大运的定点年。`:`以${x.lord}的方式兑现${M.lord}的议题（如${M.lord}运遇${x.lord}小运：${theme.best||'见上'}）。`}${isWindow?`【★兑现波段】${x.lord}主${dBw.peakSign}——正是${M.lord}大运主星 BAV 峰值星座（对应第${dBw.peakHouse}宫，SAV ${dBw.sav??'—'}），此小运最可能把本运主题落地，重点把握。`:''}</span></li>`;
    }).join('');
    antarLines.push(`<li class="rpt-group"><b>${M.lord}大运（${fmt(M.start)} 至 ${fmt(M.end)}）内的九段小运</b><ul class="rpt-list">${rows}</ul></li>`);
   }
@@ -291,7 +324,8 @@ const asthaLines=astha?.valid?[
  const antarSec=antarLines.length?`<ul class="rpt-list rpt-decades">${antarLines.join('')}</ul>`:'小运数据待排盘后生成。';
  const antarIntro=[
   `Antardasha（小运/副运）：每段大运内部再按九曜比例切分为九段小运——小运主星落宫决定「这一两年的波段剧情」。上表列出当前大运与下一大运的全部小运及起止日期，【当前小运】即当下所在波段。`,
-  `判读：大运定舞台（十年之约），小运定剧目（一两年之内）——木星大运里的土星小运，扩张主题暂时让位于验收与责任；土星大运里的金星小运，苦功之中开一扇享受与感情的窗。重叠看：小运主星若与命格（Yoga）之星同星，该波段即命格兑现期。`
+  `判读：大运定舞台（十年之约），小运定剧目（一两年之内）——木星大运里的土星小运，扩张主题暂时让位于验收与责任；土星大运里的金星小运，苦功之中开一扇享受与感情的窗。重叠看：小运主星若与命格（Yoga）之星同星，该波段即命格兑现期。`,
+  `【★兑现波段】是交叉验证的结果：该小运主星所主的星座，恰是大运主星 BAV 得分最高的星座（且该宫 SAV 支撑已在大运章列出）。「运的主题」与「星的强宫」在此重合，是传统 Ashtakavarga 判定「何时兑现」的核心方法，比单看小运落宫更进一层。`
  ];
  /* 六、分盘与专项 */
  const vargaLines=[];

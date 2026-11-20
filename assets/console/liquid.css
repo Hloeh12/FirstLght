@@ -399,3 +399,31 @@ NaN
 .rpt-table td.rpt-bindu-lo{color:#ff9f9f}
 .rpt-shad td small{color:#c99ab0}
 }
+/* WEST DIGNITY v0.38.0 */
+.rpt-dignity{font-size:11px;padding:1px 5px;border-radius:5px;margin-right:3px;white-space:nowrap}
+.rpt-dig-入庙{color:#1b7a49;background:rgba(46,160,102,.15)}
+.rpt-dig-旺相{color:#a8600a;background:rgba(224,140,20,.16)}
+.rpt-dig-入弱{color:#a3372c;background:rgba(190,60,60,.12)}
+.rpt-dig-落陷{color:#8e2c72;background:rgba(150,40,120,.13)}
+.rpt-ruler{color:#c2185b;white-space:nowrap}
+.rpt-table td small{display:block;margin-top:2px;font-size:9.5px;color:#9a7286;font-weight:400}
+.rpt-orb-极紧{color:#c2185b;font-weight:800}
+.rpt-orb-紧{color:#d8562e;font-weight:700}
+.rpt-orb-宽{color:#887}
+.rpt-orb-松{color:#aa9}
+@media (prefers-color-scheme:dark){
+.rpt-dig-入庙{color:#8ce0b0}.rpt-dig-旺相{color:#f0b96a}.rpt-dig-入弱{color:#ff9f9f}.rpt-dig-落陷{color:#e79fd6}
+.rpt-ruler{color:#ff9fc9}.rpt-table td small{color:#c99ab0}
+}
+/* VEDIC DASHA FN v0.38.0 */
+.rpt-dasha-fn{font-size:11px;padding:1px 5px;border-radius:5px;white-space:nowrap}
+.fn-yogakaraka{color:#1b7a49;background:rgba(46,160,102,.15)}
+.fn-benefic{color:#1b6ea8;background:rgba(30,120,180,.13)}
+.fn-lagna{color:#8c2f5f;background:rgba(196,42,105,.12)}
+.fn-malefic{color:#a3372c;background:rgba(190,60,60,.12)}
+.fn-maraka{color:#8e5a1a;background:rgba(180,120,20,.14)}
+.fn-kendra,.fn-neutral{color:#667;background:rgba(120,120,140,.1)}
+@media (prefers-color-scheme:dark){
+.fn-yogakaraka{color:#8ce0b0}.fn-benefic{color:#8fcaf0}.fn-lagna{color:#ff9fc9}
+.fn-malefic{color:#ff9f9f}.fn-maraka{color:#f0c46a}.fn-kendra,.fn-neutral{color:#b8b8c8}
+}

@@ -389,7 +389,7 @@ NaN
 .rpt-nav-list .rpt-toc-item.on{background:linear-gradient(135deg,#ff77aa,#ff4f8b)!important;border-color:#ff8fb6!important;color:#fff!important;box-shadow:0 4px 12px -6px rgba(255,79,139,.7)}
 .rpt-nav-list .rpt-toc-item.on .rpt-toc-no{color:#ffe0ec!important}
 /* RPT GLASS v0.41.0: 抽屉与内联目录入口的液态玻璃高光强化 */
-.rpt-nav-drawer::before{content://;position:absolute;inset:0 0 auto;height:120px;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));border-radius:18px 0 0 0}
+.rpt-nav-drawer::before{content:"";position:absolute;inset:0 0 auto;height:120px;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));border-radius:18px 0 0 0}
 .rpt-nav-drawer{box-shadow:-18px 0 48px -24px rgba(112,40,76,.85),inset 1px 0 0 rgba(255,255,255,.5)!important}
 .rpt-toc>summary{cursor:pointer;transition:opacity .15s}
 .rpt-toc>summary:active{opacity:.65}
@@ -451,4 +451,22 @@ NaN
 @media (prefers-color-scheme:dark){
 .rpt-yogini td:first-child,.rpt-varga td:first-child{color:#ff9fc9}
 .rpt-yogini tr.rpt-now td,.rpt-varga tr.rpt-now td{background:rgba(255,79,139,.16);color:#ffb6d4}
+}
+/* RPT TOC RAIL v0.42.0: 横向滑动液态玻璃章节选择器，对齐「选择排盘/选择时间」的玻璃 pill 观感 */
+.rpt-toc-list.rpt-toc-rail{display:flex;flex-wrap:nowrap;gap:8px;max-height:none;overflow-x:auto;overflow-y:hidden;padding:10px 4px 12px;margin:0 -4px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scrollbar-width:none}
+.rpt-toc-list.rpt-toc-rail::-webkit-scrollbar{display:none}
+.rpt-toc-rail .rpt-toc-group{flex:none;scroll-snap-align:start;align-self:center;margin:0;padding:6px 11px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.04em;color:#a8326a;background:linear-gradient(135deg,rgba(255,214,232,.9),rgba(255,237,245,.75));border:1px solid rgba(255,150,190,.4);white-space:nowrap;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.rpt-toc-rail .rpt-toc-item{flex:none;scroll-snap-align:center;display:inline-flex;align-items:center;gap:5px;padding:8px 13px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap;color:#7a3055;background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,238,246,.82))!important;border:1px solid rgba(255,160,198,.5)!important;box-shadow:0 6px 16px -10px rgba(196,42,105,.5),inset 0 1px 0 rgba(255,255,255,.95);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);transition:transform .16s,box-shadow .16s,background .16s}
+.rpt-toc-rail .rpt-toc-item .rpt-toc-no{font-size:10px;color:#b0895c}
+.rpt-toc-rail .rpt-toc-item:active{transform:scale(.94)}
+.rpt-toc-rail .rpt-toc-item.on{background:linear-gradient(135deg,#ff7cb0,#ff4f8b)!important;color:#fff!important;border-color:#ff8fb6!important;box-shadow:0 8px 20px -8px rgba(255,79,139,.85)!important}
+.rpt-toc-rail .rpt-toc-item.on .rpt-toc-no{color:#ffe0ec}
+.rpt-toc[open] .rpt-toc-head{margin-bottom:2px}
+/* 时点行运盘角标：一眼区分「时点盘」与「本命总览盘」 */
+.snap-vedic.is-transit[data-snap-label],.snap-west.is-transit[data-snap-label]{position:relative}
+.snap-vedic.is-transit[data-snap-label]::after,.snap-west.is-transit[data-snap-label]::after{content:attr(data-snap-label);position:absolute;top:2px;right:2px;z-index:2;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#fff;background:linear-gradient(135deg,#ff7cb0,#ff4f8b);box-shadow:0 4px 12px -6px rgba(255,79,139,.9);pointer-events:none}
+@media (prefers-color-scheme:dark){
+.rpt-toc-rail .rpt-toc-group{color:#ff9cc4;background:linear-gradient(135deg,rgba(90,40,70,.9),rgba(60,30,50,.8));border-color:rgba(255,160,200,.35)}
+.rpt-toc-rail .rpt-toc-item{color:#f0c9dd!important;background:linear-gradient(135deg,rgba(60,48,70,.92),rgba(48,38,58,.85))!important;border-color:rgba(255,164,206,.35)!important}
+.rpt-toc-rail .rpt-toc-item.on{color:#fff!important}
 }

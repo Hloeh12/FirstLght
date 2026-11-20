@@ -5,6 +5,11 @@ import {buildZiweiDeepReport} from '../../www/js/deep-ziwei.js';
 import {buildVedicDeepReport} from '../../www/js/deep-vedic.js';
 import {buildWesternDeepReport} from '../../www/js/deep-west.js';
 import {buildSynastryDeepReport} from '../../www/js/deep-synastry.js';
+// v0.42.0：全报告补「本命总览盘」，与时点报告的「时点盘」形成明确对照。
+import {baziGrid} from './bazi.js';
+import {northIndianChart} from './vedic.js';
+import {wheel} from './western.js';
+import {divisional} from '../../src/vargas.mjs';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pick=(...vals)=>vals.find(v=>v!==undefined&&v!==null&&!(Array.isArray(v)&&!v.length))??vals.at(-1);
@@ -57,12 +62,33 @@ function tocHtml(report){
   if(g!==last){items+=`<div class="rpt-toc-group">${esc(g)}</div>`;last=g;}
   items+=`<button type="button" class="rpt-toc-item" data-toc="${i+1}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(i+1).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`;
  });
- // v0.41.0：目录默认收起为「点按展开」的液态玻璃入口条，不再占正文大幅篇幅；
- // 展开后与右下角悬浮按钮唤出的侧边抽屉同源（抽屉由 app.js clone 本 list）。四体系共用本函数。
- return `<details class="rpt-toc" aria-label="报告目录"><summary class="rpt-toc-head"><span class="rpt-toc-entry"><span class="rpt-toc-entry-ico" aria-hidden="true">☰</span><span class="rpt-toc-entry-txt">目录 · 分区导航<small>点按展开 · 选择章节</small></span></span><span class="rpt-progress" data-rpt-progress>0%</span></summary><div class="rpt-toc-list">${items}</div></details>`;
+ // v0.42.0：目录做成「选择排盘/时点」同款的横向滑动液态玻璃选择器——
+ // 保留 details.rpt-toc 入口条（默认收起、点按展开），展开后是横向可滑的章节 chip rail，
+ // 分组成员作为 sticky 分隔 chip。右下悬浮按钮唤出的抽屉由 app.js clone 本 list，两处同源。
+ return `<details class="rpt-toc" aria-label="报告目录"><summary class="rpt-toc-head"><span class="rpt-toc-entry"><span class="rpt-toc-entry-ico" aria-hidden="true">☰</span><span class="rpt-toc-entry-txt">目录 · 分区导航<small>点按展开 · 左右滑动选章</small></span></span><span class="rpt-progress" data-rpt-progress>0%</span></summary><div class="rpt-toc-list rpt-toc-rail" role="group" aria-label="章节滑动选择">${items}</div></details>`;
 }
 const stripTags=s=>String(s).replace(/<[^>]*>/g,'');
 const charactersOf=sections=>sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+stripTags(x.table||'').length+stripTags(x.html||'').length,0);
+
+/* v0.42.0 本命总览盘：全报告显示终身不变的本命盘；时点报告显示随时点变化的时点盘。
+   两者口径必须在报告里写清，避免用户误以为「选不同时间盘面怎么一样/全报告和时点盘怎么不同」。 */
+function natalCharts(state){
+ const out={};
+ try{
+  const d=state.chartState?.bazi?.data||state.reading?.bazi||{};
+  const pillars=(d.pillars||[]).filter(Boolean);
+  if(pillars.length)out.bazi=`<div class="snap-bazi"><div class="bazi-grid" style="--bg-cols:${pillars.length}">${baziGrid({...d,pillars})}</div></div>`;
+ }catch{}
+ try{
+  const v=state.reading?.vedic||{};
+  if(v.planets?.length)out.vedic=`<div class="snap-vedic" data-snap-label="本命 D1">${northIndianChart(divisional(v,1))}</div>`;
+ }catch{}
+ try{
+  const w=state.reading?.western||{};
+  if(w.planets?.length&&w.axes)out.west=`<div class="snap-west" data-snap-label="本命盘">${wheel({chart:w,mode:'natal'})}</div>`;
+ }catch{}
+ return out;
+}
 
 // 把生成器产出的 glossary 追加成文末「术语小词典」
 function withGlossary(report){
@@ -79,11 +105,14 @@ export function composeFullReport(state,names){
  const label=names?.[system]||({bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'}[system]||system);
  const stamp=new Date().toLocaleString('zh-CN',{hour12:false});
  const cover={name:profile.name||'未命名命主',system:label,stamp};
+ const natal=natalCharts(state);
  if(system==='bazi'){
   const data=baziReportData(state);
   const report=withGlossary(buildBaziDeepReport(data));
   const selected=(data.selected||[]).map(p=>(p.stem||'')+(p.branch||'')).join('、');
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'bazi',gege:report.gege,
+   chartHtml:natal.bazi,chartTitle:'本命总览 · 八字四柱（终身不变）',
+   chartCaption:'此为本命原局四柱，终身不变；若要查看某个大运/流年/流月叠加后的四柱，请用「时点」Tab 生成时点专项报告。',
    lead:`日主 ${esc(data.dayMaster?.stem||'—')}${esc(data.dayMaster?.element||'')} · ${esc(data.strength?.kind||'待定')} · 扶助 ${Number(data.strength?.support||0).toFixed(1)}% · 判定${esc(report.gege||'格局')}。全文十三章：命局格局、三垣与力量来源、性格、事业、财富、婚姻、健康、神煞、大运逐运详批、流年逐年详批、流月逐月详批、流日与流时择时${selected?`（当前选中：${esc(selected)}）`:''}——每个术语都附白话。`,
    body:sectionHtml(report),sections:report.sections};
  }
@@ -101,6 +130,8 @@ export function composeFullReport(state,names){
   const v=state.reading?.vedic||{};
   const report=withGlossary(buildVedicDeepReport(v));
   return {cover,title:report.title,characters:charactersOf(report.sections),kind:'vedic',
+   chartHtml:natal.vedic,chartTitle:'本命总览 · 印度占星 D1（终身不变）',
+   chartCaption:'此为本命 D1 本命盘，终身不变；行运盘/返照盘随时点变化，请在「时点」Tab 按所选时间生成。',
    lead:`Lahiri 恒星黄道 · 整宫制。上升 ${esc(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗，Vimshottari 大运 ${(v.dashas||[]).length} 段，命格 ${esc((report.yogas||[]).length)} 组成立${v.varshaphala?`，岁运盘 ${v.varshaphala.year} 年已起`:`''`}。全文十四章：上升主轴、行星力量评级、Shadbala 六力审计、Ashtakavarga 八分点、Yoga 命格、九曜落宫、大运逐运详批、小运细分、Yogini 八女神短周期运、十三盘专项（D2–D60）、十二宫力量审计、岁运 Varshaphala、Jaimini 派专项（Karaka·Chara Dasha·Arudha）、人生格局总结。`,
    body:sectionHtml(report),sections:report.sections};
  }
@@ -120,6 +151,8 @@ export function composeFullReport(state,names){
  const report=withGlossary(buildWesternDeepReport(w,undefined,state.reading?.analysis||w.analysis));
  const ascText=typeof w.asc==='string'?w.asc:(w.asc?.sign||'待定');
  return {cover,title:report.title,characters:charactersOf(report.sections),kind:'west',
+  chartHtml:natal.west,chartTitle:'本命总览 · 西洋本命盘（终身不变）',
+  chartCaption:'此为本命盘，终身不变；行运/次限/返照外圈随时点变化，请在「时点」Tab 按所选时间生成。',
   lead:`太阳在${esc(w.planets?.find(p=>p.key==='sun')?.sign||'待定')}、月亮在${esc(w.planets?.find(p=>p.key==='moon')?.sign||'待定')}、上升${esc(ascText)}。全文五章：核心三要素、逐星解读、相位格局、盘面格局与元素失衡检测、领域速览——逐星成段、格局可核。`,
   body:sectionHtml(report),sections:report.sections};
 }

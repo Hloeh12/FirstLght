@@ -688,7 +688,11 @@ function openFullReport(prebuilt){
  // 侧边目录直接复用内联目录的分区结构，保证两处高亮/分组同源，不维护第二份章节表。
  const tocList=d.querySelector('[data-full-report] .rpt-toc-list');
  const navList=d.querySelector('[data-rpt-nav-list]');
- if(tocList&&navList)navList.appendChild(tocList.cloneNode(true));
+ if(tocList&&navList){
+  const navClone=tocList.cloneNode(true);
+  navClone.classList.remove('rpt-toc-rail'); // 抽屉内保持竖向列表，横向 rail 只用于正文内联目录
+  navList.appendChild(navClone);
+ }
  d.querySelector('[data-rpt-close]').onclick=()=>close(d);
  d.querySelector('[data-rpt-copy]').onclick=async()=>{
   const doc=d.querySelector('[data-full-report]');
@@ -720,7 +724,12 @@ function openFullReport(prebuilt){
   const t=e.target.closest('[data-toc]');
   if(t&&rptDoc){
    const sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
-   sec?.scrollIntoView({behavior:'smooth',block:'start'});
+   if(sec&&rptBody){
+    // v0.42.0 防跳动：只滚报告阅读容器自身，不用 scrollIntoView——
+    // 后者会连带滚动 dialog / #mainScrollView 等祖先，造成「点目录整页跳一下」。
+    const top=sec.offsetTop-rptBody.offsetTop-8;
+    rptBody.scrollTo?.({top:Math.max(0,top),behavior:'smooth'});
+   }
    setNav(false);
    return;
   }
@@ -745,6 +754,16 @@ function openFullReport(prebuilt){
    if(on)b.setAttribute('aria-current','location');else b.removeAttribute('aria-current');
    if(on&&rptFabLabel)rptFabLabel.textContent=(report.sections?.[active-1]?.title||'目录').replace(/^[一二三四五六七八九十]+、/,'');
   });
+  // v0.42.0：当前章节 chip 在横向 rail 里自动居中——只滚 rail 自身 scrollLeft，
+  // 绝不用 scrollIntoView（会连带滚动 #reportBody / dialog 造成跳动）。
+  const rail=d.querySelector('.rpt-toc-rail');
+  if(rail){
+   const cur=rail.querySelector('[data-toc="'+active+'"]');
+   if(cur&&rail.scrollWidth>rail.clientWidth+1){
+    const target=cur.offsetLeft-(rail.clientWidth-cur.offsetWidth)/2;
+    if(Math.abs(rail.scrollLeft-target)>2)rail.scrollLeft=Math.max(0,target);
+   }
+  }
  };
  rptBody?.addEventListener('scroll',rptOnScroll,{passive:true});
  rptOnScroll();

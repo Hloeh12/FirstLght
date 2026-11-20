@@ -35,6 +35,11 @@ export function vedicPro({birth,at}){
  result.yogini=yoginiDasha(result,result.at);
  const year=new Date(result.at).getUTCFullYear();
  const tz=Number(birth.city?.tz??8);
+ // 时点行运底盘：以所选时刻的天象在出生地起一张恒星黄道整宫制 D1。
+ // 本命 D1 终身不变，时点盘必须随时点不同——报告快照据此绘制，避免「选不同时间盘面一样」。
+ const atLocal=new Date(+new Date(result.at)+tz*3600000);
+ result.atChart=chart({Y:atLocal.getUTCFullYear(),M:atLocal.getUTCMonth()+1,D:atLocal.getUTCDate(),
+  h:atLocal.getUTCHours(),mi:atLocal.getUTCMinutes(),city:birth.city,calendar:'solar'},{baseOnly:true}).vedic;
  result.varshaphala=varshaphala({
   natal:result,birth,year,tz,
   buildChart:utc=>{

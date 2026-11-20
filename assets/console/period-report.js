@@ -67,17 +67,32 @@ function baziSnapshot(data){
  return `<div class="snap-bazi"><div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${pillars.length}">${baziGrid(gridData)}</div></div>`;
 }
 
-// 印度盘快照：分盘 SVG（已导出纯函数）。
-function vedicSnapshot(v,n){
- try{const d=divisional(v,n||1);return `<div class="snap-vedic">${northIndianChart(d)}</div>`;}
+// 印度盘快照：时点行运盘为主、本命 D1 作对照。分盘 SVG（已导出纯函数）。
+// n=1 时优先画所选时刻的 atChart（恒星黄道整宫制 D1，随 at 变化），
+// 这才是「该时点的命盘」；本命 D1 终身不变，只作底图对照。分盘（D2–D60）
+// 由本命推演，仍取 v，保持分盘规则口径不变。
+function vedicSnapshot(v,n,at){
+ try{
+  const useTransit=(!n||n===1)&&v.atChart;
+  const base=useTransit?v.atChart:v;
+  const d=divisional(base,n||1);
+  const label=useTransit?'时点行运盘 D1':'本命分盘 D'+(n||1);
+  return `<div class="snap-vedic${useTransit?' is-transit':''}" data-snap-label="${esc(label)}">${northIndianChart(d)}</div>`;
+ }
  catch{return '<p class="snap-empty-note">当前数据不足以绘制印度盘。</p>';}
 }
 
-// 西洋盘快照：wheel（已导出纯函数），需要 {chart,outer,mode}。
+// 西洋盘快照：wheel（已导出纯函数），需要 {chart,outer,mode,cross}。
+// westernPro 的行运盘字段是 outer（不是 transitChart）；现场实测取错字段导致
+// 选任何时点都画成本命盘。改为优先用 w.outer 画本命/行运双圈，随 at 变化。
 function westSnapshot(w,mode,at){
  try{
-  const arg=mode&&mode!=='natal'&&w.transitChart?{chart:w.chart,outer:w.transitChart,mode,cross:w.cross||w.aspects||[]}:{chart:w.chart,mode:'natal'};
-  return `<div class="snap-west">${wheel(arg)}</div>`;
+  const base={chart:w.chart,mode:'natal'};
+  if(!mode||mode==='natal')return `<div class="snap-west">${wheel(base)}</div>`;
+  if(w.outer)return `<div class="snap-west is-transit" data-snap-label="${esc(mode)} 行运">${wheel({chart:w.chart,outer:w.outer,mode,cross:w.cross||w.aspects||[]})}</div>`;
+  // solar/lunar 返照等只剩 progressed 单盘：直接画返照盘本体，仍随时点变化。
+  if(mode==='solar'||mode==='lunar')return `<div class="snap-west is-transit" data-snap-label="${esc(mode)} 返照">${wheel({chart:w.chart,mode})}</div>`;
+  return `<div class="snap-west">${wheel(base)}</div>`;
  }catch{return '<p class="snap-empty-note">当前数据不足以绘制星盘（推运盘需先在排盘页生成一次）。</p>';}
 }
 
@@ -149,10 +164,14 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
   const rep=buildVedicDeepReport(v);
   const fd={vedic:v,at};
   const sections=focus?focusedSections('vedic',scope,label,fd):[...rep.sections.slice(),focusSection('vedic',scope,label,fd)];
+  const varga=selection.varga||1;
+  const isTransitD1=varga===1&&v.atChart;
   return compose(sections,{title:`印度占星 · ${label}${focus?' · 时点详批':''}`,kind:'vedic',
-   chartHtml:vedicSnapshot(v,selection.varga||1),chartTitle:`印度占星 D${selection.varga||1} · ${label}`,
-   chartCaption:`${String(at).slice(0,10)} · Lahiri 恒星黄道 · 整宫制。当前大运与岁运见正文。`,
-   lead:`上升 ${escS(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗。`});
+   chartHtml:vedicSnapshot(v,varga,at),chartTitle:`${isTransitD1?'时点行运盘':'印度占星分盘'} D${varga} · ${label}`,
+   chartCaption:isTransitD1
+    ?`${String(at).slice(0,10)} · 该时刻天象在出生地所起 Lahiri 恒星黄道整宫制行运盘，随所选时点变化；本命 D1 上升 ${escS(v.lagna||'—')} 终身不变，见全报告总览。大运主星 ${escS(v.active?.lord||'—')}。`
+    :`${String(at).slice(0,10)} · 本命分盘 D${varga}（由本命 D1 推演，不随流年变）。当前大运与岁运见正文。`,
+   lead:`本命上升 ${escS(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗；${isTransitD1?'时点行运上升 '+escS(v.atChart?.lagna||'—'):'本命盘'}。`});
  }
 
  // west
@@ -161,9 +180,10 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
  const rep=buildWesternDeepReport(w.chart||w,at,w.chart?.analysis||w.analysis);
  const fd={western:w,mode,at};
  const sections=focus?focusedSections('west',scope,label,fd):[...rep.sections.slice(),focusSection('west',scope,label,fd)];
+ const hasOuter=Boolean(w.outer);
  return compose(sections,{title:`西洋占星 · ${label}${focus?' · 时点详批':''}`,kind:'west',
-  chartHtml:westSnapshot(w,mode,at),chartTitle:`西洋星盘 · ${label}`,
-  chartCaption:`${String(at).slice(0,16).replace('T',' ')} · ${NAMES.west} ${mode} 推运。推运对照本命见正文。`,
+  chartHtml:westSnapshot(w,mode,at),chartTitle:`${mode==='natal'?'本命盘':(hasOuter?'本命＋行运双圈盘':'推运盘')} · ${label}`,
+  chartCaption:`${String(at).slice(0,16).replace('T',' ')} · ${NAMES.west} ${mode} 推运。${hasOuter?'外圈为所选时点行运行星（随时点变化），内圈为本命盘（终身不变），见全报告总览。':mode==='natal'?'本命盘终身不变。':'返照盘按所选时点起算，对照本命见正文。'}`,
   lead:`推运法 ${escS(mode)}，逐条给可核的星历证据。`});
 }
 

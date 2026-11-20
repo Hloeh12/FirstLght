@@ -1539,7 +1539,7 @@ body{
 }
 
 /* ---------- 动效与手感 ---------- */
-@keyframes fl-swap{from{opacity:0;transform:translate3d(0,7px,0)}to{opacity:1;transform:none}}
+@keyframes fl-swap{from{opacity:0}to{opacity:1}}
 #screen.fl-swap{animation:fl-swap .32s cubic-bezier(.22,1,.36,1) both}
 @keyframes fl-sheet-up{from{transform:translateY(22px) scale(.986);opacity:.2}to{transform:none;opacity:1}}
 dialog[open]{animation:fl-sheet-up .42s var(--spring) both}

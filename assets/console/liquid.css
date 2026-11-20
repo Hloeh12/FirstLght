@@ -251,7 +251,7 @@ input,select,textarea{font-size:16px!important}
 }
 #birthForm .checks label input[type=checkbox]:checked{background:#ff4f8b!important;border-color:#ff4f8b!important}
 #birthForm .checks label input[type=checkbox]:checked::after{
-NaN
+  content:"";position:absolute;left:4px;top:0;width:5px;height:10px;
   border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)
 }
 /* FL-THEME-SCROLLBAR: 滚动条改为融入主题的细条，去掉深色粗边 */
@@ -452,21 +452,86 @@ NaN
 .rpt-yogini td:first-child,.rpt-varga td:first-child{color:#ff9fc9}
 .rpt-yogini tr.rpt-now td,.rpt-varga tr.rpt-now td{background:rgba(255,79,139,.16);color:#ffb6d4}
 }
-/* RPT TOC RAIL v0.42.0: 横向滑动液态玻璃章节选择器，对齐「选择排盘/选择时间」的玻璃 pill 观感 */
-.rpt-toc-list.rpt-toc-rail{display:flex;flex-wrap:nowrap;gap:8px;max-height:none;overflow-x:auto;overflow-y:hidden;padding:10px 4px 12px;margin:0 -4px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scrollbar-width:none}
-.rpt-toc-list.rpt-toc-rail::-webkit-scrollbar{display:none}
-.rpt-toc-rail .rpt-toc-group{flex:none;scroll-snap-align:start;align-self:center;margin:0;padding:6px 11px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.04em;color:#a8326a;background:linear-gradient(135deg,rgba(255,214,232,.9),rgba(255,237,245,.75));border:1px solid rgba(255,150,190,.4);white-space:nowrap;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
-.rpt-toc-rail .rpt-toc-item{flex:none;scroll-snap-align:center;display:inline-flex;align-items:center;gap:5px;padding:8px 13px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap;color:#7a3055;background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,238,246,.82))!important;border:1px solid rgba(255,160,198,.5)!important;box-shadow:0 6px 16px -10px rgba(196,42,105,.5),inset 0 1px 0 rgba(255,255,255,.95);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);transition:transform .16s,box-shadow .16s,background .16s}
-.rpt-toc-rail .rpt-toc-item .rpt-toc-no{font-size:10px;color:#b0895c}
-.rpt-toc-rail .rpt-toc-item:active{transform:scale(.94)}
-.rpt-toc-rail .rpt-toc-item.on{background:linear-gradient(135deg,#ff7cb0,#ff4f8b)!important;color:#fff!important;border-color:#ff8fb6!important;box-shadow:0 8px 20px -8px rgba(255,79,139,.85)!important}
-.rpt-toc-rail .rpt-toc-item.on .rpt-toc-no{color:#ffe0ec}
-.rpt-toc[open] .rpt-toc-head{margin-bottom:2px}
-/* 时点行运盘角标：一眼区分「时点盘」与「本命总览盘」 */
+/* ============================================================
+   LIQUID GLASS v0.43.0 —— 苹果原生液态玻璃质感 + 底部章节面板
+   核心：折射高光 / 镜面顶缘 / 厚度感 / 动态光晕 / lensing 边缘
+   ============================================================ */
+
+/* --- 通用玻璃材质升级：更接近 iOS Liquid Glass 的通透+镜面+厚度 --- */
+.liquid-glass,.card{
+ background:linear-gradient(155deg,rgba(255,255,255,.72) 0%,rgba(255,247,251,.62) 38%,rgba(255,235,245,.55) 68%,rgba(250,244,255,.7) 100%)!important;
+ backdrop-filter:blur(30px) saturate(210%) brightness(1.03)!important;
+ -webkit-backdrop-filter:blur(30px) saturate(210%) brightness(1.03)!important;
+ border:1px solid rgba(255,255,255,.82)!important;
+ box-shadow:inset 0 1.5px 0 rgba(255,255,255,.96),inset 0 -1px 0 rgba(255,158,198,.16),inset 1px 0 0 rgba(255,255,255,.32),inset -1px 0 0 rgba(255,255,255,.32),0 16px 38px -18px rgba(168,44,94,.2),0 4px 12px -6px rgba(74,28,52,.08)!important;
+}
+/* 镜面斜向高光：模拟玻璃对光的折射扫过 */
+.liquid-glass::before,.card:not(.rpt-doc)::before{
+ content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
+ background:linear-gradient(122deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,.12) 18%,transparent 42%,transparent 66%,rgba(255,255,255,.28) 88%,rgba(255,255,255,.5) 100%);
+ mix-blend-mode:screen;opacity:.9;
+}
+
+/* --- 底部升起的液态玻璃章节面板（替代原右侧抽屉形态） --- */
+.rpt-nav-drawer{
+ top:auto!important;left:0!important;right:0!important;bottom:0!important;
+ width:100%!important;max-width:none!important;height:auto!important;
+ max-height:min(72vh,660px)!important;max-height:min(72dvh,660px)!important;
+ border-radius:28px 28px 0 0!important;
+ border:1px solid rgba(255,255,255,.9)!important;border-bottom:0!important;
+ background:linear-gradient(165deg,rgba(255,255,255,.995),rgba(255,247,252,.99) 46%,rgba(249,243,255,.995))!important;
+ backdrop-filter:blur(44px) saturate(230%) brightness(1.05)!important;
+ -webkit-backdrop-filter:blur(44px) saturate(230%) brightness(1.05)!important;
+ box-shadow:0 -20px 60px -24px rgba(112,40,76,.55),inset 0 2px 0 rgba(255,255,255,.98),inset 0 -1px 0 rgba(255,158,198,.18)!important;
+ transform:translateY(103%);transition:transform .42s cubic-bezier(.22,1,.36,1)!important;
+ padding:0 0 calc(10px + env(safe-area-inset-bottom,0px))!important;
+ overflow:hidden;
+}
+.report-content.rpt-nav-open .rpt-nav-drawer{transform:translateY(0)!important}
+/* 原生 sheet 把手 */
+.rpt-nav-grip{flex:none;width:38px;height:5px;margin:9px auto 2px;border-radius:99px;
+ background:linear-gradient(90deg,rgba(196,120,158,.35),rgba(120,80,110,.5),rgba(196,120,158,.35));
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.6);cursor:pointer}
+/* 面板顶缘镜面高光 */
+.rpt-nav-drawer::before{content:"";position:absolute;inset:0 0 auto;height:140px;pointer-events:none;z-index:0;
+ background:linear-gradient(180deg,rgba(255,255,255,.66),rgba(255,255,255,0));border-radius:28px 28px 0 0}
+/* 遮罩：底部面板用更柔和的模糊 */
+.rpt-nav-scrim{background:rgba(38,18,31,.34)!important;backdrop-filter:blur(6px) saturate(120%)!important;-webkit-backdrop-filter:blur(6px) saturate(120%)!important}
+
+/* --- 面板内章节：分区标签 + 玻璃胶囊卡片，点选手感 --- */
+.rpt-nav-list{background:linear-gradient(180deg,rgba(255,253,254,.97),rgba(255,248,252,.97));border-radius:18px}
+.rpt-nav-list .rpt-toc-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rpt-nav-list .rpt-toc-group{grid-column:1/-1;margin:10px 0 2px;border-left:0;padding-left:0;
+ display:flex;align-items:center;gap:8px;font-size:11.5px;color:#a8326a;letter-spacing:.08em}
+.rpt-nav-list .rpt-toc-group::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(255,140,185,.5),transparent)}
+.rpt-nav-list .rpt-toc-item{display:flex;align-items:center;gap:7px;min-height:44px;margin:0;padding:9px 11px;
+ border-radius:14px!important;text-align:left;white-space:normal;font-size:12.5px;line-height:1.35;
+ background:linear-gradient(150deg,rgba(255,255,255,.98),rgba(255,242,248,.94))!important;
+ border:1px solid rgba(255,255,255,.9)!important;color:#6a3a52;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 6px 14px -10px rgba(168,44,94,.35);
+ backdrop-filter:blur(14px) saturate(180%);-webkit-backdrop-filter:blur(14px) saturate(180%);
+ transition:transform .16s cubic-bezier(.22,1,.36,1),box-shadow .16s,background .16s}
+.rpt-nav-list .rpt-toc-item .rpt-toc-no{display:inline-flex;align-items:center;justify-content:center;
+ min-width:24px;height:22px;padding:0 5px;border-radius:8px;background:rgba(255,79,139,.1);
+ color:#c2185b;font-weight:800;font-size:10.5px;font-variant-numeric:tabular-nums}
+.rpt-nav-list .rpt-toc-item:active{transform:scale(.955)}
+.rpt-nav-list .rpt-toc-item.on{background:linear-gradient(135deg,#ff7cb0,#ff4f8b)!important;
+ border-color:#ff8fb6!important;color:#fff!important;
+ box-shadow:0 10px 22px -10px rgba(255,79,139,.9),inset 0 1.5px 0 rgba(255,255,255,.6)!important}
+.rpt-nav-list .rpt-toc-item.on .rpt-toc-no{background:rgba(255,255,255,.24);color:#fff!important}
+
+/* 时点行运盘角标：一眼区分「时点盘」与「本命总览盘」（v0.42 保留） */
 .snap-vedic.is-transit[data-snap-label],.snap-west.is-transit[data-snap-label]{position:relative}
 .snap-vedic.is-transit[data-snap-label]::after,.snap-west.is-transit[data-snap-label]::after{content:attr(data-snap-label);position:absolute;top:2px;right:2px;z-index:2;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#fff;background:linear-gradient(135deg,#ff7cb0,#ff4f8b);box-shadow:0 4px 12px -6px rgba(255,79,139,.9);pointer-events:none}
+
 @media (prefers-color-scheme:dark){
-.rpt-toc-rail .rpt-toc-group{color:#ff9cc4;background:linear-gradient(135deg,rgba(90,40,70,.9),rgba(60,30,50,.8));border-color:rgba(255,160,200,.35)}
-.rpt-toc-rail .rpt-toc-item{color:#f0c9dd!important;background:linear-gradient(135deg,rgba(60,48,70,.92),rgba(48,38,58,.85))!important;border-color:rgba(255,164,206,.35)!important}
-.rpt-toc-rail .rpt-toc-item.on{color:#fff!important}
+.rpt-nav-drawer{background:linear-gradient(165deg,rgba(42,34,50,.94),rgba(30,24,38,.9))!important;
+ border-color:rgba(255,255,255,.14)!important;color:#eee4ec}
+.rpt-nav-drawer::before{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,0))}
+.rpt-nav-grip{background:linear-gradient(90deg,rgba(255,164,206,.2),rgba(255,164,206,.5),rgba(255,164,206,.2))}
+.rpt-nav-list .rpt-toc-item{background:linear-gradient(150deg,rgba(52,42,62,.9),rgba(42,34,52,.8))!important;
+ border-color:rgba(255,164,206,.2)!important;color:#f0d5e2}
+.rpt-nav-list .rpt-toc-item .rpt-toc-no{background:rgba(255,164,206,.12);color:#ff9fc9}
+.rpt-nav-list .rpt-toc-group{color:#ff9fc9}
+.rpt-nav-list .rpt-toc-group::after{background:linear-gradient(90deg,rgba(255,164,206,.4),transparent)}
 }

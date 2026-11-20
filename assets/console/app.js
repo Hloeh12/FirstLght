@@ -679,20 +679,17 @@ function openFullReport(prebuilt){
   <button type="button" class="rpt-nav-fab" data-rpt-nav aria-expanded="false" aria-controls="reportNavDrawer" aria-label="打开章节目录"><span class="rpt-nav-fab-ico" aria-hidden="true">☰</span><span data-rpt-fab-label>目录</span><span class="rpt-nav-pct" data-rpt-progress>0%</span></button>
   <div class="rpt-nav-scrim" data-rpt-nav-close aria-hidden="true"></div>
   <aside class="rpt-nav-drawer" id="reportNavDrawer" data-rpt-drawer role="dialog" aria-label="章节目录" aria-hidden="true">
-   <div class="rpt-nav-head"><div><b>章节目录</b><small>${esc(report.cover.system)} · ${report.sections?.length||0} 章</small></div><button type="button" class="icon" data-rpt-nav-close aria-label="收起目录">×</button></div>
+   <div class="rpt-nav-grip" data-rpt-nav-close aria-hidden="true"></div>
+   <div class="rpt-nav-head"><div><b>章节目录</b><small>${esc(report.cover.system)} · ${report.sections?.length||0} 章 · 点选跳转</small></div><button type="button" class="icon" data-rpt-nav-close aria-label="收起目录">×</button></div>
    <div class="rpt-nav-progress"><span>阅读进度</span><b data-rpt-progress>0%</b></div>
    <div class="rpt-nav-list" data-rpt-nav-list></div>
-   <p class="rpt-nav-tip">点击章节可直接跳转，无需回滑到顶部目录。</p>
+   <p class="rpt-nav-tip">点选章节直接跳转 · 下滑把手或点空白处收起</p>
   </aside>
  </div>`;
- // 侧边目录直接复用内联目录的分区结构，保证两处高亮/分组同源，不维护第二份章节表。
+ // 底部玻璃面板的章节直接复用内联目录的分区结构，保证两处高亮/分组同源，不维护第二份章节表。
  const tocList=d.querySelector('[data-full-report] .rpt-toc-list');
  const navList=d.querySelector('[data-rpt-nav-list]');
- if(tocList&&navList){
-  const navClone=tocList.cloneNode(true);
-  navClone.classList.remove('rpt-toc-rail'); // 抽屉内保持竖向列表，横向 rail 只用于正文内联目录
-  navList.appendChild(navClone);
- }
+ if(tocList&&navList)navList.appendChild(tocList.cloneNode(true));
  d.querySelector('[data-rpt-close]').onclick=()=>close(d);
  d.querySelector('[data-rpt-copy]').onclick=async()=>{
   const doc=d.querySelector('[data-full-report]');
@@ -719,6 +716,9 @@ function openFullReport(prebuilt){
   if(drawer)drawer.setAttribute('aria-hidden',String(!on));
  };
  rptNav?.addEventListener('click',()=>setNav(!rptContent?.classList.contains('rpt-nav-open')));
+ // v0.43.0：正文「目录 · 分区导航」入口条不再就地展开列表，改为唤起底部液态玻璃面板。
+ const tocSummary=d.querySelector('.rpt-toc > summary');
+ tocSummary?.addEventListener('click',e=>{e.preventDefault();setNav(true);});
  d.querySelectorAll('[data-rpt-nav-close]').forEach(b=>b.addEventListener('click',()=>setNav(false)));
  d.addEventListener('click',e=>{
   const t=e.target.closest('[data-toc]');
@@ -754,14 +754,14 @@ function openFullReport(prebuilt){
    if(on)b.setAttribute('aria-current','location');else b.removeAttribute('aria-current');
    if(on&&rptFabLabel)rptFabLabel.textContent=(report.sections?.[active-1]?.title||'目录').replace(/^[一二三四五六七八九十]+、/,'');
   });
-  // v0.42.0：当前章节 chip 在横向 rail 里自动居中——只滚 rail 自身 scrollLeft，
-  // 绝不用 scrollIntoView（会连带滚动 #reportBody / dialog 造成跳动）。
-  const rail=d.querySelector('.rpt-toc-rail');
-  if(rail){
-   const cur=rail.querySelector('[data-toc="'+active+'"]');
-   if(cur&&rail.scrollWidth>rail.clientWidth+1){
-    const target=cur.offsetLeft-(rail.clientWidth-cur.offsetWidth)/2;
-    if(Math.abs(rail.scrollLeft-target)>2)rail.scrollLeft=Math.max(0,target);
+  // v0.43.0：目录已改为点击唤起的底部玻璃面板，无需内联 rail 居中。
+  // 面板打开时让当前章节条目滚入可视区——只滚面板自身 scrollTop，不碰祖先滚动容器。
+  if(rptContent?.classList.contains('rpt-nav-open')){
+   const curNav=d.querySelector('[data-rpt-nav-list] [data-toc="'+active+'"]');
+   const navBox=d.querySelector('[data-rpt-nav-list]');
+   if(curNav&&navBox){
+    const top=curNav.offsetTop-navBox.offsetTop-navBox.clientHeight/2+curNav.offsetHeight/2;
+    if(Math.abs(navBox.scrollTop-Math.max(0,top))>2)navBox.scrollTop=Math.max(0,top);
    }
   }
  };

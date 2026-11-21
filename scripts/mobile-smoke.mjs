@@ -68,9 +68,14 @@ try{
    }
    await picker.locator('[data-wheel-apply]').click();
   }
-  assert.equal(await page.locator('#inputSheet input[type=date],#inputSheet input[type=time]').count(),2);
-  assert(await page.locator('#inputSheet input[type=date]').isVisible());
-  assert(await page.locator('#inputSheet input[type=time]').isVisible());
+  // v0.49.0：原生 date/time 控件退居数据层（display:none 但保留提交与读值），
+  // 显示交给 civil-picker 注入的 <output>，避免同义信息重复出现四层。
+  assert.equal(await page.locator('#inputSheet .native-civil-input').count(),2);
+  assert.equal(await page.locator('#inputSheet .native-civil-input').first().isVisible(),false);
+  const civilOutputs=page.locator('#inputSheet #birthForm label>output');
+  assert.equal(await civilOutputs.count(),2);
+  assert(await civilOutputs.first().isVisible());
+  assert(await civilOutputs.nth(1).isVisible());
   await chooseBirthTime(1998,11,21,2);
   assert.equal(await page.locator('#birthForm [name=date]').inputValue(),'1998-11-21');
   assert.equal(await page.locator('#birthForm [name=clock]').inputValue(),'00:02');

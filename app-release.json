@@ -1,8 +1,20 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.47.3",
-  "build": 144,
+  "version": "0.47.4",
+  "build": 145,
   "releases": [
+    {
+      "version": "0.47.4",
+      "build": 145,
+      "date": "2026-11-21",
+      "title": "目录打开不透视后页：遮罩改不透明实色",
+      "items": [
+        "用户真机截图与录屏反馈：点击「目录」后，后面的报告页面仍透过半透明蒙层清晰可见（文字可辨），与「打开目录就只看目录」的预期不符。定位根因：.rpt-nav-scrim 历次值为 rgba(38,18,31,.28)/.34 与 rgba(16,10,16,.68)，均为半透明并叠加 backdrop-filter 模糊，只能压暗、无法遮断正文。",
+        "修复：liquid.css 末尾加强规则将 .rpt-nav-scrim 改为不透明深紫实色 #241c2c!important，并强制 backdrop-filter:none!important / -webkit-backdrop-filter:none!important。点击遮罩空白处收起目录的交互保持不变，浮层本身仍为深色玻璃质感、不透明度 0.97。",
+        "视觉回归：Playwright WebKit 真机视口（440x956）截图确认——目录打开后背景为整屏不透明深紫、后页正文完全不可见；目录浮层位于右下正常显示、章节与进度文字清晰可读。",
+        "回归测试：boundary-contract.test.mjs 新增 v0.47.4 契约断言，锁定遮罩末条规则为不透明十六进制实色 !important、不得再用 rgba、必须关闭 backdrop-filter；218/218 测试全绿。"
+      ]
+    },
     {
       "version": "0.47.3",
       "build": 144,

@@ -537,3 +537,14 @@ test('报告页大白边根治：reportSheet 全屏铺满、去圆角白边、�
  assert.match(b,/margin:0!important/,'须去 UA 默认 margin 造成的居中留边');
  assert.match(css,/\.rpt-topbar\{\s*padding-top:calc\(6px \+ env\(safe-area-inset-top,0px\)\)/,'顶部安全区须由顶栏 padding 承担，内容不遮状态栏');
 });
+
+test('v0.47.4 目录打开不透视后页：遮罩须不透明实色且关闭模糊',async()=>{
+ const css=await read('../assets/console/liquid.css');
+ // 末尾强规则块必须把 scrim 改成完全不透明，覆盖 :507/:586 与 0.47.1 的历史半透明值。
+ const blocks=[...css.matchAll(/\.rpt-nav-scrim\{([\s\S]*?)\}/g)].map(m=>m[1]);
+ assert.ok(blocks.length,'须存在 rpt-nav-scrim 规则');
+ const last=blocks[blocks.length-1];
+ assert.match(last,/background:#[0-9a-f]{6}!important/i,'遮罩须为不透明十六进制实色且 !important 覆盖旧值');
+ assert.doesNotMatch(last,/background:rgba\(/,'遮罩不得再用 rgba 半透明（会透视后页正文）');
+ assert.match(last,/backdrop-filter:none!important/,'须关闭 backdrop-filter，避免模糊透出后页');
+});

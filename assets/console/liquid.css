@@ -703,3 +703,14 @@ dialog#reportSheet.report-sheet{
 dialog#reportSheet.report-sheet .rpt-topbar{
  padding-top:calc(6px + env(safe-area-inset-top,0px))!important;
 }
+
+/* ===== v0.47.4 目录打开「只看目录」：遮罩改为完全不透明 =====
+   根因：.rpt-nav-scrim 历史值 rgba(38,18,31,.28)~rgba(16,10,16,.68) 均为半透明，
+   虽压暗但正文仍可透视；录屏/真机截图可见目录浮层背后报告页面文字清晰可辨。
+   修法：遮罩用与目录浮层同色系的不透明深紫实色，并关闭 backdrop-filter，
+   打开目录即纯目录层，后面页面不可见；点击遮罩关闭的行为不变。 */
+.rpt-nav-scrim{
+ background:#241c2c!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}

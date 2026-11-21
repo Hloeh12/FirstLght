@@ -51,6 +51,9 @@ export function ayanamsa(date,mode){
  const t=(jd(date)-2451545)/36525;
  return ({lahiri:23.857092,fagan:24.740300,krishnamurti:23.760240})[mode]+(5028.796195*t+1.1054348*t*t+.00007964*t*t*t)/3600;
 }
+// 交点黄经：Parashari 印占传统用真交点（bhava chala Rahu），与平交点可差 1°+。
+// 统一入口，避免印占/西占各写一套导致口径漂移。id=11 由月球位置向量推导，是真交点。
+export const nodeLongitude=(date,ayan)=>bodyAt(date,11,ayan).longitude;
 export function bodyAt(date,id,ayan){
  const p=lonlat(date,id),then=lonlat(new Date(+date+DAY/48),id),prev=lonlat(new Date(+date-DAY/48),id);
  const offset=ayan?ayanamsa(date,ayan):0;

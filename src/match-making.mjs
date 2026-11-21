@@ -3,6 +3,7 @@
  * 本模块只补「八字干支/十神/用神」与「紫微命宫/夫妻宫互参」的结构化证据，交报告层解读。
  * 口径：传统婚配取象，供文化参考，不作关系质量实证结论。 */
 import {ziweiChart} from './ziwei.mjs';
+import {tenGod as canonicalTenGod} from './bazi.mjs';
 
 const BRANCH_EL={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
 const CLASH={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
@@ -44,12 +45,12 @@ function relOf(a,b){
  if(PO.some(p=>p.includes(a)&&p.includes(b)))return '相破';
  return null;
 }
-// 十神：以 me 为日干、other 为对照天干（简化扶抑派）
-function tenGod(me,other){
- const d='甲乙丙丁戊己庚辛壬癸'.indexOf(me),s='甲乙丙丁戊己庚辛壬癸'.indexOf(other);
- if(d<0||s<0)return null;
- const diff=(s-d+10)%10,yin=d%2===s%2;
- return [[yin?'比肩':'劫财',yin?'正财':'偏财',yin?'食神':'伤官'],[yin?'正印':'偏印',yin?'正官':'七杀',yin?'正财':'偏财']][s%2][Math.floor(diff/2)]||null;
+// 十神：委托 bazi.mjs 的权威实现（五行生克+阴阳同异定正偏），避免自造索引越界。
+// 旧实现用 floor(diff/2) 索引 2×3 数组，diff≥6 时越界返回 null，实测 100 组错 95 组。
+const STEM_IDX={甲:0,乙:1,丙:2,丁:3,戊:4,己:5,庚:6,辛:7,壬:8,癸:9};
+export function tenGod(me,other){
+ const d=STEM_IDX[me],s=STEM_IDX[other];
+ return d===undefined||s===undefined?null:canonicalTenGod(d,s);
 }
 
 /* 八字合婚证据 */

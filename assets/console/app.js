@@ -24,7 +24,8 @@ import {exportReportDocument} from './report-export.js';
 import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES} from './period-report.js';
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
-import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup} from './case-space.js';
+import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup,recomputeFit} from './case-space.js';
+import {getFavorites,getHistory,toggleFavorite,isFavorite,recordHistory,favoritesHtml,historyHtml,compareHtml} from './library.js';
 
 installDiagnostics();
 try{migrateStorage(localStorage);}catch(error){console.error(error.message);}
@@ -271,9 +272,18 @@ function fillGalaxy(dialog,profile){
 function showRelation(profile,item){
  const {other,score,type}=item;
  const d=sheet('termSheet',other.name+' · 关系名片',`<article class="card liquid-glass galaxy-profile">
- <p class="kicker">${esc(type)}</p><p class="relation-score">${score?'契合度 '+score.percent+'%':'合盘暂不可用'}</p>
- ${score?score.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')+'<small>合盘是传统观察线索。</small>':''}</article>
- ${btn('查看深度双人合盘','class="primary" data-deep-pair')}`);
+ <p class="kicker">${esc(type)}</p><p class="relation-score">${score?'契合度 '+score.percent+'%':'契合度暂不可用'}</p>
+ ${score?(score.insights||[]).map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')+'<small>合盘是传统观察线索。</small>':'<p class="muted">远程合盘服务未响应。可点「重新计算」用本机引擎离线生成契合度，或查看下方深度双人合盘。</p>'}</article>
+ <div class="spread">${score?'':btn('重新计算契合度','class="primary" data-recompute-fit')}${btn('查看深度双人合盘',score?'data-deep-pair':'class="primary" data-deep-pair')}</div>`);
+ if(!score)$('[data-recompute-fit]',d).onclick=()=>{
+  try{
+   const fit=recomputeFit(normalized(profile),normalized(other));
+   const box=$('.relation-score',d),ins=$('.galaxy-profile',d);
+   if(box)box.textContent='契合度 '+fit.percent+'%';
+   if(ins&&fit.insights?.length)ins.insertAdjacentHTML('beforeend',fit.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join(''));
+   tell('已用本机引擎算出契合度');
+  }catch(e){tell('本机合盘计算失败：'+e.message);}
+ };
  $('[data-deep-pair]',d).onclick=()=>{
   if(state.profile?.id!==profile.id){tell('请重新打开当前命主的关系星系');return;}
   state.chartState.synastry={other:other.id,token:0,result:null,error:''};
@@ -680,6 +690,9 @@ function openFullReport(prebuilt){
  const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'};
  const d=document.getElementById('reportSheet');
  const report=prebuilt||composeFullReport(state,names);
+ // 报告历史：记录元数据（不存正文），供「我」页回看生成轨迹。
+ try{recordHistory({caseId:state.profile?.id,name:state.profile?.name,system:report.cover?.system,
+  title:report.title,sections:report.sections?.length,characters:report.characters});}catch{}
  d.innerHTML=`<div class="dialog-content report-content">
   <div class="rpt-topbar"><button type="button" class="icon" data-rpt-close aria-label="关闭报告">×</button>
    <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
@@ -716,6 +729,19 @@ function openFullReport(prebuilt){
   const cap=box.querySelector('[data-bf-caption]');
   if(cap){const m=P.months[P.sel.month];cap.textContent=`当前落点：${m?.label||''} ${m?.stem||''}${m?.branch||''}。以下逐条推导该时点。`;}
  };
+ // 章节收藏：点标题旁 ☆ 存本章纯文本；再点取消。
+ for(const fb of d.querySelectorAll('[data-fav-sec]')){
+  const sec=fb.closest('.rpt-sec'),idx=fb.dataset.favSec;
+  const key=[state.profile?.id||'anon',report.kind||report.cover?.system||'rpt',idx].join('|');
+  const paint=()=>{fb.textContent=isFavorite(key)?'★':'☆';fb.classList.toggle('on',isFavorite(key));};
+  paint();
+  fb.onclick=()=>{
+   const title=sec?.querySelector('h3')?.textContent.replace('☆','').replace('★','').trim()||`第 ${idx} 章`;
+   const text=sec?.innerText||'';
+   const r=toggleFavorite({key,title,text,owner:state.profile?.name||'',system:report.cover?.system||''});
+   paint();tell(r.added?'已收藏本章':'已取消收藏');
+  };
+ }
  d.querySelector('[data-rpt-close]').onclick=()=>close(d);
  d.querySelector('[data-rpt-copy]').onclick=async()=>{
   const doc=d.querySelector('[data-full-report]');
@@ -726,7 +752,7 @@ function openFullReport(prebuilt){
  };
   d.querySelector('[data-rpt-export]').onclick=async e=>{
   const b=e.currentTarget;b.disabled=true;
-  try{tell(exportReportDocument(report));}
+  try{tell(await exportReportDocument(report));}
   catch(err){tell('导出失败：'+(err.message||err));}
   finally{b.disabled=false;}
  };
@@ -942,6 +968,9 @@ function reportTitle(key){
 function preferences(){
  root.innerHTML=`<section class="soul-home"><header><p class="kicker">FIRST LIGHT · 个人灵性空间</p><h1>我</h1></header>
  ${soulWidgets()}${soulCard(state.reading,state.profile?.name)}
+ <article class="card"><h2>我的资料库</h2>
+  <div class="tool-grid">${btn('收藏的章节 ('+getFavorites().length+')','data-lib-fav')}${btn('报告历史 ('+getHistory().length+')','data-lib-hist')}${btn('双人对比','data-lib-compare')}</div>
+  <p class="thin">收藏精彩段落、回看报告生成记录、并排对比两个案例的命理摘要。</p></article>
  <article class="card"><h2>交互反馈</h2><label class="feedback-setting"><span>交互音效与震动</span><input type="checkbox" role="switch" data-feedback ${feedbackEnabled()?'checked':''}></label></article>
  <details class="card liquid-glass maintenance-center" data-maintenance><summary>⚙️ 数据中枢与运维诊断</summary><div class="maintenance-content">
  ${versionCard()}<section><h3>案例备份</h3><div class="tool-grid">${btn('导出全量 JSON','data-export')}${btn('导入 JSON','data-import')}</div><input type="file" accept="application/json" id="importBackup" hidden></section>
@@ -952,6 +981,32 @@ function preferences(){
  const soulCta=$('[data-goto-insights]',root);
  if(soulCta)soulCta.onclick=()=>switchTab('insights');
  $('[data-release-history]',root).onclick=()=>releaseHistory(ctx);
+ // 资料库：收藏章节 / 报告历史 / 双案例对比
+ $('[data-lib-fav]',root).onclick=()=>{
+  const d=sheet('toolSheet','收藏的章节',favoritesHtml());
+  for(const b of d.querySelectorAll('[data-fav-remove]'))b.onclick=()=>{toggleFavorite({key:b.dataset.favRemove});b.closest('[data-fav-item]')?.remove();tell('已取消收藏');};
+  for(const b of d.querySelectorAll('[data-fav-copy]'))b.onclick=async()=>{
+   const item=getFavorites().find(x=>x.key===b.dataset.favCopy);if(!item)return;
+   try{await navigator.clipboard.writeText(item.title+'\n'+item.text);tell('已复制章节文本');}catch{tell('复制失败');}
+  };
+ };
+ $('[data-lib-hist]',root).onclick=()=>sheet('toolSheet','报告历史',historyHtml());
+ $('[data-lib-compare]',root).onclick=()=>{
+  if(state.cases.length<2){tell('至少需要两个案例才能对比');return;}
+  const opts=state.cases.map(c=>`<option value="${esc(c.id)}">${esc(c.name||'未命名')}</option>`).join('');
+  const d=sheet('toolSheet','双人命理对比',`<div class="form-grid"><label>案例 A<select data-cmp-a>${opts}</select></label><label>案例 B<select data-cmp-b>${opts.replace(/<option value="([^"]+)"/g,(m,id)=>`<option value="${id}"${id===state.cases[1]?.id?' selected':''}`)}</select></label></div><div data-cmp-out></div>`);
+  const first=d.querySelector('[data-cmp-a]'),second=d.querySelector('[data-cmp-b]');
+  if(state.cases[0])first.value=state.cases[0].id;
+  const renderCmp=async()=>{
+   const [ca,cb]=[first.value,second.value].map(id=>state.cases.find(c=>c.id===id));
+   if(!ca||!cb){tell('请选择两个不同案例');return;}
+   const ensure=async c=>c.summary?.day&&c.summary?.soul?c.summary:(async()=>{try{const s=summary(await request('/api/console/reading',{birth:normalized(c)}));c.summary=s;persist();return s;}catch{return {};}})();
+   const [sa,sb]=await Promise.all([ensure(ca),ensure(cb)]);
+   const line=n=>[`八字：${n.pillars||'—'}`,`日主：${n.day||'—'}`,`紫微命宫：${n.ziwei||'—'}`,`西占：${n.signs||'—'}`];
+   d.querySelector('[data-cmp-out]').innerHTML=compareHtml([{name:ca.name,lines:line(sa)},{name:cb.name,lines:line(sb)}],x=>x);
+  };
+  first.onchange=renderCmp;second.onchange=renderCmp;renderCmp();
+ };
  $('[data-diagnostics]',root).onclick=()=>diagnosticsPanel(ctx);
  $('[data-maintenance-cache]',root).onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{$('[data-maintenance-status]',root).textContent=await resetCaches();}catch(error){tell(error.message);}finally{b.disabled=false;}};
  $('[data-feedback]',root).onchange=e=>setFeedback(e.currentTarget.checked);

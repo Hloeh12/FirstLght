@@ -1,6 +1,15 @@
 import {DICTIONARY} from './dictionary-data.js';
+import {MORE_DICTIONARY} from './dictionary-more.js';
 
-const ALIAS={桃花:'咸池桃花',咸池:'咸池桃花',咸池桃花:'咸池桃花',文昌贵人:'文昌',天乙:'天乙贵人',太极:'太极贵人',华盖星:'华盖',驿马星:'驿马',羊刃星:'羊刃'};
+const ALL={...DICTIONARY,...MORE_DICTIONARY};
+const ALIAS={桃花:'咸池桃花',咸池:'咸池桃花',咸池桃花:'咸池桃花',文昌贵人:'文昌',天乙:'天乙贵人',太极:'太极贵人',华盖星:'华盖',驿马星:'驿马',羊刃星:'羊刃',
+ // 西占相位/尊贵度别名
+ 刑:'四分相',冲:'对相',拱:'三分相',hex:'六分相',六合:'合相',trine:'三分相',square:'四分相',opposition:'对相',conjunction:'合相',
+ exaltation:'旺相',domicile:'入庙',fall:'落陷',detriment:'入弱',orb:'容许度',
+ // 印占别名
+ rahu:'罗睺',ketu:'计都',navamsha:'分盘',dasha:'大运',nakshatra:'纳克沙特',
+ // 紫微别名
+ 紫微星:'紫微',天机星:'天机',廉贞星:'廉贞',贪狼星:'贪狼',破军星:'破军'};
 const DISCLAIMER='无任何科学依据，仅供传统文化学习与生活哲学参考，不构成现实预测或专业建议。';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -20,8 +29,8 @@ function listBlock(title,body){
 }
 
 export function termCard(word,text='',source='',fallback=''){
- const key=DICTIONARY[word]?word:ALIAS[word];
- const entry=key?DICTIONARY[key]:null;
+ const key=ALL[word]?word:ALIAS[word];
+ const entry=key?ALL[key]:null;
  if(entry){
   return `<article class="term-card">
    <p class="tc-kicker">${esc(entry.category||'术语')}</p>

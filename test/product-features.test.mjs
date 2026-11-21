@@ -829,3 +829,107 @@ test('v0.41 目录入口与防跳动：内联目录默认收起为点按展开�
  assert.match(css,/\.chart-loading\{[^}]*min-height:/,'骨架须有固定最小高度避免高度突变');
  assert.match(css,/RPT GLASS|\.rpt-toc/,'须有目录样式');
 });
+
+test('十神全组合：合婚 tenGod 须与 bazi.mjs 权威实现逐组一致（修复越界95%错）',async()=>{
+ const {tenGod}=await import('../src/match-making.mjs');
+ const {tenGod:canonical}=await import('../src/bazi.mjs');
+ const stems='甲乙丙丁戊己庚辛壬癸'.split('');
+ let checked=0,wrong=0;const bad=[];
+ for(let d=0;d<10;d++)for(let s=0;s<10;s++){
+  const got=tenGod(stems[d],stems[s]),exp=canonical(d,s);
+  checked++;if(got!==exp){wrong++;if(bad.length<5)bad.push(`${stems[d]}见${stems[s]}:${got}≠${exp}`);}
+ }
+ assert.equal(checked,100,'须覆盖全部100组天干');
+ assert.equal(wrong,0,'合婚十神须与权威实现一致，禁止自造索引越界：'+bad.join(', '));
+ // 关键回归点：旧实现对 diff>=6 返回 null（甲见庚/辛/壬/癸全部为 null）
+ for(const [a,b,exp] of [['甲','乙','劫财'],['甲','丙','食神'],['甲','庚','七杀'],['甲','辛','正官'],['甲','壬','偏印'],['甲','癸','正印']])
+  assert.equal(tenGod(a,b),exp,`甲见${b} 应为${exp}`);
+});
+
+test('印占时点详批：主运星力量须按位次+短板相对读，不得拿残缺分对经典达标线下绝对结论',async()=>{
+ const pf=await readFile(new URL('../assets/console/period-focus.mjs',import.meta.url),'utf8');
+ // 不得再用 sb.meets 生成「达标/略低→力量足/偏弱」的断言
+ assert.doesNotMatch(pf,/sb\.meets\?'达标'/, '时点详批不得输出"达标"绝对断言');
+ assert.doesNotMatch(pf,/sb\.meets\?'力量足/, '时点详批不得输出"力量足/偏弱"二分结论');
+ assert.match(pf,/sb\.rank/, '须按七曜位次读取力量');
+ assert.match(pf,/读法边界/, '须有时点力量读法边界说明');
+ assert.match(pf,/不能拿它对经典「达标线」下绝对结论/, '须明确量纲差异');
+});
+
+test('八字三派并列：调候用神表按日干×月支取用，从格在成势无根时成立、有根则不 From',async()=>{
+ const {tiaoHouUse,detectCongGe}=await import('../src/bazi-tiaohou.mjs');
+ // 调候：寒冬甲木取丙火暖局，盛夏甲木取壬癸润局——寒暖结论相反
+ const winter=tiaoHouUse('甲','子'),summer=tiaoHouUse('甲','午');
+ assert.equal(winter.season,'寒');assert.ok(winter.gods.includes('丙'),'冬木须取丙火暖局');
+ assert.equal(summer.season,'燥');assert.ok(summer.gods.includes('壬')||summer.gods.includes('癸'),'夏木须取水润局');
+ assert.match(winter.source,/穷通宝鉴/,'须标典籍依据');
+ // 从格：财星成势无根成立；有本气根或印比旺则不从
+ const cong=detectCongGe({木:.05,火:.05,土:.8,金:.05,水:.05},['土','土','土','土'],'甲');
+ assert.ok(cong&&cong.kind==='从财','财星80%无根须判从财');
+ assert.deepEqual(cong.use,['土','金'],'从财顺势以财与财所生为用');
+ assert.equal(detectCongGe({木:.05,火:.05,土:.8,金:.05,水:.05},['木','土','土','土'],'甲'),null,'有本气根不从');
+ assert.equal(detectCongGe({木:.2,火:.05,土:.6,金:.05,水:.1},['土','土','土','土'],'甲'),null,'印比旺不从');
+ // baziPro 挂载调候与三派口径
+ const {baziPro}=await import('../src/bazi-pro.mjs');
+ const city={label:'北京',lat:39.9,lon:116.4,tz:8,tzName:'Asia/Shanghai'};
+ const r=baziPro({birth:{Y:1990,M:1,D:20,h:10,mi:30,gender:'男',city,calendar:'solar'}});
+ assert.ok(r.tiaoHou?.gods?.length,'结果须挂调候用神');
+ assert.match(r.strength.approach,/调候法/,'扶抑说明须列三派并列');
+ assert.doesNotMatch(r.strength.approach,/未切换调候/,'不得再说未切换调候');
+});
+
+test('合盘降级：远程失败须用本地引擎兜底出契合度，关系名片提供重新计算',async()=>{
+ const cs=await import('../assets/console/case-space.js');
+ assert.equal(typeof cs.recomputeFit,'function','须导出本地重算契合度函数');
+ const a={name:'甲',gender:'男',Y:1990,M:6,D:15,h:10,mi:30,calendar:'solar',city:{label:'北京',lat:39.9,lon:116.4,tz:8,tzName:'Asia/Shanghai'}};
+ const b={name:'乙',gender:'女',Y:1992,M:3,D:8,h:14,mi:0,calendar:'solar',city:{label:'北京',lat:39.9,lon:116.4,tz:8,tzName:'Asia/Shanghai'}};
+ const fit=cs.recomputeFit(a,b);
+ assert.ok(fit&&Number.isFinite(fit.percent),'本地须算出百分比契合度');
+ assert.ok(fit.percent>=0&&fit.percent<=100);
+ // linkedCases 远程抛错时仍返回带 score 的项（本地兜底生效）
+ const cases=[{...a,id:'a'},{...b,id:'b'}];
+ const links=[{ids:['a','b'],type:'灵魂共振'}];
+ const norm=x=>({name:x.name,gender:x.gender,Y:x.Y,M:x.M,D:x.D,h:x.h,mi:x.mi,calendar:x.calendar,city:x.city});
+ const failingRequest=async()=>{throw Error('offline');};
+ const items=await cs.linkedCases(cases[0],cases,links,failingRequest,norm);
+ assert.equal(items.length,1);
+ assert.ok(items[0].score,'远程失败后本地兜底须给出 score，不再"暂不可用"');
+ const app=await readFile(new URL('../assets/console/app.js',import.meta.url),'utf8');
+ assert.match(app,/data-recompute-fit/,'关系名片须有重新计算按钮');
+ assert.doesNotMatch(app,/合盘暂不可用/,'不得再显示裸的"合盘暂不可用"');
+});
+
+test('个人资料库：收藏/历史/对比三模块须入包且契约完整（收藏星标+我页入口）',async()=>{
+ const lib=await readFile(new URL('../assets/console/library.js',import.meta.url),'utf8');
+ assert.match(lib,/export function toggleFavorite/,'须有收藏切换');
+ assert.match(lib,/export function recordHistory/,'须有报告历史记录');
+ assert.match(lib,/export function compareHtml/,'须有双案例对比');
+ assert.match(lib,/slice\(0,200\)/,'收藏须限量防 localStorage 溢出');
+ assert.match(lib,/slice\(0,40\)/,'历史须限量');
+ const fr=await readFile(new URL('../assets/console/full-report.js',import.meta.url),'utf8');
+ assert.match(fr,/data-fav-sec/,'报告章节须有收藏星标钩子');
+ const app=await readFile(new URL('../assets/console/app.js',import.meta.url),'utf8');
+ for(const hook of ['data-lib-fav','data-lib-hist','data-lib-compare'])
+  assert.match(app,new RegExp(hook),`我页须有入口 ${hook}`);
+ assert.match(app,/recordHistory\(/,'生成报告时须写历史');
+ const js=await readFile(new URL('../js/console.js',import.meta.url),'utf8');
+ assert.match(js,/data-fav-sec/,'新功能须打包进 console.js');
+ assert.match(js,/data-lib-fav/,'我页入口须打包进 console.js');
+});
+
+test('术语库覆盖四体系：紫微/印占/西占术语须命中详解而非空泛fallback',async()=>{
+ const {More}=await import('../assets/console/dictionary-more.js').then(m=>({More:m.MORE_DICTIONARY}));
+ const cats=new Set(Object.values(More).map(x=>x.category));
+ for(const c of ['紫微主星','紫微四化','印占九曜','印占基础','西占相位','西占尊贵度','西占星座','西占基础'])
+  assert.ok(cats.has(c),`须覆盖分类 ${c}`);
+ const {termCard}=await import('../assets/console/term-card.js');
+ for(const w of ['紫微','化忌','罗睺','纳克沙特','三分相','入庙','白羊','容许度']){
+  const html=termCard(w);
+  assert.doesNotMatch(html,/这是传统术数的辅助标记/,`${w} 不应落空泛 fallback`);
+  assert.match(html,/tc-nature|为喜用时/,`${w} 须有结构化详解`);
+ }
+ // 西占盘面行星须有可点术语钩子
+ const west=await readFile(new URL('../assets/console/western.js',import.meta.url),'utf8');
+ assert.match(west,/data-term=/,'西占行星列表须有可点术语');
+ assert.match(west,/dignityTerm/,'尊贵度单字标签须映射到字典键');
+});

@@ -148,14 +148,15 @@ function shift(date,unit,n){
  out.setUTCDate(Math.min(day,last));return out;
 }
 const dignityLabels={入庙:'庙',旺相:'旺',入弱:'陷',落陷:'落'};
+const dignityTerm={'庙':'入庙','旺':'旺相','陷':'入弱','落':'落陷'};
 const degreeMinutes=x=>{
  const n=Math.round(Math.abs(x)*60);
  return Math.floor(n/60)+'°'+pad(n%60)+'′';
 };
 export function planetList(planets){
  return '<div class="planet-list">'+planets.map(p=>`<div class="planet-row"><b>${esc(p.symbol+' '+p.name)}</b>
- <div class="planet-position"><span class="planet-sign">${esc(p.sign)}</span><span class="planet-degree">${esc(dms(p.degree))}</span>
- <span class="planet-meta">第${p.house}宫 ${p.retro?'逆行 Rx':''} ${dignityLabels[p.dignity]?`<span class="dignity-badge">${dignityLabels[p.dignity]}</span>`:''}${p.approximate?' · 近似位置':''}</span></div></div>`).join('')+'</div>';
+ <div class="planet-position"><span class="planet-sign term-hit" data-term="${esc(p.sign.replace('座',''))}" role="button" tabindex="0">${esc(p.sign)}</span><span class="planet-degree">${esc(dms(p.degree))}</span>
+ <span class="planet-meta"><span class="term-hit" data-term="宫位" data-explain="第 ${p.house} 宫，是本命后天十二宫之一。">第${p.house}宫</span> ${p.retro?'逆行 Rx':''} ${dignityLabels[p.dignity]?`<span class="dignity-badge term-hit" data-term="${esc(dignityTerm[dignityLabels[p.dignity]]||'入庙')}" role="button" tabindex="0">${dignityLabels[p.dignity]}</span>`:''}${p.approximate?' · 近似位置':''}</span></div></div>`).join('')+'</div>';
 }
 function facts(r,s){
  const p=r.chart.planets;

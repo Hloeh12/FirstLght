@@ -5,6 +5,7 @@ import {Solar,Lunar,LunarUtil} from 'lunar-javascript';
 import {baziFromInput} from './baziInput.mjs';
 import {flowYears,tenGod,yearPillar,monthPillar,dayPillar,solarTerms} from './bazi.mjs';
 import {calculateTrueSolarTime} from './renhuai-engine.mjs';
+import {tiaoHouUse,detectCongGe} from './bazi-tiaohou.mjs';
 
 export const stems='甲乙丙丁戊己庚辛壬癸',branches='子丑寅卯辰巳午未申酉戌亥';
 export const stemElements='木木火火土土金金水水',branchElements='水土木木土火火土金金土水';
@@ -124,20 +125,26 @@ function strength(pillars,relationships,enabled){
  }
  const day=pillars[2].stemElement,resource=Object.keys(produce).find(e=>produce[e]===day);
  const total=Object.values(weights).reduce((a,b)=>a+b,0),support=(weights[day]+weights[resource])/total;
- const kind=support>.6?'身强':support<.4?'身弱':'中和';
- return {weights,percentages:Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,100*v/total])),support:support*100,kind,
-  useful:kind==='身弱'?[resource,day]:kind==='身强'?[produce[day],control[day]]:[],
-  caution:kind==='身弱'?[produce[day],control[day]]:kind==='身强'?[resource,day]:[],
+ let kind=support>.6?'身强':support<.4?'身弱':'中和';
+ // 从格优先：某五行成势且日主无本气根、印比微弱时，弃扶抑而顺其势
+ const roots=pillars.map(p=>hidden[p.branch]?.[0]).map(s=>s?elementOf(s):'').filter(Boolean);
+ const cong=detectCongGe(weights,roots,pillars[2].stem);
+ const model=cong?'从格':kind;
+ const effectiveUse=cong?cong.use:(kind==='身弱'?[resource,day]:kind==='身强'?[produce[day],control[day]]:[]);
+ const effectiveAvoid=cong?[day,resource]:(kind==='身弱'?[produce[day],control[day]]:kind==='身强'?[resource,day]:[]);
+ return {weights,percentages:Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,100*v/total])),support:support*100,kind,model,congGe:cong,
+  useful:effectiveUse,
+  caution:effectiveAvoid,
   // 十神角色：喜用/忌神之外，明示仇神（生助忌神或克喜用）与闲神（其余），避免只给两分法
   roles:(()=>{
-   const useful=kind==='身弱'?[resource,day]:kind==='身强'?[produce[day],control[day]]:[];
-   const avoid=kind==='身弱'?[produce[day],control[day]]:kind==='身强'?[resource,day]:[];
+   const useful=effectiveUse,avoid=effectiveAvoid;
    const all=Object.keys(weights);
    const enemy=all.filter(e=>!useful.includes(e)&&!avoid.includes(e)&&(avoid.some(j=>produce[e]===j)||useful.some(u=>control[e]===u)));
    const idle=all.filter(e=>!useful.includes(e)&&!avoid.includes(e)&&!enemy.includes(e));
-   return {useful,avoid,enemy,idle,note:'仇神＝生助忌神或克制喜用、且不在前两类中的五行；闲神＝与日主喜忌不显著的余项。仅为扶抑模型内的角色划分，具体吉凶须看它落在哪一柱、被谁引出。'};
+   return {useful,avoid,enemy,idle,note:cong?`从格口径：顺${cong.element}之势，以${cong.use.join('、')}为用、${avoid.join('、')}为忌（逆势者）。`:'仇神＝生助忌神或克制喜用、且不在前两类中的五行；闲神＝与日主喜忌不显著的余项。仅为扶抑模型内的角色划分，具体吉凶须看它落在哪一柱、被谁引出。'};
   })(),
-  approach:'扶抑法（同我与生我权重定强弱、定喜忌）＋月令调候参考，未切换调候/病药/从格等其它派别。',
+  approach:cong?`从格优先（${cong.note}）＋调候互补；已按「日主无根、某行成势」偏离常规扶抑。`
+   :'三派并列：扶抑法（同我生我定强弱）＋调候法（月令寒暖燥湿，见 tiaoHou 字段）＋病药法（有余者泄、不足者补）；条件不足以定从格时仍归扶抑。',
   activated,method:enabled?'天干与藏干按各自基础权重，同日干阴阳 ×1.05，月支 ×1.8。合局得令或得月生且相关支未遭六冲时，将参与项 45% 权重归入化神。':'天干等权，藏干按本中余气；未启用月令与合化修正。'};
 }
 /* 四柱力量来源分解：把「身强/身弱」这个结论拆回得令、得地、得势、通根、透干五条证据。
@@ -294,7 +301,12 @@ const traditional={
  unknown:!!birth.timeUnknown,
  method:'胎元＝月柱天干进一位、地支进三位；命宫以生月与生时定位（子平法）；身宫＝月支与时支相加定支，天干由年干五虎遁推出。三垣补四柱之未备，用于参照先天禀赋与后天作为，不改动四柱主体。'
 };
+// 调候补论（《穷通宝鉴》）：日干×月支寒暖燥湿取用，与扶抑/从格并列，不取代之。
+const _th=tiaoHouUse(b.dayMaster.stem,pillars[1].branch);
+const tiaoHou={..._th,dayStem:b.dayMaster.stem,monthBranch:pillars[1].branch,
+ note:`${b.dayMaster.stem}日主生于${pillars[1].branch}月（${_th.season}）：调候取${_th.gods.join('、')}，扶抑喜用另见 strength。调候解决「环境寒暖」，扶抑解决「力量多寡」，两者互补，不可互相替代。`};
 const result={entry,pillars,cycles,years,months,days,hours,selected,relationships:links,strength:strength(matrix,links,combine),natalStrength,
+ tiaoHou,
  traditional,strengthBreakdown:strengthBreakdown(pillars),shenshaMethod,
   dayMaster:b.dayMaster,voidBranches:b.structure.voidBranches,roots:b.structure.roots,revealed:b.structure.revealed,
   commander,info:{solarYear:b.meta.yearPillarYear,solar:date,lunar:birthLunar.getYear()+'年'+birthLunar.getMonthInChinese()+'月'+birthLunar.getDayInChinese(),gender:birth.gender,

@@ -298,7 +298,7 @@ test('深度报告导出改用自包含 HTML 文档，不再走 canvas 长图（
  const app=await read('../assets/console/app.js');
  assert.match(app,/import \{exportReportDocument\} from '\.\/report-export\.js'/, 'app.js 须引入文档导出模块');
  assert.match(app,/data-rpt-export>导出文档<\/button>/,'报告导出按钮须改为「导出文档」');
- assert.match(app,/tell\(exportReportDocument\(report\)\)/,'报告导出须调用文档导出，不再调 shareChart');
+ assert.match(app,/tell\(await exportReportDocument\(report\)\)/,'报告导出须 await 文档导出结果，不再调 shareChart');
  const exBlock=app.slice(app.indexOf("d.querySelector('[data-rpt-export]')"),app.indexOf('/* 目录交互'));
  assert.doesNotMatch(exBlock,/shareChart\(/,'报告导出路径不得再出现 shareChart 长图调用');
  // 文档导出模块：自包含样式 + 报告正文 + 交互静态化，不依赖 App 运行时 CSS
@@ -464,4 +464,60 @@ test('v0.46 目录条取消/年份扩展/浮层深色/时点详批/SOUL块',asyn
  assert.match(pf,/apply|applying/,'西占相位须区分形成中/出相位');
  const cs=await read('../assets/console/case-space.js');
  assert.match(cs,/soul-mini[\s\S]{0,300}天生优势[\s\S]{0,300}成长课题/,'SOUL 卡片须有优势/课题双栏取代单句 motto');
+});
+
+test('真太阳时统一：birth.mjs 均时差须与 engine NOAA 式逐点一致（修复56秒分裂）',async()=>{
+ const {equationOfTimeMinutes}=await import('../src/birth.mjs');
+ const {calculateTrueSolarTime}=await import('../src/renhuai-engine.mjs');
+ let worst=0,n=0;
+ for(const [Y,M,D] of [[2000,8,16],[2024,2,4],[1988,4,17],[2026,11,21],[1990,6,15],[2001,1,1]])
+  for(const h of [0,6,11,12,18,23]){
+   const mine=equationOfTimeMinutes(Y,M,D,h,30);
+   const engine=calculateTrueSolarTime({year:Y,month:M,day:D,clockHour:h,clockMinute:30,longitude:121.47,utcOffsetMinutes:480}).equationOfTimeMinutes;
+   worst=Math.max(worst,Math.abs(mine-engine));n++;
+  }
+ assert.equal(n,36);
+ assert.ok(worst<1e-6,`均时差须与 engine 同源，最大偏差 ${worst} 分钟`);
+ // 展示口径亦统一：chart 的 ziweiSolarClock 来自 birthCorrections，须用同一时分的 EOT
+ const {birthCorrections}=await import('../src/birth.mjs');
+ const bc=birthCorrections({Y:2000,M:8,D:16,h:11,mi:0,tz:8,lon:87.6,city:{tz:8,lon:87.6},useSolarTime:true});
+ assert.ok(bc.solar.clock,'须给出真太阳时钟');
+ assert.ok(Number.isFinite(bc.meta.eotMin));
+});
+
+test('印占交点：罗睺/计都须用真交点（bhava chala），与西占口径一致（修复平/真分裂）',async()=>{
+ const {chart}=await import('../src/chart.mjs');
+ const {nodeLongitude,bodyAt}=await import('../src/ephemeris.mjs');
+ const city={label:'北京',lat:39.9,lon:116.4,tz:8,tzName:'Asia/Shanghai'};
+ const c=chart({Y:1990,M:6,D:15,h:10,mi:30,gender:'女',city,calendar:'solar',dateStr:'1990-06-15'});
+ const born=new Date(c.meta.utc);
+ const rahu=c.vedic.planets.find(p=>p.key==='rahu');
+ const ketu=c.vedic.planets.find(p=>p.key==='ketu');
+ const t=nodeLongitude(born,'lahiri'),mean=bodyAt(born,10,'lahiri').longitude;
+ let dm=Math.abs(t-mean);if(dm>180)dm=360-dm;
+ assert.ok(dm>0.05,'真交点与平交点须有可辨差异（此处约1.6°）');
+ let dr=Math.abs(rahu.sid-t);if(dr>180)dr=360-dr;
+ assert.ok(dr<1e-6,'印占罗睺须等于真交点黄经');
+ let dk=Math.abs(ketu.sid-((t+180)%360));if(dk>180)dk=360-dk;
+ assert.ok(dk<1e-6,'计都须为罗睺对宫');
+ const {vedicPro}=await import('../src/vedic-pro.mjs');
+ const vp=vedicPro({birth:{Y:1990,M:6,D:15,h:10,mi:30,gender:'女',city,calendar:'solar'},at:'2026-11-15T04:00:00.000Z'});
+ assert.equal(vp.node,'true','vedicPro 须标注 node:true');
+ assert.match(vp.method,/真交点/,'方法说明须标真交点');
+});
+
+test('导出可靠性：原生静默 guard 失败须回传结果，前端等待确认后再提示成功',async()=>{
+ const mod=await read('../assets/console/report-export.js');
+ assert.match(mod,/new Promise\(resolve/,'原生路径须 Promise 化等待确认');
+ assert.match(mod,/window\.__FL_EXPORT_DONE__/,'须监听原生回传');
+ assert.match(mod,/setTimeout\(\(\)=>finish\(true/, '须有超时兜底，避免原生无回传时卡死');
+ assert.doesNotMatch(mod,/if\(native\)\{native\.postMessage\(\{name,text:html\}\);return '文档已生成/, '不得 postMessage 后立即报成功');
+ assert.match(mod,/revokeObjectURL\(url\),60000/,'大文件下载回收须延长到 60 秒');
+ const app=await read('../assets/console/app.js');
+ assert.match(app,/await exportReportDocument\(report\)/,'调用方须 await 导出结果');
+ const swift=await read('../ios-src/AppDelegate.swift');
+ assert.match(swift,/guard let data = text\.data\(using: \.utf8\), data\.count <= 8_000_000 else \{[\s\S]{0,120}notifyExportResult\(ok: false/,'超限须回传失败');
+ assert.match(swift,/guard presentedViewController == nil else \{[\s\S]{0,120}notifyExportResult\(ok: false/,'已有面板须回传失败');
+ assert.match(swift,/presentShare\(url\)\s*notifyExportResult\(ok: true/,'成功须回传确认');
+ assert.match(swift,/window\.__FL_EXPORT_DONE__\?\./,'原生须调用前端回调');
 });

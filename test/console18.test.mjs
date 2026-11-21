@@ -13,7 +13,7 @@ const birth={Y:1998,M:11,D:21,h:0,mi:2,gender:'女',dateStr:'1998-11-21',timeStr
 const diff=(a,b)=>Math.abs(((a-b+540)%360)-180);
 test('Vedic shares Lahiri with the console, has 27 nakshatras and a contiguous 120-year Vimshottari cycle',()=>{
  const r=vedicPro({birth,at:'2026-11-08T00:00Z'}),c=localRequest('/api/console/reading',{birth}).vedic;
- assert.equal(r.planets.length,9);assert.equal(r.ayanamsa,ayanamsa(new Date(r.utc),'lahiri'));assert.equal(r.node,'mean');
+ assert.equal(r.planets.length,9);assert.equal(r.ayanamsa,ayanamsa(new Date(r.utc),'lahiri'));assert.equal(r.node,'true');
  assert.deepEqual(r.planets.map(p=>p.sid),c.planets.map(p=>p.sid));
  for(const p of r.planets){assert.equal(p.house,(p.signIndex-r.lagnaIndex+12)%12+1);assert(p.nakDegree>=0&&p.nakDegree<360/27);assert(p.pada>=1&&p.pada<=4);}
  assert.equal(r.dashas.length,9);assert.equal(r.dashas.reduce((v,d)=>v+d.years,0),120);

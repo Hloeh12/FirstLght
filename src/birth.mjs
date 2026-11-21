@@ -24,15 +24,25 @@ export function resolveBirthTime({Y,M,D,h=12,mi=0,city={},dst1988Rule='iana'}){
  const standard=new Date(Date.UTC(Y,M-1,D,h,mi)-(state.applied?3600000:0));
  return {utc,offsetMin,standard:{Y:standard.getUTCFullYear(),M:standard.getUTCMonth()+1,D:standard.getUTCDate(),h:standard.getUTCHours(),mi:standard.getUTCMinutes()},dstApplied:state.applied,warning:state.warning,dstRule:state.rule};
 }
-const doy=(Y,M,D)=>Math.floor((Date.UTC(Y,M-1,D)-Date.UTC(Y,0,1))/86400000)+1;
-export function equationOfTimeMinutes(Y,M,D){const B=2*Math.PI*(doy(Y,M,D)-81)/364;return 9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);}
+// 均时差（EOT）：与 renhai-engine.calculateTrueSolarTime / true-solar-time.ts 同源的 NOAA 近似。
+// 旧版用 Spencer 简化式（分母固定 364、只按天不按分），与八字时柱/紫微命宫实际采用的 NOAA 式
+// 差最大约 56 秒，落在时辰交界时会导致「展示的真太阳时钟」与「实际排盘时辰」错乱。此处统一口径。
+const isLeapYear=y=>y%4===0&&(y%100!==0||y%400===0);
+const doy=(Y,M,D)=>Math.floor((Date.UTC(Y,M-1,D)-Date.UTC(Y,0,0))/86400000);
+export function equationOfTimeMinutes(Y,M,D,h=12,mi=0){
+ if(!Number.isFinite(Y)||!Number.isFinite(M)||!Number.isFinite(D))return 0;
+ const daysInYear=isLeapYear(Y)?366:365,fractionalHour=h+mi/60;
+ const gamma=2*Math.PI/daysInYear*(doy(Y,M,D)-1+(fractionalHour-12)/24);
+ return 229.18*(75e-6+1868e-6*Math.cos(gamma)-0.032077*Math.sin(gamma)-0.014615*Math.cos(2*gamma)-0.040849*Math.sin(2*gamma));
+}
 export function timeIndexFromMinutes(min){if(min<60)return 0;if(min>=1380)return 12;return Math.floor((min-60)/120)+1;}
 const pad=n=>String(n).padStart(2,'0');
 // Legacy callers share the exact same civil-time resolver as all professional charts.
 export function birthCorrections(o){
  const r=resolveBirthTime({...o,city:o.city??{tz:o.tz,lon:o.lon,tzName:o.tzName}}),s=r.standard;
  const tz=Number(o.tz??o.city?.tz??8),lon=Number(o.lon??o.city?.lon),std=s.h*60+s.mi;
- const eot=o.useSolarTime?equationOfTimeMinutes(s.Y,s.M,s.D):null,lonMin=o.useSolarTime?(lon-tz*15)*4:null;
+ // 均时差须与八字/紫微的 calculateTrueSolarTime 同口径：传标准时时分（NOAA 式随时分微变）
+ const eot=o.useSolarTime?equationOfTimeMinutes(s.Y,s.M,s.D,s.h,s.mi):null,lonMin=o.useSolarTime?(lon-tz*15)*4:null;
  const solarMin=std+(lonMin??0)+(eot??0),sMin=((solarMin%1440)+1440)%1440;
  return {utcDate:r.utc,solar:{minutes:sMin,timeIndex:timeIndexFromMinutes(sMin),clock:`${pad(Math.floor(sMin/60))}:${pad(Math.floor(sMin%60))}`},meta:{dstApplied:r.dstApplied,dstRule:r.dstRule,warning:r.warning,solarApplied:!!o.useSolarTime,eotMin:eot,lonOffsetMin:lonMin,standardClock:`${pad(s.h)}:${pad(s.mi)}`,note:r.dstApplied?'夏令时-1h':null}};
 }

@@ -60,7 +60,7 @@ function renderPara(line){
  return splitAt<0?para(text):para(sents.slice(0,splitAt+1).join(''))+para(sents.slice(splitAt+1).join(''));
 }
 function sectionHtml(report){
- return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}</h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
+ return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}<button type="button" class="rpt-fav" data-fav-sec="${i+1}" aria-label="收藏本章" title="收藏本章">☆</button></h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
 }
 /* 目录：章节锚点导航 + 滚动进度 + 主题分区。让 7000+ 字报告可按区跳转、可看读到哪。 */
 function sectionGroup(title){

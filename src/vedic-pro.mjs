@@ -21,9 +21,9 @@ export function vedicReading(source,utc,at=new Date().toISOString()){
  }
  const active=all.find(p=>p.active)||null,cycle=Math.floor((active?.index??0)/9);
  const dashas=all.slice(cycle*9,cycle*9+9);
- return {...source,planets,utc:born.toISOString(),at:target.toISOString(),zodiac:'sidereal',ayan:'lahiri',node:'mean',houseSystem:'whole',dashas,active,
+ return {...source,planets,utc:born.toISOString(),at:target.toISOString(),zodiac:'sidereal',ayan:'lahiri',node:'true',houseSystem:'whole',dashas,active,
   balanceYears:(1-elapsed)*years[lord],sequence:DASHA_LORDS,
-  method:'Lahiri恒星黄道与整宫制；罗睺/计都采用平交点。27星宿每宿13°20′，月亮已行比例折算出生大运余额；Vimshottari共120年，年长采用365.24219878日。Lahiri岁差为本机近似模型。'};
+  method:'Lahiri恒星黄道与整宫制；罗睺/计都采用真交点（bhava chala Rahu，与 Parashari 主流一致）。27星宿每宿13°20′，月亮已行比例折算出生大运余额；Vimshottari共120年，年长采用365.24219878日。Lahiri岁差为本机近似模型。'};
 }
 export function vedicPro({birth,at}){
  const full=chart(birth,{baseOnly:true});

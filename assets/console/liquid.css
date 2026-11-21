@@ -654,3 +654,21 @@ input,select,textarea{font-size:16px!important}
 .soul-card .soul-meta{color:#bfa9bb!important}
 }
 @media (max-width:360px){.soul-mini{grid-template-columns:1fr}}
+
+/* ============================================================
+   LIBRARY v0.47 —— 章节收藏星标 + 收藏/历史列表 + 双案例对比网格
+   ============================================================ */
+.rpt-sec h3{display:flex;align-items:center;gap:8px}
+.rpt-fav{margin-left:auto;flex:0 0 auto;border:0;background:transparent;color:#c68; font-size:20px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:8px}
+.rpt-fav.on{color:#ff4f8b}
+.rpt-fav:hover{background:rgba(255,120,170,.12)}
+.lib-list{display:flex;flex-direction:column;gap:10px}
+.lib-item header{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.lib-item header small{color:var(--muted);font-size:10px;white-space:nowrap}
+.lib-item p{margin:8px 0;line-height:1.7}
+.lib-item .spread{margin-top:6px}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.cmp-col{min-width:0}
+.cmp-col h3{margin:0 0 8px;font-size:14px}
+.cmp-col p{margin:0 0 6px;font-size:12px;line-height:1.6}
+@media(max-width:360px){.cmp-grid{grid-template-columns:1fr}}

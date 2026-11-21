@@ -369,9 +369,16 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     // 深度报告文档导出：把自包含 HTML 写成临时文件交给系统分享面板。
     // 文件名只保留安全字符并强制 .html 后缀，防止路径穿越；大小上限 8 MB。
+    // 成功/失败都通过 window.__FL_EXPORT_DONE__ 回传，避免原生 guard 静默失败而前端误报成功。
     private func exportDocument(text: String, name: String) {
-        guard presentedViewController == nil,
-              let data = text.data(using: .utf8), data.count <= 8_000_000 else { return }
+        guard let data = text.data(using: .utf8), data.count <= 8_000_000 else {
+            notifyExportResult(ok: false, reason: "报告文档超过 8 MB，无法导出")
+            return
+        }
+        guard presentedViewController == nil else {
+            notifyExportResult(ok: false, reason: "请先关闭当前面板，再导出报告")
+            return
+        }
         let safe = name.replacingOccurrences(of: #"[/\\:*?"<>|\r\n]"#, with: "", options: .regularExpression)
         let base = safe.isEmpty ? "FirstLight-report" : safe
         let file = base.hasSuffix(".html") ? base : base + ".html"
@@ -381,8 +388,19 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             let url = folder.appendingPathComponent(file)
             try data.write(to: url, options: .atomic)
             presentShare(url)
+            notifyExportResult(ok: true, reason: nil)
         } catch {
-            reportReminder("暂时无法写入报告文档。")
+            notifyExportResult(ok: false, reason: "暂时无法写入报告文档")
+        }
+    }
+
+    private func notifyExportResult(ok: Bool, reason: String?) {
+        let reasonJSON: String
+        if let reason = reason, let d = try? JSONEncoder().encode(reason),
+           let s = String(data: d, encoding: .utf8) { reasonJSON = s } else { reasonJSON = "null" }
+        let js = "window.__FL_EXPORT_DONE__?.({ok:\(ok ? "true" : "false"),reason:\(reasonJSON)})"
+        DispatchQueue.main.async { [weak self] in
+            self?.webView.evaluateJavaScript(js)
         }
     }
 

@@ -80,13 +80,16 @@ function bazi(scope,label,data){
   const role=(useful.includes(curElem)||useful.includes(curBranchElem))?'useful'
    :(bad.includes(curElem)||bad.includes(curBranchElem))?'caution':'neutral';
   const natalPillars=data.pillars||[];
+  // 调候补论：优先用内核 tiaoHou 字段现算 note；无字段时按本命月支兜底提示，不妄断具体用神。
+  const th=data.tiaoHou;
+  const tiaoNote=th?.note||(natalPillars[1]?.branch?`月令 ${natalPillars[1].branch} 定寒暖燥湿；调候与扶抑互补，本盘未提供逐月调候明细，此处不指定具体用神。`:'');
   out.push(...classicsReading({
    god:S(cur.tenGod||'正官'),role,strengthKind:S(st.kind||nat.kind||'中和'),
    gz:S(cur.stem)+S(cur.branch),monthBranch:S(natalPillars[1]?.branch||''),
    luckName:'大运',luckGZ:luck?S(luck.stem)+S(luck.branch):'',
    yearName:'流年',yearGZ:year?S(year.stem)+S(year.branch):'',
    dayName:'流日',dayGZ:day?S(day.stem)+S(day.branch):'',
-   tiaoHouNote:data.tiaoHouNote||''
+   tiaoHouNote:tiaoNote
   }));
  }
  // 5~7) 事业 / 财帛 / 情缘，直接取按时点喜忌定制的建议
@@ -182,7 +185,8 @@ function vedic(scope,label,data){
   out.push({title:`主运星深度 · ${S(dasha.lord)}`,lines:[
    lord?`${S(dasha.lord)}在本命第 ${S(lord.house)} 宫（${V_HOUSE[Number(lord.house)]||'—'}）、${S(lord.sign)}，${lord.retro?'逆行，主题反复且需多次核对':'顺行'}；星宿 ${S(lord.nakshatra||'')} Pada ${S(lord.pada||'')}，宿主 ${S(lord.nakLord||'—')}。`:'主运星本命落宫数据未列全，以宫主关系推断。',
    `时段 ${S(dasha.start||'').slice(0,10)} 至 ${S(dasha.end||'').slice(0,10)}（约 ${S(dasha.years)} 年）。主运星所落之宫，是这一阶段持续兑现的主战场。`,
-   sb?`力量参考 Shadbala：${S(dasha.lord)}合计 ${Number(sb.rupas||0).toFixed(2)} Rupa（参考线 ${Number(sb.minimum||0).toFixed(1)}，${sb.meets?'达标':'略低'}；短板在${S(sb.weakestPart?.[0]||'—')}）。${sb.meets?'力量足，此运主题较能主动兑现。':'力量偏弱，宜借制度、贵人与长期积累，不宜硬碰硬。'}`:'本盘未提供 Shadbala 分项，力量强弱以庙旺与宫主关系定性。'
+   sb?`力量参考 Shadbala：${S(dasha.lord)}合计 ${Number(sb.rupas||0).toFixed(2)} Rupa，在七曜中列第 ${Number(sb.rank||0)} 位，最大短板在${S(sb.weakestPart?.[0]||'—')}。${Number(sb.rank||7)<=3?'位次靠前——所主领域较能主动兑现，可作这一阶段的资源入口。':Number(sb.rank||7)>=6?'位次靠后——所主领域更依赖外部资源与长期积累，不宜硬碰硬。':'位次居中——主题能否兑现更看过境触发与个人经营。'}`:'本盘未提供 Shadbala 分项，力量强弱以庙旺与宫主关系定性。',
+   sb?`读法边界：本表未计 Kala Bala 的 Nathonnatha/Ayana 等分项，采用本实现量纲，不能拿它对经典「达标线」下绝对结论——请按七曜相对位次与分项短板读取。`:''
   ]});
  }
  // 5) 岁运 Varshaphala：返照盘上升与关键落宫

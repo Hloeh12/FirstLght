@@ -1,4 +1,5 @@
 import {btn,esc,stored} from './ui.js';
+import {localRequest} from '../../src/console-engine.mjs';
 
 export const relationships=['灵魂共振','宿命羁绊','业力债主','天选搭子','相爱相杀'];
 const relationKey='xy_case_space';
@@ -11,23 +12,30 @@ export const relationStorageKey=relationKey;
 const number=n=>typeof n==='number'&&Number.isFinite(n);
 const scoreCache=new Map();
 export const clearRelationshipCache=()=>scoreCache.clear();
+// 本地强制重算契合度（跳过远程与缓存），供关系名片「重新计算」按钮使用。
+export function recomputeFit(a,b){
+ const key=JSON.stringify([a,b]);scoreCache.delete(key);
+ return localRequest('/api/console/relationship',{a,b});
+}
 
 export async function linkedCases(profile,cases,links,request,normalize){
  const neighbors=new Map(cases.map(c=>[c.id,c]));
  return Promise.all(links.filter(l=>l.ids.includes(profile.id)).map(async l=>{
   const other=neighbors.get(l.ids.find(id=>id!==profile.id));
   if(!other)return null;
-  let score=null;
+  let score=null,localFallback=false;
   try{
    const a=normalize(profile),b=normalize(other),key=JSON.stringify([a,b]);
    if(!scoreCache.has(key)){
-    const promise=request('/api/console/relationship',{a,b}).catch(error=>{scoreCache.delete(key);throw error;});
+    // 先试远程，失败则降级到同进程本地引擎（契合度八字/紫微/印占证据均在本地可算）。
+    const promise=request('/api/console/relationship',{a,b})
+     .catch(()=>localRequest('/api/console/relationship',{a,b}));
     scoreCache.set(key,promise);
     if(scoreCache.size>96)scoreCache.delete(scoreCache.keys().next().value);
    }
    score=await scoreCache.get(key);
   }catch{}
-  return {other,type:l.type,score};
+  return {other,type:l.type,score,localFallback:!score};
  })).then(items=>items.filter(Boolean).sort((a,b)=>(b.score?.percent??-1)-(a.score?.percent??-1)));
 }
 
@@ -51,7 +59,7 @@ export function galaxy(profile,links,page=0){
  ${points.map(p=>`<g class="galaxy-planet" role="button" tabindex="0" data-galaxy-case="${esc(p.other.id)}" aria-label="${esc(p.other.name+' · '+p.type+(p.score?' · 契合度 '+p.score.percent+'%':''))}">
  <title>${esc(p.other.name+' · '+p.type)}</title><circle class="relation-node" cx="${p.x}" cy="${p.y}" r="12.5"/>
  <text x="${p.x}" y="${p.y+3}" text-anchor="middle">${p.score?.percent??'–'}</text></g>`).join('')}</svg>
- <div class="stack">${batch.map(p=>`<div class="galaxy-item">${btn(p.other.name,'data-galaxy-case="'+esc(p.other.id)+'"')}<span>${esc(p.type)} · ${p.score?'契合度 '+p.score.percent+'%'+(p.score.highlight?' · '+esc(p.score.highlight):''):'合盘暂不可用'}</span></div>`).join('')}</div>
+ <div class="stack">${batch.map(p=>`<div class="galaxy-item">${btn(p.other.name,'data-galaxy-case="'+esc(p.other.id)+'"')}<span>${esc(p.type)} · ${p.score?'契合度 '+p.score.percent+'%'+(p.score.highlight?' · '+esc(p.score.highlight):''):'契合度计算中，点开可重试'}</span></div>`).join('')}</div>
  ${links.length>12?`<div class="spread">${btn('上一页',page?'data-galaxy-page="'+(page-1)+'"':'disabled')}<small>${page+1} / ${Math.ceil(links.length/12)}</small>${btn('下一页',(page+1)*12<links.length?'data-galaxy-page="'+(page+1)+'"':'disabled')}</div>`:''}
  <small>契合度取印度八项合盘双向平均分，再折算为百分比；干支与相位另列为观察线索。</small></div>`;
 }

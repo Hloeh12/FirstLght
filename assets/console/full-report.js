@@ -113,17 +113,23 @@ function sectionGroup(title){
 }
 function tocHtml(report){
  if(!report.sections?.length)return '';
+ // v0.46：按用户要求取消正文中间的「目录 · 分区导航」入口条，目录改为只由右下角 FAB 唤起。
+ // 这里保留隐藏的 details.rpt-toc 作为唯一章节数据源：app.js 克隆其中的 .rpt-toc-list 到浮层，
+ // 两处高亮同源、契约钩子（details.rpt-toc / data-toc）不破，但正文不再出现可见入口条。
+ return `<details class="rpt-toc" hidden aria-label="报告目录"><div class="rpt-toc-list" role="group" aria-label="章节选择">${tocItems(report.sections)}</div></details>`;
+}
+/* v0.50.0：章节会随所选时点整体重排（时点报告的正文不再固定），
+   所以目录条目单独抽成纯函数，app.js 重算后可以就地刷新正文目录与浮层目录。 */
+function tocItems(sections){
  let last=null,items='';
- report.sections.forEach((s,i)=>{
+ (sections||[]).forEach((s,i)=>{
   const g=sectionGroup(s.title);
   if(g!==last){items+=`<div class="rpt-toc-group">${esc(g)}</div>`;last=g;}
   items+=`<button type="button" class="rpt-toc-item" data-toc="${i+1}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(i+1).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`;
  });
- // v0.46：按用户要求取消正文中间的「目录 · 分区导航」入口条，目录改为只由右下角 FAB 唤起。
- // 这里保留隐藏的 details.rpt-toc 作为唯一章节数据源：app.js 克隆其中的 .rpt-toc-list 到浮层，
- // 两处高亮同源、契约钩子（details.rpt-toc / data-toc）不破，但正文不再出现可见入口条。
- return `<details class="rpt-toc" hidden aria-label="报告目录"><div class="rpt-toc-list" role="group" aria-label="章节选择">${items}</div></details>`;
+ return items;
 }
+export {tocItems};
 const stripTags=s=>String(s).replace(/<[^>]*>/g,'');
 const charactersOf=sections=>sections.reduce((n,x)=>n+(x.title?.length||0)+(x.lines||[]).join('').length+stripTags(x.table||'').length+stripTags(x.html||'').length,0);
 
@@ -226,7 +232,7 @@ export function reportHtml(report){
   <p class="rpt-lead">${report.lead}</p>
   ${report.chartHtml?`<section class="rpt-chart" aria-label="报告对应时点命盘"><h3 class="rpt-chart-title">${esc(report.chartTitle||'本报告的命盘快照')}</h3><div class="rpt-chart-stage">${report.chartHtml}</div>${report.chartCaption?`<p class="rpt-chart-caption">${esc(report.chartCaption)}</p>`:''}</section>`:''}
   ${tocHtml(report)}
-  ${report.body}
+  <div data-report-body>${report.body}</div>
   <footer class="rpt-foot">本报告依传统术数规则与当前命盘条件生成，仅作文化与自我观察参考，不构成事实预测、投资、法律或医疗建议。<br>留一束初光，照见当下的自己。</footer>
  </article>`;
 }

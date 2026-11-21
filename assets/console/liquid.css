@@ -1071,3 +1071,104 @@ button:focus-visible,a:focus-visible{
 .period-controls label{font-size:12.5px!important;color:#6a4f5d!important;font-weight:600!important}
 .period-step{margin:11px 0 6px!important}
 .period-mode-grid{gap:9px}
+
+/* ===== v0.50.0 时点杆：让「现在看的是哪一刻」一眼可见 =====
+   旧版只有一个下拉，选了第 N 步大运却看不出对应哪一年、哪个月，
+   流年/流月还停在今天——用户根本无法确认「这个时点到底是何时」。
+   新结构：落点时刻卡（大标题=年月干支）+ 三组级联下拉 + 流月速选条 + 逐运翻页。 */
+.snap-bazi .bf-clock{
+ display:flex;align-items:center;justify-content:space-between;gap:10px;
+ margin:0 0 10px;padding:11px 13px;border-radius:16px;
+ background:linear-gradient(150deg,rgba(255,247,251,.97),rgba(255,232,242,.9));
+ border:1px solid rgba(255,120,170,.36);
+}
+.bf-clock-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bf-clock-kicker{font-size:9.5px;font-weight:800;letter-spacing:.14em;color:#b3668c}
+.bf-clock-text b{font-size:15px;font-weight:800;color:#7d1f4c;line-height:1.25;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.bf-clock-text small{font-size:10.5px;color:#93637e;line-height:1.45;font-variant-numeric:tabular-nums}
+.bf-now{flex:none;align-self:center;padding:7px 11px;border-radius:11px;font-size:11px;font-weight:750;
+ color:#a12a5e;background:rgba(255,255,255,.92);border:1px solid rgba(255,120,170,.45);cursor:pointer}
+.bf-now:active{transform:scale(.97)}
+.bf-picks{
+ display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;
+ margin:0 0 8px;padding:10px 12px;border-radius:16px;
+ background:rgba(255,255,255,.74);border:1px solid rgba(255,140,185,.24);
+}
+/* 大运独占一行：它是主轴，且文字最长（第N步 干支），三列并排必被裁字 */
+.bf-picks label.bf-luck{grid-column:1/-1}
+.bf-picks label{display:flex;flex-direction:column;gap:4px;min-width:0;
+ font-size:10px;font-weight:800;letter-spacing:.06em;color:#a8326a}
+.bf-luck-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.bf-picks select{
+ width:100%;appearance:none;-webkit-appearance:none;min-height:38px;padding:7px 18px 7px 9px;
+ border-radius:11px;font-size:11.5px;font-weight:600;color:#5c3348;letter-spacing:0;
+ border:1px solid rgba(255,120,170,.34);background:#fff
+  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23c2185b' stroke-width='1.6' stroke-linecap='round'/></svg>")
+  no-repeat right 7px center/8px 5px;
+}
+.bf-stepper{display:inline-flex;gap:3px}
+.bf-stepper button{
+ width:23px;height:19px;border-radius:7px;font-size:12px;font-weight:800;line-height:1;
+ color:#a12a5e;background:rgba(255,255,255,.95);border:1px solid rgba(255,120,170,.38);cursor:pointer
+}
+.bf-stepper button:active{transform:scale(.94)}
+.bf-year-rail{
+ display:flex;gap:5px;overflow-x:auto;overscroll-behavior-x:contain;
+ padding:2px 2px 6px;margin:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+ -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent 100%);
+ mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent 100%)
+}
+.bf-year-rail::-webkit-scrollbar{width:0;height:0}
+.bf-year{
+ flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:0;
+ min-width:38px;padding:4px 6px;border-radius:9px;cursor:pointer;
+ border:1px solid rgba(255,140,185,.22);background:rgba(255,255,255,.7);color:#7b3a58
+}
+.bf-year b{font-size:11px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.bf-year small{font-size:8px;color:#a97d95;line-height:1.2}
+.bf-year.on{background:rgba(255,79,139,.14);border-color:#ff4f8b;color:#c2185b}
+.bf-year.on small{color:#c2185b}
+.bf-month-rail{
+ display:flex;gap:5px;overflow-x:auto;overscroll-behavior-x:contain;
+ padding:2px 2px 8px;margin:0 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+ -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent 100%);
+ mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent 100%)
+}
+.bf-month-rail::-webkit-scrollbar{width:0;height:0}
+.bf-month{
+ flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;
+ min-width:46px;padding:5px 7px;border-radius:11px;cursor:pointer;
+ border:1px solid rgba(255,140,185,.26);background:rgba(255,255,255,.82);color:#7b3a58
+}
+.bf-month b{font-size:11.5px;font-weight:750;line-height:1.2}
+.bf-month small{font-size:8.5px;color:#a97d95;line-height:1.2;white-space:nowrap}
+.bf-month.on{background:linear-gradient(150deg,#ff77aa,#e2568f);border-color:#e2568f;color:#fff;
+ box-shadow:0 4px 12px -6px rgba(200,50,110,.85)}
+.bf-month.on small{color:rgba(255,255,255,.88)}
+/* 重算中的轻提示：盘面压暗但不清空，避免整块闪白 */
+.snap-bazi.is-busy .bf-grid-host{opacity:.42;transition:opacity .15s}
+.snap-bazi.is-busy .bf-clock{opacity:.72}
+.period-scope-note{
+ margin:10px 2px 0;font-size:11.5px;line-height:1.7;color:#8a6a7a;
+ padding:9px 12px;border-radius:12px;background:rgba(255,246,250,.9);border:1px dashed rgba(255,120,170,.3)
+}
+.period-scope-note b{color:#a12a5e}
+@media (prefers-color-scheme:dark){
+ .snap-bazi .bf-clock{background:linear-gradient(150deg,rgba(52,40,52,.95),rgba(42,32,44,.92));border-color:rgba(255,164,206,.26)}
+ .bf-clock-kicker{color:#d79cbb}
+ .bf-clock-text b{color:#ffd0e4}
+ .bf-clock-text small{color:#c99bb4}
+ .bf-now{color:#ffc2dc;background:rgba(255,255,255,.10);border-color:rgba(255,164,206,.34)}
+ .bf-picks{background:rgba(46,38,54,.7);border-color:rgba(255,138,184,.26)}
+ .bf-picks label{color:#ff9fc9}
+ .bf-picks select{color:#f3dbe7!important;background-color:rgba(52,42,62,.94)!important;border-color:rgba(255,164,206,.24)!important}
+ .bf-stepper button{color:#ffc2dc;background:rgba(255,255,255,.10);border-color:rgba(255,164,206,.3)}
+ .bf-month{background:rgba(52,44,58,.9);border-color:rgba(255,164,206,.22);color:#e9c7d8}
+ .bf-year{background:rgba(52,44,58,.9);border-color:rgba(255,164,206,.2);color:#e9c7d8}
+ .bf-year small{color:#b98aa2}
+ .bf-year.on{background:rgba(255,79,139,.2);border-color:#ff4f8b;color:#ffd0e4}
+ .bf-year.on small{color:#ffb4d2}
+ .bf-month small{color:#b98aa2}
+ .period-scope-note{background:rgba(46,36,46,.86);border-color:rgba(255,164,206,.24);color:#c2a0b3}
+ .period-scope-note b{color:#ffb4d2}
+}

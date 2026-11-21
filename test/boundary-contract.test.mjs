@@ -334,19 +334,21 @@ test('视觉杂质清理：出生表单复选框用粉色主题自定义样式�
  assert.match(liquid,/input,select,textarea\{font-size:16px!important\}/,'16px 字号规则须保留（防聚焦放大回归）');
 });
 
-test('时点专项独立 Tab + 工作台：四体系分别生成报告 + 两种报告形态 + 命盘快照',async()=>{
+test('时点专项独立 Tab + 工作台：四体系分别生成报告 + 只出时点详批（与本命报告去重）+ 命盘快照',async()=>{
  const app=await read('../assets/console/app.js');
- assert.match(app,/import \{buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES\} from '\.\/period-report\.js'/,'须引入时点报告模块');
+ assert.match(app,/import \{[^}]*buildPeriodReport[^}]*\} from '\.\/period-report\.js'/,'须引入时点报告模块');
  assert.match(app,/function periodDashboard\(\)/,'须有独立时点专项页（不再塞在洞见页）');
  assert.match(app,/PERIOD_SYS_META=/,'须有四体系选择元数据');
  assert.match(app,/\['cases','period','insights','me'\]/,'主导航须接受 period Tab');
  assert.match(app,/state\.tab==='period'/,'render 须分发到时点页');
  assert.match(app,/data-psys/,'须有排盘体系选择');
  assert.match(app,/data-period-scope/,'须有时点类型切换（大运/流年/流月/流日）');
- assert.match(app,/data-pmode/,'须有报告形态切换（专属详批 / 本命全报告+时点章）');
  assert.match(app,/data-period-generate/,'须有生成按钮');
  assert.match(app,/openFullReport\(report\)/,'生成后须打开预生成的报告');
  assert.match(app,/buildPeriodReport\(ctx,system,scope,selection,label,mode\)/,'须把报告形态传入生成器');
+ // v0.50.0 去重：时点页不再提供「本命全报告 + 时点章」，那种形态与洞见页深度报告几乎同文
+ assert.doesNotMatch(app,/data-pmode/,'时点页不得再有报告形态二选一（与本命深度报告重复）');
+ assert.match(app,/const mode='focus'/,'时点页固定输出时点专属详批');
  // 洞见页改为跳转入口，不再内嵌工作台
  assert.match(app,/data-goto-period/,'洞见页须有跳到时点专项的入口');
  assert.doesNotMatch(app,/periodWorkbenchHtml\(current\)/,'洞见页不得再内嵌时点工作台');
@@ -392,14 +394,14 @@ test('时点报告差异化：同一命盘不同流月的详批正文必须实�
 test('时点报告八字详盘：本命四柱+所选时点合成多列详盘，含完整行列且术语可点',async()=>{
  const pr=await read('../assets/console/period-report.js');
  // baziSnapshot 须合并本命 pillars 与大运/流年/流月七列，并用动态列数容器
- assert.match(pr,/function baziSnapshot\(data[\s\S]*cycles\[l\],years\[y\],months\[m\]/,'须把本命四柱与大运/流年/流月合成七列');
+ assert.match(pr,/function baziSnapshot\(data[\s\S]*pickFlow=[\s\S]*cycles\[l\][\s\S]*months\[m\]/,'须把本命四柱与大运/流年/流月合成七列');
  assert.match(pr,/data-bf="luck"[\s\S]*data-bf="year"[\s\S]*data-bf="month"/,'须提供大运/流年/流月三组切换控件');
  assert.match(pr,/class="bazi-grid rpt-bazi-grid" style="--bg-cols:/,'须用动态列数容器避免塌陷为竖排');
- assert.match(pr,/baziGrid\(g\.base\)|baziGrid\(gridData\)/,'须复用完整行列结构的 baziGrid');
+ assert.match(pr,/baziGrid\(\{\.\.\.data,pillars\}\)|baziGrid\(g\.base\)/,'须复用完整行列结构的 baziGrid');
  // 报告弹层须给术语补委托（报告在 #screen 之外）
  const app=await read('../assets/console/app.js');
  assert.match(app,/d\.addEventListener\('click'[\s\S]*data-term[\s\S]*ctx\.explain/,'报告内术语须可点开解释卡');
- assert.match(app,/d\.onchange[\s\S]*data-bf[\s\S]*__FL_BAZI_FLOW__[\s\S]*baziGrid\(/,'切换器须由事件委托重绘七列盘');
+ assert.match(app,/const applyBaziPick=async[\s\S]*baziGrid\([\s\S]*d\.onchange=e=>[\s\S]*data-bf/,'切换器须由事件委托重算并重绘七列盘');
  // 报告内详盘与导出文档都须有自适应列数样式
  const liq=await read('../assets/console/liquid.css');
  assert.match(liq,/\.bazi-grid\.rpt-bazi-grid\{grid-template-columns:26px repeat\(var\(--bg-cols,4\),minmax\(0,1fr\)\);min-width:0/,'报告弹层须有动态列数样式且七列自适应不溢出');
@@ -407,13 +409,22 @@ test('时点报告八字详盘：本命四柱+所选时点合成多列详盘，�
  assert.match(exp,/\.bazi-grid\{display:grid;grid-template-columns:34px repeat\(var\(--bg-cols,4\)/,'导出文档须有详盘静态样式');
 });
 
-test('时点页报告形态按钮：点击须同步 on / aria-pressed / 对勾三态',async()=>{
+test('时点级联：改大运收窄流年、改流年重排流月，盘面与正文同源重算',async()=>{
  const app=await read('../assets/console/app.js');
- assert.match(app,/data-pmode[\s\S]*pmode-check/,'按钮须含对勾元素');
- assert.match(app,/x\.classList\.toggle\('on',on\);x\.setAttribute\('aria-pressed',String\(on\)\)/,'点击须同步 on 与 aria-pressed');
- assert.match(app,/chk\.textContent=on\?'✓':''/,'点击须同步对勾显示');
- const liq=await read('../assets/console/liquid.css');
- assert.match(liq,/\.period-mode\.on \.pmode-check\{color:#fff;background:#ff4f8b/,'选中态须有可见对勾样式');
+ // 改大运必须丢掉下级选择，让后端按新运重排（否则流年/流月会停在旧运，出现「右边时间不变」）
+ assert.match(app,/if\(patch\.luck!=null\)\{sel\.luck=Number\(patch\.luck\);delete sel\.year;delete sel\.month;\}/,'改大运须重置流年/流月');
+ assert.match(app,/if\(patch\.year!=null\)\{sel\.year=Number\(patch\.year\);delete sel\.month;\}/,'改流年须重置流月');
+ // 任何切换都要回后端重算，禁止只换一列
+ assert.match(app,/ctx\.request\('\/api\/console\/bazi',\{birth:ctx\.birth,selection,combine:false\}\)/,'切换须按新选择回后端重算');
+ // 正文/目录/标题都要跟着换，不能只换盘
+ assert.match(app,/bodyEl\.innerHTML=focusBodyHtml\(secs\)/,'切换后须重排正文章节');
+ assert.match(app,/const items=tocItems\(secs\)/,'切换后须重排目录');
+ assert.match(app,/report\.title=`八字 · \$\{spot\}`/,'切换后须更新报告标题');
+ // 三个快捷入口
+ assert.match(app,/data-bf-now/,'须有「回到当下」');
+ assert.match(app,/data-bf-step/,'须有逐运翻页');
+ assert.match(app,/data-bf-month/,'须有流月速选');
+ assert.match(app,/data-bf-year/,'须有流年速览');
 });
 
 test('八字流年选项须覆盖今年及未来，不再停在起运后第10年',()=>{
@@ -445,7 +456,9 @@ test('八字七列详盘：默认七列完全可见（minmax(0,1fr) 不把流年
  assert.match(pr,/chartCaption:''/,'盘内已有 caption 时外层须留空，避免重复两行');
  assert.match(pr,/data-bf-caption/,'盘内须有可更新的 caption 元素');
  const app=await read('../assets/console/app.js');
- assert.match(app,/cap\.textContent=`当前落点/,'切换器须同步更新盘内 caption');
+ assert.match(app,/cap\.textContent=`当前时点：/,'切换器须同步更新盘内落点文案');
+ assert.match(app,/data-bf-moment/,'盘内须有「当前时点」大标题（年月干支）');
+ assert.match(app,/data-bf-moment-sub/,'盘内须有大运起止与节气区间副标题');
 });
 
 test('v0.46 目录条取消/年份扩展/浮层深色/时点详批/SOUL块',async()=>{

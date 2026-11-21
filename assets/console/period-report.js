@@ -50,50 +50,100 @@ function ziweiSnapshot(chart,flow,profile){
  return `<div class="snap-board snap-zi">${cells}${center}</div>`;
 }
 
-// 八字时点七列详盘：本命四柱 + 大运 + 流年 + 流月，完整十神/藏干/星运/神煞/纳音。
-// 对标专业盘的「上方选时点、下方出七列盘」交互：三组 select 可点切换，
-// 切换时用内联脚本按当前 data 重算七列并重绘盘面（导出文档场景下退化为静态快照）。
-// 关键修复：不再依赖后端返回的 data.selected（时点页只传 {month:N} 时它只有流月一列），
-// 而是始终用 data.cycles/years/months 自组完整七列，默认取当前运/年/月。
-function baziSnapshot(data,selection={}){
- const natal=(data?.pillars||[]).filter(Boolean);
+/* v0.50.0 时点落点：从一份盘面数据反查「当前到底在看哪一刻」，
+   统一给「时点杆 / 盘内 caption / 报告标题」三处使用，避免三套文案各说各话。 */
+export function baziMoment(data,sel={}){
  const cycles=data?.cycles||[],years=data?.years||[],months=data?.months||[];
+ const gz=p=>p&&p.stem?`${p.stem}${p.branch}`:'';
+ const li=Number.isInteger(sel.luck)?sel.luck:null;
+ const c=li!=null?cycles[li]:null;
+ const yi=years.findIndex(y=>String(y.year)===String(sel.year));
+ const y=yi<0?null:years[yi];
+ const mi=Number.isInteger(sel.month)?sel.month:0;
+ const m=months[mi]||null;
+ const nextStart=months[mi+1]?.date?.slice(5,10);
+ const range=c&&c.startYear?`${c.startYear}–${c.endYear??c.startYear+9}`:'';
+ return {
+  // 落点卡主行：年·干支 + 月·干支，一眼确认是哪一年哪一月
+  title:[y?`${y.year} ${gz(y)}年`:'',m?`${m.label||''} ${gz(m)}月`:''].filter(Boolean).join(' · '),
+  // 次行：第几步大运/起止年 + 该月节气区间
+  sub:[
+   li!=null?`第${li+1}步 ${gz(c)}大运${range?' '+range:''}`:'本命原局（未叠流运）',
+   m?.date?`${m.date.slice(5,10)}${nextStart?'→'+nextStart:''}`:''
+  ].filter(Boolean).join(' · '),
+  // 报告标题/章节前缀用短式：长串会把封面标题挤成三行
+  brief:[y?`${y.year} ${gz(y)}年`:'',m?`${m.label||''}${gz(m)}月`:''].filter(Boolean).join(' '),
+  cue:[li!=null?`第${li+1}步大运`:'',y?`${y.year} 年`:''].join(' · ')
+ };
+}
+// 供 app.js 级联重算后重建选项与盘面：把后端返回的 selected 反查成三组索引。
+export function baziSelOf(data){
+ const cycles=data?.cycles||[],years=data?.years||[],months=data?.months||[];
+ const sel=data?.selected||[];
+ const c=sel.find(p=>p?.name==='大运'),y=sel.find(p=>p?.name==='流年'),m=sel.find(p=>p?.name==='流月');
  const nowY=new Date().getFullYear();
- const defLuck=(()=>{ // 当前大运：startYear <= 今年 < endYear
-  const i=cycles.findIndex(c=>(c.startYear??9999)<=nowY&&nowY<(c.endYear??c.startYear+10));
+ const luck=Number.isInteger(c?.index)?c.index:(()=>{
+  const i=cycles.findIndex(x=>(x.startYear??9999)<=nowY&&nowY<(x.endYear??x.startYear+10));
   return i<0?0:i;
  })();
- const defYear=(()=>{const i=years.findIndex(y=>y.year===nowY);return i<0?Math.max(0,years.length-1):i;})();
- const defMonth=Math.max(0,months.findIndex(m=>m.date?.slice(0,10)<=new Date().toISOString().slice(0,10)));
- const li=Number.isInteger(selection.luck)?Math.min(selection.luck,cycles.length-1):defLuck;
- const yi=(selection.year!=null?years.findIndex(y=>y.year===Number(selection.year)):-1);
- const yIdx=yi<0?defYear:yi;
- const mIdx=Number.isInteger(selection.month)?Math.min(selection.month,months.length-1):defMonth;
- const pickFlow=(l,y,m)=>[cycles[l],years[y],months[m]].filter(p=>p&&p.stem&&p.branch).map(p=>({...p}));
- const build=(l,y,m)=>{
-  const flow=pickFlow(l,y,m);
-  return {base:{...data,pillars:[...natal,...flow]},cols:[...natal,...flow].length};
+ const year=Number.isInteger(y?.year)?y.year:(years.find(x=>x.year===nowY)?.year??years[0]?.year);
+ const month=Number.isInteger(m?.index)?m.index:0;
+ return {luck,year,month};
+}
+/* v0.50.0：三组下拉与流月速选条的选项 HTML 统一由这里产出。
+   初次渲染与切换后的级联重建共用同一份逻辑，避免两边选项口径漂移。 */
+export function baziPickOptions(data,sel={}){
+ const cycles=data?.cycles||[],years=data?.years||[],months=data?.months||[];
+ // 报告内下拉宽度有限：去掉「（2017起）」这类冗余，只留「第几步 + 干支」，
+ // 完整起止年交给上方落点卡显示，避免 option 文字被原生控件裁掉。
+ const opt=(list,on,fmt)=>list.map((x,i)=>`<option value="${esc(String(x))}"${String(on)===String(x)?' selected':''}>${esc(fmt(i))}</option>`).join('');
+ const cOpts=cycles.length?opt(cycles.map((_,i)=>i),sel.luck,(i)=>`第${i+1}步 ${cycles[i].stem||''}${cycles[i].branch||''}`):'<option>无大运</option>';
+ const yOpts=years.length?opt(years.map(x=>x.year),sel.year,(i)=>`${years[i].year} ${years[i].stem||''}${years[i].branch||''}`):'<option>无流年</option>';
+ const mOpts=months.length?opt(months.map((_,i)=>i),sel.month,(i)=>`${months[i].label||months[i].date?.slice(5)||''} ${months[i].stem||''}${months[i].branch||''}`):'<option>无流月</option>';
+ const monthRail=months.map((m,i)=>`<button type="button" class="bf-month${i===sel.month?' on':''}" data-bf-month="${i}" aria-pressed="${i===sel.month}" title="${esc((m.label||'')+' '+m.stem+m.branch+(m.date?' · '+m.date.slice(0,10)+' 起':''))}"><b>${esc((m.stem||'')+(m.branch||''))}</b><small>${esc(m.label||'')}</small></button>`).join('');
+ // 流年速览：当前这步大运的十年一字排开，点一下换年——十年一屏，比翻下拉更接近「时间轴」直觉。
+ const yearRail=years.map(y=>`<button type="button" class="bf-year${String(y.year)===String(sel.year)?' on':''}" data-bf-year="${esc(String(y.year))}" aria-pressed="${String(y.year)===String(sel.year)}" title="${esc(y.year+' '+(y.stem||'')+(y.branch||'')+' 年')}"><b>${esc(String(y.year).slice(2))}</b><small>${esc((y.stem||'')+(y.branch||''))}</small></button>`).join('');
+ return {cOpts,yOpts,mOpts,monthRail,yearRail};
+}
+// 八字时点七列详盘：本命四柱 + 大运 + 流年 + 流月，完整十神/藏干/星运/神煞/纳音。
+// v0.50.0：三组 select 改为真正级联——改大运 → 流年列表收窄到该运年份；改流年 → 流月重排；
+// 任一处变更都回后端按新选择重算，所以盘面、落点文案、报告正文三者永远同源。
+// v0.49 之前的版本只换大运那一列，流年/流月停在「今天」，于是出现「选了第8步、右边还是2026」。
+function baziSnapshot(data,selection={},scope='luck'){
+ const natal=(data?.pillars||[]).filter(Boolean);
+ const cycles=data?.cycles||[],years=data?.years||[],months=data?.months||[];
+ const sel=baziSelOf(data);
+ const moment=baziMoment(data,sel);
+ const pickFlow=(l,y,m)=>{
+  const yi=years.findIndex(x=>String(x.year)===String(y));
+  return [cycles[l],yi<0?null:years[yi],months[m]].filter(p=>p&&p.stem&&p.branch).map(p=>({...p}));
  };
- const b0=build(li,yIdx,mIdx);
- const gridHtml=g=>`<div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${g.cols}">${baziGrid(g.base)}</div>`;
- const opt=(list,sel,fmt)=>list.map((x,i)=>`<option value="${i}"${i===sel?' selected':''}>${esc(fmt(x,i))}</option>`).join('');
- const cOpts=cycles.length?opt(cycles,li,(c,i)=>`第${i+1}步 ${c.stem||''}${c.branch||''}`):'<option>无大运</option>';
- const yOpts=years.length?opt(years,yIdx,(y)=>`${y.year} ${y.stem||''}${y.branch||''}`):'<option>无流年</option>';
- const mOpts=months.length?opt(months,mIdx,(m)=>`${m.label||m.date?.slice(5)||''} ${m.stem||''}${m.branch||''}`):'<option>无流月</option>';
- // 内联脚本所需的数据：本命四柱 + 三组运柱 + data 元字段（供 baziGrid 用）。
- // 数据挂全局，由 app.js 的事件委托负责重绘（innerHTML 注入的 <script> 不会执行）。
- const payload={natal,cycles,years,months,sel:{luck:li,year:yIdx,month:mIdx},
-  meta:{voidBranches:data.voidBranches||[],dayMaster:data.dayMaster,strength:data.strength,relationships:data.relationships}};
+ const gridOf=(l,y,m)=>{
+  const pillars=[...natal,...pickFlow(l,y,m)];
+  return `<div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${pillars.length}">${baziGrid({...data,pillars})}</div>`;
+ };
+ const {cOpts,yOpts,mOpts,monthRail,yearRail}=baziPickOptions(data,sel);
+ // 数据挂全局，由 app.js 的事件委托负责级联重算（innerHTML 注入的 <script> 不会执行）。
  const uid='bf'+Math.random().toString(36).slice(2,8);
- (globalThis.__FL_BAZI_FLOW__||= {})[uid]=payload;
- return `<div class="snap-bazi" data-bazi-flow="${uid}">
-  <div class="bazi-flow-picker card liquid-glass" role="group" aria-label="切换八字时点">
-   <label>大运<select data-bf="luck" aria-label="切换大运">${cOpts}</select></label>
-   <label>流年<select data-bf="year" aria-label="切换流年">${yOpts}</select></label>
-   <label>流月<select data-bf="month" aria-label="切换流月">${mOpts}</select></label>
+ globalThis.__FL_BAZI_FLOW__={[uid]:{uid,scope,sel,data}};
+ return `<div class="snap-bazi" data-bazi-flow="${uid}" data-bf-scope="${esc(scope)}">
+  <div class="bf-clock card liquid-glass">
+   <div class="bf-clock-text">
+    <span class="bf-clock-kicker">当前时点</span>
+    <b data-bf-moment>${esc(moment.title||'本命原局')}</b>
+    <small data-bf-moment-sub>${esc(moment.sub)}</small>
+   </div>
+   <button type="button" class="bf-now" data-bf-now>↺ 回到当下</button>
   </div>
-  <div class="bf-grid-host" data-bf-grid>${gridHtml(b0)}</div>
-  <p class="bf-snap-caption" data-bf-caption>当前落点：${esc(months[mIdx]?.label||'')} ${esc(months[mIdx]?.stem||'')}${esc(months[mIdx]?.branch||'')}。以下逐条推导该时点。</p>
+  <div class="bf-picks" role="group" aria-label="切换八字时点">
+   <label class="bf-luck"><span class="bf-luck-head">大运<span class="bf-stepper" role="group" aria-label="逐运浏览"><button type="button" data-bf-step="-1" aria-label="上一步大运">‹</button><button type="button" data-bf-step="1" aria-label="下一步大运">›</button></span></span><select data-bf="luck" aria-label="切换大运">${cOpts}</select></label>
+   <label class="bf-year-pick">流年<select data-bf="year" aria-label="切换流年">${yOpts}</select></label>
+   <label class="bf-month-pick">流月<select data-bf="month" aria-label="切换流月">${mOpts}</select></label>
+  </div>
+  <div class="bf-year-rail" role="group" aria-label="本步大运流年速览">${yearRail}</div>
+  <div class="bf-month-rail" role="group" aria-label="本年流月速选">${monthRail}</div>
+  <div class="bf-grid-host" data-bf-grid>${gridOf(sel.luck,sel.year,sel.month)}</div>
+  <p class="bf-snap-caption" data-bf-caption>当前时点：${esc(moment.title)}（${esc(moment.sub)}）。盘面与下方逐条推导都已按这一刻重算。</p>
  </div>`;
 }
 
@@ -158,16 +208,23 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
  const cover={name:who.name||'命主',system:NAMES[system]||system,stamp:new Date().toLocaleString('zh-CN',{hour12:false})};
  const compose=(sections,meta)=>{
   const body=sectionsToHtml(sections);
-  if(focus)meta.lead=`【时点专属详批】只围绕「${escS(label)}」展开：盘面快照 + 该时点逐条推导，正文随所选时点变化，不重复本命全文。${meta.lead||''}`;
+  // 导语里的落点名必须与封面标题同源，否则会出现「标题 2067、导语说本命原局」的自相矛盾。
+  const spot=meta.spot||label;
+  if(focus)meta.lead=`【时点专属详批】只围绕「${escS(spot)}」展开：盘面快照 + 该时点逐条推导，正文随所选时点变化，不重复本命全文。${meta.lead||''}`;
   return {cover,...meta,body,sections,characters:textOf(sections)};
  };
 
  if(system==='bazi'){
   const data=await request('/api/console/bazi',{birth,selection,combine:false});
   const rep=buildBaziDeepReport(data);
-  const sections=focus?focusedSections('bazi',scope,label,data):[...rep.sections.slice(),focusSection('bazi',scope,label,data)];
-  return compose(sections,{title:`八字 · ${label}${focus?' · 时点详批':''}`,kind:'bazi',
-   chartHtml:baziSnapshot(data,selection),chartTitle:`八字七列详盘 · ${label}`,
+  // v0.50.0：标题与章节名不再用页面传进来的粗标签（「大运 戊辰」），
+  // 直接用盘面反查的真落点（年·干支·月），让用户一眼看到「哪一年哪个月」。
+  const moment=baziMoment(data,baziSelOf(data));
+  // 章节前缀与封面标题用短式（年月干支）：长串会把标题挤成三行、每章标题也一起变长。
+  const spot=moment.brief||[moment.title,moment.sub].filter(Boolean).join(' · ')||label;
+  const sections=focus?focusedSections('bazi',scope,spot,data):[...rep.sections.slice(),focusSection('bazi',scope,spot,data)];
+  return compose(sections,{spot,title:`八字 · ${spot}${focus?'':' · 时点聚焦'}`,kind:'bazi',
+   chartHtml:baziSnapshot(data,selection,scope),chartTitle:`八字七列详盘 · ${spot}`,
    // 说明文字放在盘内的 [data-bf-caption]，随切换器实时更新；此处留空避免重复两行。
    chartCaption:'',
    lead:`日主 ${escS(data.dayMaster?.stem||'—')}${escS(data.dayMaster?.element||'')} · ${escS(data.strength?.kind||'')}。`,gege:rep.gege});
@@ -221,5 +278,10 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
 function sectionsToHtml(sections){
  return sections.map((s,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${escS(s.title)}</h3>${(s.lines||[]).map(renderReportPara).join('')}${s.table?`<div class="rpt-table-wrap">${s.table}</div>`:''}${s.html||''}</section>`).join('');
 }
+
+/* v0.50.0 报告内实时重算：切换时点后，只重取值、重排章节，不再整份重开报告。
+   app.js 的 [data-bf] 委托调用这两个函数替换正文与目录。 */
+export function focusSectionsFor(system,scope,label,data){return focusedSections(system,scope,label,data);}
+export function focusBodyHtml(sections){return sectionsToHtml(sections);}
 
 export {SCOPES,NAMES};

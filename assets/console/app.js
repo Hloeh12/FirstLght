@@ -2,7 +2,7 @@ import {buildBaziKnowledgeReport,buildZiweiKnowledgeReport} from '../../www/js/r
 import {buildWesternDeepReport} from '../../www/js/deep-west.js';
 import {buildVedicDeepReport} from '../../www/js/deep-vedic.js';
 import {buildZiweiDeepReport} from '../../www/js/deep-ziwei.js';
-import {composeFullReport,reportHtml} from './full-report.js';
+import {composeFullReport,reportHtml,tocItems} from './full-report.js';
 import {periodSections} from './ui.js';
 import {installCivilPickers} from './civil-picker.js';
 import {ProfileMachine} from './profile-machine.js';
@@ -24,7 +24,7 @@ import {westernView,westernTools,astroHouse,houseOptions,houseLabels,setAstroHou
 import {extraView} from './extras.js';
 import {shareChart} from './share.js';
 import {exportReportDocument} from './report-export.js';
-import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES} from './period-report.js';
+import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES,baziMoment,baziSelOf,baziPickOptions,focusSectionsFor,focusBodyHtml} from './period-report.js';
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup,recomputeFit} from './case-space.js';
@@ -718,22 +718,88 @@ function openFullReport(prebuilt,opts={}){
  const tocList=d.querySelector('[data-full-report] .rpt-toc-list');
  const navList=d.querySelector('[data-rpt-nav-list]');
  if(tocList&&navList)navList.appendChild(tocList.cloneNode(true));
- // v0.44.0 七列八字盘：时点切换器 change 委托（innerHTML 注入的 script 不会执行，故用委托）。
- // 数据由 period-report.js 的 baziSnapshot 挂到 __FL_BAZI_FLOW__[uid]，这里按当前选择重绘七列盘。
+ // v0.50.0 时点级联：改大运收窄流年、改流年重排流月，任何一处变更都回后端按新选择重算，
+ // 再同步刷新盘面 / 落点文案 / 正文 / 目录 / 字数——四者共用同一份 data，不会再出现
+ // 「选了第8步、右边流年还停在 2026」或「盘变了但正文一字未动」的割裂。
+ const applyBaziPick=async(box,patch)=>{
+  const uid=box?.dataset.baziFlow,P=globalThis.__FL_BAZI_FLOW__?.[uid];
+  if(!P||box.classList.contains('is-busy'))return;
+  const sel={...P.sel};
+  if(patch.luck!=null){sel.luck=Number(patch.luck);delete sel.year;delete sel.month;}
+  if(patch.year!=null){sel.year=Number(patch.year);delete sel.month;}
+  if(patch.month!=null)sel.month=Number(patch.month);
+  const selection={};
+  if(Number.isInteger(sel.luck))selection.luck=sel.luck;
+  if(sel.year!=null)selection.year=Number(sel.year);
+  if(Number.isInteger(sel.month))selection.month=sel.month;
+  box.classList.add('is-busy');
+  try{
+   const data=await ctx.request('/api/console/bazi',{birth:ctx.birth,selection,combine:false});
+   const next=baziSelOf(data);
+   P.data=data;P.sel=next;
+   const moment=baziMoment(data,next);
+   const {cOpts,yOpts,mOpts,monthRail,yearRail}=baziPickOptions(data,next);
+   const setSel=(k,html)=>{const el=box.querySelector('[data-bf="'+k+'"]');if(el)el.innerHTML=html;};
+   setSel('luck',cOpts);setSel('year',yOpts);setSel('month',mOpts);
+   const rail=box.querySelector('.bf-month-rail');if(rail)rail.innerHTML=monthRail;
+   const yrail=box.querySelector('.bf-year-rail');if(yrail)yrail.innerHTML=yearRail;
+   const mEl=box.querySelector('[data-bf-moment]');if(mEl)mEl.textContent=moment.title||'本命原局';
+   const sEl=box.querySelector('[data-bf-moment-sub]');if(sEl)sEl.textContent=moment.sub;
+   const natal=(data.pillars||[]).filter(Boolean);
+   const yi=(data.years||[]).findIndex(y=>String(y.year)===String(next.year));
+   const flow=[data.cycles?.[next.luck],yi<0?null:data.years[yi],data.months?.[next.month]].filter(p=>p&&p.stem&&p.branch);
+   const pillars=[...natal,...flow];
+   const host=box.querySelector('[data-bf-grid]');
+   if(host)host.innerHTML=`<div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${pillars.length}">${baziGrid({...data,pillars})}</div>`;
+   const cap=box.querySelector('[data-bf-caption]');
+   if(cap)cap.textContent=`当前时点：${moment.title}（${moment.sub}）。盘面与下方逐条推导都已按这一刻重算。`;
+   // 正文与目录同时重排：时点报告的章节本身就是随落点变的，只换盘不换字等于没切换。
+   const spot=moment.brief||[moment.title,moment.sub].filter(Boolean).join(' · ');
+   const secs=focusSectionsFor('bazi',P.scope||'luck',spot,data);
+   const bodyEl=d.querySelector('[data-report-body]');
+   if(bodyEl)bodyEl.innerHTML=focusBodyHtml(secs);
+   report.sections=secs;
+   report.title=`八字 · ${spot}`;
+   report.characters=secs.reduce((n,s)=>n+(s.title?.length||0)+(s.lines||[]).join('').length,0);
+   // 导语里也写死了旧落点名，不跟着换就会「标题 2067、导语仍说本命原局」。
+   report.lead=`【时点专属详批】只围绕「${esc(spot)}」展开：盘面快照 + 该时点逐条推导，正文随所选时点变化，不重复本命全文。日主 ${esc(data.dayMaster?.stem||'—')}${esc(data.dayMaster?.element||'')} · ${esc(data.strength?.kind||'')}。`;
+   const leadEl=d.querySelector('.rpt-lead');if(leadEl)leadEl.innerHTML=report.lead;
+   const titleEl=d.querySelector('#reportTitle');if(titleEl)titleEl.textContent=report.title;
+   const chartTitle=d.querySelector('.rpt-chart-title');if(chartTitle)chartTitle.textContent=`八字七列详盘 · ${spot}`;
+   const wordEl=d.querySelector('.rpt-meta');if(wordEl)wordEl.textContent=`全文 ${report.characters} 字`;
+   const items=tocItems(secs);
+   const tocEl=d.querySelector('.rpt-toc-list');if(tocEl)tocEl.innerHTML=items;
+   const navEl=d.querySelector('[data-rpt-nav-list]');if(navEl)navEl.innerHTML=items;
+   if(bodyEl)bodyEl.scrollTop=0;
+   const body2=d.querySelector('#reportBody');if(body2)body2.scrollTo?.({top:0,behavior:'smooth'});
+  }catch(err){tell('该时点重算失败：'+(err.message||err));}
+  finally{box.classList.remove('is-busy');}
+ };
  d.onchange=e=>{
   const s=e.target.closest?.('[data-bf]');if(!s)return;
-  const box=s.closest('[data-bazi-flow]'),uid=box?.dataset.baziFlow;
-  const P=globalThis.__FL_BAZI_FLOW__?.[uid];if(!P)return;
-  P.sel[s.dataset.bf]=Number(s.value);
-  const host=box.querySelector('[data-bf-grid]');if(!host)return;
-  const flow=[P.cycles[P.sel.luck],P.years[P.sel.year],P.months[P.sel.month]].filter(p=>p&&p.stem&&p.branch);
-  const pillars=[...P.natal,...flow];
-  const g={...P.meta,pillars};
-  host.innerHTML=`<div class="bazi-grid rpt-bazi-grid" style="--bg-cols:${pillars.length}">${baziGrid(g)}</div>`;
-  // 同步更新盘下 caption，让切换有明显反馈（如「小寒 辛丑」→「清明 壬辰」）。
-  const cap=box.querySelector('[data-bf-caption]');
-  if(cap){const m=P.months[P.sel.month];cap.textContent=`当前落点：${m?.label||''} ${m?.stem||''}${m?.branch||''}。以下逐条推导该时点。`;}
+  applyBaziPick(s.closest('[data-bazi-flow]'),{[s.dataset.bf]:s.value});
  };
+ // 回到当下 / 逐运浏览 / 流月速选：都是「换一个时点」，统一走同一条重算路径。
+ d.addEventListener('click',e=>{
+  const box=e.target.closest?.('[data-bazi-flow]');if(!box)return;
+  const P=globalThis.__FL_BAZI_FLOW__?.[box.dataset.baziFlow];if(!P)return;
+  if(e.target.closest('[data-bf-now]')){
+   const nowY=new Date().getFullYear();
+   const i=(P.data?.cycles||[]).findIndex(c=>(c.startYear??9999)<=nowY&&nowY<(c.endYear??c.startYear+10));
+   applyBaziPick(box,{luck:i<0?0:i});return;
+  }
+  const step=e.target.closest('[data-bf-step]');
+  if(step){
+   const n=(P.data?.cycles||[]).length;if(!n)return;
+   const to=Math.min(n-1,Math.max(0,(P.sel.luck??0)+Number(step.dataset.bfStep)));
+   if(to!==P.sel.luck)applyBaziPick(box,{luck:to});
+   return;
+  }
+  const m=e.target.closest('[data-bf-month]');
+  if(m){applyBaziPick(box,{month:Number(m.dataset.bfMonth)});return;}
+  const y=e.target.closest('[data-bf-year]');
+  if(y)applyBaziPick(box,{year:Number(y.dataset.bfYear)});
+ });
  // 章节收藏：点标题旁 ☆ 存本章纯文本；再点取消。
  for(const fb of d.querySelectorAll('[data-fav-sec]')){
   const sec=fb.closest('.rpt-sec'),idx=fb.dataset.favSec;
@@ -877,7 +943,7 @@ function insights(){
   natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p>${wDigest}</article>`;
   lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
  }
- root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">命主 ${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><button type="button" class="period-cta" data-goto-period><span class="period-cta-ico">◷</span><span><b>时点专项报告</b><small>流年 / 流月 / 流日 逐点出盘 + 专属详批 →</small></span><span class="period-cta-arrow">›</span></button></section>`;
+ root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 本命全局</p><h1>洞见</h1><p class="muted thin">命主 ${esc(state.profile.name)} · ${esc(names[current])} · 本命终身结构（不含流年流月）</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>大运全序列 · 终身周期</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><button type="button" class="period-cta" data-goto-period><span class="period-cta-ico">◷</span><span><b>要看某一年/某个月？转到时点</b><small>选一个时点，出该时刻的盘 + 该时刻的详批（与本页不重复）→</small></span><span class="period-cta-arrow">›</span></button></section>`;
  for(const x of root.querySelectorAll('[data-insight-system]'))x.onclick=()=>{state.system=x.dataset.insightSystem;render();};
  const or=root.querySelector('[data-open-report]');if(or)or.onclick=()=>openFullReport();
  const ex=root.querySelector('[data-share-current]');if(ex)ex.onclick=async()=>{ex.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前报告已生成，可在系统分享面板保存。');}catch(e){tell('导出失败：'+e.message);}finally{ex.disabled=false;}};
@@ -894,15 +960,19 @@ function periodOptions(system,scope){
   const d=cs.bazi?.data||r.bazi||{};
   const key={luck:'cycles',year:'years',month:'months',day:'days'}[scope];
   const list=d[key]||[];
-  if(scope==='luck')return [opt('natal','本命原局'),...list.map((x,i)=>opt(i,`第${i+1}步 ${x.stem||''}${x.branch||''}（${x.startYear||x.age||''}起）`))].join('');
-  if(scope==='year'){const nowY=new Date().getFullYear();const has=list.some(x=>x.year===nowY);return list.map(x=>opt(x.year,`${x.year} ${x.stem||''}${x.branch||''}${x.year===nowY?'（今年）':''}`,has?x.year===nowY:x===list.at(-1))).join('');}
+  const nowY=new Date().getFullYear();
+  const currentLuck=Math.max(0,(d.cycles||[]).findIndex(c=>(c.startYear??9999)<=nowY&&nowY<(c.endYear??c.startYear+10)));
+  // v0.50.0：不再提供「本命原局」一项——本命全局属于洞见页，时点页只谈具体时点；
+  // 默认就落在「当前正在走的大运」，打开即是当下这一刻。
+  if(scope==='luck')return list.map((x,i)=>opt(i,`第${i+1}步 ${x.stem||''}${x.branch||''}（${x.startYear||x.age||''}起）`,i===currentLuck)).join('');
+  if(scope==='year'){const has=list.some(x=>x.year===nowY);return list.map(x=>opt(x.year,`${x.year} ${x.stem||''}${x.branch||''}${x.year===nowY?'（今年）':''}`,has?x.year===nowY:x===list.at(-1))).join('');}
   return list.map((x,i)=>opt(i,`${x.label||x.date?.slice(5)||('第'+(i+1))} ${x.stem||''}${x.branch||''}`)).join('');
  }
  if(system==='ziwei'){
   const ch=cs.ziwei?.chart||r.ziwei||{},birthYear=ch.effectiveDate?+ch.effectiveDate.slice(0,4):new Date().getFullYear();
   // 流年选择须覆盖「今年及未来」；从出生年顺排会让中年用户只能选到童年年份。
   const year=Math.max(birthYear,new Date().getFullYear()-2);
-  if(scope==='decadal'){const list=ch.decades||[];return list.map((x,i)=>opt(x.yearRange?.[0]||year+i*10,`${(x.ageRange||[]).join('–')}岁 ${(x.yearRange||[]).join('–')} · ${x.palaceName||''}`)).join('');}
+  if(scope==='decadal'){const list=ch.decades||[],nowY=new Date().getFullYear();return list.map((x,i)=>{const r=x.yearRange||[];return opt(r[0]||year+i*10,`${(x.ageRange||[]).join('–')}岁 ${r.join('–')} · ${x.palaceName||''}`,(r[0]??0)<=nowY&&nowY<=(r[1]??0));}).join('');}
   if(scope==='yearly'){const nowY=new Date().getFullYear();return Array.from({length:23},(_,i)=>opt(year+i,`${year+i} 年${year+i===nowY?'（今年）':''}`,year+i===nowY)).join('');}
   if(scope==='monthly'){const nowM=new Date().getMonth()+1;return Array.from({length:12},(_,i)=>opt(i+1,`第 ${i+1} 月${i+1===nowM?'（本月）':''}`,i+1===nowM)).join('');}
   return Array.from({length:30},(_,i)=>opt(i+1,`第 ${i+1} 日`)).join('');
@@ -922,14 +992,14 @@ function periodDashboard(){
  if(!state.profile||!state.reading){root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项</p><h1>时点</h1></div></header><p class="empty">请先激活一个案例并完成排盘，再生成时点专项报告。</p></section>`;return;}
  const sysKeys=['bazi','ziwei','vedic','west'];
  let system=PERIOD_SYS_META[state.system]?state.system:'bazi';
- let mode='focus'; // focus=时点专属详批 / full=本命全报告+时点章
+ // v0.50.0 功能去重：原先这里还能选「本命全报告 + 时点章」，与本命深度报告（洞见页）几乎同文。
+ // 现在时点页只出「该时点专属详批」，本命全局一律走洞见页，两处互不重复。
+ const mode='focus';
  const draw=()=>{
   const meta=PERIOD_SYS_META[system],scopes=SCOPES[system]||[];
   const sysCards=sysKeys.map(k=>`<button type="button" class="period-sys${k===system?' on':''}" data-psys="${k}" aria-pressed="${k===system}"><span class="period-sys-ico">${PERIOD_SYS_META[k].ico}</span><b>${PERIOD_SYS_META[k].name}</b><small>${PERIOD_SYS_META[k].desc}</small></button>`).join('');
   const rail=scopes.map(([id,label],i)=>btn(label,`class="period-scope${i===0?' on':''}" data-period-scope="${id}" aria-pressed="${i===0}"`)).join('');
-  const modes=[['focus','时点专属详批','只围绕所选时点逐条推导，不重复本命全文'],['full','本命全报告 + 时点章','完整本命报告，末章追加该时点聚焦']];
-  const modeCards=modes.map(([id,name,desc])=>`<button type="button" class="period-mode${id===mode?' on':''}" data-pmode="${id}" aria-pressed="${id===mode}"><span class="pmode-title"><b>${name}</b><i class="pmode-check" aria-hidden="true">${id===mode?'✓':''}</i></span><small>${desc}</small></button>`).join('');
-  root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项报告</p><h1>时点</h1><p class="muted thin">命主 ${esc(state.profile.name)} · 指向性选择排盘与时点，各自生成专业报告</p></div></header>
+  root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项报告</p><h1>时点</h1><p class="muted thin">命主 ${esc(state.profile.name)} · 选一个时点，出该时刻的盘 + 该时刻的详批</p></div></header>
    <div class="period-step"><span class="period-step-no">1</span><span class="period-step-label">选择排盘体系</span></div>
    <div class="period-sys-grid">${sysCards}</div>
    <div class="period-step"><span class="period-step-no">2</span><span class="period-step-label">选择时点类型 · ${esc(meta.name)}</span></div>
@@ -937,9 +1007,8 @@ function periodDashboard(){
    <div class="period-controls card liquid-glass"><label>具体时点<select data-period-value>${periodOptions(system,scopes[0]?.[0])}</select></label>
     ${['vedic','west'].includes(system)?'<label>月份<select data-period-month>'+Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?'selected':''}>${i+1} 月</option>`).join('')+'</select></label>':''}
    </div>
-   <div class="period-step"><span class="period-step-no">3</span><span class="period-step-label">选择报告形态</span></div>
-   <div class="period-mode-grid">${modeCards}</div>
-   <div class="period-action">${btn('生成专项报告 →','class="primary period-generate" data-period-generate')}<p class="thin" data-period-status role="status"></p></div>
+   <p class="period-scope-note">只出这个时点的盘与详批，正文逐条按该时刻的干支重算；<b>本命终身结构</b>请看「洞见」页的深度报告，两处不重复。</p>
+   <div class="period-action">${btn('生成这个时点 →','class="primary period-generate" data-period-generate')}<p class="thin" data-period-status role="status"></p></div>
   </section>`;
   wirePeriodPage();
  };
@@ -949,13 +1018,6 @@ function periodDashboard(){
   let scope=scopes[0]?.[0];
   const scopeLabel=()=>scopes.find(([id])=>id===scope)?.[1]||scope;
   for(const b of host.querySelectorAll('[data-psys]'))b.onclick=()=>{system=b.dataset.psys;if(!PERIOD_SYS_META[system])system='bazi';draw();};
-  for(const b of host.querySelectorAll('[data-pmode]'))b.onclick=()=>{
-   mode=b.dataset.pmode;
-   for(const x of host.querySelectorAll('[data-pmode]')){
-    const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',String(on));
-    const chk=x.querySelector('.pmode-check');if(chk)chk.textContent=on?'✓':'';
-   }
-  };
   for(const b of host.querySelectorAll('[data-period-scope]'))b.onclick=()=>{
    scope=b.dataset.periodScope;
    for(const x of host.querySelectorAll('[data-period-scope]')){const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',String(on));}
@@ -967,12 +1029,18 @@ function periodDashboard(){
    try{
     gen.disabled=true;if(status)status.textContent='正在按所选时点重算命盘与报告…';
     if(system==='bazi'){
-     if(scope==='luck'){selection={};if(raw!=='natal')selection.luck=Number(raw);}
-     else selection={[scope]:Number(raw)};
      const d=state.chartState?.bazi?.data||state.reading?.bazi||{};
-     const list=scope==='year'?(d.years||[]):(d[{luck:'cycles',month:'months',day:'days'}[scope]]||[]);
-     const item=raw==='natal'?null:(scope==='year'?list.find(x=>String(x.year)===String(raw)):list[Number(raw)]);
-     label=raw==='natal'?'本命原局':`${scopeLabel()} ${item?(item.stem||'')+(item.branch||''):''}${scope==='year'&&item?' '+item.year:''}`.trim();
+     const cycles=d.cycles||[],years=d.years||[],nowY=new Date().getFullYear();
+     // 年份必须连带「这一年属于哪步大运」一起传给后端，否则盘面大运列会停在今天那一步，
+     // 与所选流年自相矛盾（正是「选了流年、大运列没跟着变」的旧毛病）。
+     const luckOfYear=y=>{const i=cycles.findIndex(c=>(c.startYear??9999)<=y&&y<(c.endYear??c.startYear+10));return i<0?0:i;};
+     if(scope==='luck'){selection={luck:Number(raw)};}
+     else if(scope==='year'){const y=Number(raw);selection={luck:luckOfYear(y),year:y};}
+     else if(scope==='month'){selection={luck:luckOfYear(nowY),year:nowY,month:Number(raw)};}
+     else selection={luck:luckOfYear(nowY),year:nowY,day:Number(raw)};
+     const list=scope==='year'?years:(d[{luck:'cycles',month:'months',day:'days'}[scope]]||[]);
+     const item=scope==='year'?list.find(x=>String(x.year)===String(raw)):list[Number(raw)];
+     label=item?`${scopeLabel()} ${(item.stem||'')+(item.branch||'')}${scope==='year'?' '+item.year:''}`.trim():scopeLabel();
     }else if(system==='ziwei'){
      const yr=Number(raw);
      selection={scope,year:yr,month:scope==='monthly'?Number(raw):undefined,day:scope==='daily'?Number(raw):undefined};

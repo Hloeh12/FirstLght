@@ -229,7 +229,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  const sounds=haptics.length;
  click('[data-tab=insights]');
  assert.equal(haptics.length,sounds);
- assert($('#screen').textContent.includes('全生命周期总览'));
+ assert($('#screen').textContent.includes('大运全序列'));
  assert.equal($('#screen [data-lifecycle-report]')?.parentElement?.tagName,'DETAILS');
  assert(!$('.zi-board'));
  assert.deepEqual(attempted,[]);

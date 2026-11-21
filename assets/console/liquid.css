@@ -255,7 +255,7 @@ input,select,textarea{font-size:16px!important}
   border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)
 }
 /* FL-THEME-SCROLLBAR: 滚动条改为融入主题的细条，去掉深色粗边 */
-::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar{width:0;height:0;background:transparent}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,79,139,.35);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,79,139,.55)}
@@ -770,3 +770,304 @@ dialog#reportSheet.report-sheet .rpt-topbar{
 .chart-basis-row{padding-top:6px!important;padding-bottom:6px!important}
 #screen .bazi-board{margin-top:6px!important;margin-bottom:6px!important}
 #screen section[aria-label="四柱八字"]>.spread{padding-top:2px!important;padding-bottom:4px!important}
+
+/* ===== v0.49.0 排版1：消除全局常驻粉色滚动条 =====
+   根因：FL-THEME-SCROLLBAR 给 ::-webkit-scrollbar 设了 6px 亮粉竖条，
+   在 iOS 上页面滚动时右侧常驻一根粉色条，是整屏最大的视觉污染。
+   修法：全局滚动条宽度归零（滚动能力不变，只是不可见）；
+   内部小面板（术语卡/中宫）的 3px 细条有更具体选择器，仍然保留。 */
+::-webkit-scrollbar{width:0;height:0;background:transparent}
+::-webkit-scrollbar-track{background:transparent;border:0}
+::-webkit-scrollbar-thumb{background:transparent;border:0}
+html,body{scrollbar-width:none;-ms-overflow-style:none}
+
+/* ===== v0.49.0 排版2：底部留白去重 + 底栏更紧凑 =====
+   根因：#mainScrollView 已有 padding-bottom:132px，index.html 末尾又放了 190px 的
+   .bottom-spacer（被我上轮改成 170），两者叠加成 302px 死白，
+   滚到底会看到一大片空白，且排盘页体系行(42px) 恰好压住最后 15px 内容。
+   修法：留白只由 padding 一处承担（普通页 14px / 排盘页 30px 让开体系行），
+   spacer 高度归零但保留节点（避免影响既有 JS 引用）。 */
+.bottom-spacer{height:0!important;min-height:0!important;margin:0!important}
+#mainScrollView,.main-scroll-view{padding-bottom:14px!important}
+#app:has(#chartSystemSwitch:not([hidden])) #mainScrollView{
+ padding-bottom:30px!important;
+}
+/* 体系行压缩：胶囊 32px、行高 38px，与底栏间距 4px，整体更贴合 */
+.dock-rail{
+ bottom:calc(env(safe-area-inset-bottom,0px) + 8px + 56px + 4px)!important;
+ padding:0!important;gap:6px!important;height:38px!important;
+}
+.dock-rail .rail-scroll{gap:5px!important}
+.dock-rail .rail-scroll button{height:32px!important;padding:0 12px!important;font-size:12.5px!important}
+.dock-rail .rail-grid{height:32px!important;padding:0 12px!important;font-size:12.5px!important}
+.dock-rail::before{top:-8px!important;bottom:-4px!important}
+
+/* ===== v0.49.0 排版3：报告正文节奏 + 目录浮动钮收窄 ===== */
+/* 段落：段间 10px、行高 1.92，首行不再拉满一屏 */
+.rpt-sec p.rp-p{margin:0 0 10px!important;line-height:1.92!important;letter-spacing:.005em}
+.rpt-sec p.rp-p:last-child{margin-bottom:0!important}
+/* 语义小节（生年四化 / 地空入此宫 / 地劫入此宫…）：左侧细标线，形成扫读锚点 */
+.rpt-sec p.rp-p-sub{
+ margin:14px 0 10px!important;
+ padding:8px 11px 8px 12px;
+ border-left:2px solid rgba(209,106,156,.55);
+ border-radius:0 9px 9px 0;
+ background:rgba(255,120,170,.055);
+ font-size:12.6px!important;
+ color:#4b3742!important;
+}
+.rpt-sec p.rp-p-sub .rp-key{background:none!important;color:#8a2b58!important;font-weight:750!important}
+/* 章节标题：只保留 01 徽标，标题与徽标同基线 */
+.rpt-sec h3{gap:10px!important;margin:0 0 12px!important;line-height:1.4!important}
+.rpt-sec-no{
+ width:24px!important;height:24px!important;border-radius:8px!important;
+ font-size:11.5px!important;letter-spacing:.02em;box-shadow:0 4px 10px -6px rgba(190,50,110,.6)!important;
+}
+/* 目录浮动钮：label 固定为「目录」，收窄为小胶囊，减少对正文的遮挡 */
+.rpt-nav-fab [data-rpt-fab-label]{
+ max-width:2.6em!important;overflow:hidden;
+}
+.rpt-nav-fab{
+ right:10px!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;
+ gap:5px!important;padding:7px 10px!important;font-size:11px!important;
+ box-shadow:0 8px 20px -12px rgba(196,42,105,.7)!important;
+}
+.rpt-nav-fab-ico{font-size:12.5px!important}
+.rpt-nav-pct{font-size:10.5px!important;padding-left:5px!important}
+
+/* ===== v0.49.0 排版4：紫微十二宫可读性 =====
+   问题：主星 11.5px / 辅星 10px 行高 1.32，多星时糊成一团；
+   三合三角填充 + 飞星线带 drop-shadow，粉色雾化穿透宫位文字。
+   修法：主星升到 12.5px 并加粗，辅星行高放宽到 1.5、列距加大，
+   宫名行加下边距；连线降透明度、去掉发光雾化，只保留细线走向。 */
+.zi-cell .zi-major .term,.zi-cell .zi-major .zi-star .term{font-size:12.5px!important;font-weight:750!important;line-height:1.3!important}
+.zi-cell .zi-major .zi-star{line-height:1.3!important;min-height:14px!important}
+.zi-cell .zi-assist{gap:1px 7px!important;margin-top:4px!important;align-content:flex-start!important}
+.zi-cell .zi-assist .zi-star{font-size:9.8px!important;line-height:1.5!important}
+.zi-cell .zi-assist .term{font-size:9.8px!important;letter-spacing:.01em}
+.zi-cell .zi-palace-line{padding:6px 7px 7px!important;gap:5px!important}
+.zi-cell .zi-age,.zi-board .zi-age{font-size:10px!important;margin-top:3px!important}
+.zi-cell .zi-palace-line .term{font-size:11.5px!important;padding:0 4px!important}
+/* 连线：静态时只做走向提示，不再雾化盖字 */
+.zi-overlay .zi-laser{opacity:.34!important;stroke-width:1.15!important;filter:none!important}
+.zi-overlay .zi-laser-node{opacity:.6!important;filter:none!important;r:3}
+.zi-overlay .zi-triad{fill:rgba(255,119,170,.09)!important}
+/* 中宫：信息分层，避免与连线混在一起 */
+.zi-board .zi-center,.zi-center-slot .zi-center{line-height:1.5!important}
+
+/* ===== v0.49.0 排版5：起盘工作台表单去重 =====
+   问题：date/time 原生控件与 civil-picker 的 output 同时可见，
+   出现两个 12:00、一个空 YYYY-MM-DD 和一个「尚未选定」，同义信息四层叠。
+   修法：原生控件只在数据层存在（display:none 仍参与提交），
+   显示交给 output；滚轮入口收成一行小按钮，不再独占纵向空间。 */
+#birthForm .native-civil-input{display:none!important}
+#birthForm label{color:#6a4f5d!important;font-size:12.5px!important;font-weight:600!important;letter-spacing:.02em}
+#birthForm label>output{
+ display:flex;align-items:center;width:100%;min-height:44px;margin-top:4px;
+ padding:10px 13px;border:1px solid rgba(255,120,170,.40);border-radius:13px;
+ background:#fff;color:#3a2b33;font-size:14px;font-weight:500;
+ font-variant-numeric:tabular-nums;letter-spacing:0;
+}
+#birthForm label>output:empty::before{content:'未选择';color:#b09aa6;font-weight:400}
+#birthForm label:has(> .native-civil-input){grid-column:1/-1}
+/* 滚轮入口：一行语义按钮 */
+#birthForm .civil-picker{display:block;margin:-4px 0 10px;grid-column:1/-1}
+#birthForm .civil-picker>summary{
+ list-style:none;display:inline-flex;align-items:center;gap:7px;
+ padding:8px 14px;border-radius:11px;cursor:pointer;
+ background:rgba(255,120,170,.10);border:1px solid rgba(255,120,170,.30);
+ color:#a12a5e;font-size:13px;font-weight:650;letter-spacing:.02em;
+}
+#birthForm .civil-picker>summary::-webkit-details-marker{display:none}
+#birthForm .civil-picker>summary::before{content:'⏱';font-size:13px;line-height:1}
+/* 「出生时刻不确定」：从居中大字改为与表单同宽的低调提示行 */
+#birthForm .time-unknown-wrap{display:flex!important;align-items:center;justify-content:space-between;gap:10px;padding:2px 0 4px}
+#birthForm .time-unknown-label{font-size:12px!important;color:#8c7080!important;font-weight:500!important}
+#birthForm .time-unknown-toggle{
+ flex:none;padding:7px 12px;border-radius:10px;font-size:12px;font-weight:600;
+ background:rgba(255,255,255,.9);border:1px solid rgba(255,140,185,.34);color:#9c2f60;
+}
+/* 「时刻未知」行在单列表单里也被 label 的纵向 flex 拉成两行，显式改回横排两端分布 */
+#birthForm .time-unknown-wrap{flex-direction:row!important;flex-wrap:nowrap!important;justify-content:space-between!important}
+
+/* ===== v0.49.0 排版6：案例页筛选压缩 + 卡片底行归位 =====
+   问题：搜索框无占位文字像坏掉；聚类 3 胶囊 + 「当前分组·全部」+ 分组 5 胶囊
+   共三层筛选占 200px；卡片里标签流与「详情」按钮混排，详情位置随机。
+   修法：占位提示进输入框；聚类胶囊与其状态文字并排一行；
+   分组胶囊压成 chip 尺寸；卡片底部改为「标签左 / 详情右」固定布局。 */
+.case-search label{display:block;min-width:0}
+.case-search input{width:100%;min-height:44px;padding:11px 14px;border-radius:14px;font-size:14px}
+.case-search input::placeholder{color:#b39aa8;font-weight:400}
+.case-search button{min-height:44px;padding:0 15px;border-radius:14px;font-size:13px;font-weight:600}
+.case-cluster-row{display:flex;align-items:center;gap:8px;margin:0 0 2px}
+.case-cluster-row .rail{flex:1;min-width:0;padding:2px 0}
+.case-cluster-row .thin{
+ flex:none;max-width:42%;font-size:11px;color:#a08b96;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis;margin:0;
+}
+.case-groups{margin:4px 0 10px;padding:2px 0}
+.case-groups button{min-height:28px!important;padding:3px 11px!important;font-size:12px!important;border-radius:14px!important}
+.case-foot{display:flex;align-items:flex-start;gap:8px;grid-column:1/-1;margin-top:2px}
+.case-foot .chips{flex:1;min-width:0;gap:5px}
+.case-detail{
+ flex:none;align-self:flex-end;min-height:28px;padding:3px 12px!important;
+ font-size:12px!important;border-radius:14px!important;white-space:nowrap;
+}
+
+/* ===== v0.49.0 排版7：印度页筛选由三级压到两级 + 菱形盘中宫补标注 =====
+   问题：6 个分盘胶囊 / 60px 高的「完整分盘」下拉 / 盘式 2 胶囊，三层竖向堆叠；
+   北印菱形盘正中大片空白，视觉重心失焦。
+   修法：下拉缩为小号行内选择器并与盘式并排；中宫补上升与分盘标识。 */
+.vedic-filters{display:grid;gap:7px;margin:0 0 10px}
+.vedic-varga-rail{padding:2px 0}
+.vedic-secondary{display:flex;align-items:center;gap:10px;min-width:0}
+.vedic-varga-select{
+ flex:none;display:flex;align-items:center;gap:6px;
+ font-size:12px;font-weight:600;color:#8c7080;white-space:nowrap;
+}
+.vedic-varga-select select{
+ min-height:30px;max-width:118px;padding:3px 22px 3px 9px;
+ border-radius:9px;font-size:12px;font-weight:500;
+ border:1px solid rgba(255,150,190,.34);background:rgba(255,255,255,.86);
+}
+.vedic-layout-rail{flex:1;min-width:0;padding:2px 0}
+/* 北印盘中宫：补上升星座与分盘号，填补几何中心的空白 */
+.vedic-core-label{font-size:13px;font-weight:750;fill:#8c2f5f;font-family:inherit}
+.vedic-core-sub{font-size:8px;fill:#b0879b;letter-spacing:.08em;font-family:inherit}
+
+/* ===== v0.49.0 排版8：所有横滑胶囊行统一给「还有内容」的渐隐提示 =====
+   问题：西洋 9 个推运盘类胶囊挤一行，最右「法达」显示半截；
+   之前只给八字时点行加了提示，其它 rail 仍靠用户猜。 */
+.rail[data-scrollable][data-scroll-end="0"]{
+ -webkit-mask-image:linear-gradient(90deg,#000 88%,transparent 100%);
+ mask-image:linear-gradient(90deg,#000 88%,transparent 100%);
+}
+
+/* ===== v0.49.0 排版9：卡片等高 + 洞见行星逐行 + 文案孤字 ===== */
+/* 体系卡片：强制每行等高，选中态不再比同排卡片高出一截 */
+.period-sys-grid{grid-auto-rows:1fr!important;align-items:stretch!important}
+.period-sys{height:100%!important;box-sizing:border-box}
+.period-sys b{line-height:1.3}
+.period-sys small{line-height:1.45;min-height:2.9em}
+/* 时点三步之间的节奏：步骤标题与内容块贴紧 */
+.period-step{margin:14px 0 7px!important}
+.period-step:first-of-type{margin-top:4px!important}
+.period-scope-rail{margin-bottom:0!important}
+/* 洞见页九曜：逐星一行，左名右宫位 */
+.insight-planet-list{list-style:none;margin:0 0 13px!important;padding:0!important;display:grid;gap:4px}
+.insight-planet-list li{
+ display:flex;align-items:baseline;gap:9px;
+ padding:5px 10px;border-radius:9px;
+ background:rgba(255,120,170,.05);
+ font-size:12.5px!important;line-height:1.5;color:#4b3742;
+}
+.insight-planet-list li b{flex:0 0 2.6em;color:#8a2b58;font-weight:700}
+.insight-planet-list li span{flex:1;min-width:0;overflow-wrap:anywhere}
+/* 「我」页灵感卡：避免末行只剩一两个字 */
+.soul-divination>div{min-width:0;flex:1}
+.soul-divination p{text-wrap:pretty;line-height:1.72;font-size:13px}
+
+/* ===== v0.49.0 排版10：关闭按钮与标签色阶统一 =====
+   问题：弹窗/报告页的关闭键是 38px 粉边大圆环，比周围元素大一圈且抢焦点；
+   卡片里的分组徽标、chip、当前案例三者字号接近但底色各异，读起来分层不清。 */
+.sheet-head .icon{
+ width:31px!important;height:31px!important;min-width:31px!important;
+ border-radius:11px!important;
+ background:rgba(255,255,255,.92)!important;
+ border:1px solid rgba(120,60,90,.10)!important;
+ box-shadow:none!important;
+ color:#6f5561!important;font-size:15px!important;font-weight:500!important;line-height:1!important;
+}
+.sheet-head .icon:active{background:rgba(255,235,244,.95)!important}
+.rpt-topbar .icon{
+ width:32px!important;height:32px!important;border-radius:11px!important;
+ background:rgba(255,255,255,.94)!important;
+ border:1px solid rgba(120,60,90,.10)!important;
+ box-shadow:none!important;color:#6f5561!important;font-size:15px!important;
+}
+/* 标签色阶：同一行内只保留两级——分组徽标(强调) + chip(说明) */
+.case-group-badge{font-size:11.5px!important;padding:2px 7px!important;border-radius:7px!important;font-weight:650!important}
+.case-card .chip{font-size:11.5px!important;padding:2px 7px!important;border-radius:7px!important;font-weight:500!important}
+.case-card h3{display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.35}
+.case-card h3 .chip{font-weight:500}
+/* 星盘卡内嵌的推运解析：去掉第二层卡片边框，避免双框套娃 */
+.card>.period-result>.card{
+ border:0!important;box-shadow:none!important;background:transparent!important;
+ padding:0!important;margin:0!important;
+}
+.card>.period-result{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,150,190,.22)}
+
+/* ===== v0.49.0 排版11：星盘字形字体栈 =====
+   星座与行星用 Unicode 符号（♈ ☉ ☽ …），缺字体时 WebKit 会渲染成方块。
+   显式给出符号字体优先序，取不到时仍有下方中文星座名兜底。 */
+#westernChart text,.wheel text,.astro-grid{
+ font-family:"Apple Symbols","Noto Sans Symbols 2","Noto Sans Symbols","Segoe UI Symbol",-apple-system,"PingFang SC",system-ui,sans-serif;
+}
+#westernChart .wheel-ring text{letter-spacing:0}
+/* 分盘下拉再收一档，给盘式切换留出完整宽度 */
+.vedic-varga-select select{max-width:96px!important}
+.vedic-layout-rail{gap:5px!important}
+
+/* ===== v0.49.0 排版12：洞见页折叠头与页面副标题 =====
+   问题：<details> 用浏览器默认 marker，显示成黑色实心三角，与粉色系割裂；
+   「H · 印度占星」这种「名字·体系」连写在中文里读起来不像一句话。 */
+.insight-page details.card>summary{
+ list-style:none;display:flex;align-items:center;gap:9px;
+ font-size:14px!important;font-weight:700!important;color:#8a2b58!important;
+ padding:1px 0 11px!important;margin:0 0 13px!important;
+ border-bottom:1px solid rgba(255,150,190,.22);
+}
+.insight-page details.card>summary::-webkit-details-marker{display:none}
+.insight-page details.card>summary::before{
+ content:'';flex:none;width:6.5px;height:6.5px;margin-left:3px;
+ border-right:1.7px solid #c2477a;border-bottom:1.7px solid #c2477a;
+ transform:rotate(45deg);transition:transform .18s ease;
+}
+.insight-page details.card[open]>summary::before{transform:rotate(-135deg)}
+.insight-page details.card[open]>summary{border-bottom-color:rgba(255,150,190,.32)}
+
+/* ===== v0.49.0 排版13：紫微/报告宫位正文分段 =====
+   宫位内容原来是单个 span 一坨，现在拆成「主题句 / 每颗主星 / 四化 / 杂曜」多段。 */
+.rpt-list li .rpt-palace-body{margin-top:5px}
+.rpt-list li .rpt-palace-body p{
+ font-size:12.5px!important;line-height:1.82!important;color:#463844!important;
+ margin:0 0 7px!important;text-align:justify;
+}
+.rpt-list li .rpt-palace-body p:last-child{margin-bottom:0!important}
+.rpt-list li .rpt-sihua{
+ margin:9px 0 6px!important;padding:7px 10px!important;
+ border-left:2px solid rgba(209,106,156,.5);border-radius:0 8px 8px 0;
+ background:rgba(255,120,170,.055);font-size:12px!important;line-height:1.75!important;
+}
+.rpt-list li .rpt-minor{color:#6b5460!important;font-size:12px!important}
+.rpt-list li .rpt-note{color:#8a7381!important;font-size:11.5px!important}
+.rpt-list li .rpt-palace-body p b,.rpt-list li .rpt-palace-body p strong{color:#8a2b58}
+
+/* ===== v0.49.0 排版14：修掉点击后残留的亮粉色焦点圈 =====
+   根因：design.css 的 button:focus-visible{outline:2px solid #ff4f8b} 在 iOS/WKWebView
+   里点按也会命中，于是每个点过的按钮都套一圈亮粉，像未选中的高亮框。
+   修法：可见性交给更克制的淡色内圈，图标类按钮直接去掉外圈。 */
+button:focus-visible,a:focus-visible{
+ outline-color:rgba(255,79,139,.30)!important;
+ outline-width:2px!important;outline-offset:1px!important;
+}
+.sheet-head .icon:focus-visible,.rpt-topbar .icon:focus-visible,
+.rpt-nav-fab:focus-visible,.rail-grid:focus-visible{
+ outline:none!important;
+ box-shadow:0 0 0 2px rgba(255,120,170,.26)!important;
+}
+/* 图标按钮点击后不再留任何外圈，只用背景微变表示焦点 */
+.sheet-head .icon:focus-visible,.rpt-topbar .icon:focus-visible,
+.rpt-nav-fab:focus-visible,.rail-grid:focus-visible{
+ box-shadow:none!important;background:rgba(255,235,244,.96)!important;
+}
+
+/* ===== v0.49.0 排版15：小星盘字形 + 时点页控件压缩 ===== */
+/* 「我」页 190px 小罗盘的星座/日月符号同属 Unicode 字形，补同一套字体栈 */
+.sky-compass text{font-family:"Apple Symbols","Noto Sans Symbols 2","Noto Sans Symbols","Segoe UI Symbol",-apple-system,"PingFang SC",system-ui,sans-serif}
+/* 时点页：下拉与步骤间距收紧，首屏尽量多露出第 3 步 */
+.period-controls{padding:11px!important}
+.period-controls select{min-height:44px!important;font-size:14px!important}
+.period-controls label{font-size:12.5px!important;color:#6a4f5d!important;font-weight:600!important}
+.period-step{margin:11px 0 6px!important}
+.period-mode-grid{gap:9px}

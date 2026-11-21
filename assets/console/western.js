@@ -145,20 +145,31 @@ const PLANET_DOMAIN={
  '海王星':'灵感想象与边界','冥王星':'深度转化与掌控','北交点':'成长方向','南交点':'惯性来处','上升':'外在姿态','天顶':'事业形象'
 };
 const domainOf=name=>PLANET_DOMAIN[String(name||'').replace(/^(本命|推运|行运)/,'')]||'该星所主管的议题';
-function aspectStory(a,cross){
+/* v0.49.0：每条相位的收尾也要随角度变化，否则多段文字会用同一句结尾，仍显套壳。
+   同一相位类型在一段里可能出现两次（如两条刑相），所以每种角度备两个变体轮换。 */
+const ASPECT_TAIL={
+ 0:['两星合在一处，主题会被放大，先看它们同宫还是跨宫，再定主次。','合相把两件事绑在一起，取舍时要一并考虑，拆开单看容易失真。'],
+ 60:['六合是可用之助，机会通常出现在两宫主题的交界，需要主动搭桥才接得住。','六合更像顺手的人情：本身不费力，但得有人先开口才成事。'],
+ 90:['四分相是压力点，摩擦往往先落在最日常的那件事上，宜拆小处理。','四分相制造卡点，常表现为反复拖延或硬碰硬，先减量再提速。'],
+ 120:['三分相是顺势之利，容易不知不觉就成了，但要防过度依赖、缺少备份。','三分相给的是顺风，行船仍要自己掌舵，别把顺势当成必然。'],
+ 180:['对分相是两端拉扯，常以他人的形式出现，需在关系里谈清条件与边界。','对分相是镜子：对方的坚持里，往往藏着自己没承认的那部分需求。']
+};
+function aspectStory(a,cross,idx=0){
  const angle=Number.isFinite(Number(a.angle))?Number(a.angle):null;
  const story=ASPECT_STORY[angle]||'两星形成特定角度，须结合相位性质、星体与落宫综合判读，不单独断事。';
  const aDom=domainOf(a.a),bDom=domainOf(a.b);
  const phase=a.applying===true?'正在入相，效应趋于增强':a.applying===false?'已经出相，效应逐渐回落':'相位阶段待定';
  const tight=Math.abs(a.orb)<=1.5?'容许度极紧，信号清晰':Math.abs(a.orb)<=2.5?'容许度偏紧，值得留意':'容许度尚宽，作辅助参考';
- return `${story} 具体落在${aDom}与${bDom}的交叉处，${phase}；${tight}，请回到本命盘核对这两颗星的实际落宫与现实事项。`;
+ const pool=ASPECT_TAIL[angle];
+ const tail=pool?pool[Math.abs(idx)%pool.length]:'该角度不属主相位，只作盘面细节参考，不撑起独立判断。';
+ return `${story} 具体落在${aDom}与${bDom}的交叉处，${phase}；${tight}。${tail}`;
 }
 function periodAnalysis(r,s){
  const cross=Boolean(r.outer);
  const aspects=(cross?r.aspects:r.chart?.aspects)||[];
  const tight=aspects.filter(a=>Number.isFinite(a.orb)&&a.orb<=3).slice(0,4);
  const label=modes[r.mode]||'推运';
- const evidence=tight.length?tight.map(a=>`<p><b>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}</b>，容许度 ${a.orb.toFixed(2)}°。${esc(aspectStory(a,cross))}</p>`).join(''):'<p>本次盘面在 3° 内没有主相位，不补造个人事件推断。</p>';
+ const evidence=tight.length?tight.map((a,i)=>`<p><b>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}</b>，容许度 ${a.orb.toFixed(2)}°。${esc(aspectStory(a,cross,i))}</p>`).join(''):'<p>本次盘面在 3° 内没有主相位，不补造个人事件推断。</p>';
  return `<div class="period-result"><article class="card liquid-glass period-guidance" data-period-guidance><h2>当前推运专属分析</h2><p><b>${esc(label)} · ${esc(timeLabel(s))} 本地</b>。本次以${cross?'外行星与本命星位的紧密主相位':'本盘星体之间的紧密主相位'}为证据，不把天象直接等同个人事件。</p>${evidence}</article><div data-period-resonance></div></div>`;
 }
 function shift(date,unit,n){
@@ -214,8 +225,9 @@ export function westernView(ctx){
  ctx.root.innerHTML=`<section aria-label="西洋占星"><div class="spread"><h1>西洋占星</h1><small>${esc(display?houses[display.houseSystem]:'')}</small></div>
  <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).filter(([id])=>!s.birthOverride||id==='sky').map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
  ${s.instant?`<p class="thin" data-instant-caption>即刻 ${esc(s.instant.local||localDisplayTime(s.instant.at))} 本地 · ${esc(s.instant.place)}（${esc(s.instant.source)}）</p>`:''}<p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
- ${display?`<article class="card liquid-glass">${periodAnalysis(r,s)}<div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
- <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(s.instant?.local||dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}</article>`:''}
+ ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
+ <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(s.instant?.local||dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}
+ ${periodAnalysis(r,s)}</article>`:''}
  ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 本地</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
  ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}
  <p class="thin">${display.analysis.elements.missing.length?'未覆盖 '+display.analysis.elements.missing.join('、'):'四元素均有星体'} · 主导 ${display.analysis.elements.dominant.join('、')}</p>

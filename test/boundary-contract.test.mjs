@@ -329,7 +329,8 @@ test('视觉杂质清理：出生表单复选框用粉色主题自定义样式�
  assert.match(liquid,/#birthForm \.checks label input\[type=checkbox\]:checked\{background:#ff4f8b!important/,
   '选中态须粉色填充');
  assert.match(liquid,/#birthForm \.checks label input\[type=checkbox\]:checked::after/,'选中态须白色对勾');
- assert.match(liquid,/::-webkit-scrollbar\{width:6px;height:6px\}/,'滚动条须细化为 6px');
+ // v0.49.0：6px 亮粉滚动条改为完全隐藏（滚动能力不变），它是整屏最扎眼的杂质。
+ assert.match(liquid,/::-webkit-scrollbar\{width:0;height:0;background:transparent\}/,'滚动条须隐藏（宽度 0）');
  assert.match(liquid,/input,select,textarea\{font-size:16px!important\}/,'16px 字号规则须保留（防聚焦放大回归）');
 });
 

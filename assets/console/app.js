@@ -183,11 +183,12 @@ function caseCard(c){
  <div><h3><span class="case-group-badge">${esc(c.category==='客户'?'特别关注':c.category||'我的')}</span> ${esc(c.name)} <small>${f.gender==='男'?'♂':'♀'}</small> ${state.profile?.id===c.id?'<span class="chip">当前案例</span>':''}</h3>
  <p>${esc(dates)} ${esc(f.timeUnknown?'时辰未知':f.timeStr||'')} · ${esc(f.city?.label||'手动坐标')}</p></div>
  <div class="case-actions">${btn('设为全局使用','class="primary" data-action="use"')}${btn(c.pinned?'取消置顶':'📌 置顶','data-action="pin"')}${btn('编辑','data-action="edit"')}${btn('删除','data-action="delete"')}</div>
- <div class="chips">${summaryItems.map(([k,v])=>`<span class="chip">${k} · ${esc(v)}</span>`).join('')}${btn('详情','data-action="detail"')}</div></article>`;
+ <div class="case-foot"><div class="chips">${summaryItems.map(([k,v])=>`<span class="chip">${k} · ${esc(v)}</span>`).join('')}</div>${btn('详情','class="case-detail" data-action="detail"')}</div></article>`;
 }
 function renderCases(){
  if(!$('[data-case-list]',root))root.innerHTML=`<section class="cases-page" aria-labelledby="casesTitle"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 案例</p><h1 id="casesTitle">案例</h1></div><div class="page-head-actions">${btn('关系星系','class="ghost-pill" data-galaxy-open')}${btn('＋','class="ghost-pill ghost-pill-sm" data-create aria-label="新建案例" title="新建案例"')}</div></header>
- <div class="case-search"><label><span class="muted">搜索姓名、生辰、城市或标签</span><input id="caseSearch" class="liquid-glass" type="search" value="${esc(state.query)}"></label>${btn('清除','data-clear-search aria-label="清除案例搜索"')}</div><div class="rail">${btn('同日元','data-cluster="day"')}${btn('同紫微命主','data-cluster="soul"')}${btn('全部特征','data-cluster=""')}</div><p class="thin" data-search-scope role="status"></p>
+ <div class="case-search"><label><input id="caseSearch" class="liquid-glass" type="search" value="${esc(state.query)}" placeholder="搜索姓名、生辰、城市或标签" aria-label="搜索案例"></label>${btn('清除','data-clear-search aria-label="清除案例搜索"')}</div>
+ <div class="case-cluster-row"><div class="rail" aria-label="特征聚类">${btn('同日元','data-cluster="day"')}${btn('同紫微命主','data-cluster="soul"')}${btn('全部特征','data-cluster=""')}</div><p class="thin" data-search-scope role="status"></p></div>
  <div class="rail case-groups" id="caseGroups" aria-label="案例分组"></div><div data-case-list></div></section>`;
  $('#caseSearch').oninput=e=>{state.query=e.target.value;renderCases();};
  $('[data-clear-search]',root).onclick=()=>{state.query='';$('#caseSearch').value='';renderCases();$('#caseSearch').focus();};
@@ -216,7 +217,7 @@ function renderCases(){
  const q=searchKey(state.query);
  const list=state.cases.filter(c=>!state.cluster||(state.cluster==='day'?c.summary?.day&&c.summary.day.split(' ')[0]===state.profile?.summary?.day?.split(' ')[0]:c.summary?.soul&&c.summary.soul===state.profile?.summary?.soul)).filter(c=>(q||state.filter==='全部'||(c.category==='客户'?'特别关注':c.category||'我的')===state.filter)&&
   [...(c.tags||[]),...Object.values(c.summary||{}),c.name,c.fields?.dateStr,c.fields?.timeStr,c.fields?.city?.label,[c.fields?.Y,c.fields?.M,c.fields?.D].filter(Boolean).join('-')].some(v=>searchKey(v).includes(q)));
- $('[data-search-scope]',root).textContent=q?'全案例跨组搜索 · '+list.length+' 个结果':'当前分组 · '+state.filter;
+ $('[data-search-scope]',root).textContent=q?'全案例跨组搜索 · '+list.length+' 个结果':state.cluster?'特征筛选 · '+list.length+' 例':'共 '+list.length+' 例';
 
  const host=$('[data-case-list]',root);
  list.sort((a,b)=>Number(!!b.pinned)-Number(!!a.pinned));
@@ -808,7 +809,13 @@ function openFullReport(prebuilt,opts={}){
    const on=Number(b.dataset.toc)===active;
    b.classList.toggle('on',on);
    if(on)b.setAttribute('aria-current','location');else b.removeAttribute('aria-current');
-   if(on&&rptFabLabel)rptFabLabel.textContent=(report.sections?.[active-1]?.title||'目录').replace(/^[一二三四五六七八九十]+、/,'');
+   // v0.49.0：浮动钮不再显示当前章节长名（会横向压住正文），固定为「目录」，
+   // 当前章节只在抽屉列表里高亮；按钮 title 仍带章节名供长按/辅助读取。
+   if(on&&rptFabLabel){
+    rptFabLabel.textContent='目录';
+    const navBtn=d.querySelector('[data-rpt-nav]');
+    if(navBtn)navBtn.title='当前章节：'+(report.sections?.[active-1]?.title||'目录');
+   }
   });
   // v0.43.0：目录已改为点击唤起的底部玻璃面板，无需内联 rail 居中。
   // 面板打开时让当前章节条目滚入可视区——只滚面板自身 scrollTop，不碰祖先滚动容器。
@@ -858,9 +865,10 @@ function insights(){
   lifecycle=`<article class="card liquid-glass"><h2>紫微全生命周期 · 大限</h2><p>每十年以大限宫为阶段主题，点击排盘页“大限/流年/流月/流日”后，下方当前报告会同步替换。</p>${table(['虚岁','年份','大限宫'],z.decades.map(x=>[x.ageRange.join('–')+'岁',x.yearRange.join('–'),x.palaceName]))}</article>`;
  }else if(current==='vedic'){
   const moon=v.planets.find(x=>x.key==='moon'),sun=v.planets.find(x=>x.key==='sun');
-  const planetLines=v.planets.map(x=>x.name+'：'+x.sign+'，第'+x.house+'宫，'+x.nakshatra+' Pada '+x.pada+(x.retro?'，逆行':'')).join('；');
+  // v0.49.0：九曜落宫由「；」串成一整段改为逐星一行，便于按行扫读。
+  const planetLines=v.planets.map(x=>`<li><b>${esc(x.name)}</b><span>${esc(x.sign)} · 第${x.house||'—'}宫 · ${esc(x.nakshatra)} Pada ${x.pada}${x.retro?' · 逆行':''}</span></li>`).join('');
   let vDigest='';try{vDigest=deepDigestHtml(buildVedicDeepReport(v));}catch{}
-  natal=`<article class="card liquid-glass"><h2>印度占星本命专属报告</h2><p>Lahiri 恒星黄道、整宫制。上升 ${esc(v.lagna)}；太阳 ${esc(sun?.sign||'—')} 第${sun?.house||'—'}宫；月亮 ${esc(moon?.sign||'—')} 第${moon?.house||'—'}宫，${esc(moon?.nakshatra||'—')} Pada ${moon?.pada||'—'}。</p><h3>九曜落宫与星宿</h3><p>${esc(planetLines)}</p><h3>本命判读</h3><p>先以 D1 判断上升、月亮、太阳及宫主星，再以星宿主与相位确认主题；D9 用于关系成熟度，D10 用于事业表达，不能脱离 D1 单独断事。</p>${vDigest}</article>`;
+  natal=`<article class="card liquid-glass"><h2>印度占星本命专属报告</h2><p>Lahiri 恒星黄道、整宫制。上升 ${esc(v.lagna)}；太阳 ${esc(sun?.sign||'—')} 第${sun?.house||'—'}宫；月亮 ${esc(moon?.sign||'—')} 第${moon?.house||'—'}宫，${esc(moon?.nakshatra||'—')} Pada ${moon?.pada||'—'}。</p><h3>九曜落宫与星宿</h3><ul class="insight-planet-list">${planetLines}</ul><h3>本命判读</h3><p>先以 D1 判断上升、月亮、太阳及宫主星，再以星宿主与相位确认主题；D9 用于关系成熟度，D10 用于事业表达，不能脱离 D1 单独断事。</p>${vDigest}</article>`;
   lifecycle=`<article class="card liquid-glass"><h2>印度 Vimshottari 全生命周期</h2>${table(['主运','起始','结束','状态'],v.dashas.map(x=>[x.lord,x.start.slice(0,10),x.end.slice(0,10),x.current?'当前':'—']))}<p>点击印度排盘页四级 Dasha 行，可查看 Maha、Antar、Pratyantar、Sookshma 的当前专属分析。</p></article>`;
  }else{
   const sun=w.planets.find(x=>x.key==='sun'),moon=w.planets.find(x=>x.key==='moon');
@@ -869,7 +877,7 @@ function insights(){
   natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p>${wDigest}</article>`;
   lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
  }
- root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><button type="button" class="period-cta" data-goto-period><span class="period-cta-ico">◷</span><span><b>时点专项报告</b><small>流年 / 流月 / 流日 逐点出盘 + 专属详批 →</small></span><span class="period-cta-arrow">›</span></button></section>`;
+ root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">命主 ${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><button type="button" class="period-cta" data-goto-period><span class="period-cta-ico">◷</span><span><b>时点专项报告</b><small>流年 / 流月 / 流日 逐点出盘 + 专属详批 →</small></span><span class="period-cta-arrow">›</span></button></section>`;
  for(const x of root.querySelectorAll('[data-insight-system]'))x.onclick=()=>{state.system=x.dataset.insightSystem;render();};
  const or=root.querySelector('[data-open-report]');if(or)or.onclick=()=>openFullReport();
  const ex=root.querySelector('[data-share-current]');if(ex)ex.onclick=async()=>{ex.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前报告已生成，可在系统分享面板保存。');}catch(e){tell('导出失败：'+e.message);}finally{ex.disabled=false;}};
@@ -921,7 +929,7 @@ function periodDashboard(){
   const rail=scopes.map(([id,label],i)=>btn(label,`class="period-scope${i===0?' on':''}" data-period-scope="${id}" aria-pressed="${i===0}"`)).join('');
   const modes=[['focus','时点专属详批','只围绕所选时点逐条推导，不重复本命全文'],['full','本命全报告 + 时点章','完整本命报告，末章追加该时点聚焦']];
   const modeCards=modes.map(([id,name,desc])=>`<button type="button" class="period-mode${id===mode?' on':''}" data-pmode="${id}" aria-pressed="${id===mode}"><span class="pmode-title"><b>${name}</b><i class="pmode-check" aria-hidden="true">${id===mode?'✓':''}</i></span><small>${desc}</small></button>`).join('');
-  root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项报告</p><h1>时点</h1><p class="muted thin">${esc(state.profile.name)} · 指向性选择排盘与时点，各自生成专业报告</p></div></header>
+  root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项报告</p><h1>时点</h1><p class="muted thin">命主 ${esc(state.profile.name)} · 指向性选择排盘与时点，各自生成专业报告</p></div></header>
    <div class="period-step"><span class="period-step-no">1</span><span class="period-step-label">选择排盘体系</span></div>
    <div class="period-sys-grid">${sysCards}</div>
    <div class="period-step"><span class="period-step-no">2</span><span class="period-step-label">选择时点类型 · ${esc(meta.name)}</span></div>

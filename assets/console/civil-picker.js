@@ -32,7 +32,7 @@ export function installCivilPickers(sheet) {
    return {Y:Y||now.Y,M:M||now.M,D:D||now.D,h:Number.isFinite(h)?h:now.h,mi:Number.isFinite(mi)?mi:now.mi};
   };
   const display=()=>{
-   for(const [input,output] of outputs)output.textContent=input.value.replace('T',' ')||'尚未选定';
+   for(const [input,output] of outputs)output.textContent=input.value.replace('T',' ')||'未选择';
    summary.textContent=date&&!(clock||combined)?'选择日期':'选择日期与时刻';
   };
   display();

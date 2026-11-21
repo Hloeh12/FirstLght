@@ -57,13 +57,15 @@ const PALACE_THEME={
 };
 const PALACE_KEYWORD={命宫:'自身与格局',父母:'长辈与文书',福德:'心境与福气',田宅:'家产与安居',官禄:'事业与地位',仆役:'人际与圈子',迁移:'远方与变动',疾厄:'身体与能量',财帛:'金钱与流通',子女:'子嗣与创作',夫妻:'婚姻与另一半',兄弟:'手足与同伴'};
 const BRIGHT_MOD={
- 庙:'（入庙）星曜全力发挥，此主题以正面放大呈现',
- 旺:'（旺地）星曜得力，主题强势而顺',
- 得:'（得地）星曜稳定，主题平实可靠',
- 利:'（利益）星曜可用，主题先蓄后发',
- 平:'（平和）星曜不增不减，主题看后天经营',
- 不:'（失辉）星曜受制，主题以课题形式出现，宜早修炼',
- 陷:'（落陷）星曜失辉，此领域为一生功课，磨出真金'
+  // v0.49.0：修饰语只留状态，不再带「此领域为一生功课，磨出真金」这类后半句——
+  // 同宫两三颗星时会连着重复同一句，读起来像模板填空。
+ 庙:'（入庙）星曜全力发挥',
+ 旺:'（旺地）星曜得力',
+ 得:'（得地）星曜稳定',
+ 利:'（利益）星曜可用',
+ 平:'（平和）星曜不增不减',
+ 不:'（失辉）星曜受制，属后修课题',
+ 陷:'（落陷）星曜偏弱，需借三方补强'
 };
 const SIHUA_EVENTS={
  禄:{
@@ -155,15 +157,25 @@ const STEMS='甲乙丙丁戊己庚辛壬癸';
 const BRANCHES='子丑寅卯辰巳午未申酉戌亥';
 
 function brightnessOf(star){return star?.brightness||'';}
-function starEntry(star,palaceName,gloss){
+/* v0.49.0：没有专属组合文案时，通用解读按三种句式轮换，
+   否则同宫两三颗星会输出一模一样的骨架，只替换星名，一眼看出是模板。 */
+const ENTRY_SHAPES=[
+ (s,mod,pn,core,kw,tail)=>`${s}（${core.gloss}）${mod}，坐${pn}——以${s}星性（${core.person||'见前述主星深解'}）与${kw}相参：${tail}`,
+ (s,mod,pn,core,kw,tail)=>`${s}（${core.gloss}）${mod}，落${pn}：${core.person?core.person+'主导，':''}主题集中落在${kw}上——${tail}`,
+ (s,mod,pn,core,kw,tail)=>`${s}（${core.gloss}）${mod}，入${pn}，把${core.person||'该星特质'}带进${kw}：${tail}`
+];
+function starEntry(star,palaceName,gloss,idx=0){
  const core=STAR_CORE[star.name]||{gloss:'星曜',person:'',career:'',wealth:'',love:'',risk:''};
  const mod=BRIGHT_MOD[(star.brightness||'').slice(0,1)]||'';
  gloss[star.name]=core.gloss;
  const pn=/宫$/.test(palaceName||'')?palaceName:(palaceName+'宫'); // 避免「命宫宫」重复
  const spec=STAR_PALACE[star.name]?.[palaceName];
+ const kw=PALACE_KEYWORD[palaceName]||'本宫主题';
+ const tail=`${core.career?`事业上${core.career}；`:''}${core.love?`感情上${core.love}。`:''}`;
+ const shape=ENTRY_SHAPES[Math.abs(idx)%ENTRY_SHAPES.length];
  const text=spec
-  ? `${star.name}（${core.gloss}）${mod}坐${pn}：${spec}`
-  : `${star.name}（${core.gloss}）${mod}坐${pn}——以${star.name}星性（${core.person||'见前述主星深解'}）与${PALACE_KEYWORD[palaceName]||'本宫主题'}相参：${core.career?`事业上${core.career}；`:''}${core.love?`感情上${core.love}。`:''}`;
+  ? `${star.name}（${core.gloss}）${mod}，坐${pn}：${spec}`
+  : shape(star.name,mod,pn,core,kw,tail);
  return {name:star.name,core,mod,text,specific:!!spec};
 }
 export function buildZiweiDeepReport(chart,flow,at){
@@ -212,11 +224,21 @@ export function buildZiweiDeepReport(chart,flow,at){
  /* 三、十二宫逐宫详解 */
  const palaceLines=palaces.filter(p=>p.name&&p.name!=='').sort((a,b)=>PALACE_ORDER.indexOf(a.name)-PALACE_ORDER.indexOf(b.name)).map(p=>{
   const stars=p.majorStars?.length?p.majorStars:p.borrowedStars||[];
-  const starTexts=stars.map(s=>starEntry(s,p.name,gloss));
-  const minor=(p.minorStars||[]).slice(0,4).map(s=>MINOR_STAR[s.name]).filter(Boolean).map(m=>m.text).join('；');
+  const starTexts=stars.map((s,i)=>starEntry(s,p.name,gloss,i));
+  // 杂曜各自成段，不再用「；」串成一长句
+  const minorParas=(p.minorStars||[]).slice(0,4).map(s=>MINOR_STAR[s.name]).filter(Boolean).map(m=>`<p class="rpt-minor">${m.text}。</p>`);
   const sihua=(p.stars||[]).filter(s=>s.siHua).map(s=>`${s.name}化${s.siHua}`);
   const dec=p.decadal?`（大限${p.decadal.range?.join?.('–')||p.decadal.range}岁）`:'';
-  return `<li><b>${pnOf(p.name)} · ${p.earthlyBranch}${dec}${stars.length?` · ${stars.map(s=>s.name+(s.brightness||'')).join('、')}`:' · 空宫'}</b><span>${PALACE_THEME[p.name]}。${starTexts.map(t=>t.text).join('')}${borrowed&&stars===p.borrowedStars?'（借星入宫，力道六成）':''}${sihua.length?` 生年四化：${sihua.join('、')}——${sihua.map(x=>SIHUA_EVENTS[x.slice(-1)][p.name]).join('；')}。`:''}${minor?' '+minor+'。':''}</span></li>`;
+  // v0.49.0：宫位正文由「一整段 span」改为多段——主题句、每颗主星、四化、杂曜各自成段，
+  // 否则一宫 6-8 行挤成砖块，读者找不到落点。
+  const palaceBody=[
+   `<p>${PALACE_THEME[p.name]}。</p>`,
+   ...starTexts.map(t=>`<p>${t.text}</p>`),
+   borrowed&&stars===p.borrowedStars?`<p class="rpt-note">借星入宫，力道六成。</p>`:'',
+   sihua.length?`<p class="rpt-sihua">生年四化：${sihua.join('、')}——${sihua.map(x=>SIHUA_EVENTS[x.slice(-1)][p.name]).join('；')}。</p>`:'',
+   ...minorParas
+  ].filter(Boolean).join('');
+  return `<li><b>${pnOf(p.name)} · ${p.earthlyBranch}${dec}${stars.length?` · ${stars.map(s=>s.name+(s.brightness||'')).join('、')}`:' · 空宫'}</b><div class="rpt-palace-body">${palaceBody}</div></li>`;
  }).join('');
  const palacesSec=`<ul class="rpt-list rpt-palaces">${palaceLines||'<li>宫位数据待排盘后生成。</li>'}</ul>`;
 
@@ -257,7 +279,14 @@ export function buildZiweiDeepReport(chart,flow,at){
   const yearRange=Array.isArray(d.yearRange)?d.yearRange.join('–'):d.yearRange;
   const isNow=Array.isArray(d.yearRange)&&d.yearRange[0]<=nowYear&&nowYear<d.yearRange[1];
   const flying=pal?.flying||[];
-  return `<li class="${isNow?'rpt-now':''}"><b>大限 ${ageRange}岁 · ${yearRange} · 走${pnOf(d.palaceName)}${isNow?' · 【当前十年】':''}</b><span>${PALACE_THEME[d.palaceName]}。${stars.length?`本限主星${stars.map(s=>s.name+(s.brightness||'')).join('、')}：${core.map(c=>c.career).join('；')}。`:'空宫借对宫参断，主题随环境而变。'}${flying.length?` 大限四化：${flying.map(f=>`${f.star}化${f.type}入${pnOf(find(f.branch)?.name||'—')}${f.type==='忌'?'——此十年防该领域反复':''}`).join('、')}。`:''}${core.length?` 福气面：${core.map(c=>c.wealth).join('；')}。风险面：${core.map(c=>c.risk).join('；')}。`:''}</span></li>`;
+  // v0.49.0：大限段落同样拆成多段（主题 / 主星 / 四化 / 福气与风险），避免一坨砖块。
+  const limitBody=[
+   `<p>${PALACE_THEME[d.palaceName]}。</p>`,
+   stars.length?`<p>本限主星${stars.map(s=>s.name+(s.brightness||'')).join('、')}：${core.map(c=>c.career).join('；')}。</p>`:'<p>空宫借对宫参断，主题随环境而变。</p>',
+   flying.length?`<p class="rpt-sihua">大限四化：${flying.map(f=>`${f.star}化${f.type}入${pnOf(find(f.branch)?.name||'—')}${f.type==='忌'?'——此十年防该领域反复':''}`).join('、')}。</p>`:'',
+   core.length?`<p>福气面：${core.map(c=>c.wealth).join('；')}。</p><p>风险面：${core.map(c=>c.risk).join('；')}。</p>`:''
+  ].filter(Boolean).join('');
+  return `<li class="${isNow?'rpt-now':''}"><b>大限 ${ageRange}岁 · ${yearRange} · 走${pnOf(d.palaceName)}${isNow?' · 【当前十年】':''}</b><div class="rpt-palace-body">${limitBody}</div></li>`;
  }).join('');
  const decadesSec=decadeLines?`<ul class="rpt-list rpt-decades">${decadeLines}</ul>`:'大限资料待排盘后生成——紫微的十年剧本按大限宫逐限展开，本报告在排盘后自动列出每限主题。';
 

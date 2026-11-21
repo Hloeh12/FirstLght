@@ -51,16 +51,55 @@ function rpEmphasis(text){
  if(end>22){const sub=text.slice(0,22);const cut=Math.max(sub.lastIndexOf('、'),sub.lastIndexOf(' '));end=cut>8?cut+1:22;}
  return end>=text.length?{key:text,rest:''}:{key:text.slice(0,end),rest:text.slice(end)};
 }
+/* v0.49.0 排版3：长段按语义切分，避免「一堵墙」。
+   旧实现在整段中点拆成两段，宫位类段落仍是一屏 6-8 行黏在一起；
+   现在先按语义标记（生年四化/地空/地劫/三方四正/调候/用神）独立成小节，
+   再按 92 字打包成多段，每段只高亮开头结论短语。 */
+const RP_SUB=/^(生年四化|地空入此宫|地劫入此宫|三方四正|调候|用神|大限|流年|流月|格局)/;
+const RP_SENT=/[^。；！？]+[。；！？]?/g;
+function rpSentences(text){
+ const out=String(text||'').match(RP_SENT)||[String(text||'')];
+ return out.map(s=>s.trim()).filter(Boolean);
+}
+function rpPack(sents,max){
+ const out=[];let cur='';
+ for(const s of sents){
+  if(cur&&(cur.length+s.length)>max){out.push(cur);cur=s;}
+  else cur+=s;
+ }
+ if(cur)out.push(cur);
+ return out.length?out:[sents.join('')];
+}
 function renderPara(line){
- const text=String(line??'');if(!text.trim())return '';
- const sents=text.match(/[^。；！？]+[。；！？]?/g)||[text];
- let splitAt=-1;
- if(sents.length>1&&text.length>108){let acc=0,best=Infinity;for(let i=0;i<sents.length-1;i++){acc+=sents[i].length;const d=Math.abs(acc-text.length/2);if(d<best){best=d;splitAt=i;}}}
- const para=seg=>{if(!seg||!seg.trim())return '';const{key,rest}=rpEmphasis(seg);return `<p><strong class="rp-key">${esc(key)}</strong>${esc(rest)}</p>`;};
- return splitAt<0?para(text):para(sents.slice(0,splitAt+1).join(''))+para(sents.slice(splitAt+1).join(''));
+ const text=String(line??'').trim();if(!text)return '';
+ const sents=rpSentences(text);
+ // 1) 语义小节起点独立成段；2) 其余句子打包，每段不超过 92 字。
+ const groups=[];let buf=[];
+ const flush=()=>{if(buf.length){groups.push(buf.join(''));buf=[];}};
+ for(const s of sents){
+  if(RP_SUB.test(s)){flush();groups.push(s);}
+  else buf.push(s);
+ }
+ flush();
+ const paras=[];
+ for(const g of groups){
+  const isSub=RP_SUB.test(g);
+  if(isSub){paras.push({text:g,sub:true});continue;}
+  for(const p of rpPack(rpSentences(g),92))paras.push({text:p,sub:false});
+ }
+ return paras.map(({text:seg,sub})=>{
+  if(!seg.trim())return '';
+  const{key,rest}=rpEmphasis(seg);
+  return `<p class="rp-p${sub?' rp-p-sub':''}"><strong class="rp-key">${esc(key)}</strong>${esc(rest)}</p>`;
+ }).join('');
+}
+/* 章节标题去重：深度库标题自带「一、二、」，而卡片又输出 01/02 徽标，会双重编号。
+   统一剥掉中文序号，只保留 01 徽标 + 纯标题。 */
+export function cleanSecTitle(title){
+ return String(title||'').replace(/^\s*[（(]?[一二三四五六七八九十百零〇]+[）)]?\s*[、.．]\s*/,'').trim();
 }
 function sectionHtml(report){
- return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(sec.title)}<button type="button" class="rpt-fav" data-fav-sec="${i+1}" aria-label="收藏本章" title="收藏本章">☆</button></h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
+ return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(cleanSecTitle(sec.title))}<button type="button" class="rpt-fav" data-fav-sec="${i+1}" aria-label="收藏本章" title="收藏本章">☆</button></h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
 }
 /* 目录：章节锚点导航 + 滚动进度 + 主题分区。让 7000+ 字报告可按区跳转、可看读到哪。 */
 function sectionGroup(title){

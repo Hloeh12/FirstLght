@@ -28,10 +28,10 @@ test('深度知识库确有充足章节：西洋/印占远超洞见页旧的 4 �
 
 test('西洋相位解读差异化：不再逐条套「回到盘面核对…」同一句',async()=>{
  const w=await readFile(new URL('../assets/console/western.js',import.meta.url),'utf8');
- assert.match(w,/function aspectStory\(a,cross\)/,'须有按相位差异化的解读函数');
+ assert.match(w,/function aspectStory\(a,cross(?:,[\w=]+)?\)/,'须有按相位差异化的解读函数');
  assert.match(w,/const ASPECT_STORY=/,'须有按角度区分的相位剧情表');
  assert.match(w,/const PLANET_DOMAIN=/,'须有按星体区分的领域词表');
- assert.match(w,/aspectStory\(a,cross\)/,'逐条证据须调用差异化解读');
+ assert.match(w,/aspectStory\(a,cross(?:,[\w]+)?\)/,'逐条证据须调用差异化解读');
  assert.doesNotMatch(w,/回到盘面核对这些星体的落宫与现实事项/,'旧的逐条重复句须彻底移除');
  for(const angle of [0,60,90,120,180])
   assert.match(w,new RegExp(String(angle)+':'),`相位 ${angle}° 须有专属剧情`);

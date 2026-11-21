@@ -704,13 +704,26 @@ dialog#reportSheet.report-sheet .rpt-topbar{
  padding-top:calc(6px + env(safe-area-inset-top,0px))!important;
 }
 
-/* ===== v0.47.4 目录打开「只看目录」：遮罩改为完全不透明 =====
-   根因：.rpt-nav-scrim 历史值 rgba(38,18,31,.28)~rgba(16,10,16,.68) 均为半透明，
-   虽压暗但正文仍可透视；录屏/真机截图可见目录浮层背后报告页面文字清晰可辨。
-   修法：遮罩用与目录浮层同色系的不透明深紫实色，并关闭 backdrop-filter，
-   打开目录即纯目录层，后面页面不可见；点击遮罩关闭的行为不变。 */
+/* ===== v0.47.5 目录交互纠偏：只要下面那个目录块儿 =====
+   用户反馈 0.47.4 把整个背景刷成纯色一大块，非所需。真实诉求：打开目录时
+   只显示下面那个目录浮层块儿，且该块儿本身实心、不透出后面的报告文字；
+   背景报告页保持原样可见（遮罩透明，仅保留点击空白处收起的功能）。 */
 .rpt-nav-scrim{
- background:#241c2c!important;
+ background:transparent!important;
  backdrop-filter:none!important;
  -webkit-backdrop-filter:none!important;
 }
+.rpt-nav-drawer{
+ background:linear-gradient(160deg,#302638,#231c2e 46%,#291f33)!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+ box-shadow:0 20px 48px -18px rgba(30,12,24,.62),inset 0 1.5px 0 rgba(255,255,255,.12)!important;
+}
+.rpt-nav-drawer::after{background:#291f33!important}
+.rpt-nav-drawer::before{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,0))!important}
+.rpt-nav-list .rpt-toc-item{
+ background:linear-gradient(150deg,#3a2e44,#2c2338)!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+/* 序号「01」不得被拆成「0 / 1」两行 */
+.rpt-nav-list .rpt-toc-item .rpt-toc-no{white-space:nowrap!important;flex:0 0 auto!important;min-width:24px!important}

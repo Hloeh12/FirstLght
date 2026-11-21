@@ -1,8 +1,20 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.47.4",
-  "build": 145,
+  "version": "0.47.5",
+  "build": 146,
   "releases": [
+    {
+      "version": "0.47.5",
+      "build": 146,
+      "date": "2026-11-21",
+      "title": "目录交互纠偏：只保留下方目录块儿、背景还原",
+      "items": [
+        "用户反馈 0.47.4 把整个背景刷成一整块深紫纯色，并非预期；真实诉求是打开目录时只显示下面那个目录浮层块儿，背景报告页照常可见。",
+        "修复：遮罩 .rpt-nav-scrim 改透明（background:transparent + 关 backdrop-filter），仅保留点击空白处收起的功能，背景报告页不再被纯色盖住；目录浮层 .rpt-nav-drawer 改为实心不透明渐变并关闭 backdrop-filter，块儿本身不透出后面的报告文字。",
+        "顺带修复目录序号「01/02/03」被拆成「0 / 1」两行的问题：.rpt-toc-no 加 white-space:nowrap 不换行。",
+        "验证：Playwright WebKit 440x956 实测遮罩背景 rgba(0,0,0,0)、浮层实心渐变 rgb 全不透明、序号单行显示；boundary-contract 契约断言覆盖三项；218/218 测试全绿。"
+      ]
+    },
     {
       "version": "0.47.4",
       "build": 145,

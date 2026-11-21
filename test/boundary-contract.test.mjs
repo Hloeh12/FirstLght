@@ -538,13 +538,19 @@ test('报告页大白边根治：reportSheet 全屏铺满、去圆角白边、�
  assert.match(css,/\.rpt-topbar\{\s*padding-top:calc\(6px \+ env\(safe-area-inset-top,0px\)\)/,'顶部安全区须由顶栏 padding 承担，内容不遮状态栏');
 });
 
-test('v0.47.4 目录打开不透视后页：遮罩须不透明实色且关闭模糊',async()=>{
+test('v0.47.5 目录交互纠偏：遮罩透明不遮背景，浮层块儿实心不透字、序号不换行',async()=>{
  const css=await read('../assets/console/liquid.css');
- // 末尾强规则块必须把 scrim 改成完全不透明，覆盖 :507/:586 与 0.47.1 的历史半透明值。
- const blocks=[...css.matchAll(/\.rpt-nav-scrim\{([\s\S]*?)\}/g)].map(m=>m[1]);
- assert.ok(blocks.length,'须存在 rpt-nav-scrim 规则');
- const last=blocks[blocks.length-1];
- assert.match(last,/background:#[0-9a-f]{6}!important/i,'遮罩须为不透明十六进制实色且 !important 覆盖旧值');
- assert.doesNotMatch(last,/background:rgba\(/,'遮罩不得再用 rgba 半透明（会透视后页正文）');
- assert.match(last,/backdrop-filter:none!important/,'须关闭 backdrop-filter，避免模糊透出后页');
+ // 末尾强规则：scrim 必须透明（背景报告页照常显示，只留点击空白处收起）
+ const scrims=[...css.matchAll(/\.rpt-nav-scrim\{([\s\S]*?)\}/g)].map(m=>m[1]);
+ const lastScrim=scrims[scrims.length-1];
+ assert.match(lastScrim,/background:transparent!important/,'遮罩须透明，不得刷整屏纯色盖住后页');
+ assert.match(lastScrim,/backdrop-filter:none!important/,'遮罩须关闭模糊');
+ // 浮层块儿必须实心不透明、关闭 backdrop-filter，不透出后面的报告文字
+ const drawers=[...css.matchAll(/\.rpt-nav-drawer\{([\s\S]*?)\}/g)].map(m=>m[1]);
+ const lastDrawer=drawers[drawers.length-1];
+ assert.match(lastDrawer,/background:linear-gradient\(160deg,#[0-9a-f]{6}/i,'浮层块儿须实心不透明渐变');
+ assert.match(lastDrawer,/backdrop-filter:none!important/,'浮层须关闭 backdrop-filter，不透后页文字');
+ // 序号「01」须 nowrap，避免被拆成「0 / 1」两行
+ const nos=[...css.matchAll(/\.rpt-nav-list \.rpt-toc-item \.rpt-toc-no\{([^}]*)\}/g)].map(m=>m[1]);
+ assert.ok(nos.length&&/white-space:nowrap!important/.test(nos[nos.length-1]),'目录序号须 nowrap 不换行');
 });

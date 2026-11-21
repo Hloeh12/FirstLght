@@ -171,7 +171,8 @@ try{
   console.log('rails-after-reset',JSON.stringify(railsDbg));
   assert(Array.isArray(railsDbg)&&railsDbg.length>=2,'rail timeline must stay rendered after reset');
   await page.locator('[data-tab=insights]').click();
-  assert((await page.locator('#screen').textContent()).includes('总体运势'));
+  // v0.51.0 洞见页重做：本命内容改为「主轴摘要 + 六维结构」，用六维段标题做锚点更稳定
+  assert((await page.locator('#screen').textContent()).includes('本命结构拆解'));
   await page.locator('[data-tab=chart]').click();
   await useSystem('vedic','印度盘');
   await page.locator('.vedic-chart').waitFor();assert.equal(await page.locator('[data-vedic-house]').count(),12);
@@ -261,7 +262,10 @@ try{
   assert(samples.every(s=>s.animations.flat().every(scale=>scale===undefined)),'pill has no scale keyframes');
   for(const tab of ['cases','chart','insights','me']){
    await page.locator('[data-tab="'+tab+'"]').click();
-   await page.waitForTimeout(500);
+   // 等胶囊过渡真正结束再量：洞见页内容变多后，布局会晚一拍触发 ResizeObserver，
+   // 固定 500ms 有时会量到行进中的位置（曾出现 right 超出 tabRight 0.45px 的假失败）。
+   await page.locator('#tabLiquidPill').evaluate(n=>Promise.all(n.getAnimations().map(a=>a.finished.catch(()=>{}))));
+   await page.waitForTimeout(80);
    const pill=await page.locator('#tabLiquidPill').evaluate(n=>{
     const p=n.getBoundingClientRect(),b=document.querySelector('#bottomNav [aria-current=page]').getBoundingClientRect();
     return {left:p.left,right:p.right,top:p.top,bottom:p.bottom,tabLeft:b.left,tabRight:b.right,tabTop:b.top,tabBottom:b.bottom};

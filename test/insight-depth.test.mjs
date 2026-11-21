@@ -4,15 +4,17 @@ import {readFile} from 'node:fs/promises';
 import {buildWesternDeepReport} from '../www/js/deep-west.js';
 import {buildVedicDeepReport} from '../www/js/deep-vedic.js';
 
-test('洞见页接深度知识库：app.js 导入并在印占/西洋分支渲染深度摘要',async()=>{
- const app=await readFile(new URL('../assets/console/app.js',import.meta.url),'utf8');
- assert.match(app,/import \{buildWesternDeepReport\} from '\.\.\/\.\.\/www\/js\/deep-west\.js'/,'须导入西洋深度库');
- assert.match(app,/import \{buildVedicDeepReport\} from '\.\.\/\.\.\/www\/js\/deep-vedic\.js'/,'须导入印占深度库');
- assert.match(app,/function deepDigestHtml\(report\)/,'须有深度摘要渲染函数');
- assert.match(app,/buildVedicDeepReport\(v\)/,'印占洞见须调用深度库');
- assert.match(app,/buildWesternDeepReport\(w,undefined,state\.reading\?\.analysis\|\|w\.analysis\)/,'西洋洞见须调用深度库并传 dignity 分析');
- assert.match(app,/\$\{vDigest\}/,'印占卡片须拼入深度摘要');
- assert.match(app,/\$\{wDigest\}/,'西洋卡片须拼入深度摘要');
+test('洞见页接深度知识库：内容层统一在 insight.js，四体系都拼深度摘要',async()=>{
+ const ins=await readFile(new URL('../assets/console/insight.js',import.meta.url),'utf8');
+ assert.match(ins,/import \{buildBaziDeepReport\} from '\.\.\/\.\.\/www\/js\/deep-bazi\.js'/,'须导入八字深度库（旧版漏接，导致八字只有四句话）');
+ assert.match(ins,/import \{buildZiweiDeepReport\} from '\.\.\/\.\.\/www\/js\/deep-ziwei\.js'/,'须导入紫微深度库');
+ assert.match(ins,/import \{buildWesternDeepReport\} from '\.\.\/\.\.\/www\/js\/deep-west\.js'/,'须导入西洋深度库');
+ assert.match(ins,/import \{buildVedicDeepReport\} from '\.\.\/\.\.\/www\/js\/deep-vedic\.js'/,'须导入印占深度库');
+ assert.match(ins,/buildBaziDeepReport\(reading\.bazi\)/,'八字须调用深度库');
+ assert.match(ins,/buildVedicDeepReport\(reading\.vedic\)/,'印占须调用深度库');
+ assert.match(ins,/buildWesternDeepReport\(reading\.western,undefined,reading\.analysis\|\|reading\.western\?\.analysis\)/,'西洋须调用深度库并传 dignity 分析');
+ assert.match(ins,/buildZiweiDeepReport\(reading\.ziwei,opt\.flow\|\|null\)/,'紫微须调用深度库并传流运');
+ assert.match(ins,/digest:report\?digestHtml\(report\):''/,'深度摘要须挂在模型上统一渲染');
 });
 
 test('深度知识库确有充足章节：西洋/印占远超洞见页旧的 4 段模板',()=>{
@@ -59,13 +61,19 @@ test('底部导航精修：模块入口改文字胶囊、体系行更贴底栏�
  assert.match(css,/\.bottom-spacer\{height:170px!important/,'底部留白须收紧');
 });
 
-test('紫微洞见接深度知识库：不再只有 252 字模板',async()=>{
+test('四体系目见深度一致：都是六个结构维 + 深度详批 + 终身周期，不再「紫微万字、八字四句」',async()=>{
+ const ins=await readFile(new URL('../assets/console/insight.js',import.meta.url),'utf8');
+ for(const fn of ['baziBlocks','ziweiBlocks','westernBlocks','vedicBlocks'])
+  assert.match(ins,new RegExp('function '+fn+'\\('),fn+' 须存在');
+ // 每个体系必须产出 6 个 dim(...) 与 1 个 summary
+ const count=(name)=>{const i=ins.indexOf('function '+name+'(');const j=ins.indexOf('/* ----',i+10);return (ins.slice(i,j>i?j:undefined).match(/dim\('0\d'/g)||[]).length;};
+ for(const fn of ['baziBlocks','ziweiBlocks','westernBlocks','vedicBlocks'])
+  assert.equal(count(fn),6,fn+' 须产出六个结构维');
  const app=await readFile(new URL('../assets/console/app.js',import.meta.url),'utf8');
- assert.match(app,/import \{buildZiweiDeepReport\} from '\.\.\/\.\.\/www\/js\/deep-ziwei\.js'/,'须导入紫微深度库');
- assert.match(app,/buildZiweiDeepReport\(z,state\.chartState\?\.ziwei\?\.flow\|\|null\)/,'紫微洞见须调用深度库');
- assert.match(app,/\$\{zDigest\}/,'紫微卡片须拼入深度摘要');
+ assert.match(app,/summaryHtml\(model\)\+dimsHtml\(model\)/,'摘要与六维须同源渲染');
+ assert.match(app,/digestBlockHtml\(model\)/,'深度详批须统一挂载');
+ assert.match(app,/lifecycleBlockHtml\(current,r\)/,'终身周期须统一挂载');
 });
-
 test('配置弹窗按钮语义化：不再用含糊的裸「生成」',async()=>{
  const app=await readFile(new URL('../assets/console/app.js',import.meta.url),'utf8');
  assert.match(app,/configRow\('report','生成深度报告',state\.reading\?'全文详批 · 可导出'/,'报告入口须写明产出（全文详批·可导出）');

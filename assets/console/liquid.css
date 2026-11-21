@@ -1072,46 +1072,59 @@ button:focus-visible,a:focus-visible{
 .period-step{margin:11px 0 6px!important}
 .period-mode-grid{gap:9px}
 
-/* ===== v0.50.0 时点杆：让「现在看的是哪一刻」一眼可见 =====
-   旧版只有一个下拉，选了第 N 步大运却看不出对应哪一年、哪个月，
-   流年/流月还停在今天——用户根本无法确认「这个时点到底是何时」。
-   新结构：落点时刻卡（大标题=年月干支）+ 三组级联下拉 + 流月速选条 + 逐运翻页。 */
+/* ===== v0.51.0 时点杆 2.0：修掉「‹ › 飘在右上角」的错位 =====
+   旧版把两个 23×19 的小胶囊塞进 label 行，行高被撑开、按钮又贴着卡片上缘，
+   看起来像两个散落的碎片。新版改成「夹持式」：‹ [大运下拉] ›，
+   按钮与下拉同高、同圆角、同一基线，视觉上是同一个控件组。
+   顺带把时刻卡改成竖排三段（kicker+回当下 / 大标题 / 元信息 chips），
+   不再让「第几步 + 起止年 + 节气区间」挤在一行折成两截。 */
 .snap-bazi .bf-clock{
- display:flex;align-items:center;justify-content:space-between;gap:10px;
- margin:0 0 10px;padding:11px 13px;border-radius:16px;
- background:linear-gradient(150deg,rgba(255,247,251,.97),rgba(255,232,242,.9));
- border:1px solid rgba(255,120,170,.36);
+ display:flex;flex-direction:column;gap:0;
+ margin:0 0 10px;padding:12px 14px 13px;border-radius:18px;
+ background:linear-gradient(155deg,rgba(255,250,252,.98),rgba(255,235,243,.92));
+ border:1px solid rgba(255,120,170,.30);
+ box-shadow:0 12px 28px -22px rgba(190,60,110,.55);
 }
-.bf-clock-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-.bf-clock-kicker{font-size:9.5px;font-weight:800;letter-spacing:.14em;color:#b3668c}
-.bf-clock-text b{font-size:15px;font-weight:800;color:#7d1f4c;line-height:1.25;font-variant-numeric:tabular-nums;letter-spacing:.01em}
-.bf-clock-text small{font-size:10.5px;color:#93637e;line-height:1.45;font-variant-numeric:tabular-nums}
-.bf-now{flex:none;align-self:center;padding:7px 11px;border-radius:11px;font-size:11px;font-weight:750;
- color:#a12a5e;background:rgba(255,255,255,.92);border:1px solid rgba(255,120,170,.45);cursor:pointer}
-.bf-now:active{transform:scale(.97)}
+.bf-clock-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 7px}
+.bf-clock-kicker{font-size:9.5px;font-weight:800;letter-spacing:.16em;color:#b3668c}
+.bf-clock-title{display:block;font-size:16.5px;font-weight:800;color:#7d1f4c;
+ line-height:1.3;letter-spacing:.005em;font-variant-numeric:tabular-nums}
+.bf-clock-meta{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:7px}
+.bf-clock-meta span{font-size:10.5px;line-height:1.5;color:#8f5f79;font-variant-numeric:tabular-nums}
+.bf-clock-meta .bf-clock-span{color:#ab7d94}
+.bf-now{flex:none;padding:6px 11px;border-radius:999px;font-size:10.5px;font-weight:750;
+ color:#a12a5e!important;background:rgba(255,255,255,.95)!important;
+ border:1px solid rgba(255,120,170,.40)!important;cursor:pointer}
+.bf-now:active{transform:scale(.96)}
 .bf-picks{
- display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;
- margin:0 0 8px;padding:10px 12px;border-radius:16px;
- background:rgba(255,255,255,.74);border:1px solid rgba(255,140,185,.24);
+ display:grid;grid-template-columns:1fr 1fr;gap:9px 8px;align-items:end;
+ margin:0 0 10px;padding:11px 12px;border-radius:16px;
+ background:rgba(255,255,255,.70);border:1px solid rgba(255,140,185,.22);
 }
-/* 大运独占一行：它是主轴，且文字最长（第N步 干支），三列并排必被裁字 */
-.bf-picks label.bf-luck{grid-column:1/-1}
-.bf-picks label{display:flex;flex-direction:column;gap:4px;min-width:0;
- font-size:10px;font-weight:800;letter-spacing:.06em;color:#a8326a}
-.bf-luck-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+/* 大运整行：‹ [下拉] › 三件套同高同基线，不再让箭头飘到卡片角上 */
+.bf-luck-row{grid-column:1/-1;display:flex;align-items:flex-end;gap:7px}
+.bf-luck-row .bf-luck{flex:1 1 auto;min-width:0}
+.bf-picks label{display:flex;flex-direction:column;gap:5px;min-width:0;
+ font-size:10px;font-weight:800;letter-spacing:.08em;color:#a8326a}
+.bf-step{
+ flex:none;width:40px;height:41px;padding:0;display:grid;place-items:center;
+ border-radius:12px;font-size:17px;font-weight:700;line-height:1;
+ color:#a12a5e!important;background:rgba(255,255,255,.96)!important;
+ border:1px solid rgba(255,120,170,.34)!important;
+ cursor:pointer;transition:transform .12s ease,background .12s ease;
+}
+.bf-step:active{transform:scale(.94);background:#ffedf5}
 .bf-picks select{
- width:100%;appearance:none;-webkit-appearance:none;min-height:38px;padding:7px 18px 7px 9px;
- border-radius:11px;font-size:11.5px;font-weight:600;color:#5c3348;letter-spacing:0;
+ width:100%;appearance:none;-webkit-appearance:none;min-height:41px;padding:8px 20px 8px 10px;
+ border-radius:12px;font-weight:650;color:#5c3348;letter-spacing:0;
+ /* 必须带 !important：liquid.css:243 有 iOS 防缩放规则 input,select{font-size:16px!important}，
+    不加就会被顶到 16px 而把「第3步 庚申」裁掉。 */
+ font-size:13px!important;
  border:1px solid rgba(255,120,170,.34);background:#fff
   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23c2185b' stroke-width='1.6' stroke-linecap='round'/></svg>")
-  no-repeat right 7px center/8px 5px;
+  no-repeat right 8px center/8px 5px;
 }
-.bf-stepper{display:inline-flex;gap:3px}
-.bf-stepper button{
- width:23px;height:19px;border-radius:7px;font-size:12px;font-weight:800;line-height:1;
- color:#a12a5e;background:rgba(255,255,255,.95);border:1px solid rgba(255,120,170,.38);cursor:pointer
-}
-.bf-stepper button:active{transform:scale(.94)}
+.bf-year-pick select,.bf-month-pick select{font-size:12.5px!important}
 .bf-year-rail{
  display:flex;gap:5px;overflow-x:auto;overscroll-behavior-x:contain;
  padding:2px 2px 6px;margin:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;
@@ -1120,13 +1133,13 @@ button:focus-visible,a:focus-visible{
 }
 .bf-year-rail::-webkit-scrollbar{width:0;height:0}
 .bf-year{
- flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:0;
- min-width:38px;padding:4px 6px;border-radius:9px;cursor:pointer;
- border:1px solid rgba(255,140,185,.22);background:rgba(255,255,255,.7);color:#7b3a58
+ flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;
+ min-width:40px;padding:4px 6px;border-radius:10px;cursor:pointer;
+ border:1px solid rgba(255,140,185,.22);background:rgba(255,255,255,.70);color:#7b3a58
 }
 .bf-year b{font-size:11px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
 .bf-year small{font-size:8px;color:#a97d95;line-height:1.2}
-.bf-year.on{background:rgba(255,79,139,.14);border-color:#ff4f8b;color:#c2185b}
+.bf-year.on{background:rgba(255,79,139,.13)!important;border-color:rgba(255,79,139,.55)!important;color:#c2185b!important}
 .bf-year.on small{color:#c2185b}
 .bf-month-rail{
  display:flex;gap:5px;overflow-x:auto;overscroll-behavior-x:contain;
@@ -1137,14 +1150,14 @@ button:focus-visible,a:focus-visible{
 .bf-month-rail::-webkit-scrollbar{width:0;height:0}
 .bf-month{
  flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;
- min-width:46px;padding:5px 7px;border-radius:11px;cursor:pointer;
- border:1px solid rgba(255,140,185,.26);background:rgba(255,255,255,.82);color:#7b3a58
+ min-width:48px;padding:5px 7px;border-radius:11px;cursor:pointer;
+ border:1px solid rgba(255,140,185,.22);background:rgba(255,255,255,.78);color:#7b3a58
 }
 .bf-month b{font-size:11.5px;font-weight:750;line-height:1.2}
 .bf-month small{font-size:8.5px;color:#a97d95;line-height:1.2;white-space:nowrap}
-.bf-month.on{background:linear-gradient(150deg,#ff77aa,#e2568f);border-color:#e2568f;color:#fff;
- box-shadow:0 4px 12px -6px rgba(200,50,110,.85)}
-.bf-month.on small{color:rgba(255,255,255,.88)}
+/* 年条与月条的选中态统一：同一个品牌粉，不再一个描边一个渐变块 */
+.bf-month.on{background:rgba(255,79,139,.13)!important;border-color:rgba(255,79,139,.55)!important;color:#c2185b!important}
+.bf-month.on small{color:#c2185b}
 /* 重算中的轻提示：盘面压暗但不清空，避免整块闪白 */
 .snap-bazi.is-busy .bf-grid-host{opacity:.42;transition:opacity .15s}
 .snap-bazi.is-busy .bf-clock{opacity:.72}
@@ -1154,21 +1167,212 @@ button:focus-visible,a:focus-visible{
 }
 .period-scope-note b{color:#a12a5e}
 @media (prefers-color-scheme:dark){
- .snap-bazi .bf-clock{background:linear-gradient(150deg,rgba(52,40,52,.95),rgba(42,32,44,.92));border-color:rgba(255,164,206,.26)}
+ .snap-bazi .bf-clock{background:linear-gradient(155deg,rgba(54,42,54,.96),rgba(42,32,44,.94));border-color:rgba(255,164,206,.26)}
  .bf-clock-kicker{color:#d79cbb}
- .bf-clock-text b{color:#ffd0e4}
- .bf-clock-text small{color:#c99bb4}
+ .bf-clock-title{color:#ffd0e4}
+ .bf-clock-meta span{color:#c99bb4}
+ .bf-clock-meta .bf-clock-span{color:#b8909f}
  .bf-now{color:#ffc2dc;background:rgba(255,255,255,.10);border-color:rgba(255,164,206,.34)}
  .bf-picks{background:rgba(46,38,54,.7);border-color:rgba(255,138,184,.26)}
  .bf-picks label{color:#ff9fc9}
  .bf-picks select{color:#f3dbe7!important;background-color:rgba(52,42,62,.94)!important;border-color:rgba(255,164,206,.24)!important}
- .bf-stepper button{color:#ffc2dc;background:rgba(255,255,255,.10);border-color:rgba(255,164,206,.3)}
+ .bf-step{color:#ffc2dc;background:rgba(255,255,255,.10);border-color:rgba(255,164,206,.3)}
  .bf-month{background:rgba(52,44,58,.9);border-color:rgba(255,164,206,.22);color:#e9c7d8}
  .bf-year{background:rgba(52,44,58,.9);border-color:rgba(255,164,206,.2);color:#e9c7d8}
  .bf-year small{color:#b98aa2}
- .bf-year.on{background:rgba(255,79,139,.2);border-color:#ff4f8b;color:#ffd0e4}
- .bf-year.on small{color:#ffb4d2}
+ .bf-year.on,.bf-month.on{background:rgba(255,79,139,.2);border-color:rgba(255,79,139,.6);color:#ffd0e4}
+ .bf-year.on small,.bf-month.on small{color:#ffb4d2}
  .bf-month small{color:#b98aa2}
  .period-scope-note{background:rgba(46,36,46,.86);border-color:rgba(255,164,206,.24);color:#c2a0b3}
  .period-scope-note b{color:#ffb4d2}
+}
+
+/* ===== v0.51.0 洞见页重做：从「一摞相同的折叠框」改成有节奏的阅读页 =====
+   旧结构：页头两个幽灵胶囊 + 两个 details（本命 / 生命周期），紫微塞了万字、八字只有四句。
+   新结构：体系分段器 → 主轴摘要卡 → 六维结构 → 深度详批（可折叠）→ 终身周期 → 报告操作。
+   视觉上用「数字编号 + 细分割线 + 证据胶囊」建立节奏，不再靠不断加卡片。 */
+.insight-page{display:flex;flex-direction:column;gap:14px;padding-bottom:4px}
+.insight-page .page-head{margin-bottom:2px}
+
+/* 体系分段器：四等分，选中项浮起成白片 */
+.insight-page .insight-system-tabs{
+ display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;
+ margin:0!important;padding:5px;border-radius:15px;overflow:visible!important;
+ background:rgba(255,255,255,.62);border:1px solid rgba(255,140,185,.18)
+}
+.insight-page .insight-system-tabs button{
+ width:100%;min-width:0;min-height:0;padding:8px 2px;border-radius:11px!important;
+ border:1px solid transparent!important;background:transparent!important;
+ font-size:12px!important;font-weight:650!important;color:#8a6a7a!important;
+ letter-spacing:.01em;transition:background .16s ease,color .16s ease;
+}
+.insight-page .insight-system-tabs button[aria-pressed=true]{
+ background:#fff!important;color:#b32657!important;font-weight:800!important;
+ border-color:rgba(255,79,139,.20)!important;
+ box-shadow:0 8px 18px -14px rgba(180,40,90,.85)
+}
+
+/* 主轴摘要卡：一屏之内交代「这是谁、主轴是什么」 */
+.is-summary{
+ margin:0;padding:16px 16px 15px;border-radius:20px;
+ background:linear-gradient(158deg,rgba(255,252,253,.98),rgba(255,234,243,.9));
+ border:1px solid rgba(255,120,170,.24);
+ box-shadow:0 20px 44px -38px rgba(190,60,110,.7);
+}
+.is-summary-kicker{margin:0 0 8px;font-size:9.5px;font-weight:800;letter-spacing:.16em;color:#b3668c}
+.is-summary-head{margin:0;font-size:18px;font-weight:800;line-height:1.44;color:#79204a;letter-spacing:-.01em}
+.is-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}
+.is-chip{
+ display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;
+ font-size:10.5px;font-weight:650;color:#8a2b58;white-space:nowrap;
+ background:rgba(255,255,255,.88);border:1px solid rgba(255,140,185,.30);
+ font-variant-numeric:tabular-nums;letter-spacing:.01em;
+}
+
+/* 段落标题：细线收尾，避免每个模块都用一个厚卡片 */
+.is-sec-head{display:flex;align-items:center;gap:8px;margin:2px 2px 0}
+.is-sec-no{font-size:9.5px;font-weight:800;letter-spacing:.14em;color:#c9a0b4}
+.is-sec-head h2{margin:0;font-size:13px;font-weight:800;letter-spacing:.02em;color:#7d4b63}
+.is-sec-rule{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,140,185,.38),rgba(255,140,185,0))}
+
+/* 六维：同一张卡里六段，用编号与细线分区，比六个折叠框清爽 */
+.is-dims-wrap{display:flex;flex-direction:column;gap:9px}
+.is-dims{
+ list-style:none;margin:0;padding:0;display:block;border-radius:18px;overflow:hidden;
+ background:rgba(255,255,255,.74);border:1px solid rgba(255,140,185,.18)
+}
+.is-dim{display:flex;gap:11px;padding:14px 14px 15px;border-top:1px solid rgba(255,140,185,.13)}
+.is-dim:first-child{border-top:0}
+.is-dim-no{
+ flex:none;width:24px;height:24px;margin-top:1px;border-radius:8px;display:grid;place-items:center;
+ font-size:10px;font-weight:800;color:#b5457a;background:rgba(255,79,139,.09);
+ border:1px solid rgba(255,79,139,.16);font-variant-numeric:tabular-nums
+}
+.is-dim-body{flex:1;min-width:0}
+.is-dim-title{margin:0 0 6px;font-size:13.5px;font-weight:800;color:#7a2349;letter-spacing:.01em}
+.is-dim-text p{margin:0 0 8px;font-size:12.8px;line-height:1.88;color:#4d3b45;overflow-wrap:anywhere}
+.is-dim-text p:last-child{margin-bottom:0}
+.is-dim-text b{color:#a12a5e;font-weight:750}
+.is-dim .is-chips{margin-top:9px}
+.is-dim .is-chip{height:20px;font-size:10px;background:rgba(255,246,250,.94)}
+
+/* 深度详批 / 终身周期：折叠头做成一行标题 + 元信息，不用浏览器默认三角 */
+.is-deep-wrap>summary,.is-life-wrap>summary{
+ display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+ cursor:pointer;list-style:none;padding:2px 0
+}
+.is-deep-wrap>summary::-webkit-details-marker,.is-life-wrap>summary::-webkit-details-marker{display:none}
+.is-sum-title{font-size:14px;font-weight:800;color:#7a2349}
+.is-sum-meta{font-size:10.5px;color:#a98c9b;font-weight:650;white-space:nowrap}
+.is-deep-wrap>summary .is-sum-meta::after{content:' ▾'}
+.is-deep-wrap[open]>summary .is-sum-meta::after{content:' ▴'}
+.is-life-wrap>summary .is-sum-meta::after{content:' ▾'}
+.is-life-wrap[open]>summary .is-sum-meta::after{content:' ▴'}
+.is-deep-body,.is-life-body{margin-top:12px;padding-top:12px;border-top:1px dashed rgba(255,120,170,.28)}
+.is-deep-sec{margin:0 0 16px}
+.is-deep-sec:last-child{margin-bottom:0}
+.is-deep-sec h4{margin:0 0 7px;font-size:13px;font-weight:800;color:#8a2a57;line-height:1.5}
+.is-deep-sec p{margin:0 0 8px;font-size:12.8px;line-height:1.88;color:#4d3b45;overflow-wrap:anywhere}
+.is-deep-more{margin-top:6px}
+.is-deep-more>summary{
+ cursor:pointer;list-style:none;padding:9px 11px;border-radius:12px;
+ background:rgba(255,79,139,.07);border:1px solid rgba(255,120,170,.24);
+ font-size:12px;font-weight:700;color:#8a2a57
+}
+.is-deep-more>summary::-webkit-details-marker{display:none}
+.is-deep-more[open]>summary{margin-bottom:12px}
+.is-note{margin:0 0 11px;font-size:11.5px;line-height:1.7;color:#8a6a7a}
+
+/* 报告操作区：主行动占一行，导出退成次级行——不再把两个胶囊挂在页头 */
+.is-tools{display:grid;gap:8px}
+.is-tool{
+ display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+ padding:13px 14px;border-radius:16px;cursor:pointer;transition:transform .12s ease
+}
+.is-tool:active{transform:scale(.985)}
+.is-tool-main{
+ color:#fff!important;border:1px solid rgba(214,66,124,.92)!important;
+ background:linear-gradient(135deg,#ff74a9,#dd4682)!important;
+ box-shadow:0 16px 32px -20px rgba(200,50,110,.9)!important
+}
+.is-tool-alt{background:rgba(255,255,255,.84)!important;border:1px solid rgba(255,140,185,.24)!important;color:#7a2349!important}
+.is-tool-ico{flex:none;width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:13px}
+.is-tool-ico svg{width:16px;height:16px;display:block}
+.is-tool-main .is-tool-ico{background:rgba(255,255,255,.24);color:#fff}
+.is-tool-alt .is-tool-ico{background:rgba(255,79,139,.10);color:#b5457a}
+.is-tool-body{flex:1;min-width:0;display:grid;gap:2px}
+.is-tool-body b{font-size:13.5px;font-weight:800;letter-spacing:.01em}
+.is-tool-body small{font-size:10.5px;line-height:1.4;opacity:.85}
+.is-tool-main .is-tool-body small{opacity:.92;color:rgba(255,255,255,.94)}
+.is-tool-arrow{font-size:18px;line-height:1;opacity:.72}
+
+@media (prefers-color-scheme:dark){
+ .insight-page .insight-system-tabs{background:rgba(46,38,54,.6);border-color:rgba(255,138,184,.2)}
+ .insight-page .insight-system-tabs button{color:#c2a0b3!important}
+ .insight-page .insight-system-tabs button[aria-pressed=true]{
+  background:rgba(255,79,139,.20)!important;color:#ffd0e4!important;border-color:rgba(255,164,206,.34)!important
+ }
+ .is-summary{background:linear-gradient(158deg,rgba(54,42,52,.96),rgba(43,32,44,.94));border-color:rgba(255,164,206,.24)}
+ .is-summary-kicker{color:#d79cbb}
+ .is-summary-head{color:#ffd0e4}
+ .is-chip{background:rgba(255,255,255,.10);border-color:rgba(255,164,206,.26);color:#f0c8da}
+ .is-sec-head h2{color:#e3bcd0}
+ .is-sec-no{color:#a9889a}
+ .is-sec-rule{background:linear-gradient(90deg,rgba(255,164,206,.34),rgba(255,164,206,0))}
+ .is-dims{background:rgba(46,38,52,.78);border-color:rgba(255,164,206,.16)}
+ .is-dim{border-top-color:rgba(255,164,206,.12)}
+ .is-dim-no{color:#ffb4d2;background:rgba(255,79,139,.16);border-color:rgba(255,164,206,.22)}
+ .is-dim-title,.is-sum-title{color:#ffd0e4}
+ .is-dim-text p,.is-deep-sec p{color:#d6c2cd}
+ .is-dim-text b{color:#ffb4d2}
+ .is-dim .is-chip{background:rgba(255,255,255,.08)}
+ .is-sum-meta{color:#b8909f}
+ .is-deep-sec h4{color:#ffb4d2}
+ .is-deep-more>summary{background:rgba(255,79,139,.12);border-color:rgba(255,164,206,.24);color:#ffd0e4}
+ .is-deep-body,.is-life-body{border-top-color:rgba(255,164,206,.22)}
+ .is-note{color:#c2a0b3}
+ .is-tool-alt{background:rgba(46,38,52,.8);border-color:rgba(255,164,206,.22);color:#ffd0e4}
+ .is-tool-alt .is-tool-ico{background:rgba(255,79,139,.18);color:#ffb4d2}
+}
+
+/* 主行动按钮的副标题：白字在渐变色上容易被小字号+降透明度吃掉，单独提对比 */
+.is-tool-main .is-tool-body small{
+ opacity:1!important;color:rgba(255,255,255,.97)!important;
+ font-size:11px!important;font-weight:600!important;letter-spacing:.01em
+}
+.is-tool-main .is-tool-body b{font-size:14px!important;letter-spacing:.02em}
+/* 「转到时点」是跨页提示，不是主行动：在洞见页降级为虚线轻条，避免和深度报告抢重心 */
+.insight-page .period-cta{
+ margin:0 0 6px!important;padding:11px 13px!important;border-radius:14px!important;
+ background:rgba(255,255,255,.62)!important;border:1px dashed rgba(255,120,170,.30)!important;
+ color:#8a4a68!important;box-shadow:none!important
+}
+.insight-page .period-cta b{font-size:12.5px!important;font-weight:750!important}
+.insight-page .period-cta small{font-size:10.5px!important;color:#a98c9b!important;margin-top:3px}
+.insight-page .period-cta-ico{font-size:15px!important;color:#d07ba0!important}
+.insight-page .period-cta-arrow{font-size:16px!important;color:#d07ba0!important}
+@media (prefers-color-scheme:dark){
+ .insight-page .period-cta{background:rgba(46,38,52,.7)!important;border-color:rgba(255,164,206,.24)!important;color:#e3bcd0!important}
+ .insight-page .period-cta small{color:#b8909f!important}
+}
+
+/* ===== v0.51.0 弹层不透明化：WKWebView 对 dialog 的 backdrop-filter 支持不稳，
+   只靠 0.82~0.9 的透明底会让下层页面文字透进来（配置面板曾能看见背后的「紫微斗数」）。
+   改为近实色 + 更深遮罩，玻璃感交给边框与高光，可读性优先。 */
+.sheet.liquid-glass,.drawer.liquid-glass,.sheet,.drawer,dialog#termSheet{
+ /* 全不透明：留 1% 半透明时，深色正文仍会透出鬼影。玻璃感交给顶缘高光与阴影。 */
+ background:linear-gradient(180deg,#fffdfe 0%,#fff6fa 100%)!important;
+}
+.sheet::backdrop,.drawer::backdrop{background:rgba(72,26,46,.34)!important}
+@media (prefers-color-scheme:dark){
+ .sheet.liquid-glass,.drawer.liquid-glass,.sheet,.drawer,dialog#termSheet{background:linear-gradient(180deg,#241d2a 0%,#1e1826 100%)!important}
+ .sheet::backdrop,.drawer::backdrop{background:rgba(8,4,10,.6)!important}
+}
+
+/* 印度页的九曜证据表：独立一张小卡，放在摘要卡与六维之间 */
+.is-planets{margin:0;padding:13px 14px 11px;border-radius:16px}
+.is-planets-kicker{margin:0 0 9px;font-size:9.5px;font-weight:800;letter-spacing:.14em;color:#b3668c}
+.is-planets .insight-planet-list{margin:0!important}
+@media (prefers-color-scheme:dark){
+ .is-planets-kicker{color:#d79cbb}
 }

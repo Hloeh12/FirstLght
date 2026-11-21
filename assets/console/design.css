@@ -2033,7 +2033,6 @@ dialog#reportSheet::backdrop{position:fixed;inset:0;z-index:999;background:rgba(
 .time-basis-note .tb-warn{color:#b3261e}
 
 /* 五行色分层：默认传统五行色（木绿/火红/土黄/金白/水蓝黑），品牌粉色只用于导航与按钮 */
-html[data-palette=pink]{--wood:#a44a86;--fire:#bd2d63;--earth:#92602d;--metal:#a04469;--water:#8c4d91;--fl-useful:#ff4f8b;--fl-caution:#8b95ad;--fl-neutral:#d9a3c4}
 /* 深色模式基础层：跟随系统，纸墨反转、玻璃变暗 */
 @media (prefers-color-scheme:dark){
  :root{--paper:#16121b;--ink:#eee4ec;--ink-secondary:#cdbcc9;--muted:#9c8c99;--line:rgba(255,164,206,.2);--rose:#33202d;--wood:#5fbf7e;--fire:#ef7065;--earth:#d9a53e;--metal:#a9b3c1;--water:#5f92d6;--fl-useful:#ef7065;--fl-caution:#98a3b2;--fl-neutral:#c7a06a;

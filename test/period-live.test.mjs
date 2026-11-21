@@ -15,7 +15,9 @@ test('时点落点：一句话说清「哪一年·哪一月·第几步大运」�
  assert.equal(sel.year,2026,'须能从 selected 反查流年');
  const m=baziMoment(data,sel);
  assert.match(m.title,/^2026 [\u4e00-\u9fa5]{2}年 · [\u4e00-\u9fa5]{2} [\u4e00-\u9fa5]{2}月$/,'落点主行须是「年·干支 + 月·干支」');
- assert.match(m.sub,/^第3步 [\u4e00-\u9fa5]{2}大运 \d{4}–\d{4} · \d{2}-\d{2}→\d{2}-\d{2}$/,'次行须给步数、起止年与节气区间');
+ // v0.51.0：次行只给「第N步 + 干支 + 起止年」，节气区间拆到独立 chip（挤一行会折成两截）
+ assert.match(m.sub,/^第3步 [\u4e00-\u9fa5]{2}大运 · \d{4}–\d{4}$/,'次行须给步数与起止年');
+ assert.match(m.span,/^节气 \d{2}-\d{2} → \d{2}-\d{2}$/,'节气区间须独立成一项');
  // 报告标题用短式：长串会把封面标题挤成三行
  assert.ok(m.brief.length<m.title.length,'短式须比完整落点更短');
  assert.ok(!m.brief.includes('大运'),'短式标题不得带大运段');
@@ -72,7 +74,7 @@ test('功能去重：时点页只出时点详批，本命全局归洞见页',asy
  assert.doesNotMatch(app,/data-pmode/,'时点页不得再有「本命全报告 + 时点章」二选一');
  assert.match(app,/const mode='focus'/,'时点页固定输出时点专属详批');
  assert.match(app,/const PERIOD_SYS_META/,'四体系入口仍保留');
- assert.match(app,/本命终身结构（不含流年流月）/,'洞见页须明确自己只管本命全局');
+ assert.match(app,/本命终身结构 · 不含流年流月/,'洞见页须明确自己只管本命全局');
  assert.match(app,/只看这个时点的盘与详批|只出这个时点的盘与详批/,'时点页须写明分工');
  assert.match(app,/两处不重复/,'两页须写明互不重复');
 });

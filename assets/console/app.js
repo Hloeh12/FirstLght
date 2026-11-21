@@ -1,7 +1,5 @@
 import {buildBaziKnowledgeReport,buildZiweiKnowledgeReport} from '../../www/js/rules.js';
-import {buildWesternDeepReport} from '../../www/js/deep-west.js';
-import {buildVedicDeepReport} from '../../www/js/deep-vedic.js';
-import {buildZiweiDeepReport} from '../../www/js/deep-ziwei.js';
+import {insightModel,summaryHtml,dimsHtml,digestBlockHtml,lifecycleBlockHtml,SYSTEM_LABEL} from './insight.js';
 import {composeFullReport,reportHtml,tocItems} from './full-report.js';
 import {periodSections} from './ui.js';
 import {installCivilPickers} from './civil-picker.js';
@@ -43,9 +41,9 @@ const state={
  query:'',filter:'全部',chartState:{},pending:false,error:''
 };
 const profileMachine=new ProfileMachine(birth=>request('/api/console/reading',{birth}));
-/* P1 五行配色：默认传统五行色（木绿/火红/土黄/金白/水蓝黑），可切回品牌粉；干支/十神/运势曲线随之联动 */
-const applyPalette=()=>{document.documentElement.dataset.palette=state.settings.palette==='pink'?'pink':'traditional';};
-applyPalette();
+/* 五行配色固定为传统五行色（木绿 / 火红 / 土黄 / 金白 / 水蓝黑）。
+   v0.51.0 移除「五行配色」切换项：旧开关只改 7 个 CSS 变量，绝大多数干支色已被
+   更具体的规则覆盖，切了几乎看不出差别，属于「摆着但没作用」的设置，直接删掉。 */
 const root=$('#screen');
 let generation=0,flight,noticeTimer,locationToken=0,locationReply;
 window.firstlightLocation=(token,lat,lon)=>{if(token===locationToken)locationReply?.(lat,lon);};
@@ -688,6 +686,18 @@ function forceRefreshAllInsights(){
 }
 // 生成成篇深度报告：复活四层知识库，做成可生成/可导出/可复制的产品功能。
 // 可传入预生成的 report（时点专项报告工作台用），否则按当前本命盘生成。
+// 速选条横向滚动位置：进来时选中的年份常常在末位（如 2026 在 2017–2026 的最后一格），
+// 不滚过去就只能看到开头几年，误以为「没有今年」。用 rect 差值居中，不依赖 offsetParent。
+function centerBfRails(host){
+ if(!host)return;
+ for(const rail of host.querySelectorAll('.bf-year-rail,.bf-month-rail')){
+  const on=rail.querySelector('.on');
+  if(!on)continue;
+  const rb=rail.getBoundingClientRect(),ob=on.getBoundingClientRect();
+  if(!rb.width)continue;
+  rail.scrollLeft+=Math.round((ob.left-rb.left)-(rb.width-ob.width)/2);
+ }
+}
 function openFullReport(prebuilt,opts={}){
  const synReady=state.system==='synastry'&&state.chartState.synastry?.result;
  if(!prebuilt&&!state.reading&&!synReady){tell('请先排盘，再生成报告。');return;}
@@ -743,8 +753,11 @@ function openFullReport(prebuilt,opts={}){
    setSel('luck',cOpts);setSel('year',yOpts);setSel('month',mOpts);
    const rail=box.querySelector('.bf-month-rail');if(rail)rail.innerHTML=monthRail;
    const yrail=box.querySelector('.bf-year-rail');if(yrail)yrail.innerHTML=yearRail;
+   centerBfRails(box);
    const mEl=box.querySelector('[data-bf-moment]');if(mEl)mEl.textContent=moment.title||'本命原局';
    const sEl=box.querySelector('[data-bf-moment-sub]');if(sEl)sEl.textContent=moment.sub;
+   const spEl=box.querySelector('.bf-clock-span');
+   if(spEl){spEl.textContent=moment.span||'';spEl.hidden=!moment.span;}
    const natal=(data.pillars||[]).filter(Boolean);
    const yi=(data.years||[]).findIndex(y=>String(y.year)===String(next.year));
    const flow=[data.cycles?.[next.luck],yi<0?null:data.years[yi],data.months?.[next.month]].filter(p=>p&&p.stem&&p.branch);
@@ -897,60 +910,48 @@ function openFullReport(prebuilt,opts={}){
  rptBody?.addEventListener('scroll',rptOnScroll,{passive:true});
  rptOnScroll();
  open(d);
+ requestAnimationFrame(()=>centerBfRails(d));
 }
-// v0.48.0 洞见页接深度知识库：把深度报告的章节渲染成可读正文，
-// 前 3 章直接展开、其余章节放 <details open> 可收起——内容全在，首屏也不至于被万字长文淹没。
-function deepDigestHtml(report){
- if(!report?.sections?.length)return '';
- const sec=s=>`<section class="insight-deep-sec"><h3>${esc(s.title)}</h3>${
-  (s.lines||[]).map(l=>`<p>${esc(l)}</p>`).join('')
- }${s.table?`<div class="rpt-table-wrap">${s.table}</div>`:''}${s.html||''}</section>`;
- const head=report.sections.slice(0,3).map(sec).join('');
- const rest=report.sections.slice(3);
- return `<div class="insight-deep-digest">
-  <p class="thin">以下为深度知识库逐章详批（${report.sections.length} 章 · 盘面证据驱动），完整排版与术语白话见「打开完整报告」。</p>
-  ${head}
-  ${rest.length?`<details class="insight-deep-more" open><summary>展开其余 ${rest.length} 章详批</summary>${rest.map(sec).join('')}</details>`:''}
- </div>`;
-}
-// FINAL_INSIGHT_REPORT_BUNDLE_CHECK: the report dictionaries are imported by this entry and bundled into js/console.js.
+// v0.51.0 洞见页重做：四体系收进同一骨架（主轴摘要 → 六维结构 → 深度详批 → 终身周期）。
+// 内容生成全部搬到 insight.js：那里按盘面字段推导，不再「紫微万字、八字四句」。
 function insights(){
  const r=state.reading;
  if(!r){root.innerHTML='<p class="empty">激活案例后查看专属报告。</p>';return;}
- const current=state.system,names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星'};
+ // 洞见页只讲本命四体系：双人合盘/择日等页面进来时，旧代码会落到 else 分支显示西洋，
+ // 但体系名与分段器都没有选中项（副标题出现空名）。这里先归一，保证「标题-分段器-内容」三者一致。
+ const order=['bazi','ziwei','west','vedic'];
+ const current=order.includes(state.system)?state.system:'west',names=SYSTEM_LABEL;
+ let model=null;
+ try{model=insightModel(current,r,{flow:state.chartState?.ziwei?.flow||null});}
+ catch(error){console.warn('洞见内容生成失败：'+error.message);}
  const nav=['bazi','ziwei','west','vedic'].map(k=>btn(names[k],`data-insight-system="${k}" aria-pressed="${current===k}"`)).join('');
- const b=r.bazi,z=r.ziwei,w=r.western,v=r.vedic;
- let natal='', lifecycle='';
- if(current==='bazi'){
-  natal=`<article class="card liquid-glass"><h2>八字本命专属报告</h2><p><b>日主与承载：</b>${esc(b.dayMaster.stem+b.dayMaster.element)}，${esc(b.strength.kind)}，扶助${b.strength.support.toFixed(1)}%。月令提纲${esc(b.pillars[1].stem+b.pillars[1].branch)}，通根${esc(b.roots.map(x=>x.pillar+x.branch+'藏'+x.stem).join('、')||'未见')}，透干${esc(b.revealed.map(x=>x.stem+'透'+x.visibleAt).join('、')||'未见')}。</p><p><b>结构与取用：</b>${esc(b.strength.method)}；喜用参考${esc(b.strength.useful.join('、')||'未单列')}，忌偏参考${esc(b.strength.caution.join('、')||'未单列')}。这些是盘面权重参考，不用单一百分比替代月令、根气、寒暖燥湿。</p><p><b>实际关系：</b>${esc(b.relationships.map(x=>x.pattern+' '+x.type+'（'+x.meaning+'）').join('；')||'未触发当前规则表内关系')}。应核实具体参与柱位，合冲不自动等于吉凶。</p><p><b>总体运势：</b>宜先选择能长期积累的专长，重大合作把权责和退出条件写清；财务安排以现金流与现实风险为准。此为本命总体观察，不夹带当前流年流月。</p></article>`;
-  lifecycle=`<article class="card liquid-glass"><h2>八字大运生命周期</h2><p>起运：${esc(b.info.startAge||b.entry?.local||'以出生资料计算')}；${esc(b.info.forward?'顺行':'逆行')}。以下为大运顺序，点击排盘页时间轴可查看对应岁运专属报告。</p>${table(['阶段','干支','起止','十神'],b.cycles.map(x=>[x.age+'岁',x.stem+x.branch,x.startYear+'–'+x.endYear,x.tenGod]))}</article>`;
- }else if(current==='ziwei'){
-  const life=z.palaces.find(x=>x.name==='命宫'), stars=life?.majorStars?.length?life.majorStars:life?.borrowedStars||[],triad=life?z.palaces.filter(x=>life.relatedBranches?.includes(x.branch)):[];
-  let zDigest='';try{zDigest=deepDigestHtml(buildZiweiDeepReport(z,state.chartState?.ziwei?.flow||null));}catch{}
-  natal=`<article class="card liquid-glass"><h2>紫微本命专属报告</h2><p><b>命宫主轴：</b>命宫在${esc(life?.earthlyBranch||'待定位')}，${stars.length?'主星为 '+esc(stars.map(x=>x.name).join('、')):'空宫，借对宫主星并参看三方四正'}；${esc(stars.map(x=>x.name+'：'+(x.brightness||'本宫星曜')).join('；')||'星曜待定位')}。</p><p><b>三方四正：</b>${esc(triad.map(x=>x.name+'（'+x.majorStars.map(y=>y.name).join('、')+'）').join('；')||'当前结构未能定位完整三方')}。先看命宫主星如何与事业、资源、迁移互证，不以单星断终身。</p><p><b>本命四化：</b>${esc(z.sihua.map(x=>x.type+'入'+x.palace).join('、')||'待定位')}。化禄看资源入口，化权看责任，化科看名誉与文书，化忌看牵挂与反复；实际作用要看落宫、对宫及会照星。</p><p><b>总体运势：</b>先发挥命宫星曜的组织/思考/执行特质，再以官禄和财帛三方核对适合承担的角色。遇到关系或职业抉择，要比较双方责任与资源，不用一颗化忌替代现实判断。</p>${zDigest}</article>`;
-  lifecycle=`<article class="card liquid-glass"><h2>紫微全生命周期 · 大限</h2><p>每十年以大限宫为阶段主题，点击排盘页“大限/流年/流月/流日”后，下方当前报告会同步替换。</p>${table(['虚岁','年份','大限宫'],z.decades.map(x=>[x.ageRange.join('–')+'岁',x.yearRange.join('–'),x.palaceName]))}</article>`;
- }else if(current==='vedic'){
-  const moon=v.planets.find(x=>x.key==='moon'),sun=v.planets.find(x=>x.key==='sun');
-  // v0.49.0：九曜落宫由「；」串成一整段改为逐星一行，便于按行扫读。
-  const planetLines=v.planets.map(x=>`<li><b>${esc(x.name)}</b><span>${esc(x.sign)} · 第${x.house||'—'}宫 · ${esc(x.nakshatra)} Pada ${x.pada}${x.retro?' · 逆行':''}</span></li>`).join('');
-  let vDigest='';try{vDigest=deepDigestHtml(buildVedicDeepReport(v));}catch{}
-  natal=`<article class="card liquid-glass"><h2>印度占星本命专属报告</h2><p>Lahiri 恒星黄道、整宫制。上升 ${esc(v.lagna)}；太阳 ${esc(sun?.sign||'—')} 第${sun?.house||'—'}宫；月亮 ${esc(moon?.sign||'—')} 第${moon?.house||'—'}宫，${esc(moon?.nakshatra||'—')} Pada ${moon?.pada||'—'}。</p><h3>九曜落宫与星宿</h3><ul class="insight-planet-list">${planetLines}</ul><h3>本命判读</h3><p>先以 D1 判断上升、月亮、太阳及宫主星，再以星宿主与相位确认主题；D9 用于关系成熟度，D10 用于事业表达，不能脱离 D1 单独断事。</p>${vDigest}</article>`;
-  lifecycle=`<article class="card liquid-glass"><h2>印度 Vimshottari 全生命周期</h2>${table(['主运','起始','结束','状态'],v.dashas.map(x=>[x.lord,x.start.slice(0,10),x.end.slice(0,10),x.current?'当前':'—']))}<p>点击印度排盘页四级 Dasha 行，可查看 Maha、Antar、Pratyantar、Sookshma 的当前专属分析。</p></article>`;
- }else{
-  const sun=w.planets.find(x=>x.key==='sun'),moon=w.planets.find(x=>x.key==='moon');
-  const sunAspects=w.aspects.filter(a=>a.aKey==='sun'||a.bKey==='sun').slice(0,4).map(a=>a.a+' '+a.type+' '+a.b+'（'+a.orb.toFixed(1)+'°）').join('、');
-  let wDigest='';try{wDigest=deepDigestHtml(buildWesternDeepReport(w,undefined,state.reading?.analysis||w.analysis));}catch{}
-  natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p>${wDigest}</article>`;
-  lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
- }
- root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 本命全局</p><h1>洞见</h1><p class="muted thin">命主 ${esc(state.profile.name)} · ${esc(names[current])} · 本命终身结构（不含流年流月）</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>大运全序列 · 终身周期</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><button type="button" class="period-cta" data-goto-period><span class="period-cta-ico">◷</span><span><b>要看某一年/某个月？转到时点</b><small>选一个时点，出该时刻的盘 + 该时刻的详批（与本页不重复）→</small></span><span class="period-cta-arrow">›</span></button></section>`;
+ const body=model?summaryHtml(model)+dimsHtml(model):'<p class="empty">当前体系的盘面数据尚未就绪，重新生成命盘后再看。</p>';
+ root.innerHTML=`<section class="insight-page">
+  <header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 本命全局</p><h1>洞见</h1><p class="muted thin">命主 ${esc(state.profile.name)} · ${esc(names[current])} · 本命终身结构 · 不含流年流月</p></div></header>
+  <div class="insight-system-tabs">${nav}</div>
+  <div data-natal-background>${body}</div>
+  ${model?digestBlockHtml(model):''}
+  ${lifecycleBlockHtml(current,r)}
+  <section class="insight-bridges" data-resonance-host></section>
+  <section class="is-tools" aria-label="报告操作">
+   <button type="button" class="is-tool is-tool-main" data-open-report>
+    <span class="is-tool-ico" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 3.2h6.1l3.3 3.3v10.1a1 1 0 0 1-1 1H5.4a1 1 0 0 1-1-1V4.2a1 1 0 0 1 1-1z"/><path d="M11.4 3.2v3.5h3.4M7 10.3h6M7 13.1h4.2"/></svg></span>
+    <span class="is-tool-body"><b>生成深度报告</b><small>完整章次 · 盘面证据逐条推导 · 可导出文档</small></span>
+    <span class="is-tool-arrow" aria-hidden="true">›</span>
+   </button>
+   <button type="button" class="is-tool is-tool-alt" data-share-current>
+    <span class="is-tool-ico" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2v8.4M6.6 8.4 10 11.8l3.4-3.4"/><path d="M4.2 15.6h11.6"/></svg></span>
+    <span class="is-tool-body"><b>导出当前长图</b><small>保存到相册或系统分享</small></span>
+   </button>
+  </section>
+  <button type="button" class="period-cta" data-goto-period><span class="period-cta-ico">◷</span><span><b>要看某一年 / 某个月？转到时点</b><small>选一个时点，出该时刻的盘 + 该时刻的详批（与本页不重复）→</small></span><span class="period-cta-arrow">›</span></button>
+ </section>`;
  for(const x of root.querySelectorAll('[data-insight-system]'))x.onclick=()=>{state.system=x.dataset.insightSystem;render();};
  const or=root.querySelector('[data-open-report]');if(or)or.onclick=()=>openFullReport();
  const ex=root.querySelector('[data-share-current]');if(ex)ex.onclick=async()=>{ex.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前报告已生成，可在系统分享面板保存。');}catch(e){tell('导出失败：'+e.message);}finally{ex.disabled=false;}};
  const gp=root.querySelector('[data-goto-period]');if(gp)gp.onclick=()=>switchTab('period');
  forceRefreshAllInsights();
 }
-
 /* ---------------- 洞见页：时点专项报告工作台 ---------------- */
 // 根据体系从当前缓存数据准备时点选项：选「时点类型」→选具体时点→生成该时点的详细报告+命盘快照。
 function periodOptions(system,scope){
@@ -1196,7 +1197,6 @@ function configPanel(){
    configRow('share','分享当前长图',state.tab==='chart'?'导出图片':'仅排盘页')
   ]),
   cfgSection('系统',[
-   configRow('palette','五行配色',state.settings.palette==='pink'?'品牌粉':'传统五行色'),
    configRow('feedback','交互音效与震动',feedbackEnabled()?'开':'关'),
    configRow('diagnostics','运行诊断与日志',''),
    configRow('about','关于与版本',''),
@@ -1214,7 +1214,6 @@ function configPanel(){
    if(id==='solar'){const next=!state.settings.useSolarTime;state.settings={...state.settings,useSolarTime:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,useSolarTime:next}},false);configPanel();return;}
    if(id==='house'){const ids=Object.keys(houseLabels),next=ids[(ids.indexOf(astroHouse())+1)%ids.length];setAstroHouse(ctx,next);close(d);configPanel();return;}
    if(id==='late'){const next=(state.settings.lateZishi||'next-day')==='next-day'?'current-day':'next-day';state.settings={...state.settings,lateZishi:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,lateZishi:next}},false);configPanel();return;}
-   if(id==='palette'){const next=state.settings.palette==='pink'?'traditional':'pink';state.settings={...state.settings,palette:next};save(SETTINGS,state.settings);applyPalette();configPanel();tell('五行配色已切换为「'+(next==='pink'?'品牌粉':'传统五行色')+'」，盘面与运势曲线已联动。');return;}
    if(id==='feedback'){setFeedback(!feedbackEnabled());configPanel();return;}
    if(id==='report'){close(d);openFullReport();return;}
    if(id==='tools'||id==='share'){close(d);toolPanel();return;}

@@ -93,15 +93,16 @@ test('专业细盘：神煞扩充、查法披露、扶抑口径与仇神闲神�
  assert.doesNotMatch(text,/undefined|NaN/);
 });
 
-test('盘面语义：传统五行色为默认、品牌粉可切、口径条与深色层已挂载',async()=>{
+test('盘面语义：五行色固定传统口径、无伪切换项，口径条与深色层已挂载',async()=>{
  const css=await read('../assets/console/design.css');
  assert.match(css,/--wood:#2f7d46;--fire:#c53a2f;--earth:#a87614;--metal:#7a8391;--water:#2b5fa8/);
- assert.match(css,/html\[data-palette=pink\]\{--wood:#a44a86/);
+ // v0.51.0：旧「品牌粉」开关只改 7 个 CSS 变量且大多被更具体规则覆盖，切了几乎无变化，已彻底移除
+ assert.doesNotMatch(css,/data-palette/, '不得再有五行配色切换的样式分支');
  assert.match(css,/\.time-basis-note\{/);
  assert.match(css,/@media \(prefers-color-scheme:dark\)/);
  assert.doesNotMatch(css,/NaNpx/,'字号替换不得产生非法字号');
  const app=await read('../assets/console/app.js');
- assert.match(app,/dataset\.palette=state\.settings\.palette==='pink'\?'pink':'traditional'/);
+ assert.doesNotMatch(app,/palette/,'不得再有 palette 开关（配置面板与运行时代码都要清干净）');
  assert.match(app,/真太阳时未启用|new Date\(\)/);
  const bazi=await read('../assets/console/bazi.js');
  assert.match(bazi,/function timeBasis\(/);

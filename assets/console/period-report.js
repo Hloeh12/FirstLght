@@ -66,8 +66,12 @@ export function baziMoment(data,sel={}){
  return {
   // 落点卡主行：年·干支 + 月·干支，一眼确认是哪一年哪一月
   title:[y?`${y.year} ${gz(y)}年`:'',m?`${m.label||''} ${gz(m)}月`:''].filter(Boolean).join(' · '),
-  // 次行：第几步大运/起止年 + 该月节气区间
-  sub:[
+  // 次行：第几步大运 + 起止年（不再把节气区间挤在同一行，避免折成两截）
+  sub:li!=null?`第${li+1}步 ${gz(c)}大运${range?' · '+range:''}`:'本命原局（未叠流运）',
+  // 第三行：该月节气区间，单独成 chip
+  span:m?.date?`节气 ${m.date.slice(5,10)}${nextStart?' → '+nextStart:''}`:'',
+  // 兼容旧调用：合并成一行纯文本
+  subLine:[
    li!=null?`第${li+1}步 ${gz(c)}大运${range?' '+range:''}`:'本命原局（未叠流运）',
    m?.date?`${m.date.slice(5,10)}${nextStart?'→'+nextStart:''}`:''
   ].filter(Boolean).join(' · '),
@@ -128,15 +132,22 @@ function baziSnapshot(data,selection={},scope='luck'){
  globalThis.__FL_BAZI_FLOW__={[uid]:{uid,scope,sel,data}};
  return `<div class="snap-bazi" data-bazi-flow="${uid}" data-bf-scope="${esc(scope)}">
   <div class="bf-clock card liquid-glass">
-   <div class="bf-clock-text">
+   <div class="bf-clock-top">
     <span class="bf-clock-kicker">当前时点</span>
-    <b data-bf-moment>${esc(moment.title||'本命原局')}</b>
-    <small data-bf-moment-sub>${esc(moment.sub)}</small>
+    <button type="button" class="bf-now" data-bf-now>↺ 回到当下</button>
    </div>
-   <button type="button" class="bf-now" data-bf-now>↺ 回到当下</button>
+   <b class="bf-clock-title" data-bf-moment>${esc(moment.title||'本命原局')}</b>
+   <div class="bf-clock-meta">
+    <span data-bf-moment-sub>${esc(moment.sub)}</span>
+    ${moment.span?`<span class="bf-clock-span">${esc(moment.span)}</span>`:''}
+   </div>
   </div>
   <div class="bf-picks" role="group" aria-label="切换八字时点">
-   <label class="bf-luck"><span class="bf-luck-head">大运<span class="bf-stepper" role="group" aria-label="逐运浏览"><button type="button" data-bf-step="-1" aria-label="上一步大运">‹</button><button type="button" data-bf-step="1" aria-label="下一步大运">›</button></span></span><select data-bf="luck" aria-label="切换大运">${cOpts}</select></label>
+   <div class="bf-luck-row">
+    <button type="button" class="bf-step" data-bf-step="-1" aria-label="上一步大运">‹</button>
+    <label class="bf-luck"><span class="bf-luck-label">大运</span><select data-bf="luck" aria-label="切换大运">${cOpts}</select></label>
+    <button type="button" class="bf-step" data-bf-step="1" aria-label="下一步大运">›</button>
+   </div>
    <label class="bf-year-pick">流年<select data-bf="year" aria-label="切换流年">${yOpts}</select></label>
    <label class="bf-month-pick">流月<select data-bf="month" aria-label="切换流月">${mOpts}</select></label>
   </div>

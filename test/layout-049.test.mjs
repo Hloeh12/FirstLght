@@ -57,8 +57,9 @@ test('v0.49.0 排版6-8：案例页底行归位、印度筛选两级、横滑渐
 
 test('v0.49.0 排版9-10：行星逐行、卡片等高、焦点圈淡化',async()=>{
  const app=await read('../assets/console/app.js');
+ const insight=await read('../assets/console/insight.js');
  const css=await read('../assets/console/liquid.css');
- assert.match(app,/class="insight-planet-list"/,'九曜须逐星一行');
+ assert.match(insight,/class="insight-planet-list"/,'九曜须逐星一行');
  assert.match(css,/\.insight-planet-list li\{[\s\S]{0,160}display:flex/,'行星行须左名右位');
  assert.match(css,/\.period-sys-grid\{grid-auto-rows:1fr!important/,'体系卡片须强制等高');
  assert.match(css,/button:focus-visible,a:focus-visible\{[\s\S]{0,90}outline-color:rgba\(255,79,139,\.30\)!important/,'焦点圈须淡化');

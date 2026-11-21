@@ -372,7 +372,7 @@ input,select,textarea{font-size:16px!important}
 .rpt-nav-fab-ico{font-size:14px;line-height:1}
 .rpt-nav-fab [data-rpt-fab-label]{flex:0 1 auto;min-width:0;max-width:clamp(88px,34vw,148px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rpt-nav-pct{font-variant-numeric:tabular-nums;font-size:11px;padding-left:6px;border-left:1px solid rgba(255,255,255,.5)}
-.rpt-nav-scrim{position:absolute;inset:0;z-index:20;background:rgba(38,18,31,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+.rpt-nav-scrim{position:absolute;inset:0;z-index:20;background:rgba(18,11,17,.62);backdrop-filter:blur(3px) saturate(80%);-webkit-backdrop-filter:blur(3px) saturate(80%);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
 .rpt-nav-drawer{position:absolute;top:0;right:0;bottom:0;z-index:21;width:min(84%,320px);display:flex;flex-direction:column;min-height:0;transform:translateX(105%);transition:transform .26s cubic-bezier(.22,.82,.24,1);background:rgba(255,252,253,.96)!important;border-left:1px solid rgba(255,182,206,.5);border-radius:18px 0 0 18px;box-shadow:-14px 0 40px -22px rgba(112,40,76,.75);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);padding:calc(10px + env(safe-area-inset-top,0px)) 0 calc(10px + env(safe-area-inset-bottom,0px));visibility:hidden}
 .report-content.rpt-nav-open .rpt-nav-scrim{opacity:1;visibility:visible}
 .report-content.rpt-nav-open .rpt-nav-drawer{transform:translateX(0);visibility:visible}
@@ -672,3 +672,11 @@ input,select,textarea{font-size:16px!important}
 .cmp-col h3{margin:0 0 8px;font-size:14px}
 .cmp-col p{margin:0 0 6px;font-size:12px;line-height:1.6}
 @media(max-width:360px){.cmp-grid{grid-template-columns:1fr}}
+
+/* v0.47.1 目录浮层去白框：末尾强规则覆盖 :507/:586 的旧 !important 浅色蒙层。
+   旧值 rgba(38,18,31,.28)+blur(5px) 叠在浅色报告页上被糊成灰白大片；改深色遮罩、减模糊让背景沉下去。 */
+.rpt-nav-scrim{
+ background:rgba(16,10,16,.68)!important;
+ backdrop-filter:blur(2px) saturate(75%)!important;
+ -webkit-backdrop-filter:blur(2px) saturate(75%)!important;
+}

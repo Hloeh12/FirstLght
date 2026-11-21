@@ -667,6 +667,9 @@ input,select,textarea{font-size:16px!important}
 .lib-item header small{color:var(--muted);font-size:10px;white-space:nowrap}
 .lib-item p{margin:8px 0;line-height:1.7}
 .lib-item .spread{margin-top:6px}
+.lib-item .spread button{cursor:pointer}
+button.danger{border-color:#e7b7c6;color:#b5375b;background:#fff5f8}
+button.danger:hover{background:#ffe8f0}
 .cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
 .cmp-col{min-width:0}
 .cmp-col h3{margin:0 0 8px;font-size:14px}
@@ -727,3 +730,43 @@ dialog#reportSheet.report-sheet .rpt-topbar{
 }
 /* 序号「01」不得被拆成「0 / 1」两行 */
 .rpt-nav-list .rpt-toc-item .rpt-toc-no{white-space:nowrap!important;flex:0 0 auto!important;min-width:24px!important}
+
+/* ===== v0.48.0 洞见页深度摘要：深度知识库逐章详批的可读排版 ===== */
+.insight-deep-digest{margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,120,170,.35)}
+.insight-deep-digest>.thin{margin:0 0 10px}
+.insight-deep-sec{margin:0 0 14px}
+.insight-deep-sec h3{margin:0 0 7px;font-size:14px!important;font-weight:700!important;color:#8a2a57!important;line-height:1.45}
+.insight-deep-sec p{margin:0 0 8px;line-height:1.78;font-size:13px;overflow-wrap:anywhere}
+.insight-deep-more{margin-top:8px}
+.insight-deep-more>summary{cursor:pointer;padding:8px 10px;border-radius:12px;background:rgba(255,120,170,.10);border:1px solid rgba(255,120,170,.28);font-weight:600;font-size:13px;color:#8a2a57}
+.insight-deep-more[open]>summary{margin-bottom:10px}
+
+/* ===== v0.48.0 时点胶囊行：横滑溢出提示（渐隐 + 箭头），只滚自身不跳页 ===== */
+.time-row{position:relative}
+.time-row .rail[data-scrollable][data-scroll-end="0"]{
+ -webkit-mask-image:linear-gradient(90deg,#000 86%,transparent 100%);
+ mask-image:linear-gradient(90deg,#000 86%,transparent 100%);
+}
+.time-row:has(.rail[data-scrollable][data-scroll-end="0"])::after{
+ content:'›';position:absolute;right:1px;top:50%;transform:translateY(-50%);
+ font-size:17px;line-height:1;color:#c2477a;pointer-events:none;padding:0 3px;
+ text-shadow:0 0 6px #fff,0 0 3px #fff;
+}
+
+/* ===== v0.48.0 底部导航精修：模块入口融入体系胶囊行，不再孤立菱形 ===== */
+.rail-grid{
+ width:auto!important;height:34px!important;padding:0 13px!important;border-radius:17px!important;
+ font-size:12.5px!important;font-weight:600!important;letter-spacing:.06em!important;
+}
+.rail-grid-label{line-height:1;white-space:nowrap}
+.dock-rail{bottom:calc(env(safe-area-inset-bottom,16px) + 8px + 56px + 5px)!important;gap:6px!important}
+.dock-rail::before{top:-12px!important;bottom:-6px!important}
+.bottom-spacer{height:170px!important;min-height:170px!important}
+
+/* ===== v0.48.0 文字挤压/留白精修：神煞格不重叠、时间口径与顶部按钮不贴边 ===== */
+.bazi-grid .bg-shensha{gap:3px 3px!important;padding:6px 2px!important;line-height:1.5!important}
+.bazi-grid .bg-shensha .term{font-size:10px!important;line-height:1.5!important;padding:2px 4px!important}
+.time-basis-note{margin:8px 0 10px!important}
+.chart-basis-row{padding-top:6px!important;padding-bottom:6px!important}
+#screen .bazi-board{margin-top:6px!important;margin-bottom:6px!important}
+#screen section[aria-label="四柱八字"]>.spread{padding-top:2px!important;padding-bottom:4px!important}

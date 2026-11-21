@@ -1,4 +1,7 @@
 import {buildBaziKnowledgeReport,buildZiweiKnowledgeReport} from '../../www/js/rules.js';
+import {buildWesternDeepReport} from '../../www/js/deep-west.js';
+import {buildVedicDeepReport} from '../../www/js/deep-vedic.js';
+import {buildZiweiDeepReport} from '../../www/js/deep-ziwei.js';
 import {composeFullReport,reportHtml} from './full-report.js';
 import {periodSections} from './ui.js';
 import {installCivilPickers} from './civil-picker.js';
@@ -25,7 +28,7 @@ import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES} from './period-report.js
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup,recomputeFit} from './case-space.js';
-import {getFavorites,getHistory,toggleFavorite,isFavorite,recordHistory,favoritesHtml,historyHtml,compareHtml} from './library.js';
+import {getFavorites,getHistory,getHistoryEntry,deleteHistory,toggleFavorite,isFavorite,recordHistory,favoritesHtml,historyHtml,compareHtml} from './library.js';
 
 installDiagnostics();
 try{migrateStorage(localStorage);}catch(error){console.error(error.message);}
@@ -684,15 +687,16 @@ function forceRefreshAllInsights(){
 }
 // 生成成篇深度报告：复活四层知识库，做成可生成/可导出/可复制的产品功能。
 // 可传入预生成的 report（时点专项报告工作台用），否则按当前本命盘生成。
-function openFullReport(prebuilt){
+function openFullReport(prebuilt,opts={}){
  const synReady=state.system==='synastry'&&state.chartState.synastry?.result;
  if(!prebuilt&&!state.reading&&!synReady){tell('请先排盘，再生成报告。');return;}
  const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'};
  const d=document.getElementById('reportSheet');
  const report=prebuilt||composeFullReport(state,names);
- // 报告历史：记录元数据（不存正文），供「我」页回看生成轨迹。
- try{recordHistory({caseId:state.profile?.id,name:state.profile?.name,system:report.cover?.system,
-  title:report.title,sections:report.sections?.length,characters:report.characters});}catch{}
+ // 报告历史：元数据 + 整份纯数据快照，供「我」页点开原样复盘（v0.48.0）。
+ // opts.replay=从历史打开旧报告：原样重绘，但不再写一条新历史（否则每看一次多一条）。
+ if(!opts.replay){try{recordHistory({caseId:state.profile?.id,name:state.profile?.name,system:report.cover?.system,
+  title:report.title,sections:report.sections?.length,characters:report.characters,snapshot:report});}catch{}}
  d.innerHTML=`<div class="dialog-content report-content">
   <div class="rpt-topbar"><button type="button" class="icon" data-rpt-close aria-label="关闭报告">×</button>
    <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
@@ -821,6 +825,21 @@ function openFullReport(prebuilt){
  rptOnScroll();
  open(d);
 }
+// v0.48.0 洞见页接深度知识库：把深度报告的章节渲染成可读正文，
+// 前 3 章直接展开、其余章节放 <details open> 可收起——内容全在，首屏也不至于被万字长文淹没。
+function deepDigestHtml(report){
+ if(!report?.sections?.length)return '';
+ const sec=s=>`<section class="insight-deep-sec"><h3>${esc(s.title)}</h3>${
+  (s.lines||[]).map(l=>`<p>${esc(l)}</p>`).join('')
+ }${s.table?`<div class="rpt-table-wrap">${s.table}</div>`:''}${s.html||''}</section>`;
+ const head=report.sections.slice(0,3).map(sec).join('');
+ const rest=report.sections.slice(3);
+ return `<div class="insight-deep-digest">
+  <p class="thin">以下为深度知识库逐章详批（${report.sections.length} 章 · 盘面证据驱动），完整排版与术语白话见「打开完整报告」。</p>
+  ${head}
+  ${rest.length?`<details class="insight-deep-more" open><summary>展开其余 ${rest.length} 章详批</summary>${rest.map(sec).join('')}</details>`:''}
+ </div>`;
+}
 // FINAL_INSIGHT_REPORT_BUNDLE_CHECK: the report dictionaries are imported by this entry and bundled into js/console.js.
 function insights(){
  const r=state.reading;
@@ -834,17 +853,20 @@ function insights(){
   lifecycle=`<article class="card liquid-glass"><h2>八字大运生命周期</h2><p>起运：${esc(b.info.startAge||b.entry?.local||'以出生资料计算')}；${esc(b.info.forward?'顺行':'逆行')}。以下为大运顺序，点击排盘页时间轴可查看对应岁运专属报告。</p>${table(['阶段','干支','起止','十神'],b.cycles.map(x=>[x.age+'岁',x.stem+x.branch,x.startYear+'–'+x.endYear,x.tenGod]))}</article>`;
  }else if(current==='ziwei'){
   const life=z.palaces.find(x=>x.name==='命宫'), stars=life?.majorStars?.length?life.majorStars:life?.borrowedStars||[],triad=life?z.palaces.filter(x=>life.relatedBranches?.includes(x.branch)):[];
-  natal=`<article class="card liquid-glass"><h2>紫微本命专属报告</h2><p><b>命宫主轴：</b>命宫在${esc(life?.earthlyBranch||'待定位')}，${stars.length?'主星为 '+esc(stars.map(x=>x.name).join('、')):'空宫，借对宫主星并参看三方四正'}；${esc(stars.map(x=>x.name+'：'+(x.brightness||'本宫星曜')).join('；')||'星曜待定位')}。</p><p><b>三方四正：</b>${esc(triad.map(x=>x.name+'（'+x.majorStars.map(y=>y.name).join('、')+'）').join('；')||'当前结构未能定位完整三方')}。先看命宫主星如何与事业、资源、迁移互证，不以单星断终身。</p><p><b>本命四化：</b>${esc(z.sihua.map(x=>x.type+'入'+x.palace).join('、')||'待定位')}。化禄看资源入口，化权看责任，化科看名誉与文书，化忌看牵挂与反复；实际作用要看落宫、对宫及会照星。</p><p><b>总体运势：</b>先发挥命宫星曜的组织/思考/执行特质，再以官禄和财帛三方核对适合承担的角色。遇到关系或职业抉择，要比较双方责任与资源，不用一颗化忌替代现实判断。</p></article>`;
+  let zDigest='';try{zDigest=deepDigestHtml(buildZiweiDeepReport(z,state.chartState?.ziwei?.flow||null));}catch{}
+  natal=`<article class="card liquid-glass"><h2>紫微本命专属报告</h2><p><b>命宫主轴：</b>命宫在${esc(life?.earthlyBranch||'待定位')}，${stars.length?'主星为 '+esc(stars.map(x=>x.name).join('、')):'空宫，借对宫主星并参看三方四正'}；${esc(stars.map(x=>x.name+'：'+(x.brightness||'本宫星曜')).join('；')||'星曜待定位')}。</p><p><b>三方四正：</b>${esc(triad.map(x=>x.name+'（'+x.majorStars.map(y=>y.name).join('、')+'）').join('；')||'当前结构未能定位完整三方')}。先看命宫主星如何与事业、资源、迁移互证，不以单星断终身。</p><p><b>本命四化：</b>${esc(z.sihua.map(x=>x.type+'入'+x.palace).join('、')||'待定位')}。化禄看资源入口，化权看责任，化科看名誉与文书，化忌看牵挂与反复；实际作用要看落宫、对宫及会照星。</p><p><b>总体运势：</b>先发挥命宫星曜的组织/思考/执行特质，再以官禄和财帛三方核对适合承担的角色。遇到关系或职业抉择，要比较双方责任与资源，不用一颗化忌替代现实判断。</p>${zDigest}</article>`;
   lifecycle=`<article class="card liquid-glass"><h2>紫微全生命周期 · 大限</h2><p>每十年以大限宫为阶段主题，点击排盘页“大限/流年/流月/流日”后，下方当前报告会同步替换。</p>${table(['虚岁','年份','大限宫'],z.decades.map(x=>[x.ageRange.join('–')+'岁',x.yearRange.join('–'),x.palaceName]))}</article>`;
  }else if(current==='vedic'){
   const moon=v.planets.find(x=>x.key==='moon'),sun=v.planets.find(x=>x.key==='sun');
   const planetLines=v.planets.map(x=>x.name+'：'+x.sign+'，第'+x.house+'宫，'+x.nakshatra+' Pada '+x.pada+(x.retro?'，逆行':'')).join('；');
-  natal=`<article class="card liquid-glass"><h2>印度占星本命专属报告</h2><p>Lahiri 恒星黄道、整宫制。上升 ${esc(v.lagna)}；太阳 ${esc(sun?.sign||'—')} 第${sun?.house||'—'}宫；月亮 ${esc(moon?.sign||'—')} 第${moon?.house||'—'}宫，${esc(moon?.nakshatra||'—')} Pada ${moon?.pada||'—'}。</p><h3>九曜落宫与星宿</h3><p>${esc(planetLines)}</p><h3>本命判读</h3><p>先以 D1 判断上升、月亮、太阳及宫主星，再以星宿主与相位确认主题；D9 用于关系成熟度，D10 用于事业表达，不能脱离 D1 单独断事。</p></article>`;
+  let vDigest='';try{vDigest=deepDigestHtml(buildVedicDeepReport(v));}catch{}
+  natal=`<article class="card liquid-glass"><h2>印度占星本命专属报告</h2><p>Lahiri 恒星黄道、整宫制。上升 ${esc(v.lagna)}；太阳 ${esc(sun?.sign||'—')} 第${sun?.house||'—'}宫；月亮 ${esc(moon?.sign||'—')} 第${moon?.house||'—'}宫，${esc(moon?.nakshatra||'—')} Pada ${moon?.pada||'—'}。</p><h3>九曜落宫与星宿</h3><p>${esc(planetLines)}</p><h3>本命判读</h3><p>先以 D1 判断上升、月亮、太阳及宫主星，再以星宿主与相位确认主题；D9 用于关系成熟度，D10 用于事业表达，不能脱离 D1 单独断事。</p>${vDigest}</article>`;
   lifecycle=`<article class="card liquid-glass"><h2>印度 Vimshottari 全生命周期</h2>${table(['主运','起始','结束','状态'],v.dashas.map(x=>[x.lord,x.start.slice(0,10),x.end.slice(0,10),x.current?'当前':'—']))}<p>点击印度排盘页四级 Dasha 行，可查看 Maha、Antar、Pratyantar、Sookshma 的当前专属分析。</p></article>`;
  }else{
   const sun=w.planets.find(x=>x.key==='sun'),moon=w.planets.find(x=>x.key==='moon');
   const sunAspects=w.aspects.filter(a=>a.aKey==='sun'||a.bKey==='sun').slice(0,4).map(a=>a.a+' '+a.type+' '+a.b+'（'+a.orb.toFixed(1)+'°）').join('、');
-  natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p></article>`;
+  let wDigest='';try{wDigest=deepDigestHtml(buildWesternDeepReport(w,undefined,state.reading?.analysis||w.analysis));}catch{}
+  natal=`<article class="card liquid-glass"><h2>西洋占星本命专属报告</h2><p><b>核心三要素：</b>太阳${esc(sun?.sign||'—')}第${sun?.house||'—'}宫，月亮${esc(moon?.sign||'—')}第${moon?.house||'—'}宫，上升${esc(w.asc.sign)}，天顶${esc(w.mc.sign)}。</p><p><b>表达与需求：</b>太阳位置描述持续投入的领域，月亮位置描述安全感与情绪习惯，上升描述进入环境的方式；三者不一致时代表内在需求与外在策略需要协调，不是互相抵消。</p><p><b>相位证据：</b>${esc(sunAspects||'当前没有可显示的太阳主相位')}。相位须结合行星、容许度和落宫理解，不把单一相位当作事件。</p><p><b>总体建议：</b>把太阳落宫的长期投入转成可检查的目标，同时给月亮需求安排稳定恢复时间；职业选择另核对天顶与六宫日常工作方式。本命总体不夹带当前行运。</p>${wDigest}</article>`;
   lifecycle=`<article class="card liquid-glass"><h2>西洋推运生命周期</h2><p>次限一日推一年，行运按当前日期，日返/ 月返按回归时刻；选择排盘页对应推运后，只在下方替换当前专属段落。</p></article>`;
  }
  root.innerHTML=`<section class="insight-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 总体运势</p><h1>洞见</h1><p class="muted thin">${esc(state.profile.name)} · ${esc(names[current])}</p></div><div class="page-head-actions">${btn('深度报告','class="ghost-pill" data-open-report aria-label="生成完整深度报告"')}${btn('导出','class="ghost-pill" data-share-current aria-label="导出总体报告长图"')}</div></header><div class="insight-system-tabs">${nav}</div><details class="card liquid-glass" data-natal-background open><summary>本命总体分析 · ${esc(names[current])}</summary><div data-natal-report>${natal}</div></details><details class="card liquid-glass" open><summary>全生命周期总览 · ${esc(names[current])}</summary><div data-lifecycle-report>${lifecycle}</div></details><section class="insight-bridges" data-resonance-host></section><button type="button" class="period-cta" data-goto-period><span class="period-cta-ico">◷</span><span><b>时点专项报告</b><small>流年 / 流月 / 流日 逐点出盘 + 专属详批 →</small></span><span class="period-cta-arrow">›</span></button></section>`;
@@ -990,7 +1012,25 @@ function preferences(){
    try{await navigator.clipboard.writeText(item.title+'\n'+item.text);tell('已复制章节文本');}catch{tell('复制失败');}
   };
  };
- $('[data-lib-hist]',root).onclick=()=>sheet('toolSheet','报告历史',historyHtml());
+ $('[data-lib-hist]',root).onclick=()=>{
+  const redraw=()=>{
+   const d=sheet('toolSheet','报告历史',historyHtml());
+   // 打开历史报告：用快照原样重绘报告弹层，并标记 replay 避免重复写历史。
+   for(const b of d.querySelectorAll('[data-hist-open]'))b.onclick=()=>{
+    const entry=getHistoryEntry(b.dataset.histOpen);
+    if(!entry?.snapshot){tell('这条旧记录没有正文快照，请重新排盘生成。');return;}
+    close(d);
+    openFullReport(entry.snapshot,{replay:true});
+   };
+   // 删除：二次点击确认（不依赖 window.confirm——WKWebView 未实现回调时会恒为 false 导致删不掉）。
+   for(const b of d.querySelectorAll('[data-hist-del]'))b.onclick=()=>{
+    if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='再点一次确认';setTimeout(()=>{if(b.dataset.confirm==='1'){b.dataset.confirm='0';b.textContent='删除';}},5000);return;}
+    deleteHistory(b.dataset.histDel);
+    tell('已删除该记录');redraw();
+   };
+  };
+  redraw();
+ };
  $('[data-lib-compare]',root).onclick=()=>{
   if(state.cases.length<2){tell('至少需要两个案例才能对比');return;}
   const opts=state.cases.map(c=>`<option value="${esc(c.id)}">${esc(c.name||'未命名')}</option>`).join('');
@@ -1076,8 +1116,8 @@ function configPanel(){
   ]),
   cfgSection(labels[state.system]||'当前排盘',chartRows),
   cfgSection('报告与导出',[
-   configRow('report','生成深度报告',state.reading?'生成':'需先排盘'),
-   configRow('share','分享当前长图',state.tab==='chart'?'生成':'仅排盘页')
+   configRow('report','生成深度报告',state.reading?'全文详批 · 可导出':'需先排盘'),
+   configRow('share','分享当前长图',state.tab==='chart'?'导出图片':'仅排盘页')
   ]),
   cfgSection('系统',[
    configRow('palette','五行配色',state.settings.palette==='pink'?'品牌粉':'传统五行色'),

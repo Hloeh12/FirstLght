@@ -29,13 +29,17 @@ function timeBasis(info){
 function pillarHead(p,index,chart){
  return `<div class="bg-head" data-pillar="${index}" role="button" tabindex="0" aria-pressed="false" aria-label="${esc(p.name)}柱，点击可与其他柱对比合冲"><b class="bg-name">${p.unknown?esc(p.name):term(p.name,`${chart} 这一柱是${p.stem}${p.branch}：天干${p.stem}为${p.tenGod}，地支${p.branch}藏${p.hidden.map(h=>h.stem).join('、')}。`)}</b><span class="bg-god" data-e="${p.stemElement}">${term(p.tenGod,`${chart} 你在${p.name}天干见${p.tenGod}。`)}</span></div>`;
 }
-function pickLine(p){
- const p2=p||{};const parts=[];
- if(p2.luck!=null)parts.push('第'+(Number(p2.luck)+1)+'步大运');
- if(p2.year!=null)parts.push(p2.year+'年');
- if(p2.month!=null)parts.push('第'+(Number(p2.month)+1)+'个月');
- if(p2.day!=null)parts.push('第'+(Number(p2.day)+1)+'天');
- if(p2.hour!=null)parts.push('第'+(Number(p2.hour)+1)+'个时辰');
+function pickLine(p,d){
+ // v0.48.0：光说「第4步大运」看不懂——把索引映射回干支与起止年份，
+ // 让「第几步」和下方时间轴胶囊上的 label 一一对得上。
+ const p2=p||{},D=d||{},parts=[];
+ const cycle=D.cycles?.[p2.luck],year=D.years?.find(y=>y.year===p2.year),
+  month=D.months?.[p2.month],day=D.days?.[p2.day],hour=D.hours?.[p2.hour];
+ if(p2.luck!=null)parts.push('第'+(Number(p2.luck)+1)+'步大运'+(cycle?` ${cycle.stem||''}${cycle.branch||''}（${cycle.startYear??'?'}${cycle.endYear?'–'+cycle.endYear:''}）`:''));
+ if(p2.year!=null)parts.push(p2.year+'年'+(year?` ${year.stem||''}${year.branch||''}`:''));
+ if(p2.month!=null)parts.push('第'+(Number(p2.month)+1)+'个月'+(month?` ${month.stem||''}${month.branch||''}`:''));
+ if(p2.day!=null)parts.push('第'+(Number(p2.day)+1)+'天'+(day?` ${day.stem||''}${day.branch||''}`:''));
+ if(p2.hour!=null)parts.push('第'+(Number(p2.hour)+1)+'个时辰'+(hour?` ${hour.stem||''}${hour.branch||''}`:''));
  return parts.length?'正在看：'+parts.join(' · ')+' —— 下方分析已随之更新':'正在看：本命原局（点下面任一时点可切换）';
 }
 function chartLine(d){
@@ -147,7 +151,7 @@ export function baziView(ctx){
  ${timeBasis(d.info)}
  <div class="bazi-board"><div class="bazi-grid">${baziGrid(d)}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
  <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d,ctx.birth?.timeUnknown)}
- <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${trendChart(d,s.pick)}${timeline(d,s.pick)}</div></section>
+ <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick,d)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${trendChart(d,s.pick)}${timeline(d,s.pick)}</div></section>
  <p id="baziStatus" class="muted" role="status"></p>
  <section class="period-result"><div class="bazi-crossfade"><div data-bazi-data>${details(d)}</div></div></section></section>`;
  $('[data-combine]',ctx.root).onclick=()=>update(ctx,s.pick,!s.combine);
@@ -159,8 +163,10 @@ export function baziView(ctx){
   if(!b)return;
   const {rail:id,pick:v}=b.dataset,n=Number(v),{pick}=s;
   const next=id==='大运'?(v==='natal'?{}:{luck:n}):id==='流年'?{...pick,year:n,month:undefined,day:undefined,hour:undefined}:id==='流月'?{...pick,month:n,day:undefined,hour:undefined}:id==='流日'?{...pick,day:n,hour:undefined}:{...pick,hour:n};
-  const line=$('.pc-current',ctx.root);if(line)line.textContent=pickLine(next);
-  if(b.scrollIntoView)if(typeof b.scrollIntoView==='function')b.scrollIntoView({inline:'center',block:'nearest'});
+  const line=$('.pc-current',ctx.root);if(line)line.textContent=pickLine(next,s.data);
+  // v0.48.0 防跳动：旧代码在此对胶囊调用 scrollIntoView({inline:'center',block:'nearest'})，
+  // 它会连带滚动 #mainScrollView / dialog 等祖先容器，与键盘避让和 scrollTo(0,0) 打架，
+  // 正是「点八字时点整页跳一下」的元凶。被点胶囊本就在视野内，无需滚动，直接删除。
   ctx.state.activeTimeSystem='bazi';
   update(ctx,next,s.combine);
  };

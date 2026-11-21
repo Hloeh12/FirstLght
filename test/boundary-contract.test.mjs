@@ -353,7 +353,7 @@ test('时点专项独立 Tab + 工作台：四体系分别生成报告 + 两种�
  const idx=await read('../index.html');
  assert.match(idx,/data-tab="period"/,'底部导航须有时点 Tab');
  // openFullReport 须接受预生成 report
- assert.match(app,/function openFullReport\(prebuilt\)/,'报告弹层须接受预生成报告对象');
+ assert.match(app,/function openFullReport\(prebuilt[^)]*\)/,'报告弹层须接受预生成报告对象（可含 opts 扩展参数）');
  const full=await read('../assets/console/full-report.js');
  assert.match(full,/report\.chartHtml\?`<section class="rpt-chart"/,'报告 HTML 须渲染命盘快照区');
  const mod=await read('../assets/console/period-report.js');
@@ -553,4 +553,16 @@ test('v0.47.5 目录交互纠偏：遮罩透明不遮背景，浮层块儿实心
  // 序号「01」须 nowrap，避免被拆成「0 / 1」两行
  const nos=[...css.matchAll(/\.rpt-nav-list \.rpt-toc-item \.rpt-toc-no\{([^}]*)\}/g)].map(m=>m[1]);
  assert.ok(nos.length&&/white-space:nowrap!important/.test(nos[nos.length-1]),'目录序号须 nowrap 不换行');
+});
+
+test('v0.48.0 八字时点：「第几步」须映射干支年份、点选不得 scrollIntoView 跳动',async()=>{
+ const b=await read('../assets/console/bazi.js');
+ // 修复2：pickLine 须接收 data 并把索引解析为干支（不再只写「第N步」）。
+ assert.match(b,/function pickLine\(p,d\)/,'pickLine 须接收报告数据以解析干支');
+ assert.match(b,/cycle\?\.startYear|cycle\.startYear/,'大运须带出起止年份');
+ assert.match(b,/pickLine\(next,s\.data\)/,'点击切换时须传入数据更新文案');
+ assert.match(b,/pickLine\(s\.pick,d\)/,'初始渲染须传入数据');
+ // 修复3：不得再对时点胶囊调用 scrollIntoView（会带动祖先容器导致整页跳动）。
+ const codeOnly=b.split('\n').filter(l=>!l.trim().startsWith('//')).join('\n');
+ assert.doesNotMatch(codeOnly,/scrollIntoView\s*\(\s*\{[^}]*inline\s*:\s*['"]center['"]/,'时点胶囊不得调用 scrollIntoView（跳动根因）');
 });

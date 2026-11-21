@@ -25,8 +25,22 @@ export function row(label,items,active){
 }
 export function selectedRails(root){
  for(const rail of root.querySelectorAll('.rail')){
+  // v0.48.0 滑动提示：溢出时标记 data-scrollable，CSS 给右侧渐隐+箭头提示可横滑；
+  // 选中项仍只滚自身 scrollLeft（不碰祖先，避免整页跳动）。
+  const mark=()=>{
+   const over=rail.scrollWidth-rail.clientWidth>4;
+   if(over)rail.setAttribute('data-scrollable','');else rail.removeAttribute('data-scrollable');
+   const atEnd=rail.scrollLeft+rail.clientWidth>=rail.scrollWidth-4;
+   rail.setAttribute('data-scroll-end',atEnd?'1':'0');
+  };
   const item=$('[aria-pressed="true"]',rail);
   if(item){const a=item.getBoundingClientRect(),b=rail.getBoundingClientRect();if(a.left<b.left||a.right>b.right)rail.scrollLeft+=a.left-b.left-8;}
+  mark();
+  if(!rail.__scrollHintBound){
+   rail.__scrollHintBound=true;
+   rail.addEventListener('scroll',mark,{passive:true});
+   if(typeof ResizeObserver!=='undefined')new ResizeObserver(mark).observe(rail);
+  }
  }
 }
 export async function request(path,body,signal){

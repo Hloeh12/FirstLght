@@ -130,12 +130,35 @@ function matrix(r){
  ${q.map((a,i)=>'<tr><th>'+esc(a.symbol+' '+a.name)+'</th>'+p.map((b,j)=>outer||j<i?cell(a,b):'<td></td>').join('')+'</tr>').join('')}</tbody></table></div>`;
 }
 function timeLabel(s){return localDisplayTime(s.at);}
+// v0.48.0：相位逐条解读不再套同一句「回到盘面核对…」。
+// 按角度给「剧情」，按星体给「领域」，再叠加入/出相与容许度松紧——每条都不同。
+const ASPECT_STORY={
+ 0:'两股能量合流，议题被同时点亮——关注它们共同落的宫位，那里是本期最容易被推动的场域。',
+ 60:'一次轻巧的协作机会，需要你主动发起才成形——适合铺垫、联络与小额尝试，不必等大时机。',
+ 90:'张力带来摩擦，也带来调整的动力——冲突点往往落在两星所主管的议题之间，宜疏不宜堵。',
+ 120:'和谐流通的天赋支持，事情较易顺势推进——留意别把顺境当成理所当然，仍要有落地动作。',
+ 180:'两端拉扯形成关系镜像，容易在对立里看见自己——合作与亲密议题需兼顾双方节奏。'
+};
+const PLANET_DOMAIN={
+ '太阳':'自我意志与存在感','月亮':'情绪与安全需求','水星':'思维沟通与交易','金星':'关系与审美价值',
+ '火星':'行动力与竞争','木星':'成长信念与扩张','土星':'责任约束与课题','天王星':'变革与独立',
+ '海王星':'灵感想象与边界','冥王星':'深度转化与掌控','北交点':'成长方向','南交点':'惯性来处','上升':'外在姿态','天顶':'事业形象'
+};
+const domainOf=name=>PLANET_DOMAIN[String(name||'').replace(/^(本命|推运|行运)/,'')]||'该星所主管的议题';
+function aspectStory(a,cross){
+ const angle=Number.isFinite(Number(a.angle))?Number(a.angle):null;
+ const story=ASPECT_STORY[angle]||'两星形成特定角度，须结合相位性质、星体与落宫综合判读，不单独断事。';
+ const aDom=domainOf(a.a),bDom=domainOf(a.b);
+ const phase=a.applying===true?'正在入相，效应趋于增强':a.applying===false?'已经出相，效应逐渐回落':'相位阶段待定';
+ const tight=Math.abs(a.orb)<=1.5?'容许度极紧，信号清晰':Math.abs(a.orb)<=2.5?'容许度偏紧，值得留意':'容许度尚宽，作辅助参考';
+ return `${story} 具体落在${aDom}与${bDom}的交叉处，${phase}；${tight}，请回到本命盘核对这两颗星的实际落宫与现实事项。`;
+}
 function periodAnalysis(r,s){
  const cross=Boolean(r.outer);
  const aspects=(cross?r.aspects:r.chart?.aspects)||[];
  const tight=aspects.filter(a=>Number.isFinite(a.orb)&&a.orb<=3).slice(0,4);
  const label=modes[r.mode]||'推运';
- const evidence=tight.length?tight.map(a=>`<p>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}，容许度 ${a.orb.toFixed(2)}°，${a.applying===true?'入相':a.applying===false?'出相':'相位阶段待定'}；回到盘面核对这些星体的落宫与现实事项。</p>`).join(''):'<p>本次盘面在 3° 内没有主相位，不补造个人事件推断。</p>';
+ const evidence=tight.length?tight.map(a=>`<p><b>${esc(a.a+' '+a.type+' '+(cross?'本命':'')+a.b)}</b>，容许度 ${a.orb.toFixed(2)}°。${esc(aspectStory(a,cross))}</p>`).join(''):'<p>本次盘面在 3° 内没有主相位，不补造个人事件推断。</p>';
  return `<div class="period-result"><article class="card liquid-glass period-guidance" data-period-guidance><h2>当前推运专属分析</h2><p><b>${esc(label)} · ${esc(timeLabel(s))} 本地</b>。本次以${cross?'外行星与本命星位的紧密主相位':'本盘星体之间的紧密主相位'}为证据，不把天象直接等同个人事件。</p>${evidence}</article><div data-period-resonance></div></div>`;
 }
 function shift(date,unit,n){

@@ -521,3 +521,19 @@ test('导出可靠性：原生静默 guard 失败须回传结果，前端等待�
  assert.match(swift,/presentShare\(url\)\s*notifyExportResult\(ok: true/,'成功须回传确认');
  assert.match(swift,/window\.__FL_EXPORT_DONE__\?\./,'原生须调用前端回调');
 });
+
+test('报告页大白边根治：reportSheet 全屏铺满、去圆角白边、安全区由顶栏承担',async()=>{
+ const css=await read('../assets/console/liquid.css');
+ // 末尾强规则须把 dialog 的全屏几何与去边写死，不依赖真机 env(safe-area-inset-*)
+ const block=css.match(/dialog#reportSheet\.report-sheet\{[\s\S]*?\n\}/);
+ assert.ok(block,'须存在 reportSheet 全屏覆盖强规则块');
+ const b=block[0];
+ assert.match(b,/inset:0!important/,'须 inset:0 铺满');
+ assert.match(b,/top:0!important/,'须强制 top:0，去掉 top:env(safe-area-inset-top) 的下移');
+ assert.match(b,/height:100dvh!important/,'高度须占满视口');
+ assert.match(b,/max-width:none!important/,'须去掉 max-width:640px 的左右留白');
+ assert.match(b,/border-radius:0!important/,'须去圆角（真机白色圆角大框的根因之一）');
+ assert.match(b,/border:0!important/,'须去 1px 白边');
+ assert.match(b,/margin:0!important/,'须去 UA 默认 margin 造成的居中留边');
+ assert.match(css,/\.rpt-topbar\{\s*padding-top:calc\(6px \+ env\(safe-area-inset-top,0px\)\)/,'顶部安全区须由顶栏 padding 承担，内容不遮状态栏');
+});

@@ -1,8 +1,20 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.47.2",
-  "build": 143,
+  "version": "0.47.3",
+  "build": 144,
   "releases": [
+    {
+      "version": "0.47.3",
+      "build": 144,
+      "date": "2026-11-21",
+      "title": "报告页白色圆角大框（大白边）根治",
+      "items": [
+        "用户多轮反馈「点开目录周边白色框框」「大白边还是在」。逐帧核对真机截图：白色圆角矩形包裹整个报告内容、四角圆润、顶部状态栏在框外。定位根因为 dialog#reportSheet.report-sheet 自身样式：border-radius:24px + border:1px solid white + 白色渐变背景 + top:env(safe-area-inset-top) 下移 + height:calc(100dvh - safeTop)。headless 环境(safe-area=0)下铺满看不出，真机(safeTop≈47~59px)下 dialog 下移并露白边，浮在 ::backdrop 灰紫之上，形成白色圆角大框。前两轮改的 scrim 遮罩/紫微中宫均非此因，故「还是在」。",
+        "修复：liquid.css 末尾加强规则将 reportSheet 强制全屏铺满——inset:0 / top:0 / left:0 / right:0 / bottom:0、width:100% / max-width:none、height:100dvh / max-height:100dvh、margin:0、border:0、border-radius:0、box-shadow:none，彻底去圆角与白边；顶部安全区改由 .rpt-topbar 的 padding-top:calc(6px + env(safe-area-inset-top)) 承担，内容不遮状态栏、视觉无白框。",
+        "回归测试：boundary-contract.test.mjs 新增契约断言，锁定 reportSheet 全屏去边强规则（inset:0 / top:0 / height:100dvh / max-width:none / border-radius:0 / border:0 / margin:0）与顶栏安全区 padding 均存在，防真机白边复发。",
+        "验证：217/217 单元与契约测试全绿；verify-042/045/046/047 四脚本全过零错误；真机视口探针测量报告页计算样式 radius=0px、border=0、top=0、440x956 满屏。"
+      ]
+    },
     {
       "version": "0.47.2",
       "build": 143,

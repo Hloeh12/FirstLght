@@ -680,3 +680,26 @@ input,select,textarea{font-size:16px!important}
  backdrop-filter:blur(2px) saturate(75%)!important;
  -webkit-backdrop-filter:blur(2px) saturate(75%)!important;
 }
+
+/* ===== v0.47.3 报告页「大白边」根治：报告 dialog 全屏铺满、去圆角白边 =====
+   根因：dialog#reportSheet.report-sheet 在 design.css:1912 用
+   top:env(safe-area-inset-top) + height:calc(100dvh - safeTop) + border-radius:24px
+   + border:1px solid white + 白色渐变背景。headless(safe-area=0)下铺满看不出，
+   真机(safeTop≈47~59px)下 dialog 下移、四角圆润并带白边，浮在 ::backdrop 灰紫之上，
+   形成用户反复反馈的「白色圆角大框 / 大白边」。
+   修法：报告页本身铺满整个 WebView 视口、去圆角去边框去阴影；
+   顶部安全区改由 .rpt-topbar 的 padding-top 承担，内容不遮状态栏、视觉无白边。 */
+dialog#reportSheet.report-sheet{
+ inset:0!important;
+ top:0!important;left:0!important;right:0!important;bottom:0!important;
+ width:100%!important;max-width:none!important;
+ height:100dvh!important;max-height:100dvh!important;
+ margin:0!important;
+ border:0!important;
+ border-radius:0!important;
+ box-shadow:none!important;
+ padding-top:0!important;
+}
+dialog#reportSheet.report-sheet .rpt-topbar{
+ padding-top:calc(6px + env(safe-area-inset-top,0px))!important;
+}

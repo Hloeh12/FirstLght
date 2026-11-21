@@ -1,8 +1,21 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.47.1",
-  "build": 142,
+  "version": "0.47.2",
+  "build": 143,
   "releases": [
+    {
+      "version": "0.47.2",
+      "build": 143,
+      "date": "2026-11-21",
+      "title": "起盘工作台键盘输入跳动根治（录屏定位 scrollIntoView 反复重启）",
+      "items": [
+        "用户提交真机录屏反馈「还是跳动」。逐帧抽帧分析（6.1s/26 帧）坐实：跳动发生在「起盘工作台」输入弹层——用户连续点击姓名/历法/出生日期等字段时，面板反复抖动、位置上下跳。诊断 JSON 的视口层数据全绿（innerWidth=440、scale=1、zs/pz=1、零错误日志），证明与冷启动缩放无关，此前多轮针对视口的修复从未触及真正场景。",
+        "根因：assets/console/viewport.js 的 fitKeyboard() 在 visualViewport 的每次 resize/scroll/focus 事件里都调用 focused.scrollIntoView({behavior:\"smooth\",block:\"center\"})。iOS 键盘滑入是渐进动画，会连续触发数十次 resize/scroll，每次都重启 smooth 滚动动画并连带滚动所有祖先容器（含 dialog 与 sheet-body），与键盘原生动画打架，形成肉眼可见的反复抖动。app.js 早有注释认定 scrollIntoView 是界面跳动主因并从体系切换处移除，唯独键盘补偿逻辑残留同类调用。",
+        "修复：移除该 scrollIntoView 调用（含历史成因注释）。面板已通过 --keyboard-inset 抬升，sheet-body 自带 overflow:auto 与 scroll-padding-bottom，浏览器聚焦时自然把输入框滚入可视区，无需手动 smooth 滚动。jsdom 探针复现「连续 resize + 字段切换」序列，scrollIntoView 调用从 2 次降至 0 次，键盘补偿 inset 在字段切换期间保持稳定不归零。",
+        "回归测试：test/shell.test.mjs 键盘用例新增三条断言——连续 16 次 resize 不触发 scrollIntoView、字段切换（blur→focus）补偿不归零、字段切换不触发 scrollIntoView，锁定根因防复发。",
+        "验证：216/216 单元与契约测试全绿；verify-042/045/046/047 四脚本全过零错误；真机视口复现起盘工作台，键盘补偿面板位置与高度变化符合预期、字段全部可见。"
+      ]
+    },
     {
       "version": "0.47.1",
       "build": 142,

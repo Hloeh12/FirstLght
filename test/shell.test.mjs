@@ -244,14 +244,29 @@ test('liquid navigation has one measured physical pill, inline editing, keyboard
   const vv=new w.EventTarget();vv.height=844;vv.offsetTop=0;w.visualViewport=vv;
   w.fetch=()=>{throw Error('network blocked');};
   w.URL.createObjectURL=()=> 'blob:logs';w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=()=>{};
+  // v0.47.2 跳动回归：scrollIntoView 在 iOS 键盘连续 resize 时反复重启 smooth 动画是翻页抖动根因，
+  // 键盘补偿逻辑绝不能调用它。记录所有调用以断言为零。
+  const scrollCalls=[];w.__scrollCalls=scrollCalls;w.HTMLElement.prototype.scrollIntoView=function(opt){scrollCalls.push({tag:this.tagName,opt});};
  }});t.after(()=>dom.window.close());
  const w=dom.window,d=w.document,$=s=>d.querySelector(s),click=s=>{assert($(s),s);$(s).click();};
  const script=d.createElement('script');script.textContent=js;d.body.append(script);
  const tick=()=>new Promise(resolve=>setTimeout(resolve,65));
+ const scrollCalls=w.__scrollCalls;
  await tick();assert($('#inputSheet').open);
  const input=$('#inputSheet input');input.focus();w.visualViewport.height=330;w.visualViewport.dispatchEvent(new w.Event('resize'));await tick();
  assert.equal(d.documentElement.style.getPropertyValue('--sheet-limit'),'290px');
  assert.equal(d.documentElement.style.getPropertyValue('--keyboard-inset'),'514px');
+ // v0.47.2：模拟 iOS 键盘滑入的连续 resize（几十次）——面板可以更新 inset，
+ // 但绝不能调用 scrollIntoView，否则每次都重启 smooth 滚动造成面板反复抖动。
+ for(let h=330;h<=420;h+=6){w.visualViewport.height=h;w.visualViewport.dispatchEvent(new w.Event('resize'));}
+ await tick();
+ assert.equal(scrollCalls.length,0,'键盘 resize 不得调用 scrollIntoView（v0.47.2 跳动根因）');
+ // 字段切换（blur→focus）期间 inset 必须保持，不能归零让面板回落再弹起。
+ const beforeSwitch=d.documentElement.style.getPropertyValue('--keyboard-inset');
+ const inputs=[...$('#inputSheet').querySelectorAll('input')],a=inputs[0],b=inputs.find(x=>x!==a);
+ a.blur();b.focus();await tick();
+ assert.equal(d.documentElement.style.getPropertyValue('--keyboard-inset'),beforeSwitch,'字段切换不得让键盘补偿归零');
+ assert.equal(scrollCalls.length,0,'字段切换不得调用 scrollIntoView');
  w.visualViewport.height=844;w.visualViewport.dispatchEvent(new w.Event('resize'));await tick();
  assert.equal(d.documentElement.style.getPropertyValue('--sheet-limit'),'');
  click('#inputSheet [data-close]');

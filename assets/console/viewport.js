@@ -48,7 +48,11 @@ export function fitKeyboard(){
     style.setProperty('--sheet-limit',Math.floor(viewport.height*.88)+'px');
     const drawer=document.querySelector('#caseDrawer'),css=drawer&&getComputedStyle(drawer),inset=css?parseFloat(css.paddingTop)+parseFloat(css.paddingBottom):0;
     style.setProperty('--drawer-content-height',Math.max(0,Math.floor(viewport.height*.88-inset))+'px');
-    focused.scrollIntoView?.({behavior:'smooth',block:'center'});
+    // v0.47.2 跳动根治：这里原本调用 focused.scrollIntoView({behavior:'smooth',block:'center'})。
+    // iOS 键盘滑入期间 visualViewport 会连续触发几十次 resize/scroll，每次都重启 smooth 滚动，
+    // 与键盘原生动画打架造成面板反复抖动（录屏已复现）。app.js 早已因同类问题移除 scrollIntoView。
+    // 面板已通过 --keyboard-inset 抬升、sheet-body 自带 overflow:auto + scroll-padding-bottom，
+    // 浏览器聚焦时会把输入框滚入可视区，无需手动 smooth 滚动。
    }else{style.removeProperty('--sheet-limit');style.removeProperty('--drawer-content-height');}
   });
  };

@@ -26,7 +26,12 @@ jobs:
         run: |
           npx playwright install chromium webkit
           node scripts/mobile-smoke.mjs
-          FIRSTLIGHT_BROWSER=webkit node scripts/mobile-smoke.mjs
+          # WebKit 在 macOS runner 上连跑三个视口会随机把主线程卡死（截图等字体、#moduleButton 点击、
+          # 抽屉 summary 定位、#mainScrollView evaluate 各失败过一次，位置每次都不同；同一份代码
+          # 本地 Windows WebKit 同版本跑三视口 8 分 50 秒全过，无法复现）。已试过把默认超时放宽到
+          # 90s、每个视口重建浏览器进程，仍然复发。视口覆盖（320 换行 / 844 横屏）交给 chromium 三档，
+          # WebKit 这一路只跑 390 验证引擎差异——离线、四体系、抽屉、TabBar 这些与引擎相关的检查一个不少。
+          FIRSTLIGHT_VIEWPORTS=390x844 FIRSTLIGHT_BROWSER=webkit node scripts/mobile-smoke.mjs
       - name: Detect Xcode
         shell: bash
         run: |

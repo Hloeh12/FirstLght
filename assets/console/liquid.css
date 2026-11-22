@@ -1191,6 +1191,11 @@ button:focus-visible,a:focus-visible{
    新结构：体系分段器 → 主轴摘要卡 → 六维结构 → 深度详批（可折叠）→ 终身周期 → 报告操作。
    视觉上用「数字编号 + 细分割线 + 证据胶囊」建立节奏，不再靠不断加卡片。 */
 .insight-page{display:flex;flex-direction:column;gap:14px;padding-bottom:4px}
+/* 大屏（iPad 横屏 / 分屏）：这一页通篇是长文，行宽不做限制会拉到 800px 以上，
+   一行 40+ 字很难读。与深度报告正文同宽 560px 居中，两个入口的阅读节奏一致。 */
+@media (min-width:600px){
+ .insight-page{max-width:560px;margin:0 auto;width:100%}
+}
 .insight-page .page-head{margin-bottom:2px}
 
 /* 体系分段器：四等分，选中项浮起成白片 */
@@ -1234,26 +1239,62 @@ button:focus-visible,a:focus-visible{
 .is-sec-head h2{margin:0;font-size:13px;font-weight:800;letter-spacing:.02em;color:#7d4b63}
 .is-sec-rule{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,140,185,.38),rgba(255,140,185,0))}
 
-/* 六维：同一张卡里六段，用编号与细线分区，比六个折叠框清爽 */
+/* 六维：一张卡里六行可开合。收起态两行摘要，展开态交还 auto 高度 */
 .is-dims-wrap{display:flex;flex-direction:column;gap:9px}
 .is-dims{
  list-style:none;margin:0;padding:0;display:block;border-radius:18px;overflow:hidden;
  background:rgba(255,255,255,.74);border:1px solid rgba(255,140,185,.18)
 }
-.is-dim{display:flex;gap:11px;padding:14px 14px 15px;border-top:1px solid rgba(255,140,185,.13)}
+.is-dim{display:block;border-top:1px solid rgba(255,140,185,.13);transition:background .2s ease}
 .is-dim:first-child{border-top:0}
-.is-dim-no{
- flex:none;width:24px;height:24px;margin-top:1px;border-radius:8px;display:grid;place-items:center;
- font-size:10px;font-weight:800;color:#b5457a;background:rgba(255,79,139,.09);
- border:1px solid rgba(255,79,139,.16);font-variant-numeric:tabular-nums
+.is-dim.is-open{background:rgba(255,251,253,.72)}
+.is-dim-head{
+ display:grid!important;grid-template-columns:24px minmax(0,1fr) 16px;align-items:start;gap:11px;
+ width:100%;margin:0;padding:13px 14px;
+ border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;
+ text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent
 }
-.is-dim-body{flex:1;min-width:0}
-.is-dim-title{margin:0 0 6px;font-size:13.5px;font-weight:800;color:#7a2349;letter-spacing:.01em}
+.is-dim-head:active{background:rgba(255,243,249,.86)!important}
+.is-dim-no{
+ flex:none;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
+ font-size:10px;font-weight:800;color:#b5457a;background:rgba(255,79,139,.09);
+ border:1px solid rgba(255,79,139,.16);font-variant-numeric:tabular-nums;
+ transition:color .18s ease,background .18s ease,border-color .18s ease
+}
+.is-dim.is-open .is-dim-no{color:#fff;background:linear-gradient(160deg,#ff6b9f,#e0357f);border-color:transparent}
+.is-dim-headmain{min-width:0;display:flex;flex-direction:column;gap:4px}
+.is-dim-title{font-size:13.5px;font-weight:800;color:#7a2349;letter-spacing:.01em;line-height:1.42}
+.is-dim-gist{
+ font-size:11.8px;line-height:1.62;color:#8d6a7c;
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
+}
+.is-dim.is-open .is-dim-gist{display:none}
+.is-dim-chev{display:grid;place-items:center;width:16px;height:16px;margin-top:2px;color:#c091a8;
+ transition:transform .26s cubic-bezier(.3,.9,.3,1),color .18s ease}
+.is-dim-chev svg{width:13px;height:13px;display:block}
+.is-dim.is-open .is-dim-chev{transform:rotate(90deg);color:#d1437f}
+/* 展开面板：平时 hidden（display:none，不占位也不进无障碍树），
+   过渡中的中间高度由 JS 写成具体 px，收尾清掉内联高度交还 auto。 */
+.is-dim-panel{overflow:hidden;transition:height .26s cubic-bezier(.32,.86,.3,1)}
+.is-dim-panel[hidden]{display:none}
+.is-dim-body{padding:0 14px 16px 49px;min-width:0}
 .is-dim-text p{margin:0 0 8px;font-size:12.8px;line-height:1.88;color:#4d3b45;overflow-wrap:anywhere}
 .is-dim-text p:last-child{margin-bottom:0}
 .is-dim-text b{color:#a12a5e;font-weight:750}
 .is-dim .is-chips{margin-top:9px}
 .is-dim .is-chip{height:20px;font-size:10px;background:rgba(255,246,250,.94)}
+/* 六维「全部展开 / 收起」：挂在段落标题右端，与细线同一行 */
+.is-dims-all{
+ flex:none;padding:3px 9px;border-radius:9px!important;min-height:0!important;
+ border:1px solid rgba(255,120,170,.26)!important;background:rgba(255,246,250,.9)!important;
+ font-size:10.5px!important;font-weight:700!important;color:#a03a6c!important;line-height:1.4;
+ cursor:pointer;-webkit-tap-highlight-color:transparent
+}
+.is-dims-all:active{background:rgba(255,229,241,.95)!important}
+@media (prefers-reduced-motion:reduce){
+ .is-dim-panel{transition:none}
+ .is-dim-chev{transition:none}
+}
 
 /* 深度详批 / 终身周期：折叠头做成一行标题 + 元信息，不用浏览器默认三角 */
 .is-deep-wrap>summary,.is-life-wrap>summary{
@@ -1320,7 +1361,14 @@ button:focus-visible,a:focus-visible{
  .is-sec-rule{background:linear-gradient(90deg,rgba(255,164,206,.34),rgba(255,164,206,0))}
  .is-dims{background:rgba(46,38,52,.78);border-color:rgba(255,164,206,.16)}
  .is-dim{border-top-color:rgba(255,164,206,.12)}
+ .is-dim.is-open{background:rgba(255,255,255,.03)}
+ .is-dim-head:active{background:rgba(255,255,255,.06)!important}
  .is-dim-no{color:#ffb4d2;background:rgba(255,79,139,.16);border-color:rgba(255,164,206,.22)}
+ .is-dim.is-open .is-dim-no{color:#fff;background:linear-gradient(160deg,#ff6b9f,#d92f74);border-color:transparent}
+ .is-dim-gist{color:#b79aab}
+ .is-dim-chev{color:#8f7484}
+ .is-dim.is-open .is-dim-chev{color:#ff9cc4}
+ .is-dims-all{background:rgba(255,255,255,.07)!important;border-color:rgba(255,164,206,.28)!important;color:#ffb4d2!important}
  .is-dim-title,.is-sum-title{color:#ffd0e4}
  .is-dim-text p,.is-deep-sec p{color:#d6c2cd}
  .is-dim-text b{color:#ffb4d2}
@@ -1387,4 +1435,23 @@ button:focus-visible,a:focus-visible{
 .rail[data-scrollable][data-scroll-start="1"][data-scroll-end="0"]{
  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 86%,transparent 100%);
  mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 86%,transparent 100%);
+}
+
+/* ===== v0.53.0 体系互切入场 =====
+   洞见页四个体系原先是整页硬替换：旧内容消失、新内容瞬现，视觉上只有一次「闪」。
+   这里给内容区一段 10px 上浮 + 淡入，按「摘要 → 深度详批 → 终身周期」错开 40ms，
+   读起来像翻页而不是刷新。只做 opacity/transform，不触发重排。 */
+@keyframes isSwapIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.insight-page.is-swap [data-natal-background]{animation:isSwapIn .3s cubic-bezier(.22,.9,.28,1) both}
+.insight-page.is-swap .is-deep-wrap{animation:isSwapIn .3s cubic-bezier(.22,.9,.28,1) .04s both}
+.insight-page.is-swap .is-life-wrap{animation:isSwapIn .3s cubic-bezier(.22,.9,.28,1) .08s both}
+.insight-page.is-swap .insight-bridges{animation:isSwapIn .3s cubic-bezier(.22,.9,.28,1) .11s both}
+/* 分段器按下时给一点位移反馈，和内容入场呼应 */
+.insight-page .insight-system-tabs button:active{transform:scale(.965)}
+@media (prefers-reduced-motion:reduce){
+ .insight-page.is-swap [data-natal-background],
+ .insight-page.is-swap .is-deep-wrap,
+ .insight-page.is-swap .is-life-wrap,
+ .insight-page.is-swap .insight-bridges{animation:none}
+ .insight-page .insight-system-tabs button:active{transform:none}
 }

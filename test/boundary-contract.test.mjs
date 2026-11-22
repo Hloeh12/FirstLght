@@ -124,7 +124,7 @@ test('报告可用性：目录锚点、滚动进度与章节导航已接入',asy
  const app=await read('../assets/console/app.js');
  assert.match(app,/data-rpt-progress/,'应有滚动进度');
  assert.match(app,/rptBody\.scrollTo\?\.\(\{top:[\s\S]*?behavior:'smooth'/, '点击目录应只滚报告容器自身、平滑滚动（防祖先跳动）');
- assert.match(app,/addEventListener\('scroll',rptOnScroll/,'应监听滚动更新进度');
+ assert.match(app,/addEventListener\('scroll',\(\)=>\{[\s\S]{0,80}requestAnimationFrame\(/,'应监听滚动更新进度，并用 rAF 合并同一帧内的多次事件');
  const css=await read('../assets/console/design.css');
  assert.match(css,/\.rpt-toc\{position:relative/);
  assert.match(css,/\.rpt-toc-item\.on/);

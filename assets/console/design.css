@@ -1926,6 +1926,35 @@ dialog#reportSheet::backdrop{position:fixed;inset:0;z-index:999;background:rgba(
 .rpt-topbar .icon{width:34px;height:34px;flex:none}
 .rpt-topbar-title{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
 .rpt-act{flex:none;border-radius:16px!important;padding:7px 12px!important;font-size:12px!important;font-weight:600!important}
+/* v0.53.0 报告定位条：正文两万多像素，翻到中段就失去方位。
+   固定在顶栏之下，常驻高度 28px（不随滚动出现/消失，避免阅读区高度跳变），
+   左侧是当前章号与章名，底部一条 1.5px 进度细线。 */
+.rpt-rail{
+ flex:none;position:relative;display:flex;align-items:center;gap:7px;height:28px;
+ padding:0 max(14px,env(safe-area-inset-right,0px)) 0 max(14px,env(safe-area-inset-left,0px));
+ background:linear-gradient(180deg,rgba(255,252,254,.96),rgba(255,247,251,.94));
+ border-bottom:1px solid rgba(190,120,155,.16)
+}
+.rpt-rail-no{
+ flex:none;min-width:15px;font-size:10px;font-weight:800;letter-spacing:.04em;
+ color:#c9558c;font-variant-numeric:tabular-nums;opacity:0;transition:opacity .18s ease
+}
+.rpt-rail.is-live .rpt-rail-no{opacity:1}
+.rpt-rail-title{
+ flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ font-size:10.5px;font-weight:650;color:#9a7386;letter-spacing:.01em;
+ transition:color .18s ease
+}
+.rpt-rail.is-live .rpt-rail-title{color:#7a4a62}
+.rpt-rail-track{
+ position:absolute;left:0;right:0;bottom:-1px;height:1.5px;
+ background:rgba(255,120,170,.13);overflow:hidden
+}
+.rpt-rail-track b{
+ display:block;height:100%;width:0;
+ background:linear-gradient(90deg,#ffa6c9,#e0357f);
+ transition:width .12s linear
+}
 .rpt-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px max(14px,env(safe-area-inset-right,0px)) 40px max(14px,env(safe-area-inset-left,0px))}
 .rpt-doc{max-width:560px;margin:0 auto}
 .rpt-cover{text-align:center;padding:18px 10px 20px;border-bottom:1px solid var(--line);margin-bottom:16px}

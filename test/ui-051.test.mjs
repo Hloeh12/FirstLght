@@ -36,7 +36,7 @@ test('v0.51.0 速选条居中：进报告与每次级联都把选中项滚到中
  const app=await read('../assets/console/app.js');
  assert.match(app,/function centerBfRails\(host\)/,'须有速选条居中函数');
  assert.match(app,/rail\.scrollLeft\+=Math\.round\(\(ob\.left-rb\.left\)-\(rb\.width-ob\.width\)\/2\)/,'须按 rect 差值居中（不依赖 offsetParent）');
- assert.match(app,/requestAnimationFrame\(\(\)=>centerBfRails\(d\)\)/,'打开报告后须居中一次');
+ assert.match(app,/requestAnimationFrame\(\(\)=>\{centerBfRails\(d\);rptOnScroll\(\);\}\)/,'打开报告后须居中一次，并同步一次章节定位');
  assert.match(app,/if\(yrail\)yrail\.innerHTML=yearRail;\n   centerBfRails\(box\)/,'级联重算后须重新居中');
 });
 
@@ -66,7 +66,9 @@ test('v0.51.0 洞见阅读节奏：摘要卡 / 六维列表 / 深度折叠 / 主
  const ins=await read('../assets/console/insight.js');
  assert.match(ins,/class="is-summary card liquid-glass"/,'须有主轴摘要卡');
  assert.match(ins,/class="is-sec-head"><span class="is-sec-no">六维<\/span><h2>本命结构拆解<\/h2>/,'六维须有独立段落标题');
- assert.match(ins,/class="is-dim"><span class="is-dim-no">/,'每维须有编号与独立容器');
+ assert.match(ins,/class="is-dim" data-dim="\$\{no\}"/,'每维须有独立容器');
+ assert.match(ins,/class="is-dim-head" aria-expanded="false" aria-controls="isDimPanel\$\{no\}"/,'每维须是可开合按钮，带 aria-expanded / aria-controls');
+ assert.match(ins,/class="is-dim-gist"/,'收起态须有首句摘要，不能只剩标题');
  assert.match(ins,/class="is-chips">\$\{chips\.map/,'每维须有盘面证据胶囊');
  assert.match(ins,/is-deep-wrap/,'深度详批须为折叠块');
  assert.match(ins,/展开其余 \$\{rest\.length\} 章详批/,'长报告须保留展开/收起');

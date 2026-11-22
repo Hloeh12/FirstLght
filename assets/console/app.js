@@ -1,6 +1,6 @@
 import {buildBaziKnowledgeReport,buildZiweiKnowledgeReport} from '../../www/js/rules.js';
-import {insightModel,summaryHtml,dimsHtml,digestBlockHtml,lifecycleBlockHtml,SYSTEM_LABEL} from './insight.js';
-import {composeFullReport,reportHtml,tocItems} from './full-report.js';
+import {insightModel,summaryHtml,dimsHtml,digestBlockHtml,lifecycleBlockHtml,wireDims,SYSTEM_LABEL} from './insight.js';
+import {composeFullReport,reportHtml,tocItems,cleanSecTitle} from './full-report.js';
 import {periodSections} from './ui.js';
 import {installCivilPickers} from './civil-picker.js';
 import {ProfileMachine} from './profile-machine.js';
@@ -704,6 +704,8 @@ function openFullReport(prebuilt,opts={}){
  const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'};
  const d=document.getElementById('reportSheet');
  const report=prebuilt||composeFullReport(state,names);
+ // 报告滚动节流的缓存：章节节点 / 目录按钮只查一次，时点重排后置空重取
+ let rptSecs=null,rptTocBtns=null,rptRaf=0;
  // 报告历史：元数据 + 整份纯数据快照，供「我」页点开原样复盘（v0.48.0）。
  // opts.replay=从历史打开旧报告：原样重绘，但不再写一条新历史（否则每看一次多一条）。
  if(!opts.replay){try{recordHistory({caseId:state.profile?.id,name:state.profile?.name,system:report.cover?.system,
@@ -713,6 +715,11 @@ function openFullReport(prebuilt,opts={}){
    <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
    <button type="button" class="rpt-act" data-rpt-copy>复制</button>
    <button type="button" class="rpt-act primary" data-rpt-export>导出文档</button></div>
+  <div class="rpt-rail" data-rpt-rail aria-hidden="true">
+   <span class="rpt-rail-no" data-rpt-rail-no></span>
+   <span class="rpt-rail-title" data-rpt-rail-title>${esc(report.title||'')}</span>
+   <i class="rpt-rail-track"><b data-rpt-rail-fill></b></i>
+  </div>
   <div class="sheet-body rpt-body" id="reportBody">${reportHtml(report)}<div class="scroll-clearance" aria-hidden="true"></div></div>
   <button type="button" class="rpt-nav-fab" data-rpt-nav aria-expanded="false" aria-controls="reportNavDrawer" aria-label="打开章节目录"><span class="rpt-nav-fab-ico" aria-hidden="true">☰</span><span data-rpt-fab-label>目录</span><span class="rpt-nav-pct" data-rpt-progress>0%</span></button>
   <div class="rpt-nav-scrim" data-rpt-nav-close aria-hidden="true"></div>
@@ -783,6 +790,7 @@ function openFullReport(prebuilt,opts={}){
    const items=tocItems(secs);
    const tocEl=d.querySelector('.rpt-toc-list');if(tocEl)tocEl.innerHTML=items;
    const navEl=d.querySelector('[data-rpt-nav-list]');if(navEl)navEl.innerHTML=items;
+   rptSecs=null;rptTocBtns=null;
    if(bodyEl)bodyEl.scrollTop=0;
    const body2=d.querySelector('#reportBody');if(body2)body2.scrollTo?.({top:0,behavior:'smooth'});
   }catch(err){tell('该时点重算失败：'+(err.message||err));}
@@ -873,18 +881,39 @@ function openFullReport(prebuilt,opts={}){
   const termEl=e.target.closest('[data-term]');
   if(termEl){e.preventDefault();ctx.explain(termEl.dataset.term,termEl.dataset.explain,termEl.dataset.source);}
  });
- const rptProg=d.querySelectorAll('[data-rpt-progress]');
- const rptFabLabel=d.querySelector('[data-rpt-fab-label]');
- const rptOnScroll=()=>{
-  if(!rptBody||!rptDoc)return;
-  const total=rptDoc.scrollHeight-rptBody.clientHeight;
-  const p=total>0?Math.min(100,Math.round((rptBody.scrollTop/total)*100)):0;
-  rptProg.forEach(x=>x.textContent=p+'%');
-  const cur=rptDoc.querySelectorAll('.rpt-sec');
-  const at=rptBody.scrollTop;
-  let active=0;
-  for(let i=0;i<cur.length;i++){if(cur[i].offsetTop-rptBody.offsetTop<=at+80)active=i+1;}
-  d.querySelectorAll('[data-toc]').forEach(b=>{
+const rptProg=d.querySelectorAll('[data-rpt-progress]');
+const rptFabLabel=d.querySelector('[data-rpt-fab-label]');
+// v0.53.0：正文两万多像素，翻到中段就不知道自己在第几章了。顶部加一条定位条，
+// 随滚动更新「章号 + 章名」与一条进度细线；数仍以右下角 FAB 为准，这里不重复数字。
+const rptRail=d.querySelector('[data-rpt-rail]');
+const rptRailNo=d.querySelector('[data-rpt-rail-no]');
+const rptRailTitle=d.querySelector('[data-rpt-rail-title]');
+const rptRailFill=d.querySelector('[data-rpt-rail-fill]');
+/* 章节节点与目录按钮只查一次。旧实现每次 scroll 事件都 querySelectorAll 两遍
+   （20+ 章、40+ 目录项），iOS 上手感是「滚动发涩」；这里缓存 DOM 引用，
+   再用 rAF 把一帧内的多次 scroll 合并成一次测量，滚动期间只读不查。 */
+const rptOnScroll=()=>{
+ if(!rptBody||!rptDoc)return;
+ const total=rptDoc.scrollHeight-rptBody.clientHeight;
+ const p=total>0?Math.min(100,Math.round((rptBody.scrollTop/total)*100)):0;
+ rptProg.forEach(x=>x.textContent=p+'%');
+ if(rptRailFill)rptRailFill.style.width=p+'%';
+ const cur=rptSecs||(rptSecs=[...rptDoc.querySelectorAll('.rpt-sec')]);
+ const at=rptBody.scrollTop;
+ // scrollTop 为 0 时直接算成「封面」：对话框刚打开还没布局完，各章 offsetTop 都是 0，
+ // 循环会把 active 一路顶到最后一章（实测出现「刚打开就显示 11 附、术语小词典」）。
+ let active=0;
+ if(at>2)for(let i=0;i<cur.length;i++){if(cur[i].offsetTop-rptBody.offsetTop<=at+80)active=i+1;}
+ if(rptRail){
+  // 未进正文时只留标题，进了正文才出现章号——避免封面下就挂一个「00」
+  if(rptRailNo)rptRailNo.textContent=active>0?String(active).padStart(2,'0'):'';
+  if(rptRailTitle){
+   const label=active>0?cleanSecTitle(report.sections?.[active-1]?.title||''):(report.title||'');
+   if(rptRailTitle.textContent!==label)rptRailTitle.textContent=label;
+  }
+  rptRail.classList.toggle('is-live',active>0);
+ }
+  (rptTocBtns||(rptTocBtns=[...d.querySelectorAll('[data-toc]')])).forEach(b=>{
    const on=Number(b.dataset.toc)===active;
    b.classList.toggle('on',on);
    if(on)b.setAttribute('aria-current','location');else b.removeAttribute('aria-current');
@@ -907,13 +936,17 @@ function openFullReport(prebuilt,opts={}){
    }
   }
  };
- rptBody?.addEventListener('scroll',rptOnScroll,{passive:true});
+ rptBody?.addEventListener('scroll',()=>{
+  if(rptRaf)return;
+  rptRaf=requestAnimationFrame(()=>{rptRaf=0;rptOnScroll();});
+ },{passive:true});
  rptOnScroll();
  open(d);
- requestAnimationFrame(()=>centerBfRails(d));
+ requestAnimationFrame(()=>{centerBfRails(d);rptOnScroll();});
 }
 // v0.51.0 洞见页重做：四体系收进同一骨架（主轴摘要 → 六维结构 → 深度详批 → 终身周期）。
 // 内容生成全部搬到 insight.js：那里按盘面字段推导，不再「紫微万字、八字四句」。
+let lastInsightSystem=null;
 function insights(){
  const r=state.reading;
  if(!r){root.innerHTML='<p class="empty">激活案例后查看专属报告。</p>';return;}
@@ -921,12 +954,16 @@ function insights(){
  // 但体系名与分段器都没有选中项（副标题出现空名）。这里先归一，保证「标题-分段器-内容」三者一致。
  const order=['bazi','ziwei','west','vedic'];
  const current=order.includes(state.system)?state.system:'west',names=SYSTEM_LABEL;
+ // v0.53.0：体系互切原本是整页硬替换——内容闪一下、滚动位置留在原处（旧内容的第 900px
+ // 换成新体系的第 900px，等于把人扔进半篇中间）。改为记录上一体系，切换时回顶部并做入场过渡。
+ const swapped=lastInsightSystem!==null&&lastInsightSystem!==current;
+ lastInsightSystem=current;
  let model=null;
  try{model=insightModel(current,r,{flow:state.chartState?.ziwei?.flow||null});}
  catch(error){console.warn('洞见内容生成失败：'+error.message);}
  const nav=['bazi','ziwei','west','vedic'].map(k=>btn(names[k],`data-insight-system="${k}" aria-pressed="${current===k}"`)).join('');
  const body=model?summaryHtml(model)+dimsHtml(model):'<p class="empty">当前体系的盘面数据尚未就绪，重新生成命盘后再看。</p>';
- root.innerHTML=`<section class="insight-page">
+ root.innerHTML=`<section class="insight-page${swapped?' is-swap':''}">
   <header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 本命全局</p><h1>洞见</h1><p class="muted thin">命主 ${esc(state.profile.name)} · ${esc(names[current])} · 本命终身结构 · 不含流年流月</p></div></header>
   <div class="insight-system-tabs">${nav}</div>
   <div data-natal-background>${body}</div>
@@ -950,6 +987,12 @@ function insights(){
  const or=root.querySelector('[data-open-report]');if(or)or.onclick=()=>openFullReport();
  const ex=root.querySelector('[data-share-current]');if(ex)ex.onclick=async()=>{ex.disabled=true;try{await shareChart(root,`${state.profile.name} · ${names[current]}报告`);tell('当前报告已生成，可在系统分享面板保存。');}catch(e){tell('导出失败：'+e.message);}finally{ex.disabled=false;}};
  const gp=root.querySelector('[data-goto-period]');if(gp)gp.onclick=()=>switchTab('period');
+ wireDims(root);
+ if(swapped){
+  // 新内容从分段器开始读，而不是停在旧内容滚到的位置
+  const mv=document.getElementById('mainScrollView');
+  if(mv)mv.scrollTop=0;
+ }
  forceRefreshAllInsights();
 }
 /* ---------------- 洞见页：时点专项报告工作台 ---------------- */

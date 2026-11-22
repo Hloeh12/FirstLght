@@ -22,7 +22,42 @@ const signOf=lon=>SIGNS[Math.floor((((Number(lon)||0)%360)+360)%360/30)];
 const gz=p=>p&&p.stem?`${p.stem}${p.branch}`:'';
 const num=v=>Number.isFinite(Number(v))?Number(v):0;
 const list=a=>a&&a.length?a.join('、'):'';
-const dim=(no,title,body,chips)=>`<li class="is-dim"><span class="is-dim-no">${no}</span><div class="is-dim-body"><h3 class="is-dim-title">${esc(title)}</h3><div class="is-dim-text">${body}</div>${chips&&chips.length?`<div class="is-chips">${chips.map(c=>`<span class="is-chip">${esc(c)}</span>`).join('')}</div>`:''}</div></li>`;
+/* v0.53.0：六维从「一张长卡六段全展开」改成可开合的六行。
+   原因是实测：六维全展开 1354px，正好占满一屏半，用户到不了下面的深度详批，
+   也看不出「有哪六个维度」。现在收起来每行只留编号 + 标题 + 首句摘要（两行截断），
+   一屏内能看清整个结构，点哪一行展开哪一行。 */
+const CHEV='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.4 10.7 8 6 12.6"/></svg>';
+/* 行内标签（<b> 高亮）必须直接去掉，不能换成空格——否则「命宫在申」会变成
+   「命宫在 申 」，摘要里全是断开的空格。只有段落/换行才算空白。 */
+const plainOf=html=>String(html??'')
+ .replace(/<\/p>|<br\s*\/?>/gi,' ')
+ .replace(/<[^>]*>/g,'')
+ .replace(/&nbsp;/g,' ')
+ .replace(/\s+/g,' ').trim();
+/* 摘要取正文首句：只做「这段讲什么」的一行提示，不重复正文措辞。
+   超长时退到最近的句读处再省略——直接切 86 字会出现「迁移寅：紫微（旺）、…」
+   这种把顿号切在末尾的断法，读起来像漏字。 */
+const gistOf=body=>{
+ const first=String(body).split(/<\/p>/)[0]||String(body);
+ const t=plainOf(first);
+ if(t.length<=86)return t;
+ let best=-1;
+ // 优先在句末标点收，其次才是逗顿——「食神×1、…」这种断在顿号上的摘要像漏字
+ for(const ch of '。！？；'){const i=t.lastIndexOf(ch,85);if(i>40&&i>best)best=i;}
+ if(best<0)for(const ch of '，、'){const i=t.lastIndexOf(ch,85);if(i>40&&i>best)best=i;}
+ const cut=best>0?best+1:86;
+ return t.slice(0,cut)+'…';
+};
+const dim=(no,title,body,chips)=>`<li class="is-dim" data-dim="${no}">
+  <button type="button" class="is-dim-head" aria-expanded="false" aria-controls="isDimPanel${no}">
+   <span class="is-dim-no">${no}</span>
+   <span class="is-dim-headmain"><span class="is-dim-title">${esc(title)}</span><span class="is-dim-gist">${gistOf(body)}</span></span>
+   <span class="is-dim-chev">${CHEV}</span>
+  </button>
+  <div class="is-dim-panel" id="isDimPanel${no}" role="region" aria-label="${esc(title)}" hidden>
+   <div class="is-dim-body"><div class="is-dim-text">${body}</div>${chips&&chips.length?`<div class="is-chips">${chips.map(c=>`<span class="is-chip">${esc(c)}</span>`).join('')}</div>`:''}</div>
+  </div>
+ </li>`;
 
 /* ---------------- 八字 ---------------- */
 function baziBlocks(b){
@@ -309,9 +344,76 @@ export function summaryHtml(model){
 export function dimsHtml(model){
  if(!model)return '';
  return `${model.evidence||''}<section class="is-dims-wrap">
-  <header class="is-sec-head"><span class="is-sec-no">六维</span><h2>本命结构拆解</h2><span class="is-sec-rule" aria-hidden="true"></span></header>
-  <ol class="is-dims">${model.dims.join('')}</ol>
+  <header class="is-sec-head"><span class="is-sec-no">六维</span><h2>本命结构拆解</h2><span class="is-sec-rule" aria-hidden="true"></span><button type="button" class="is-dims-all" data-dims-all aria-expanded="false">全部展开</button></header>
+  <ol class="is-dims" data-dims>${model.dims.join('')}</ol>
  </section>`;
+}
+
+/* 六维开合：收起态由 CSS 给 height:0 + visibility:hidden（不占位、不进无障碍树），
+   展开态交还 auto；中间的过渡高度由 JS 量 scrollHeight 写成具体 px。
+   不用 max-height 猜值（正文长短差一倍，猜小了裁字、猜大了前半段是空的）；
+   也不靠 transitionend 收尾——iOS 上偶发不触发会让面板卡在半开，末尾补一个定时兜底。 */
+const DIM_DUR=260;
+const reducedMotion=()=>{try{return !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;}catch{return false;}};
+
+function setDimOpen(item,open,animate=true){
+ const head=item.querySelector('.is-dim-head'),panel=item.querySelector('.is-dim-panel');
+ if(!head||!panel)return;
+ const isOpen=head.getAttribute('aria-expanded')==='true';
+ if(isOpen===open)return;
+ // 收起态用 hidden（display:none）而不是 height:0+visibility——后者的 visibility 切换
+ // 在窄屏上会被上一条 transition 的延迟拖住，出现「占着位置却不画内容」的空卡片。
+ const from=animate&&!reducedMotion()?panel.getBoundingClientRect().height:0;
+ head.setAttribute('aria-expanded',String(open));
+ item.classList.toggle('is-open',open);
+ if(!animate||reducedMotion()){panel.hidden=!open;panel.style.height='';return;}
+ if(open)panel.hidden=false;
+ panel.style.height=from+'px';
+ const target=open?panel.scrollHeight:0;
+ void panel.offsetHeight;
+ panel.style.height=target+'px';
+ /* 收尾一律把内联高度清掉：展开回落 auto、收起补 hidden。
+    这样即使 scrollHeight 量到 0、或 transitionend 没触发，最终态也一定是对的——
+    最多是少一段动画，不会留下「点开了却是空白」的半死状态。 */
+ const tok=(Number(panel.dataset.tok)||0)+1;
+ panel.dataset.tok=String(tok);
+ const settle=()=>{
+  if(panel.dataset.tok!==String(tok))return;
+  panel.style.height='';
+  if(!open)panel.hidden=true;
+ };
+ panel.addEventListener('transitionend',e=>{if(e.propertyName==='height')settle();},{once:true});
+ setTimeout(settle,DIM_DUR+120);
+}
+
+export function wireDims(root){
+ const list=root?.querySelector?.('[data-dims]');
+ if(!list)return;
+ const items=[...list.querySelectorAll('.is-dim')];
+ const allBtn=root.querySelector('[data-dims-all]');
+ const syncAll=()=>{
+  if(!allBtn)return;
+  const allOpen=items.length>0&&items.every(x=>x.querySelector('.is-dim-head')?.getAttribute('aria-expanded')==='true');
+  allBtn.textContent=allOpen?'全部收起':'全部展开';
+  allBtn.setAttribute('aria-expanded',String(allOpen));
+ };
+ for(const item of items){
+  const head=item.querySelector('.is-dim-head');
+  if(!head)continue;
+  head.addEventListener('click',()=>{setDimOpen(item,head.getAttribute('aria-expanded')!=='true');syncAll();});
+ }
+ if(allBtn){
+  allBtn.addEventListener('click',()=>{
+   const allOpen=items.every(x=>x.querySelector('.is-dim-head')?.getAttribute('aria-expanded')==='true');
+   items.forEach((it,i)=>{
+    if(i===0)setDimOpen(it,!allOpen);else setTimeout(()=>setDimOpen(it,!allOpen),Math.min(i,5)*26);
+   });
+   setTimeout(syncAll,DIM_DUR+140);
+  });
+ }
+ // 默认只展开第一维：首屏就能看到一段真内容，其余收成一行索引
+ if(items[0])setDimOpen(items[0],true,false);
+ syncAll();
 }
 
 export function digestBlockHtml(model,chapterHint=''){

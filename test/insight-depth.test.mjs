@@ -45,7 +45,8 @@ test('时点胶囊行横滑提示：溢出标记、渐隐、箭头，且只滚�
  assert.match(ui,/data-scrollable/,'溢出时须标记可横滑');
  assert.match(ui,/data-scroll-end/,'须根据滚动位置更新末端状态');
  assert.match(ui,/rail\.addEventListener\('scroll',mark/,'滚动时须更新提示');
- assert.match(ui,/rail\.scrollLeft\+=a\.left-b\.left-8/,'选中项只滚 rail 自身 scrollLeft（不 scrollIntoView）');
+ // v0.52.0：从「顶到左边缘」改为「尽量居中」——顶边会让左侧残留半截前一项。
+ assert.match(ui,/rail\.scrollLeft\+=Math\.round\(\(a\.left-b\.left\)-\(b\.width-a\.width\)\/2\)/,'选中项只滚 rail 自身 scrollLeft 且尽量居中（不 scrollIntoView）');
  const css=await readFile(new URL('../assets/console/liquid.css',import.meta.url),'utf8');
  assert.match(css,/\.rail\[data-scrollable\]\[data-scroll-end="0"\]/,'渐隐须只在可横滑且未到底时生效');
  assert.match(css,/mask-image:linear-gradient/,'须有右侧渐隐提示');

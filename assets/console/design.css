@@ -379,7 +379,9 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .civil-wheel>button[aria-selected=true]{background:#ffe0ee;color:#8f2454;font-weight:750}
 #birthForm output,.form-grid output{padding:8px;border:1px solid var(--line);border-radius:10px;color:var(--ink);font-variant-numeric:tabular-nums}
 .south-planets,.south-planets>span{box-sizing:border-box!important;white-space:nowrap!important;text-overflow:ellipsis!important}
-.timeline [data-pick=natal]{position:sticky;left:0;z-index:1;background:#fff0f7}
+/* v0.52.0：大运轨里的「本命」胶囊已移除（header 有「恢复本命」）。
+   原规则把它固定在左侧（sticky），但按压态的白底渐变覆盖了它的实心背景，
+   滚动时与下面的胶囊文字互相穿透——真机截图可见「本命」叠着相邻年份。 */
 .time-row.has-period-reset{grid-template-columns:39px auto minmax(0,1fr)}
 .time-row .period-reset{padding:3px 5px;background:#fff0f7;color:#912953;font-size:.72rem;white-space:nowrap}
 .chart-basis-time{margin:12px auto;text-align:center;color:var(--muted)}
@@ -456,7 +458,7 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .period-control{padding:15px 12px 12px!important;border-radius:var(--fl-radius)!important}
 .period-control-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:0 5px 8px}
 .period-control-head h2{font-size:14.5px!important;margin:0 0 3px!important}
-.period-control-head p{margin:0;font-size:11px;line-height:1.45;color:rgba(90,44,66,.58);max-width:78%}
+.period-control-head p{margin:0;font-size:11px;line-height:1.45;color:rgba(90,44,66,.58);max-width:100%}
 .period-master-reset{flex:0 0 auto;height:26px!important;padding:0 11px!important;border-radius:999px!important;font-size:11px!important;font-weight:600!important;white-space:nowrap}
 .timeline{display:flex!important;flex-direction:column;gap:7px;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
 .timeline .time-row{border-bottom:0!important}
@@ -1714,7 +1716,7 @@ dialog#termSheet .sheet-body::-webkit-scrollbar-thumb{background:rgba(190,120,15
 #mainScrollView,.main-scroll-view{padding-bottom:132px!important}
 .period-control{padding-bottom:10px!important;scroll-margin-bottom:130px}
 .timeline,.rails{scroll-padding-inline:16px}
-.pc-current{margin:2px 0 0!important;font-size:11.5px!important;color:#a03a6c!important;letter-spacing:.01em}
+.pc-current{margin:2px 0 0!important;font-size:11.5px!important;color:#a03a6c!important;letter-spacing:.01em;text-wrap:balance}
 
 /* ==========================================================================
    DESIGN SYSTEM v2 · 单一权威层 (Authoritative Override Layer)
@@ -1984,35 +1986,60 @@ dialog#reportSheet::backdrop{position:fixed;inset:0;z-index:999;background:rgba(
 .zi-board .zi-cell .zi-palace-line .chip{max-width:none!important;flex:0 0 auto!important;text-overflow:clip!important}
 
 /* =========================================================
-   运势起伏图（trend-block）：十年流年扶助度曲线 + 大运条带
+   运势起伏（trend-block）：当前大运十年柱 + 本命基准线 + 一生大运迷你条
    数值来自引擎 trend 字段，颜色按用神/忌神关系，不做吉凶断言
    ========================================================= */
-.trend-block{grid-column:1/-1;margin:2px 0 6px;padding:10px 12px 8px;border-radius:14px;background:rgba(255,255,255,.5);box-shadow:inset 0 0 0 1px rgba(190,120,155,.12)}
-.trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.trend-head h3{margin:0;font-size:13px;color:#7a2350;font-weight:700}
-.trend-legend{margin:0;font-size:11px;color:var(--muted,#8a6a7a);display:flex;gap:8px;align-items:center}
-.trend-legend i{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:3px;vertical-align:-1px}
-.trend-svg{display:block;width:100%;height:auto;margin:6px 0 0;touch-action:pan-y}
-.trend-svg .tline{fill:none;stroke:rgba(255,79,139,.55);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.trend-svg .tb{opacity:.85;transition:opacity .15s ease}
+.trend-block{grid-column:1/-1;margin:2px 0 4px;padding:12px 12px 10px;border-radius:16px;
+  background:linear-gradient(165deg,rgba(255,255,255,.8),rgba(255,246,250,.62));
+  box-shadow:inset 0 0 0 1px rgba(190,120,155,.13),0 10px 24px -22px rgba(120,30,70,.5)}
+.trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.trend-head h3{margin:0;font-size:13px;color:#7a2350;font-weight:700;letter-spacing:.01em}
+.trend-range{font-size:10.5px;font-weight:700;color:#b3668c;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.trend-legend{margin:6px 0 0;font-size:10px;color:#9a7a8c;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.trend-legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:4px;vertical-align:0}
+.trend-plot{margin:2px 0 0}
+.trend-svg{display:block;width:100%;max-width:420px;height:auto;margin:0 auto;touch-action:pan-y;overflow:visible}
+.trend-svg .tb{transition:opacity .15s ease}
 .trend-svg .ty{cursor:pointer}
-.trend-svg .ty:hover .tb,.trend-svg .ty:focus .tb{opacity:1}
+.trend-svg .ty:hover .tb{opacity:.86}
 .trend-svg .ty:focus{outline:none}
-.trend-svg .ty:focus-visible circle{stroke:#7a2350}
-.trend-svg .ty.on .tb{opacity:1;stroke:#7a2350;stroke-width:1.2}
-.trend-svg .tx{font-size:10px;fill:#9a7a8c;font-family:inherit}
-.trend-svg .tx.now{fill:#e0357f;font-weight:700}
-.trend-svg .tnow{stroke:rgba(224,53,127,.35);stroke-width:1;stroke-dasharray:2 3}
-.trend-cap{margin:4px 0 0;font-size:10px;line-height:1.6;color:var(--muted,#8a6a7a)}
-.cyc-band{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin-top:8px}
-.cyc-seg{position:relative;display:grid;justify-items:center;gap:1px;padding:6px 2px 8px;border:none;border-radius:9px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(190,120,155,.14);cursor:pointer;overflow:hidden;-webkit-tap-highlight-color:transparent}
-.cyc-seg:active{transform:scale(.96)}
-.cyc-seg .cs-gz{font-size:11.5px;font-weight:700;color:#6d2a4e}
-.cyc-seg .cs-age{font-size:9px;color:#9a7a8c}
-.cyc-seg .cs-bar{position:absolute;left:4px;bottom:3px;height:3px;border-radius:2px;background:var(--role,#ff4f8b);opacity:.75;transition:width .3s ease}
-.cyc-seg .cs-sup{font-size:9px;color:#b088a0}
-.cyc-seg.on{background:rgba(255,224,238,.92);box-shadow:inset 0 0 0 1.5px rgba(255,79,139,.55),0 4px 10px -6px rgba(190,50,110,.45)}
-.cyc-seg.on .cs-gz{color:#e0357f}
+.trend-svg .ty.on .tb{stroke:#7a2350;stroke-width:1.4}
+.trend-svg .tbase{stroke:rgba(120,52,84,.42);stroke-width:1;stroke-dasharray:3 3}
+.trend-svg .tbase-lab{font-size:8.6px;font-weight:700;fill:#a0567c;font-family:inherit;paint-order:stroke;stroke:#fff;stroke-width:2.6;stroke-linejoin:round}
+.trend-svg .tnow{stroke:rgba(224,53,127,.3);stroke-width:1;stroke-dasharray:2 3}
+.trend-svg .tpin{fill:#fff;stroke:#7a2350;stroke-width:1.6}
+.trend-svg .tval{font-size:9px;font-weight:800;fill:#7a2350;font-family:inherit;font-variant-numeric:tabular-nums;paint-order:stroke;stroke:#fff;stroke-width:2.4;stroke-linejoin:round}
+/* 年份轴：HTML 网格承载，与 SVG 柱中心严格对齐（SVG 左右不留白），永不重叠、不被拉伸 */
+.trend-axis{display:grid;grid-template-columns:repeat(var(--n,10),minmax(0,1fr));max-width:420px;margin:2px auto 0}
+.trend-axis .ta{border:0!important;background:transparent!important;box-shadow:none!important;padding:3px 0 0!important;min-height:0!important;height:auto!important;
+  font-size:9.5px!important;font-weight:600!important;color:#a4889a!important;font-variant-numeric:tabular-nums;line-height:1.2;border-radius:6px!important}
+.trend-axis .ta.now{color:#e0357f!important;font-weight:800!important}
+.trend-axis .ta.on{color:#7a2350!important;font-weight:800!important}
+/* 窄屏（320 级）：10 列年份只剩 29px 一列，9.5px 的四位年份会互相贴住，收一档字号 */
+@media (max-width:360px){
+ .trend-axis .ta{font-size:8.5px!important;letter-spacing:-.03em}
+ .trend-legend{font-size:9.5px;gap:7px}
+}
+.trend-cap{margin:7px 0 0;font-size:10px;line-height:1.6;color:#9a7a8c;text-wrap:balance}
+/* 一生大运：迷你柱条（总览），与上方「本步十年」构成 overview → detail */
+.cyc-mini{margin-top:9px;padding-top:8px;border-top:1px dashed rgba(190,120,155,.2)}
+.cm-track{display:grid;grid-template-columns:repeat(var(--n,8),minmax(0,1fr));gap:2px;align-items:end;max-width:420px;margin:0 auto}
+/* 全局 button[aria-pressed=true] 带 !important 粉底（design.css:711 / liquid.css:64），
+   特异性 (0,1,1) 高于单类 .cm-seg——不显式压回，选中那一格会变成粉色圆角块。 */
+.cyc-mini .cm-seg,.cyc-mini .cm-seg.on{background:transparent!important;border-color:transparent!important;color:inherit!important;box-shadow:none!important}
+.cm-seg{position:relative;display:grid;justify-items:center;gap:2px;padding:2px 0 4px;height:auto!important;min-height:0!important;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:8px!important;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .16s ease}
+.cm-seg:active{transform:scale(.94)}
+/* 八格索引：色点（喜忌）+ 干支 + 起运年龄，不用柱高表达强弱（细微差异会退化成断线） */
+.cm-dot{display:block;width:7px;height:7px;border-radius:50%;background:var(--c,#c9a5b8);opacity:.62;transition:opacity .16s ease,box-shadow .16s ease}
+.cm-seg b{font-size:9.5px!important;font-weight:600!important;color:#a4889a!important;letter-spacing:.02em;line-height:1.1}
+.cm-seg em{font-size:8.5px;font-style:normal;color:#bfa3b3;font-variant-numeric:tabular-nums;line-height:1.1}
+.cm-seg.is-now .cm-dot{opacity:.8}
+.cm-seg.on .cm-dot{opacity:1;box-shadow:0 0 0 2.5px rgba(224,53,127,.16)}
+.cm-seg.on b{color:#7a2350!important;font-weight:800!important}
+.cm-seg.on em{color:#c25e8c}
+.cm-seg.on::after{content:'';position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:15px;height:2px;border-radius:2px;background:#e0357f}
+.cm-foot{display:block;margin-top:5px;font-size:9px;letter-spacing:.14em;color:#b08ca0;text-align:center}
+
 
 /* ===== Build 56: palace name must never truncate to one glyph ===== */
 /* Build 55e put palace-line and age on one grid row; the auto age column (~49px)

@@ -17,7 +17,10 @@ try{
   processServer.once('exit',code=>reject(Error('server exit '+code)));
  });
  browser=await browserType.launch({headless:true,executablePath:process.env.FIRSTLIGHT_BROWSER_EXECUTABLE||undefined});
- for(const [width,height] of [[390,844],[320,568],[844,390]]){
+ // 默认三视口全跑（CI 走默认）；本地排查单个断点时可 FIRSTLIGHT_VIEWPORTS=390x844 只跑一档。
+ const viewports=(process.env.FIRSTLIGHT_VIEWPORTS||'390x844,320x568,844x390')
+  .split(',').map(s=>s.trim().split('x').map(Number)).filter(([w,h])=>w>0&&h>0);
+ for(const [width,height] of viewports){
   const context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   const page=await context.newPage(),errors=[],api=[];
   page.on('pageerror',error=>errors.push(error.message));

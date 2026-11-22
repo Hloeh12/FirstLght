@@ -323,9 +323,12 @@ const result={entry,pillars,cycles,years,months,days,hours,selected,relationship
  // 五行权重模型计算日主扶助度。数值口径与选中该年时的 guidance.strength 一致，非拍脑袋估算。
  const supportOf=p=>strength([...pillars,p],relations([...pillars,p]),combine).support;
  result.trend={
-  natal:{support:natalStrength.support,kind:natalStrength.kind},
-  years:years.map(y=>({year:y.year,ganzhi:y.stem+y.branch,element:y.stemElement,support:supportOf(y)})),
-  cycles:cycles.map(c=>({index:c.index,age:c.age,startYear:c.startYear,endYear:c.endUtc?new Date(c.endUtc).getUTCFullYear():c.startYear+9,ganzhi:c.stem+c.branch,element:c.stemElement,support:supportOf(c)})),
+  // v0.52.0：natal 之前只带 support/kind，前端 roleOf() 读不到 useful/caution，
+  // 于是每根柱恒落「中性」——图例列了三种颜色而实际只有一种。这里补齐喜忌，
+  // 并把地支五行一并输出，让着色与 period-focus 的判定口径（干支任一命中即算）一致。
+  natal:{support:natalStrength.support,kind:natalStrength.kind,useful:natalStrength.useful||[],caution:natalStrength.caution||[]},
+  years:years.map(y=>({year:y.year,ganzhi:y.stem+y.branch,element:y.stemElement,branchElement:y.branchElement,support:supportOf(y)})),
+  cycles:cycles.map(c=>({index:c.index,age:c.age,startYear:c.startYear,endYear:c.endUtc?new Date(c.endUtc).getUTCFullYear():c.startYear+9,ganzhi:c.stem+c.branch,element:c.stemElement,branchElement:c.branchElement,support:supportOf(c)})),
   method:'流年与大运干支单独并入原局重算日主扶助度，口径与岁运提要一致。'
  };
  result.guidance=periodGuidance({...result,monthWindows});

@@ -2,7 +2,7 @@ import {buildBaziKnowledgeReport,BAZI_FLOW_RULES} from '../../www/js/rules.js';
 globalThis.BAZI_FLOW_RULES = BAZI_FLOW_RULES;
 import {reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,bars,table,selectedRails,splitDate,periodSections} from './ui.js';
-import {trendChart} from './trend-chart.js';
+import {trendChart,trendYears} from './trend-chart.js';
 const setUp=ctx=>ctx.state.chartState.bazi??={data:ctx.state.reading.bazi,combine:false,pick:{},token:0,error:'',selected:[],pulse:false};
 const stages={
  长生:'像新生一样，表示力量开始生长。',沐浴:'处于初生后的变化期，表示适应和转换。',冠带:'表示逐渐成形、开始显露。',临官:'表示条件齐备、开始承担职责。',帝旺:'表示力量处在高点。',衰:'表示达到高点后开始回落。',病:'表示力量受到牵制，适合观察休整需求。',死:'表示某一阶段结束。',墓:'表示力量归藏、暂未显露。',绝:'表示旧阶段与新阶段的转折。',胎:'表示新阶段开始孕育。',养:'表示积累条件，准备进入下一阶段。'
@@ -35,12 +35,23 @@ function pickLine(p,d){
  const p2=p||{},D=d||{},parts=[];
  const cycle=D.cycles?.[p2.luck],year=D.years?.find(y=>y.year===p2.year),
   month=D.months?.[p2.month],day=D.days?.[p2.day],hour=D.hours?.[p2.hour];
- if(p2.luck!=null)parts.push('第'+(Number(p2.luck)+1)+'步大运'+(cycle?` ${cycle.stem||''}${cycle.branch||''}（${cycle.startYear??'?'}${cycle.endYear?'–'+cycle.endYear:''}）`:''));
+ // 年份区间不在这里重复：图头右侧已写「2027–2036 · 壬申」，两处都给会把这行顶成两行。
+ if(p2.luck!=null)parts.push('第'+(Number(p2.luck)+1)+'步'+(cycle?` ${cycle.stem||''}${cycle.branch||''}`:''));
  if(p2.year!=null)parts.push(p2.year+'年'+(year?` ${year.stem||''}${year.branch||''}`:''));
  if(p2.month!=null)parts.push('第'+(Number(p2.month)+1)+'个月'+(month?` ${month.stem||''}${month.branch||''}`:''));
  if(p2.day!=null)parts.push('第'+(Number(p2.day)+1)+'天'+(day?` ${day.stem||''}${day.branch||''}`:''));
  if(p2.hour!=null)parts.push('第'+(Number(p2.hour)+1)+'个时辰'+(hour?` ${hour.stem||''}${hour.branch||''}`:''));
- return parts.length?'正在看：'+parts.join(' · ')+' —— 下方分析已随之更新':'正在看：本命原局（点下面任一时点可切换）';
+ // 尾注原本是「—— 下方分析已随之更新」，实测会把这一行顶成两行、括号年份被拆开；
+ // 语义上也不必反复强调（切换后正文本身会变），故去掉。
+ if(!parts.length){
+  // 未选时点：下方图仍画「今年所在那一步」的十年，文案必须跟图上一致，
+  // 不能只写「本命原局」——否则读者会以为图上高亮的是原局数据。
+  const cyc=D?.cycles||[],yNow=new Date().getFullYear();
+  const i=cyc.findIndex(c=>c.startYear<=yNow&&yNow<=(c.endYear??c.startYear+9));
+  const c=i>=0?cyc[i]:null;
+  return c?`正在看：本命原局 · 第${i+1}步 ${c.stem||''}${c.branch||''}`:'正在看：本命原局（点下面任一时点可切换）';
+ }
+ return '正在看：'+parts.join(' · ');
 }
 function chartLine(d){
  const dm=d.dayMaster||{},st=d.strength||{},m=d.pillars[1]||{},y=d.pillars[0]||{};
@@ -94,10 +105,12 @@ function entryCard(d,timeUnknown){
  <p>首次交运：${esc(e.local)}（出生地历史UTC偏移 ${e.offsetMinutes/60}）</p><p>${esc(e.year)}年 ${esc(e.term)}后第 ${e.daysAfter} 天交运 · 每十回归年换运</p><small>${esc(e.method)}</small></article>`;
 }
 function timeline(d,pick){
- const year=d.years.map(y=>[y.year,y.year+' '+y.stem+y.branch]);
+ // v0.52.0：删除「大运」轨——它和上方「一生大运」迷你条职责完全重叠（都能切大运，
+ // 胶囊还多带一个长生字段），是这块最刺眼的重复。迷你条保留干支与起运年龄，
+ // 长生在时点正文里已有专章。流年轨同时收窄到「当前大运的十年」，与柱状图 1:1 对应。
+ const yearRail=trendYears(d,pick).map(y=>[y.year,y.year+' '+y.ganzhi]);
  const hourRail=(pick.day!=null&&d.hours?.length)?row('流时',d.hours.map(h=>[h.index,h.label+' '+h.stem+h.branch]),pick.hour):'';
- return row('大运',[['natal','本命'],...d.cycles.map(p=>[p.index,p.age+'岁 '+p.stem+p.branch+' '+p.changsheng])],pick.luck??'natal')+
-  row('流年',year,pick.year)+row('流月',d.months.map(m=>[m.index,m.label+' '+m.stem+m.branch]),pick.month)+
+ return row('流年',yearRail,pick.year)+row('流月',d.months.map(m=>[m.index,m.label+' '+m.stem+m.branch]),pick.month)+
   row('流日',d.days.map(x=>[x.index,x.date.slice(5)+' '+x.stem+x.branch]),pick.day)+hourRail;
 }
 function drawRelations(ctx,s,animate){

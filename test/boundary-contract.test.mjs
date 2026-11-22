@@ -574,7 +574,11 @@ test('v0.48.0 八字时点：「第几步」须映射干支年份、点选不得
  const b=await read('../assets/console/bazi.js');
  // 修复2：pickLine 须接收 data 并把索引解析为干支（不再只写「第N步」）。
  assert.match(b,/function pickLine\(p,d\)/,'pickLine 须接收报告数据以解析干支');
- assert.match(b,/cycle\?\.startYear|cycle\.startYear/,'大运须带出起止年份');
+ assert.match(b,/cycle\?[\s\S]{0,40}cycle\.stem/,'大运须解析出干支');
+ // v0.52.0：起止年份改由图头承载（「2027–2036 · 壬申」），pickLine 只写「第4步 壬申」，
+ // 两处都给会把「正在看」顶成两行、把年份区间拆开。契约改为：年份区间必须存在且在图头。
+ const tc=await read('../assets/console/trend-chart.js');
+ assert.match(tc,/class="trend-range">\$\{cycle\.startYear\}–\$\{cycle\.endYear\}/,'大运起止年份须在图头带出');
  assert.match(b,/pickLine\(next,s\.data\)/,'点击切换时须传入数据更新文案');
  assert.match(b,/pickLine\(s\.pick,d\)/,'初始渲染须传入数据');
  // 修复3：不得再对时点胶囊调用 scrollIntoView（会带动祖先容器导致整页跳动）。

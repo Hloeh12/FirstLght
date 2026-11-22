@@ -32,9 +32,17 @@ export function selectedRails(root){
    if(over)rail.setAttribute('data-scrollable','');else rail.removeAttribute('data-scrollable');
    const atEnd=rail.scrollLeft+rail.clientWidth>=rail.scrollWidth-4;
    rail.setAttribute('data-scroll-end',atEnd?'1':'0');
+   // v0.52.0：左侧同样需要提示。选中项居中后，左端必然露出半截前一项，
+   // 没有渐隐时看起来像裁切错误（真机上「（20）09 己丑」只剩半格）。
+   rail.setAttribute('data-scroll-start',rail.scrollLeft>4?'1':'0');
   };
   const item=$('[aria-pressed="true"]',rail);
-  if(item){const a=item.getBoundingClientRect(),b=rail.getBoundingClientRect();if(a.left<b.left||a.right>b.right)rail.scrollLeft+=a.left-b.left-8;}
+  if(item){
+   // v0.52.0：选中项改为「尽量居中」而不是顶到左边缘。顶边会让左侧残留半截前一项
+   // （八字大运轨上出现过只剩一个「死」字的胶囊），视觉像裁切错误。内容不足一屏时浏览器自动夹回 0。
+   const a=item.getBoundingClientRect(),b=rail.getBoundingClientRect();
+   if(a.left<b.left||a.right>b.right)rail.scrollLeft+=Math.round((a.left-b.left)-(b.width-a.width)/2);
+  }
   mark();
   if(!rail.__scrollHintBound){
    rail.__scrollHintBound=true;

@@ -23,6 +23,12 @@ try{
  for(const [width,height] of viewports){
   const context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   const page=await context.newPage(),errors=[],api=[];
+  // GitHub macOS runner 上的 WebKit 跑完两个视口后明显变慢：同一份代码本地（Windows WebKit
+  // 同版本）三视口 8 分 50 秒全过，runner 上却会在随机位置触发 30s 默认超时（截图等字体、
+  // #moduleButton 点击、抽屉 summary 定位各失败过一次，本地均无法复现）。
+  // 这些超时是「等得不够久」而不是「元素不存在」，所以 WebKit 放宽到 90s；chromium 维持 30s，
+  // 不因为这条改动放松对真实实现的判定。
+  if(engine==='webkit')page.setDefaultTimeout(90000);
   page.on('pageerror',error=>errors.push(error.message));
   page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/'))api.push(request.url());});
   await page.goto('http://127.0.0.1:18824/',{waitUntil:'networkidle'});

@@ -3,6 +3,7 @@ import {formatLocalDisplayTime} from './now.js';
 import {practicalZiwei} from '../../src/ziwei-practical.mjs';
 import {playSuccessSound,reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,selectedRails,table} from './ui.js';
+import {bindSwipeTurn} from './swipe-turn.js';
 
 globalThis.ZIWEI_FLOW_RULES = flowRules;
 const branches='子丑寅卯辰巳午未申酉戌亥',stems='甲乙丙丁戊己庚辛壬癸';
@@ -232,6 +233,29 @@ function detail(s){
  })):'';
  return `<article class="card liquid-glass zi-detail" aria-live="polite" data-period-guidance><h2>${esc(heading)}</h2>${[...description,...ziweiPeriodEvidence(z,flow)].filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')}${flying?'<h3>四化飞星明细</h3>'+grid:''}<small>${esc(weight)} · 传统术数观察 · 借星按借入宫重查亮度，并以 0.6 系数计入参考。</small></article>`;
 }
+/* v0.54.0 逐限翻页：左右滑动 = 上/下一个大限，与八字时点页同一套手势口径。
+   基准取 railData() 算出的「当前这一段」（它已经按 flow.year 归到所在大限），
+   不再从 flow.scope 反推——scope 为 yearly 时也该从该流年所在的大限往前走一步。 */
+let turnDir=0;
+function playTurn(ctx,dir){
+ const el=$('.period-control',ctx.root);
+ if(!el||reducedMotion())return;
+ el.classList.remove('turn-next','turn-prev');
+ void el.offsetWidth;
+ el.classList.add(dir>0?'turn-next':'turn-prev');
+ setTimeout(()=>el.classList.remove('turn-next','turn-prev'),460);
+}
+function turnDecade(ctx,dir){
+ const s=current(ctx),{decades,d}=railData(s);
+ if(!decades?.length||!d?.yearRange)return;
+ const cur=d.yearRange[0];
+ const i=decades.findIndex(x=>x.yearRange?.[0]===cur);
+ const to=decades[(i<0?0:i)+dir];
+ if(!to?.yearRange)return;
+ turnDir=dir;
+ ctx.state.activeTimeSystem='ziwei';
+ setPeriod(ctx,{scope:'decadal',year:to.yearRange[0]});
+}
 let observer;
 export function ziweiView(ctx,arrival=false){
  const s=current(ctx),z=s.chart,flow=s.flow,{decades,d,years}=railData(s);
@@ -242,7 +266,7 @@ export function ziweiView(ctx,arrival=false){
  panel.innerHTML=`<section aria-label="紫微斗数">${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，命宫、身宫与生时星按正午 12:00 推定，仅供结构参考，不宜据此断具体应期；填入时刻后可重排。</p>':''}${board(ctx,s)}<article class="card" data-zi-practical>${practicalZiwei(s.chart,s.flow).map(x=>`<p><b>${esc(x.name+' · '+x.palace)}</b> ${esc(x.text)}</p>`).join('')||'<small>当前未触发双禄、禄冲或羊陀夹忌条件。</small>'}</article>
  <div class="segments liquid-glass" aria-label="紫微模式">${mode.map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${id===s.mode}"`)).join('')}</div>
  ${s.mode==='transform'?'<div class="rail" aria-label="四化分析">'+[['natal','生年四化'],['self','自化分析'],['track','飞星轨迹']].map(([id,label])=>btn(label,`data-filter="${id}" aria-pressed="${s.filter===id}"`)).join('')+'</div>':''}
- <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大限与流限</h2><p>点任一格即切换下方当前阶段的专属分析。</p></div>${btn('↺ 本命','class="period-master-reset" data-reset-period')}</div><div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),flow?.scope==='decadal'?flow?.year:d.yearRange[0])}
+ <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大限与流限</h2><p>点任一格即切换下方当前阶段的专属分析，也可左右滑动换大限。</p></div>${btn('↺ 本命','class="period-master-reset" data-reset-period')}</div><div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),flow?.scope==='decadal'?flow?.year:d.yearRange[0])}
  ${row('流年',[...years.map(y=>[y,yearName(y)])],flow?.scope==='decadal'?'':flow?.year)}
  ${row('流月',Array.from({length:12},(_,i)=>[i+1,monthName(i+1)]),flow?.month)}
  ${row('流日',flow?.days?.length?flow.days.map(x=>[x.day,x.day+'日 '+x.ganZhi]):Array.from({length:new Date(Date.UTC(baseYear,baseMonth,0)).getUTCDate()},(_,i)=>[i+1,(i+1)+'日']),flow?.day)}</div></section>
@@ -279,6 +303,8 @@ export function ziweiView(ctx,arrival=false){
    key==='流月'?{scope:'monthly',year:baseYear,month:n}:{scope:'daily',year:baseYear,month:baseMonth,day:n};
   setPeriod(ctx,p);
  };
+ bindSwipeTurn($('.period-control',panel),dir=>turnDecade(ctx,dir));
+ if(turnDir){playTurn(ctx,turnDir);turnDir=0;}
 }
 async function setPeriod(ctx,p,type){
  const s=current(ctx),n=++s.token;

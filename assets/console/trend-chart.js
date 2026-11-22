@@ -103,15 +103,19 @@ export function trendChart(d,pick){
    <i class="cm-dot" style="--c:${ROLE[role]}"></i><b>${esc(c.ganzhi)}</b><em>${Math.round(c.age)}岁</em>
   </button>`;
  }).join('');
- const legend=graded?['生扶用神','忌神偏重','中性']:['高于本命','低于本命','持平'];
- return `<div class="trend-block" data-trend-block>
-  <div class="trend-head"><h3>运势起伏</h3><span class="trend-range">${cycle.startYear}–${cycle.endYear} · ${esc(cycle.stem||'')}${esc(cycle.branch||'')}</span></div>
+const legend=graded?['生扶用神','忌神偏重','中性']:['高于本命','低于本命','持平'];
+// v0.54.0：把「逐运浏览」从只能点胶囊，补成可见的上一步/下一步——窄屏上胶囊轨要横滑
+// 才知道后面还有七步，箭头让「这是一串可以往前走的时间」在首屏就说清楚。
+const ci=cycle.index,total=t.cycles.length;
+const nav=`<span class="trend-nav"><button type="button" class="tnav" data-luck-step="-1" aria-label="上一步大运"${ci<=0?' disabled':''}>‹</button><button type="button" class="tnav" data-luck-step="1" aria-label="下一步大运"${ci>=total-1?' disabled':''}>›</button></span>`;
+return `<div class="trend-block" data-trend-block>
+ <div class="trend-head"><h3>运势起伏</h3><span class="trend-head-side"><span class="trend-range">${cycle.startYear}–${cycle.endYear} · ${esc(cycle.stem||'')}${esc(cycle.branch||'')}</span>${nav}</span></div>
   <p class="trend-legend"><i style="background:${ROLE.useful}"></i>${legend[0]}<i style="background:${ROLE.caution}"></i>${legend[1]}<i style="background:${ROLE.neutral}"></i>${legend[2]}</p>
   <div class="trend-plot">
    <svg class="trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="本步十年流年扶助度柱状图">${nowMark}${baseline}${bars}${pin}</svg>
    ${axis}
   </div>
-  <p class="trend-cap">柱高＝日主扶助度，虚线为本命；点柱切换。</p>
+  <p class="trend-cap">柱高＝日主扶助度，虚线为本命；点柱切换，也可左右滑动换大运。</p>
   <div class="cyc-mini" role="group" aria-label="一生大运强弱概览，点按切换"><div class="cm-track" style="--n:${t.cycles.length}">${mini}</div><span class="cm-foot">一生大运</span></div>
  </div>`;
 }

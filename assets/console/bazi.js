@@ -2,7 +2,8 @@ import {buildBaziKnowledgeReport,BAZI_FLOW_RULES} from '../../www/js/rules.js';
 globalThis.BAZI_FLOW_RULES = BAZI_FLOW_RULES;
 import {reducedMotion} from './feedback.js';
 import {$,btn,esc,term,row,bars,table,selectedRails,splitDate,periodSections} from './ui.js';
-import {trendChart,trendYears} from './trend-chart.js';
+import {trendChart,trendYears,trendCycle} from './trend-chart.js';
+import {bindSwipeTurn} from './swipe-turn.js';
 const setUp=ctx=>ctx.state.chartState.bazi??={data:ctx.state.reading.bazi,combine:false,pick:{},token:0,error:'',selected:[],pulse:false};
 const stages={
  长生:'像新生一样，表示力量开始生长。',沐浴:'处于初生后的变化期，表示适应和转换。',冠带:'表示逐渐成形、开始显露。',临官:'表示条件齐备、开始承担职责。',帝旺:'表示力量处在高点。',衰:'表示达到高点后开始回落。',病:'表示力量受到牵制，适合观察休整需求。',死:'表示某一阶段结束。',墓:'表示力量归藏、暂未显露。',绝:'表示旧阶段与新阶段的转折。',胎:'表示新阶段开始孕育。',养:'表示积累条件，准备进入下一阶段。'
@@ -154,6 +155,27 @@ function drawRelations(ctx,s,animate){
   :'点按柱头可对比两柱的合冲连线';
 }
 
+/* v0.54.0 逐运翻页：箭头与左右滑动共用同一条路径——都只是「大运索引 ±1」，
+   再走既有的 update() 重算，不另开一套只换胶囊高亮的假切换。 */
+let turnDir=0;
+function playTurn(ctx,dir){
+ const el=$('.period-control',ctx.root);
+ if(!el||reducedMotion())return;
+ el.classList.remove('turn-next','turn-prev');
+ void el.offsetWidth; // 强制回流，否则同一元素连续两次翻页不会重播动画
+ el.classList.add(dir>0?'turn-next':'turn-prev');
+ setTimeout(()=>el.classList.remove('turn-next','turn-prev'),460);
+}
+function turnLuck(ctx,dir){
+ const s=setUp(ctx),list=s.data?.cycles||[];
+ if(!list.length)return;
+ const from=trendCycle(s.data,s.pick)?.index??0,to=from+dir;
+ // 到头了就不说话：越界回弹的动效在离线 WebView 里只会让人以为「卡了一下」
+ if(to<0||to>=list.length)return;
+ turnDir=dir;
+ ctx.state.activeTimeSystem='bazi';
+ update(ctx,{luck:to},s.combine);
+}
 let observer;
 export function baziView(ctx){
  const s=setUp(ctx),d=s.data;
@@ -172,6 +194,8 @@ export function baziView(ctx){
  const periodPanel=$('.period-control',ctx.root)||rails;
  periodPanel.onclick=e=>{
   if(e.target.closest('[data-reset-period]')){update(ctx,{},s.combine);return;}
+  const step=e.target.closest('[data-luck-step]');
+  if(step){turnLuck(ctx,Number(step.dataset.luckStep));return;}
   const b=e.target.closest('[data-rail]');
   if(!b)return;
   const {rail:id,pick:v}=b.dataset,n=Number(v),{pick}=s;
@@ -189,6 +213,8 @@ export function baziView(ctx){
   const g=e.target.closest('svg [data-rail]');
   if(g){e.preventDefault();g.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
  });
+ // 左右滑动整段翻页（起点落在胶囊轨上时不接管：那里横滑是滚动那一排）
+ bindSwipeTurn(periodPanel,dir=>turnLuck(ctx,dir));
  for(const cell of ctx.root.querySelectorAll('[data-pillar]')){
   const toggle=()=>{
    const index=Number(cell.dataset.pillar);
@@ -217,13 +243,21 @@ function refresh(ctx,s){
   if(b.dataset.rail===focused.dataset.rail&&b.dataset.pick===focused.dataset.pick){b.focus({preventScroll:true});break;}
  }
  selectedRails(root);
+ // 「正在看」这行由 pickLine 生成；点击路径在委托里即时改过，滑动/箭头路径没有，
+ // 统一在这里补一次（幂等，重复写同一串不影响）。
+ const line=$('.pc-current',root);if(line)line.textContent=pickLine(s.pick,s.data);
  $('[data-combine]',root).setAttribute('aria-pressed',String(s.combine));
  current.getAnimations?.().forEach(a=>a.cancel());
  current.innerHTML=details(s.data);
  if(!reducedMotion()&&current.animate){
-  current.animate([{opacity:.72,transform:'translateY(1px)'},{opacity:1,transform:'translateY(0)'}],{duration:200,easing:'ease-out'});
+  // 翻页时正文与图同向进场；普通点选仍是原来的纵向轻移
+  current.animate(turnDir
+   ?[{opacity:.35,transform:`translateX(${turnDir>0?18:-18}px)`},{opacity:1,transform:'translateX(0)'}]
+   :[{opacity:.72,transform:'translateY(1px)'},{opacity:1,transform:'translateY(0)'}],{duration:turnDir?340:200,easing:'ease-out'});
  }
  drawRelations(ctx,s,true);
+ // 翻页入场：动画挂在整个 .period-control 上，让图、轴、迷你条、正文同一方向一起进场
+ if(turnDir){playTurn(ctx,turnDir);turnDir=0;}
 }
 async function update(ctx,pick,combine){
  const s=setUp(ctx),token=++s.token;
@@ -232,7 +266,7 @@ async function update(ctx,pick,combine){
   const data=await ctx.request('/api/console/bazi',{birth:ctx.birth,selection:pick,combine});
   if(s.token!==token||ctx.state.chartState.bazi!==s)return;
   s.data=data;s.pick=pick;s.combine=combine;s.pulse=combine;s.error='';
- }catch(error){if(token===s.token)s.error=error.message;}
+ }catch(error){if(token===s.token){s.error=error.message;turnDir=0;}}
  if(s.token===token&&ctx.state.chartState.bazi===s&&ctx.state.tab==='chart'&&ctx.state.system==='bazi'){
   $('#baziStatus',ctx.root).textContent=s.error;
   if(!s.error)refresh(ctx,s);

@@ -129,7 +129,7 @@ test('报告可用性：目录锚点、滚动进度与章节导航已接入',asy
  assert.match(css,/\.rpt-toc\{position:relative/);
  assert.match(css,/\.rpt-toc-item\.on/);
  const app2=await read('../assets/console/app.js');
- assert.match(app2,/reportHtml\(report\)/,'报告页渲染入口存在');
+ assert.match(app2,/reportHtml\(report,\{lazy:true\}\)/,'报告页渲染入口存在（v0.54.0 起首屏分帧）');
 });
 
 test('报告侧边目录：任意滚动位置唤出、与内联目录同源、跳转自动收起',async()=>{

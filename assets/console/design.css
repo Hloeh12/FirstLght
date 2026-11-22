@@ -2069,6 +2069,39 @@ dialog#reportSheet::backdrop{position:fixed;inset:0;z-index:999;background:rgba(
 .cm-seg.on::after{content:'';position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:15px;height:2px;border-radius:2px;background:#e0357f}
 .cm-foot{display:block;margin-top:5px;font-size:9px;letter-spacing:.14em;color:#b08ca0;text-align:center}
 
+/* =========================================================
+   v0.54.0 逐运翻页：图头上一步/下一步 + 左右滑动整段切换
+   手势由 swipe-turn.js 接管，这里只负责可见控件与入场动效
+   ========================================================= */
+/* 容器只吃纵向滚动：横向留给 swipe-turn.js，避免 iOS 侧滑返回/横滚抢所有权 */
+.period-control{touch-action:pan-y}
+.trend-head{align-items:center}
+.trend-head-side{display:flex;align-items:center;gap:7px;min-width:0}
+.trend-nav{display:flex;gap:2px;flex:none}
+/* 全局 button 带 !important 底色（design.css:711 / liquid.css:64），半径与边框都要显式压回 */
+.trend-nav .tnav{width:22px;height:22px;min-height:0!important;padding:0!important;display:grid;place-items:center;
+  border-radius:50%!important;border:1px solid rgba(255,154,190,.42)!important;
+  background:rgba(255,255,255,.72)!important;box-shadow:0 3px 8px -6px rgba(158,36,86,.6)!important;
+  color:#a0567c!important;font-size:13px!important;font-weight:700!important;line-height:1!important;
+  -webkit-tap-highlight-color:transparent;transition:transform .14s ease,color .14s ease}
+.trend-nav .tnav:active{transform:scale(.9)}
+.trend-nav .tnav[disabled]{opacity:.42;color:#b795a8!important;border-color:rgba(200,170,188,.44)!important;box-shadow:none!important}
+/* 入场：图、轴、迷你条朝翻页方向一起进场，读起来像「翻过一页」而不是「闪了一下」。
+   .period-result 是 .period-control 的兄弟节点，选择器到不了，正文的方向动画在
+   bazi.js 的 refresh() 里用 WAAPI 单独给（同一 turnDir 口径）。 */
+.period-control.turn-next .trend-block,.period-control.turn-next .timeline{animation:perTurnNext .34s cubic-bezier(.22,.72,.24,1) both}
+.period-control.turn-prev .trend-block,.period-control.turn-prev .timeline{animation:perTurnPrev .34s cubic-bezier(.22,.72,.24,1) both}
+@keyframes perTurnNext{from{opacity:.3;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes perTurnPrev{from{opacity:.3;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+ .period-control.turn-next .trend-block,.period-control.turn-next .timeline,
+ .period-control.turn-prev .trend-block,.period-control.turn-prev .timeline{animation:none}
+}
+@media (max-width:360px){
+ .trend-nav .tnav{width:20px;height:20px;font-size:12px!important}
+ .trend-head-side{gap:5px}
+}
+
 
 /* ===== Build 56: palace name must never truncate to one glyph ===== */
 /* Build 55e put palace-line and age on one grid row; the auto age column (~49px)

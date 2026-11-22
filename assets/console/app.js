@@ -720,7 +720,7 @@ function openFullReport(prebuilt,opts={}){
    <span class="rpt-rail-title" data-rpt-rail-title>${esc(report.title||'')}</span>
    <i class="rpt-rail-track"><b data-rpt-rail-fill></b></i>
   </div>
-  <div class="sheet-body rpt-body" id="reportBody">${reportHtml(report)}<div class="scroll-clearance" aria-hidden="true"></div></div>
+  <div class="sheet-body rpt-body" id="reportBody">${reportHtml(report,{lazy:true})}<div class="scroll-clearance" aria-hidden="true"></div></div>
   <button type="button" class="rpt-nav-fab" data-rpt-nav aria-expanded="false" aria-controls="reportNavDrawer" aria-label="打开章节目录"><span class="rpt-nav-fab-ico" aria-hidden="true">☰</span><span data-rpt-fab-label>目录</span><span class="rpt-nav-pct" data-rpt-progress>0%</span></button>
   <div class="rpt-nav-scrim" data-rpt-nav-close aria-hidden="true"></div>
   <aside class="rpt-nav-drawer" id="reportNavDrawer" data-rpt-drawer role="dialog" aria-label="章节目录" aria-hidden="true">
@@ -828,6 +828,7 @@ function openFullReport(prebuilt,opts={}){
   const paint=()=>{fb.textContent=isFavorite(key)?'★':'☆';fb.classList.toggle('on',isFavorite(key));};
   paint();
   fb.onclick=()=>{
+   flushLazy(); // 未就位的章节 innerText 为空，收藏会存成空壳
    const title=sec?.querySelector('h3')?.textContent.replace('☆','').replace('★','').trim()||`第 ${idx} 章`;
    const text=sec?.innerText||'';
    const r=toggleFavorite({key,title,text,owner:state.profile?.name||'',system:report.cover?.system||''});
@@ -836,6 +837,7 @@ function openFullReport(prebuilt,opts={}){
  }
  d.querySelector('[data-rpt-close]').onclick=()=>close(d);
  d.querySelector('[data-rpt-copy]').onclick=async()=>{
+  flushLazy(); // 隐藏章节取不到 innerText，先全部就位
   const doc=d.querySelector('[data-full-report]');
   const text=[doc.querySelector('h2')?.innerText,doc.querySelector('.rpt-owner')?.innerText,
    ...[...doc.querySelectorAll('.rpt-sec')].map(s=>s.innerText)].filter(Boolean).join('\n\n');
@@ -851,8 +853,32 @@ function openFullReport(prebuilt,opts={}){
  /* 目录交互：顶部目录 + 侧边抽屉共用一套锚点跳转，滚动时两处同步高亮 */
  const rptBody=d.querySelector('#reportBody');
  const rptDoc=d.querySelector('[data-full-report]');
- const rptContent=d.querySelector('.report-content');
- const rptNav=d.querySelector('[data-rpt-nav]');
+const rptContent=d.querySelector('.report-content');
+const rptNav=d.querySelector('[data-rpt-nav]');
+/* v0.54.0 分帧渲染：reportHtml(report,{lazy:true}) 只直出前三章，其余挂在
+   [data-rpt-lazy] 这个 display:none 容器里，这里每帧搬两章出来。
+   一次 innerHTML 全量注入后首帧布局实测 132ms（390×844 WebKit），
+   拆开后首屏只排三章，用户点「深度报告」不再先白一下。
+   flushLazy() 供目录跳转/复制/收藏使用——隐藏容器里的 offsetTop 恒为 0，
+   innerText 也拿不到，必须先全部就位。 */
+const flushLazy=()=>{
+ const host=rptDoc?.querySelector('[data-rpt-lazy]');
+ if(!host)return false;
+ const parent=host.parentElement;
+ while(host.firstElementChild)parent.insertBefore(host.firstElementChild,host);
+ host.remove();rptSecs=null;rptTocBtns=null;
+ return true;
+};
+const pumpLazy=()=>{
+ if(!rptDoc?.isConnected)return; // 报告已关闭，别继续搬
+ const host=rptDoc.querySelector('[data-rpt-lazy]');
+ if(!host)return;
+ const parent=host.parentElement;
+ for(let i=0;i<3&&host.firstElementChild;i++)parent.insertBefore(host.firstElementChild,host);
+ if(host.firstElementChild)requestAnimationFrame(pumpLazy);
+ else{host.remove();rptSecs=null;rptTocBtns=null;}
+};
+if(rptDoc?.querySelector('[data-rpt-lazy]'))requestAnimationFrame(pumpLazy);
  const setNav=on=>{
   rptContent?.classList.toggle('rpt-nav-open',on);
   if(rptNav)rptNav.setAttribute('aria-expanded',String(on));
@@ -865,9 +891,11 @@ function openFullReport(prebuilt,opts={}){
  tocSummary?.addEventListener('click',e=>{e.preventDefault();setNav(true);});
  d.querySelectorAll('[data-rpt-nav-close]').forEach(b=>b.addEventListener('click',()=>setNav(false)));
  d.addEventListener('click',e=>{
-  const t=e.target.closest('[data-toc]');
-  if(t&&rptDoc){
-   const sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
+ const t=e.target.closest('[data-toc]');
+ if(t&&rptDoc){
+  // 目标章可能还在隐藏容器里：那里 offsetTop 恒为 0，先全部就位再量
+  flushLazy();
+  const sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
    if(sec&&rptBody){
     // v0.42.0 防跳动：只滚报告阅读容器自身，不用 scrollIntoView——
     // 后者会连带滚动 dialog / #mainScrollView 等祖先，造成「点目录整页跳一下」。

@@ -2073,8 +2073,10 @@ dialog#reportSheet::backdrop{position:fixed;inset:0;z-index:999;background:rgba(
    v0.54.0 逐运翻页：图头上一步/下一步 + 左右滑动整段切换
    手势由 swipe-turn.js 接管，这里只负责可见控件与入场动效
    ========================================================= */
-/* 容器只吃纵向滚动：横向留给 swipe-turn.js，避免 iOS 侧滑返回/横滚抢所有权 */
-.period-control{touch-action:pan-y}
+/* 容器只吃纵向滚动：横向留给 swipe-turn.js，避免 iOS 侧滑返回/横滚抢所有权。
+   只标到真的绑了手势的两处（八字「大运与应期」、紫微「大限与流限」），
+   印度/西洋的 .period-control 没有横滑翻页，别让它们平白改变触摸行为。 */
+.period-control[data-swipe-turn]{touch-action:pan-y}
 .trend-head{align-items:center}
 .trend-head-side{display:flex;align-items:center;gap:7px;min-width:0}
 .trend-nav{display:flex;gap:2px;flex:none}

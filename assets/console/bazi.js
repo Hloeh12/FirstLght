@@ -186,7 +186,7 @@ export function baziView(ctx){
  ${timeBasis(d.info)}
  <div class="bazi-board"><div class="bazi-grid">${baziGrid(d)}</div><svg class="bazi-overlay" aria-hidden="true"></svg></div>
  <p id="pillarRelation" class="thin" role="status"></p>${entryCard(d,ctx.birth?.timeUnknown)}
- <section class="period-control liquid-glass"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick,d)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${trendChart(d,s.pick)}${timeline(d,s.pick)}</div></section>
+ <section class="period-control liquid-glass" data-swipe-turn="1"><div class="period-control-head"><div><h2>大运与应期</h2><p class="pc-current" aria-live="polite">${pickLine(s.pick,d)}</p></div>${btn('↺ 恢复本命','class="period-master-reset" data-reset-period')}</div><div class="timeline" data-bazi-rails>${trendChart(d,s.pick)}${timeline(d,s.pick)}</div></section>
  <p id="baziStatus" class="muted" role="status"></p>
  <section class="period-result"><div class="bazi-crossfade"><div data-bazi-data>${details(d)}</div></div></section></section>`;
  $('[data-combine]',ctx.root).onclick=()=>update(ctx,s.pick,!s.combine);

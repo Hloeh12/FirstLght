@@ -71,7 +71,9 @@ test('紫微逐限：滑动换大限，基准取当前这一段而非 flow.scope
 
 test('翻页样式：容器只吃纵向滚动，动画朝翻页方向且尊重减弱动效',async()=>{
  const css=read('assets/console/design.css');
- assert.match(css,/\.period-control\{touch-action:pan-y\}/,'横向手势留给 JS，避免 iOS 侧滑返回抢走');
+ assert.match(css,/\.period-control\[data-swipe-turn\]\{touch-action:pan-y\}/,'横向手势留给 JS，避免 iOS 侧滑返回抢走（只标真绑了手势的两处）');
+ assert.match(read('assets/console/bazi.js'),/class="period-control liquid-glass" data-swipe-turn="1"/,'八字时点控件打标');
+ assert.match(read('assets/console/ziwei.js'),/class="period-control liquid-glass" data-swipe-turn="1"/,'紫微时点控件打标');
  assert.match(css,/\.trend-nav \.tnav\{[^}]*background:rgba\(255,255,255,\.72\)!important/,'全局 button !important 底色须显式压回');
  assert.match(css,/@keyframes perTurnNext\{from\{opacity:\.3;transform:translateX\(18px\)\}/);
  assert.match(css,/@keyframes perTurnPrev\{from\{opacity:\.3;transform:translateX\(-18px\)\}/);

@@ -20,7 +20,14 @@ try{
  // 默认三视口全跑（CI 走默认）；本地排查单个断点时可 FIRSTLIGHT_VIEWPORTS=390x844 只跑一档。
  const viewports=(process.env.FIRSTLIGHT_VIEWPORTS||'390x844,320x568,844x390')
   .split(',').map(s=>s.trim().split('x').map(Number)).filter(([w,h])=>w>0&&h>0);
- for(const [width,height] of viewports){
+ for(const [index,[width,height]] of viewports.entries()){
+  // WebKit 在 macOS runner 上连着跑多个视口会卡死：同一份代码本地三视口全过，runner 上却会在
+  // 随机位置停在「performing click action」，主线程完全不动（截图等字体、#moduleButton 点击、
+  // 抽屉 summary 各遇到一次）。每视口重建浏览器进程，切断跨视口的状态累积。
+  if(index>0&&engine==='webkit'){
+   await browser.close();
+   browser=await browserType.launch({headless:true,executablePath:process.env.FIRSTLIGHT_BROWSER_EXECUTABLE||undefined});
+  }
   const context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   const page=await context.newPage(),errors=[],api=[];
   // GitHub macOS runner 上的 WebKit 跑完两个视口后明显变慢：同一份代码本地（Windows WebKit

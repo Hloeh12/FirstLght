@@ -318,7 +318,8 @@ function scoreDay({s,natal,event,events=[],light=false}){
 const basisLabel=(natal,id)=>natal?.pillars?.[id]?.name||'命局';
 
 export function almanac({birth,date,days=1,event='general',events=[]}){
- if(!Number.isInteger(days)||days<1||days>31)throw Error('最多查询 31 天');
+ // 节气流月可能出现 32 天（如芒种→小暑），上限留到 32，避免「看整月」漏掉末日。
+ if(!Number.isInteger(days)||days<1||days>32)throw Error('最多查询 32 天');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date??''))throw Error('请选择有效公历日期');
  const solar=civilSolar(...date.split('-').map(Number));
  if(solar.toYmd()!==date)throw Error('该日期不存在');

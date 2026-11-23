@@ -221,7 +221,12 @@ async function agendaSheet(ctx,s){
   if(strip&&on)strip.scrollLeft=Math.max(0,on.offsetLeft-(strip.clientWidth-on.offsetWidth)/2);
   for(const b of body.querySelectorAll('[data-agenda-month]'))b.onclick=()=>{sel=+b.dataset.agendaMonth;paint();};
   for(const b of body.querySelectorAll('[data-agenda-go]'))b.onclick=()=>jump(b.dataset.agendaGo,7);
-  for(const b of body.querySelectorAll('[data-agenda-open]'))b.onclick=()=>jump(b.dataset.agendaOpen,31);
+  // 按该流月的实际天数取窗：固定 31 天会把下个月的头一天也算进来。
+  for(const b of body.querySelectorAll('[data-agenda-open]'))b.onclick=()=>{
+   const mm=data.months[sel];
+   const n=Math.round((Date.parse(mm.end+'T00:00:00Z')-Date.parse(mm.start+'T00:00:00Z'))/86400000)+1;
+   jump(mm.start,Math.min(32,n));
+  };
   for(const b of body.querySelectorAll('[data-agenda-year]'))b.onclick=()=>{s.agendaYear=+b.dataset.agendaYear;ctx.close(d);agendaSheet(ctx,s);};
  };
  const jump=(date,days)=>{

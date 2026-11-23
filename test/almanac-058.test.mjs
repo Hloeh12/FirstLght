@@ -85,8 +85,8 @@ test('no birth still yields a usable public almanac',()=>{
 
 test('almanac rejects bad ranges and unknown events fall back to general',()=>{
  assert.throws(()=>almanac({date:'2026-02-30'}),/日期/);
- assert.throws(()=>almanac({date:'2026-11-24',days:0}),/31 天/);
- assert.throws(()=>almanac({date:'2026-11-24',days:32}),/31 天/);
+ assert.throws(()=>almanac({date:'2026-11-24',days:0}),/32 天/);
+ assert.throws(()=>almanac({date:'2026-11-24',days:33}),/32 天/);
  const r=almanac({birth,date:'2026-11-24',days:2,event:'nope'});
  assert.equal(r.event,'general');
  assert.equal(r.eventLabel,EVENTS.general.label);

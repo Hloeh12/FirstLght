@@ -1,8 +1,8 @@
 import bones from './reference/chenggu.json' with {type:'json'};
 import mansions from './reference/mansions.json' with {type:'json'};
-import {Solar,LunarYear} from 'lunar-javascript';
+import {LunarYear} from 'lunar-javascript';
 import * as Astronomy from 'astronomy-engine';
-import {baziPro,branches,relations,civilSolar} from './bazi-pro.mjs';
+import {baziPro,branches} from './bazi-pro.mjs';
 import {ephemerisBody,normalize,houseOf} from './western-pro.mjs';
 
 export function boneWeight(birth){
@@ -14,30 +14,7 @@ export function boneWeight(birth){
  return {parts,qian,song:bones.SONG[qian],reading,method:'农历年月日与时支四项相加。闰月并本月，歌诀采用通行单本。'};
 }
 export {yijing} from './yijing-tianji.mjs';
-function validSolar(value){
- if(!/^\d{4}-\d{2}-\d{2}$/.test(value??''))throw Error('请选择有效公历日期');
- const s=civilSolar(...value.split('-').map(Number));
- if(s.toYmd()!==value)throw Error('该日期不存在');
- return s;
-}
-const rank=(links,good,bad)=>links.reduce((n,r)=>n+(good.includes(r.type)?2:bad.includes(r.type)?-2:0),0);
-export function almanac({birth,date,days=1}){
- if(!Number.isInteger(days)||days<1||days>31)throw Error('最多查询 31 天');
- const solar=validSolar(date),natal=birth?baziPro({birth}).pillars:null;
- const good=['天干五合','六合','三合局','三会方'],bad=['六冲','相刑','相害','相破'];
- return {dates:Array.from({length:days},(_,i)=>{
-  const s=solar.next(i),l=s.getLunar();
-  const gz=l.getDayInGanZhi();
-  const links=natal?relations([...natal,{name:'日课',stem:gz[0],branch:gz[1]}]).filter(r=>r.ids.includes(4)):[];
-  const hours=Array.from({length:12},(_,j)=>{
-   const h=Solar.fromYmdHms(s.getYear(),s.getMonth(),s.getDay(),j*2,0,0).getLunar();
-   const time=h.getTimeInGanZhi();
-   const combined=natal?relations([...natal,{name:'日课',stem:gz[0],branch:gz[1]},{name:'时课',stem:time[0],branch:time[1]}]).filter(r=>r.ids.includes(5)):[];
-   return {branch:branches[j],time,traditional:h.getTimeTianShenLuck(),god:h.getTimeTianShen(),links:combined.map(r=>r.pattern+' '+r.type),score:rank(combined,good,bad)+(h.getTimeTianShenLuck()==='吉'?1:-1)};
-  });
-  return {date:s.toYmd(),lunar:l.getMonthInChinese()+'月'+l.getDayInChinese(),gz,yi:l.getDayYi(),ji:l.getDayJi(),good:l.getDayJiShen(),bad:l.getDayXiongSha(),links,score:rank(links,good,bad),hours};
- }),method:'宜忌和日时值神来自农历黄历表。个人比较按日课、时课与本命的合会与冲刑破害计分，每项 +2 或 −2，时值神加减 1。'};
-}
+export {almanac} from './almanac.mjs';
 const RAD=Math.PI/180;
 function raOfStar(ra,dec,date){
  const v=new Astronomy.Vector(Math.cos(ra*RAD)*Math.cos(dec*RAD),Math.sin(ra*RAD)*Math.cos(dec*RAD),Math.sin(dec*RAD),Astronomy.MakeTime(date));

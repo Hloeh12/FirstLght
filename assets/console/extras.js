@@ -2,6 +2,7 @@ import {wheel,planetList} from './western.js';
 import {aspectBrowser,bindAspectBrowser} from './aspects.js';
 import {bindWheel} from './wheel-gesture.js';
 import {$,btn,esc,term,table,isoLocal} from './ui.js';
+import {EVENTS as CAL_EVENT_META} from '../../src/almanac.mjs';
 
 const stateFor=(ctx,id,defaults)=>ctx.state.chartState[id]??={...defaults,token:0,result:null,error:''};
 async function load(ctx,id,s,path,body){
@@ -41,27 +42,61 @@ function yi(ctx){
  }
  if(!r&&!s.pending&&!s.error)load(ctx,id,s,'/api/console/yijing',{birth:ctx.birth,year:s.year});
 }
+const CAL_EVENTS=['general','contract','open','travel','move','wedding','medical','exam','negotiate','build','pray','burial'];
+const CAL_LABELS=Object.fromEntries(Object.entries(CAL_EVENT_META).map(([k,v])=>[k,v.label]));
+const signed=value=>(value>0?'+':'−')+Math.abs(value);
 function calendar(ctx){
- const id='calendar',s=stateFor(ctx,id,{date:isoLocal(),filters:{}}),r=s.result;
- const list=r?.dates.filter(x=>(!s.filters.event||x.yi.some(t=>t.includes(s.filters.event)))&&(!s.filters.good||x.good.some(t=>t.includes(s.filters.good)))&&
-  (!s.filters.avoid||!x.links.some(l=>['六冲','相刑','相害','相破'].includes(l.type))))||[];
- ctx.root.innerHTML=`<section id="calendar"><div class="spread"><h1>万年历择日</h1>${btn('设置日期与筛选','data-calendar-filter')}</div>
- <p class="muted">${esc(s.date)} 起 · ${ctx.birth?'结合当前案例日时冲合':'公共黄历'}</p><p data-extra-status role="status">${esc(s.error)}</p>
- ${r?list.map(x=>`<details class="card" ${list.length===1?'open':''}><summary><b>${x.date}</b> · ${esc(x.lunar+' '+x.gz)} · 参考分 ${x.score}</summary>
- <p>宜 ${esc(x.yi.join('、'))}</p><p>忌 ${esc(x.ji.join('、'))}</p><p>吉神 ${esc(x.good.join('、'))}</p><p>凶煞 ${esc(x.bad.join('、'))}</p>
- <p>个人关系 ${esc(x.links.map(l=>l.pattern+l.type+' '+l.pillars.join('／')).join('；')||'无')}</p>
- ${table(['时辰','干支','值神','吉凶','个人关系','参考分'],x.hours.map(h=>[h.branch,h.time,h.god,h.traditional,h.links.join('、')||'—',h.score]))}</details>`).join('')+'<p class="thin">'+esc(r.method)+'</p>':''}
- ${r&&!list.length?'<p class="empty">当前筛选范围内没有匹配日期。</p>':''}</section>`;
+ const id='calendar',s=stateFor(ctx,id,{date:isoLocal(),days:7,event:'general',sort:'score',excludeClash:false}),r=s.result;
+ const list=(r?.dates||[]).filter(x=>!s.excludeClash||!x.minus.some(m=>/六冲|相刑|相害|相破|冲本命生肖/.test(m.k)));
+ const ordered=[...list].sort(s.sort==='date'?(a,b)=>a.date.localeCompare(b.date):(a,b)=>b.score-a.score||a.date.localeCompare(b.date));
+ const byScore=[...list].sort((a,b)=>b.score-a.score||a.date.localeCompare(b.date));
+ const top=byScore[0],basis=r?.basis;
+ const basisLine=!r?'':basis
+  ?`本命 ${esc(basis.dayMaster)}${esc(basis.use.join('、')?'·喜用 '+basis.use.join('、'):'')}${basis.avoid.length?' · 忌 '+esc(basis.avoid.join('、')):''} · ${esc(basis.source==='调候'?'调候口径（减半）':basis.source==='均衡'?'五行均衡':'扶抑口径')}`
+  :'未关联案例：仅按公共黄历与建除取用，选一个案例可得到个性化评分';
+ const tags=x=>[...x.plus.slice(0,2),...x.minus.slice(0,2)].map(t=>`<span class="cal-tag ${t.v>0?'up':'down'}">${esc(t.k)} ${signed(t.v)}</span>`).join('');
+ const evidence=x=>`<ul class="cal-ev">${[...x.plus,...x.minus].map(t=>`<li class="${t.v>0?'up':'down'}"><span>${esc(t.k)}</span><b>${signed(t.v)}</b><small>${esc(t.why)}</small></li>`).join('')||'<li><span>当日无显著加减项</span></li>'}</ul>`;
+ const hours=x=>`<div class="cal-hours" role="list">${x.hours.map(h=>`<div class="cal-hour" role="listitem" data-tier="${h.tier}"${x.bestHours.some(b=>b.branch===h.branch)?' data-best="1"':''}><b>${esc(h.branch)}</b><small>${esc(h.range)}</small><span>${h.score}</span></div>`).join('')}</div>`;
+ const card=x=>`<article class="cal-day" data-tier="${x.tier}">
+ <div class="cal-day-head"><div class="cal-date"><b>${x.date.slice(5)}</b><small>${esc(x.weekday+' · '+x.lunar)}</small></div>
+ <div class="cal-gz"><b>${esc(x.gz)}</b><small>${esc(x.zhiXing+'日 · '+x.tianShen+'·'+x.tianShenLuck)}</small></div>
+ <div class="cal-score"><b>${x.score}</b><span>${x.rank?'第'+x.rank+' · ':''}${x.tier}</span></div></div>
+ <div class="cal-meter" role="img" aria-label="${x.score} 分"><i style="width:${x.score}%"></i></div>
+ <div class="cal-tags">${tags(x)||'<span class="cal-tag neu">无显著加减项</span>'}</div>
+ <p class="cal-best">${x.bestHours.length?'推荐时段 '+x.bestHours.map(h=>esc(h.branch+' '+h.range)).join(' · '):'当日无明显吉时，宜按事就人'}</p>
+ <details class="cal-detail"><summary>${x.plus.length+x.minus.length} 条评分依据 · 12 时辰</summary>
+ ${evidence(x)}${hours(x)}
+ <p class="cal-yiji">宜 ${esc(x.yi.join('、')||'—')}<br>忌 ${esc(x.ji.join('、')||'—')}</p>
+ <p class="cal-sub">吉神 ${esc(x.good.join('、')||'—')} · 凶煞 ${esc(x.bad.join('、')||'—')} · 冲${esc(x.chong)} · 旬空 ${esc(x.xunKong)}${x.tenGod?' · 日干十神 '+esc(x.tenGod):''}</p>
+ </details></article>`;
+ ctx.root.innerHTML=`<section id="calendar"><div class="spread"><h1>择日 · 择时</h1>${btn('日期与筛选','data-calendar-filter')}</div>
+ <p class="cal-basis">${basisLine}</p>
+ <div class="cal-events" role="group" aria-label="择日事项">${CAL_EVENTS.map(k=>`<button type="button" class="cal-chip" data-cal-event="${k}" aria-pressed="${s.event===k}">${esc(CAL_LABELS[k]||k)}</button>`).join('')}</div>
+ ${r?`<div class="cal-summary"><div><b>${esc(r.eventLabel)}</b><small>${esc(s.date)} 起 ${r.dates.length} 天${s.excludeClash?' · 已排除冲刑破害':''}</small></div>
+ <div class="cal-summary-top">${top?`<span>最优 ${esc(top.date.slice(5))} ${top.weekday}</span><b>${top.score}</b><small>${esc(top.tier)}</small>`:''}</div></div>
+ <div class="cal-sort" role="group" aria-label="排序"><button type="button" data-cal-sort="score" aria-pressed="${s.sort!=='date'}">按分数</button><button type="button" data-cal-sort="date" aria-pressed="${s.sort==='date'}">按日期</button></div>`:''}
+ <p data-extra-status role="status">${esc(s.error)}</p>
+ ${ordered.map(card).join('')}
+ ${r&&!list.length?'<p class="empty">当前条件下没有可推荐的日期，试试放宽排除项或延长天数。</p>':''}
+ ${basis?.note?`<p class="thin">${esc(basis.note)}</p>`:''}
+ ${r?`<p class="thin method">${esc(r.method)}</p>`:''}</section>`;
+ for(const chip of ctx.root.querySelectorAll('[data-cal-event]')){
+  chip.onclick=()=>{if(s.event===chip.dataset.calEvent)return;s.event=chip.dataset.calEvent;s.result=null;
+   load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event});};
+ }
+ for(const b of ctx.root.querySelectorAll('[data-cal-sort]'))b.onclick=()=>{s.sort=b.dataset.calSort;calendar(ctx);};
  $('[data-calendar-filter]',ctx.root).onclick=()=>{
   const dialog=ctx.sheet('toolSheet','择日条件',`<form class="form-grid"><label>起始日期<input type="date" name="date" value="${esc(s.date)}" required></label>
-  <label>连续天数<input name="days" type="number" min="1" max="31" value="${s.days??7}" required></label><label>宜事关键词<input name="event" value="${esc(s.filters.event)}" placeholder="如 出行"></label>
-  <label>吉神关键词<input name="good" value="${esc(s.filters.good)}"></label><label class="checks wide"><input type="checkbox" name="avoid" ${s.filters.avoid?'checked':''}>排除冲、刑、破、害</label><button class="primary wide">查找日期</button></form>`);
+  <label>连续天数<input name="days" type="number" min="1" max="31" value="${s.days??7}" required></label>
+  <label class="wide">事项<select name="event">${CAL_EVENTS.map(k=>`<option value="${k}" ${s.event===k?'selected':''}>${esc(CAL_LABELS[k]||k)}</option>`).join('')}</select></label>
+  <label class="checks wide"><input type="checkbox" name="exclude" ${s.excludeClash?'checked':''}>排除冲、刑、破、害日</label><button class="primary wide">重新择日</button></form>`);
   $('form',dialog).onsubmit=e=>{
-   e.preventDefault();const f=new FormData(e.currentTarget);s.date=f.get('date');s.days=+f.get('days');s.filters={event:f.get('event').trim(),good:f.get('good').trim(),avoid:f.has('avoid')};ctx.close(dialog);
-   load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days});
+   e.preventDefault();const f=new FormData(e.currentTarget);
+   s.date=f.get('date');s.days=+f.get('days');s.event=f.get('event');s.excludeClash=f.has('exclude');s.result=null;ctx.close(dialog);
+   load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event});
   };
  };
- if(!r&&!s.pending&&!s.error)load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days??1});
+ if(!r&&!s.pending&&!s.error)load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days??7,event:s.event||'general'});
 }
 function calculatePair(ctx,s,other){
  s.other=other.id;s.result=null;s.error='';

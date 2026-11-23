@@ -1,0 +1,260 @@
+// 个性化择日引擎 v1（v0.58.0）
+// 旧实现只有「黄历宜忌 + 日课与本命冲合（每项 ±2）」，看不出分从哪来，也不能按要做的事排序。
+// 本模块把择日拆成可核对的六层证据，每一分都带 label/delta/why，前端原样展示：
+//   1 本命喜忌（扶抑 useful/caution；中和盘改取《穷通宝鉴》调候用神，权重减半）
+//   2 日课与四柱的刑冲合害（按落宫加权：日柱夫妻宫 > 月柱 > 年柱/时柱）
+//   3 黄历宜忌与所选事项的匹配
+//   4 建除十二神与日值神吉凶
+//   5 日支冲本命生肖
+//   6 时辰层：时干时支喜忌、日破时、与命局冲合、时家值神、旬空
+import {Solar} from 'lunar-javascript';
+import {baziPro,branches,relations,stemElements,branchElements,civilSolar} from './bazi-pro.mjs';
+import {tenGod} from './bazi.mjs';
+
+const STEMS='甲乙丙丁戊己庚辛壬癸';
+const WEEK=['周日','周一','周二','周三','周四','周五','周六'];
+// 六冲对照与五行相克，用于岁破／月破／天克地冲判断（只查表，不做推断）。
+const CLASH={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
+const CONTROL={木:'土',土:'水',水:'火',火:'金',金:'木'};
+
+export const EVENTS={
+ general:{label:'综合参考',terms:[]},
+ contract:{label:'签约立券',terms:['立券','交易','纳财','会亲友']},
+ open:{label:'开业开市',terms:['开市','交易','立券','纳财','挂匾']},
+ travel:{label:'出行远行',terms:['出行','赴任']},
+ move:{label:'搬家入宅',terms:['入宅','移徙','安床']},
+ wedding:{label:'婚嫁订盟',terms:['嫁娶','纳采','订盟','会亲友']},
+ medical:{label:'求医问诊',terms:['求医','治病','针灸']},
+ exam:{label:'考试面试',terms:['入学','赴任','会亲友']},
+ negotiate:{label:'谈判议价',terms:['会亲友','立券','纳财']},
+ build:{label:'动土装修',terms:['动土','修造','竖柱','上梁','安门']},
+ pray:{label:'祈福许愿',terms:['祈福','斋醮','祭祀']},
+ burial:{label:'安葬立碑',terms:['安葬','破土','立碑']}
+};
+
+// 建除十二神：除危定执成开为黄道可用日，破最忌，其余偏保守。
+const ZHIXING={黄:['除','危','定','执','成','开'],破:['破']};
+// 日课地支落宫权重（0 年柱 / 1 月柱 / 2 日柱 / 3 时柱）。
+const HIT={
+ 六冲:{2:-4.5,1:-3,0:-2.5,3:-2},
+ 六合:{2:2.5,1:1.5,0:1.5,3:1.5},
+ 三合局:{2:1.5,1:1.5,0:1,3:1},
+ 相刑:{2:-2,1:-1.5,0:-1,3:-1},
+ 相害:{2:-1.5,1:-1.5,0:-1,3:-1},
+ 相破:{2:-1,1:-1,0:-1,3:-1}
+};
+const DAY_ELEM={use:{stem:3,branch:2},avoid:{stem:-3,branch:-2},enemy:{stem:-1.5,branch:-1},idle:{stem:0,branch:0}};
+const HOUR_ELEM={use:{stem:2,branch:1.5},avoid:{stem:-2,branch:-1.5},enemy:{stem:-1,branch:-.75},idle:{stem:0,branch:0}};
+const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+const round1=value=>Math.round(value*10)/10;
+const scoreOf=(raw,scale)=>clamp(Math.round(50+45*Math.tanh(raw/scale)),3,98);
+const tierOf=score=>score>=82?'上吉':score>=68?'吉':score>=52?'平':score>=38?'慎':'避';
+const TIER_MEAN={上吉:'诸事顺遂，可放手推进',吉:'条件偏顺，适合安排要事',平:'吉凶参半，按细节取舍',慎:'有明确阻力，非必要不安排',避:'冲忌较重，建议另择他日'};
+
+// 本命喜忌口径：扶抑优先；中和盘 useful 为空时改取调候用神，并如实标出来源。
+export function natalBasis(birth){
+ if(!birth)return null;
+ let b;
+ try{b=baziPro({birth});}catch{return null;}
+ const strength=b.strength||{};
+ const use=[...(strength.useful||[])];
+ const avoid=[...(strength.caution||[])];
+ const enemy=[...(strength.roles?.enemy||[])];
+ const tiao=b.tiaoHou?.elements||[];
+ let source='扶抑',note='';
+ if(!use.length&&!avoid.length){
+  if(tiao.length){
+   use.push(...tiao);source='调候';
+   note='本命扶抑判断为'+(strength.kind||'中和')+'，喜用未单列，改以《穷通宝鉴》调候用神作参考（权重减半）。';
+  }else{
+   source='均衡';
+   note='本命五行较均衡，不做单一喜忌加权，仅按日课与命局的冲合及黄历取用。';
+  }
+ }
+ return {
+  use,avoid,enemy,source,note,half:source==='调候',
+  kind:strength.kind||'—',
+  dayMaster:b.dayMaster?.stem||'',
+  dayElement:b.dayMaster?.element||'',
+  pillars:b.pillars.map(p=>({name:p.name,stem:p.stem,branch:p.branch})),
+  tiaoHou:b.tiaoHou?.gods||[]
+ };
+}
+const roleOf=(element,basis)=>{
+ if(!basis)return 'idle';
+ if(basis.avoid.includes(element))return 'avoid';
+ if(basis.use.includes(element))return 'use';
+ if(basis.enemy.includes(element))return 'enemy';
+ return 'idle';
+};
+const elemWeight=(table,role,part,basis)=>{
+ if(!basis||basis.source==='均衡')return 0;
+ const scale=basis.half?0.5:1;
+ return ((table[role]||table.idle)[part]||0)*scale;
+};
+const dayAdd=(role,part,basis)=>elemWeight(DAY_ELEM,role,part,basis);
+const hourAdd=(role,part,basis)=>elemWeight(HOUR_ELEM,role,part,basis);
+
+function dayRelations(natal,gz){
+ if(!natal?.pillars?.length)return [];
+ return relations([...natal.pillars,{name:'日课',stem:gz[0],branch:gz[1]}]).filter(r=>r.ids.includes(4));
+}
+
+function scoreHours({s,lunar,day,basis}){
+ return Array.from({length:12},(_,j)=>{
+  // j=0 取 00:00 采样即早子时；干支与值神随日干走，与 23:00 晚子时同柱。
+  const sample=Solar.fromYmdHms(s.getYear(),s.getMonth(),s.getDay(),j*2,0,0).getLunar();
+  const time=sample.getTimeInGanZhi();
+  const hs=time[0],hb=time[1];
+  const he=stemElements[STEMS.indexOf(hs)],be=branchElements[branches.indexOf(hb)];
+  const plus=[],minus=[];
+  const add=(list,label,delta,why)=>{if(delta)list.push({k:label,v:round1(delta),why});};
+  if(basis){
+   const rs=roleOf(he,basis),rb=roleOf(be,basis);
+   const ws=hourAdd(rs,'stem',basis),wb=hourAdd(rb,'branch',basis);
+   add(ws>=0?plus:minus,`时干${hs}${he}`,ws,ws>0?'时干属本命喜用':'时干属本命忌神');
+   add(wb>=0?plus:minus,`时支${hb}${be}`,wb,wb>0?'时支五行得用':'时支五行失宜');
+  }
+  // 时支与日支
+  for(const r of relations([{name:'日课',stem:day[0],branch:day[1]},{name:'时课',stem:hs,branch:hb}]).filter(x=>x.ids.includes(1))){
+   const delta=r.type==='六冲'?-4.5:r.type==='六合'?1.5:r.type==='三合局'?1.5:r.type==='相刑'?-1.5:r.type==='相害'?-1:r.type==='相破'?-.75:0;
+   if(delta)add(delta>0?plus:minus,r.type==='六冲'?'日破时':r.type+'·日支',delta,r.type==='六冲'?'时支冲日支，传统称日破时':'时支与日支'+r.type);
+  }
+  // 时支与命局四柱
+  if(basis?.pillars?.length){
+   let total=0;
+   for(const r of relations([...basis.pillars,{name:'时课',stem:hs,branch:hb}]).filter(x=>x.ids.includes(4))){
+    for(const id of r.ids){
+     if(id===4)continue;
+     const delta=r.type==='六冲'?(id===2?-2.5:-1):r.type==='六合'?(id===2?1.5:.75):0;
+     if(!delta)continue;
+     total+=delta;
+     add(delta>0?plus:minus,`${r.type}·${basis.pillars[id].name}`,delta,'时支与'+basis.pillars[id].name+'柱'+r.type);
+    }
+   }
+   if(Math.abs(total)>4){
+    const ratio=4/Math.abs(total);
+    for(const item of [...plus,...minus])item.v=round1(item.v*ratio);
+   }
+  }
+  const hl=sample.getTimeTianShenLuck();
+  add(hl==='吉'?plus:minus,`时值神·${sample.getTimeTianShen()}`,hl==='吉'?.5:-.5,'时家值神吉凶');
+  if(basis?.pillars?.[0]&&CLASH[basis.pillars[0].branch]===hb)add(minus,'时冲本命生肖',-1.5,'时支冲本命年支');
+  const xunKong=lunar.getDayXunKong();
+  if(xunKong.includes(hb))add(minus,'时支落旬空',-1,'当日旬空在'+xunKong);
+  const raw=[...plus,...minus].reduce((n,x)=>n+x.v,0);
+  const score=scoreOf(raw,7);
+  const range=j===0?'23:00–00:59':String(2*j-1).padStart(2,'0')+':00–'+String(2*j+1).padStart(2,'0')+':59';
+  return {branch:hb,time:hs+hb,range,god:sample.getTimeTianShen(),traditional:hl,
+   links:[...plus,...minus].map(x=>x.k),score,tier:tierOf(score),
+   plus:plus.sort((a,b)=>b.v-a.v),minus:minus.sort((a,b)=>a.v-b.v)};
+ });
+}
+
+function scoreDay({s,natal,event}){
+ const lunar=s.getLunar();
+ const gz=lunar.getDayInGanZhi();
+ const stem=gz[0],branch=gz[1];
+ const stemElem=stemElements[STEMS.indexOf(stem)];
+ const branchElem=branchElements[branches.indexOf(branch)];
+ const plus=[],minus=[];
+ const add=(list,label,delta,why)=>{if(delta)list.push({k:label,v:round1(delta),why});};
+
+ // 1 本命喜忌
+ if(natal){
+  const ws=dayAdd(roleOf(stemElem,natal),'stem',natal);
+  const wb=dayAdd(roleOf(branchElem,natal),'branch',natal);
+  add(ws>=0?plus:minus,`日干${stem}${stemElem}`,ws,ws>0?'日干五行属本命喜用':'日干五行属本命忌神');
+  add(wb>=0?plus:minus,`日支${branch}${branchElem}`,wb,wb>0?'日支五行属本命喜用':'日支五行属本命忌神');
+ }
+ // 2 日课与四柱冲合，总幅封顶 ±8
+ const rows=dayRelations(natal,gz);
+ if(rows.length){
+  let total=0;
+  for(const r of rows){
+   const weight=HIT[r.type];
+   if(!weight)continue;
+   for(const id of r.ids){
+    if(id===4)continue;
+    const delta=weight[id]||0;
+    if(!delta)continue;
+    total+=delta;
+    const label=basisLabel(natal,id);
+    add(delta>0?plus:minus,`${r.type}·${label}`,delta,`日支${branch}与${label}${natal.pillars[id].branch}${r.type}`);
+   }
+  }
+  if(Math.abs(total)>8){
+   const ratio=8/Math.abs(total);
+   for(const item of [...plus,...minus])if(/冲|合|刑|害|破/.test(item.k))item.v=round1(item.v*ratio);
+  }
+  if(rows.some(r=>r.type==='天干五合'&&r.ids.includes(2))){
+   add(plus,'日干合日主',2,'日干与日主天干相合，人事易接洽');
+  }
+ }
+ // 2b 岁破 / 月破 / 天克地冲：择日里最常被单独点名的三类硬忌，凭日支即可核对。
+ const yearBranch=lunar.getYearInGanZhiByLiChun()[1],monthBranch=lunar.getMonthInGanZhi()[1];
+ if(CLASH[yearBranch]===branch)add(minus,`岁破·冲${yearBranch}太岁`,-3.5,'日支冲当年太岁，传统列为大忌');
+ if(CLASH[monthBranch]===branch)add(minus,`月破·冲${monthBranch}月建`,-3,'日支冲当月月建，传统忌举大事');
+ if(natal?.pillars?.[2]&&CONTROL[stemElem]===stemElements[STEMS.indexOf(natal.pillars[2].stem)]&&CLASH[natal.pillars[2].branch]===branch){
+  add(minus,'天克地冲本命日柱',-2,'日干克本命日干、日支冲本命日支，本命主题最易被动摇');
+ }
+ // 3 黄历宜忌与事项
+ const terms=EVENTS[event]?.terms||[];
+ const eventHits={yi:[],ji:[]};
+ if(terms.length){
+  const yi=lunar.getDayYi(),ji=lunar.getDayJi();
+  eventHits.yi=terms.filter(t=>yi.some(x=>x.includes(t)));
+  eventHits.ji=terms.filter(t=>ji.some(x=>x.includes(t)));
+  if(eventHits.yi.length)add(plus,'黄历宜·'+eventHits.yi.join('、'),Math.min(5,eventHits.yi.length*2.5),'所选事项在当日宜项内');
+  if(eventHits.ji.length)add(minus,'黄历忌·'+eventHits.ji.join('、'),Math.max(-6,-eventHits.ji.length*3),'所选事项在当日忌项内');
+ }
+ // 4 建除十二神与日值神
+ const zhiXing=lunar.getZhiXing();
+ if(ZHIXING.破.includes(zhiXing))add(minus,`建除·${zhiXing}日`,-3,'破日传统不举大事');
+ else if(ZHIXING.黄.includes(zhiXing))add(plus,`建除·${zhiXing}日`,1.5,'黄道可用之日');
+ else add(minus,`建除·${zhiXing}日`,-1.5,'建满平收闭偏保守');
+ const tianShen=lunar.getDayTianShen(),luck=lunar.getDayTianShenLuck();
+ add(luck==='吉'?plus:minus,`日值神·${tianShen}`,luck==='吉'?1:-1,luck==='吉'?'值神为吉':'值神为凶');
+ // 5 日支冲本命生肖
+ if(natal?.pillars?.[0]&&relations([{name:'年',branch:natal.pillars[0].branch},{name:'日课',branch:gz[1]}]).some(r=>r.type==='六冲')){
+  add(minus,'日支冲本命生肖',-3,'当日地支冲本命年支，大事宜缓');
+ }
+
+ const raw=[...plus,...minus].reduce((n,x)=>n+x.v,0);
+ const score=scoreOf(raw,9);
+ const tier=tierOf(score);
+ const hours=scoreHours({s,lunar,day:gz,basis:natal});
+ const bestHours=[...hours].sort((a,b)=>b.score-a.score).filter(h=>h.score>=55).slice(0,3);
+
+ return {
+  date:s.toYmd(),weekday:WEEK[s.getWeek()],lunar:lunar.getMonthInChinese()+'月'+lunar.getDayInChinese(),gz,
+  zhiXing,tianShen,tianShenLuck:luck,
+  chong:lunar.getDayChongDesc(),sha:lunar.getDaySha(),xunKong:lunar.getDayXunKong(),
+  yi:lunar.getDayYi(),ji:lunar.getDayJi(),good:lunar.getDayJiShen(),bad:lunar.getDayXiongSha(),
+  score,tier,tierMean:TIER_MEAN[tier],raw:round1(raw),
+  plus:plus.sort((a,b)=>b.v-a.v),minus:minus.sort((a,b)=>a.v-b.v),
+  eventHits,tenGod:natal?tenGod(STEMS.indexOf(natal.dayMaster),STEMS.indexOf(stem)):null,
+  hours,bestHours,links:[...plus,...minus].map(x=>x.k),
+  personal:Boolean(natal)
+ };
+}
+const basisLabel=(natal,id)=>natal?.pillars?.[id]?.name||'命局';
+
+export function almanac({birth,date,days=1,event='general'}){
+ if(!Number.isInteger(days)||days<1||days>31)throw Error('最多查询 31 天');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date??''))throw Error('请选择有效公历日期');
+ const solar=civilSolar(...date.split('-').map(Number));
+ if(solar.toYmd()!==date)throw Error('该日期不存在');
+ const natal=birth?natalBasis(birth):null;
+ const key=EVENTS[event]?event:'general';
+ const dates=Array.from({length:days},(_,i)=>scoreDay({s:solar.next(i),natal,event:key}));
+ const ranked=[...dates].sort((a,b)=>b.score-a.score||a.date.localeCompare(b.date));
+ ranked.forEach((d,i)=>{d.rank=i+1;d.percentile=dates.length>1?Math.round((1-i/(dates.length-1))*100):100;});
+ return {
+  dates,event:key,eventLabel:EVENTS[key].label,terms:EVENTS[key].terms,
+  best:ranked[0]?.date??null,worst:ranked.at(-1)?.date??null,
+  basis:natal?{use:natal.use,avoid:natal.avoid,enemy:natal.enemy,source:natal.source,kind:natal.kind,
+   dayMaster:natal.dayMaster,note:natal.note,tiaoHou:natal.tiaoHou}:null,
+  method:'个人部分：日干／日支五行是否属本命喜用（忌神、仇神递减）＋日课地支与本命四柱的刑冲合害（日支＝夫妻宫权重最高，月支次之，年支、时支递减）＋日支是否冲本命生肖，累计原始分后以 tanh 映射到 0–98，避免极值堆叠。另有岁破（日冲太岁）、月破（日冲月建）、天克地冲本命日柱三项硬忌单独计分。公共部分取黄历宜忌、建除十二神、日值神。时辰层另按「时干时支喜忌＋是否日破时＋与命局冲合＋时家值神＋旬空＋时冲生肖」计分。冲刑不代表绝对凶，只提示该日主题易起变动，须结合实际安排取舍；本命喜用取自扶抑模型，中和盘改用《穷通宝鉴》调候并减半计入。'
+ };
+}

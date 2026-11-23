@@ -1567,3 +1567,68 @@ button:focus-visible,a:focus-visible{
 .wheel-dark .wheel-aspect[data-aspect-angle="180"]{opacity:.95!important;stroke-width:1.7!important}
 .wheel-dark .wheel-star-halo{display:none}
 /* 外圈行运单字加方框区分，内圈不加，半径差 + 框线让双圈层次清楚 */
+
+/* ===== 择日 · 择时（v0.58.0）=====
+   旧页面是一串 details，看不到分数从哪来。现在按「结论在上、证据在下」：
+   日期/干支/分数一眼可读，加减分与十二时辰收进详情，避免长文压屏。 */
+.cal-basis{margin:0 0 8px;padding:7px 10px;border-radius:11px;background:#fff2f8;border:1px solid #ffd8e8;font-size:.78rem;line-height:1.5;color:var(--accent);overflow-wrap:anywhere}
+.cal-events{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cal-events::-webkit-scrollbar{display:none}
+.cal-chip{flex:none;padding:6px 11px;border-radius:999px;background:#fff;border:1px solid #f3cfe0;color:#7a4a63;font-size:.8rem;white-space:nowrap}
+.cal-chip[aria-pressed=true]{background:linear-gradient(135deg,#ff8ab5,#ff4f8b);color:#fff;border-color:#ff8ab5;font-weight:750;box-shadow:0 4px 12px -2px rgba(255,79,139,.4)}
+.cal-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 7px;padding:10px 13px;border-radius:16px;background:linear-gradient(135deg,#fff6fa,#fff);border:1px solid #ffdcea}
+.cal-summary>div{min-width:0}
+.cal-summary b{font-size:.98rem;color:var(--accent)}
+.cal-summary small{display:block;font-size:.72rem;line-height:1.4;color:var(--muted);overflow-wrap:anywhere}
+.cal-summary-top{display:flex;align-items:baseline;gap:5px;flex:none}
+.cal-summary-top span{font-size:.72rem;color:var(--muted)}
+.cal-summary-top b{font-size:1.55rem;line-height:1;color:#c2185b;font-variant-numeric:tabular-nums}
+.cal-sort{display:flex;gap:6px;margin:0 0 9px}
+.cal-sort button{font-size:.76rem;padding:5px 11px;border-radius:999px}
+.cal-day{margin:0 0 9px;padding:11px 12px;border-radius:18px;background:var(--liquid-card-bg);border:1px solid rgba(255,255,255,.7);box-shadow:0 8px 22px -12px rgba(160,40,90,.22)}
+.cal-day[data-tier=上吉]{border-color:#ff9dbf;box-shadow:0 8px 22px -10px rgba(255,79,139,.28)}
+.cal-day[data-tier=避]{opacity:.88}
+.cal-day-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px}
+.cal-date b{display:block;font-size:1.06rem;font-weight:800;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+.cal-date small{display:block;font-size:.7rem;color:var(--muted);overflow-wrap:anywhere}
+.cal-gz{text-align:center;min-width:0}
+.cal-gz b{font-size:.95rem;color:#a8285d}
+.cal-gz small{display:block;font-size:.66rem;color:var(--muted);white-space:nowrap}
+.cal-score{text-align:right;min-width:56px}
+.cal-score b{font-size:1.32rem;line-height:1;color:#c2185b;font-variant-numeric:tabular-nums}
+.cal-day[data-tier=慎] .cal-score b{color:#b06a2c}
+.cal-day[data-tier=避] .cal-score b{color:#6b7a86}
+.cal-score span{display:block;font-size:.66rem;color:var(--muted);white-space:nowrap}
+.cal-meter{height:5px;margin:8px 0 7px;border-radius:4px;background:#f6e3ec;overflow:hidden}
+.cal-meter i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#ffa3c7,#ff4f8b)}
+.cal-day[data-tier=慎] .cal-meter i{background:linear-gradient(90deg,#f0c48a,#d99a3f)}
+.cal-day[data-tier=避] .cal-meter i{background:linear-gradient(90deg,#c3ccd4,#8794a0)}
+.cal-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.cal-tag{max-width:100%;padding:2px 6px;border-radius:7px;font-size:.68rem;line-height:1.4;overflow-wrap:anywhere}
+.cal-tag.up{background:#ffe9f1;color:#a8285d}
+.cal-tag.down{background:#eef1f4;color:#5d6b78}
+.cal-tag.neu{background:#f3eef1;color:#8c7d86}
+.cal-best{margin:0;font-size:.76rem;color:var(--ink-secondary);overflow-wrap:anywhere}
+.cal-detail{margin-top:7px;padding-top:6px;border-top:1px dashed #f0d6e2}
+.cal-detail>summary{font-size:.72rem;color:var(--muted);cursor:pointer;list-style:none}
+.cal-detail>summary::-webkit-details-marker{display:none}
+.cal-detail>summary::before{content:'▸ '}
+.cal-detail[open]>summary::before{content:'▾ '}
+.cal-ev{display:grid;gap:4px;margin:8px 0;padding:0;list-style:none}
+.cal-ev li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:4px 7px;border-radius:8px;background:#fdf6f9;font-size:.74rem}
+.cal-ev li.down{background:#f4f6f8}
+.cal-ev li span{color:var(--ink);overflow-wrap:anywhere}
+.cal-ev li b{color:#c2185b;font-variant-numeric:tabular-nums}
+.cal-ev li.down b{color:#5d6b78}
+.cal-ev li small{grid-column:1/-1;font-size:.68rem;color:var(--muted)}
+.cal-hours{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:8px 0}
+.cal-hour{display:grid;gap:1px;padding:5px 2px;border-radius:9px;background:#fbf5f8;border:1px solid transparent;text-align:center}
+.cal-hour[data-tier=上吉],.cal-hour[data-tier=吉]{background:#ffeef5}
+.cal-hour[data-tier=避]{background:#f2f5f7}
+.cal-hour[data-best="1"]{border-color:#ff9dbf;box-shadow:inset 0 0 0 1px #ffd0e2}
+.cal-hour b{font-size:.85rem;color:#a8285d}
+.cal-hour small{font-size:.6rem;color:var(--muted);letter-spacing:-.02em;white-space:nowrap}
+.cal-hour span{font-size:.7rem;font-weight:700;color:var(--ink-secondary);font-variant-numeric:tabular-nums}
+.cal-yiji{margin:8px 0 4px;font-size:.72rem;line-height:1.55;color:var(--ink-secondary);overflow-wrap:anywhere}
+.cal-sub{margin:0;font-size:.68rem;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.method{font-size:.68rem;line-height:1.6}

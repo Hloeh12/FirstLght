@@ -104,7 +104,9 @@ test('首屏分帧：搬运动作与失效兜底都在 app.js 里',async()=>{
  assert.match(app,/host\.remove\(\);rptSecs=null;rptTocBtns=null;/,'搬完后目录/章节缓存必须失效重取');
  assert.match(app,/const flushLazy=\(\)=>\{[\s\S]{0,400}rptSecs=null;rptTocBtns=null;/,'提供一次性补齐');
  // 目录跳转按 offsetTop 定位，隐藏容器里的 offsetTop 恒为 0，必须先补齐
- assert.match(app,/flushLazy\(\);\s*\n\s*const sec=rptDoc\.querySelector/,'目录跳转前补齐');
+ assert.match(app,/flushLazy\(\);\s*\n\s*let sec=rptDoc\.querySelector/,'目录跳转前补齐');
+ // v0.62.0：目标章可能被领域筛选隐藏，先还原再量偏移
+ assert.match(app,/if\(sec&&sec\.hidden\)\{applyScope\('全部'/,'跳到被筛掉的章节前先还原筛选');
  assert.match(app,/flushLazy\(\); \/\/ 隐藏章节取不到 innerText/,'复制前补齐');
  assert.match(app,/flushLazy\(\); \/\/ 未就位的章节 innerText 为空/,'收藏前补齐');
 });

@@ -10,6 +10,8 @@ import {baziGrid} from './bazi.js';
 import {northIndianChart} from './vedic.js';
 import {wheel} from './western.js';
 import {divisional} from '../../src/vargas.mjs';
+// v0.62.0：报告速览——把已算好的字段摆成指标、把正文结论提到第一屏并挂回章节。
+import {buildBrief,briefHtml} from './report-brief.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pick=(...vals)=>vals.find(v=>v!==undefined&&v!==null&&!(Array.isArray(v)&&!v.length))??vals.at(-1);
@@ -100,12 +102,18 @@ export function cleanSecTitle(title){
 }
 /* 章节 HTML 拆成数组：首屏只直出前几章，其余由 app.js 分帧接管。
    deep-* 五个知识库实测都没有嵌套 <section>（grep 计数为 0），所以按章拆分安全。 */
-function sectionHtmlList(report){
- return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(cleanSecTitle(sec.title))}<button type="button" class="rpt-fav" data-fav-sec="${i+1}" aria-label="收藏本章" title="收藏本章">☆</button></h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`);
+/* v0.62.0 章号可外部指定：按分区筛选后只留下部分章节，若重新从 01 编号，
+   「第 07 章 婚姻」会变成「第 03 章」，正文里「详见第九章」这类交叉引用全部错位。
+   所以筛选视图一律沿用原始章号（numbers 由调用方给），目录与锚点同源。 */
+function sectionHtmlList(report,numbers){
+ return report.sections.map((sec,i)=>{
+  const no=Number(numbers?.[i]??sec.__no)||i+1;
+  return `<section class="rpt-sec" id="rpt-sec-${no}" data-sec="${no}" data-group="${esc(sectionGroup(sec.title))}"><h3><span class="rpt-sec-no">${String(no).padStart(2,'0')}</span>${esc(cleanSecTitle(sec.title))}<button type="button" class="rpt-fav" data-fav-sec="${no}" aria-label="收藏本章" title="收藏本章">☆</button></h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`;
+ });
 }
 function sectionHtml(report){return sectionHtmlList(report).join('');}
 /* 目录：章节锚点导航 + 滚动进度 + 主题分区。让 7000+ 字报告可按区跳转、可看读到哪。 */
-function sectionGroup(title){
+export function sectionGroup(title){
  const t=String(title||'');
  if(/格局|命局|总览|根基|三垣|力量|五行|性格|命宫|三方|十二宫/.test(t))return '命局基础';
  if(/四化|飞星|神煞|Yoga|Shadbala|Ashtakavarga|相位|行星力量|分盘/.test(t))return '结构要件';
@@ -123,12 +131,13 @@ function tocHtml(report){
 }
 /* v0.50.0：章节会随所选时点整体重排（时点报告的正文不再固定），
    所以目录条目单独抽成纯函数，app.js 重算后可以就地刷新正文目录与浮层目录。 */
-function tocItems(sections){
+function tocItems(sections,numbers){
  let last=null,items='';
  (sections||[]).forEach((s,i)=>{
+  const no=Number(numbers?.[i]??s.__no)||i+1;
   const g=sectionGroup(s.title);
   if(g!==last){items+=`<div class="rpt-toc-group">${esc(g)}</div>`;last=g;}
-  items+=`<button type="button" class="rpt-toc-item" data-toc="${i+1}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(i+1).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`;
+  items+=`<button type="button" class="rpt-toc-item" data-toc="${no}" aria-label="跳转到 ${esc(s.title)}"><span class="rpt-toc-no">${String(no).padStart(2,'0')}</span>${esc(s.title.replace(/^[一二三四五六七八九十]+、/,''))}</button>`;
  });
  return items;
 }
@@ -164,8 +173,13 @@ function withGlossary(report){
  return report;
 }
 
-// 决定当前体系下能生成哪一份成篇报告
+// 决定当前体系下能生成哪一份成篇报告（先按体系成篇，再挂速览）
 export function composeFullReport(state,names){
+ const report=composeSystemReport(state,names);
+ try{report.brief=buildBrief({kind:report.kind,state,report});}catch{report.brief=null;}
+ return report;
+}
+function composeSystemReport(state,names){
  const system=state.system;
  const profile=state.profile||{};
  const label=names?.[system]||({bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'}[system]||system);
@@ -230,7 +244,7 @@ export function composeFullReport(state,names){
 const RPT_EAGER=3;
 export function reportHtml(report,opts={}){
  const wordLine=report.characters?`<span class="rpt-meta">全文 ${report.characters} 字</span>`:'';
- const list=report.sections?.length?sectionHtmlList(report):[report.body||''];
+ const list=report.sections?.length?sectionHtmlList(report,opts.numbers):[report.body||''];
  const eager=opts.lazy?list.slice(0,RPT_EAGER):list;
  const rest=opts.lazy?list.slice(RPT_EAGER):[];
  return `<article class="rpt-doc" data-full-report data-report-kind="${report.kind}">
@@ -241,6 +255,8 @@ export function reportHtml(report,opts={}){
   <p class="rpt-stamp">生成于 ${esc(report.cover.stamp)} ${wordLine}</p>
  </header>
  <p class="rpt-lead">${report.lead}</p>
+ ${report.scopeNote?`<p class="rpt-scope-note">${esc(report.scopeNote)}</p>`:''}
+ ${briefHtml(report.brief)}
  ${report.chartHtml?`<section class="rpt-chart" aria-label="报告对应时点命盘"><h3 class="rpt-chart-title">${esc(report.chartTitle||'本报告的命盘快照')}</h3><div class="rpt-chart-stage">${report.chartHtml}</div>${report.chartCaption?`<p class="rpt-chart-caption">${esc(report.chartCaption)}</p>`:''}</section>`:''}
  ${tocHtml(report)}
  <div data-report-body>${eager.join('')}${rest.length?`<div class="rpt-lazy" data-rpt-lazy hidden>${rest.join('')}</div>`:''}</div>

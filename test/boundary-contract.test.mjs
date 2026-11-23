@@ -119,8 +119,9 @@ test('报告可用性：目录锚点、滚动进度与章节导航已接入',asy
  const fr=await read('../assets/console/full-report.js');
  assert.match(fr,/function tocHtml\(/,'应生成目录');
  assert.match(fr,/class="rpt-toc"/);
- assert.match(fr,/data-sec="\$\{i\+1\}"/,'章节应带锚点');
- assert.match(fr,/data-toc="\$\{i\+1\}"/,'目录项应指向锚点');
+ // v0.62.0：章号改为可外部指定（筛选视图沿用原始编号），锚点仍由同一变量产出。
+ assert.match(fr,/data-sec="\$\{no\}"/,'章节应带锚点');
+ assert.match(fr,/data-toc="\$\{no\}"/,'目录项应指向锚点');
  const app=await read('../assets/console/app.js');
  assert.match(app,/data-rpt-progress/,'应有滚动进度');
  assert.match(app,/rptBody\.scrollTo\?\.\(\{top:[\s\S]*?behavior:'smooth'/, '点击目录应只滚报告容器自身、平滑滚动（防祖先跳动）');
@@ -299,7 +300,7 @@ test('深度报告导出改用自包含 HTML 文档，不再走 canvas 长图（
  const app=await read('../assets/console/app.js');
  assert.match(app,/import \{exportReportDocument\} from '\.\/report-export\.js'/, 'app.js 须引入文档导出模块');
  assert.match(app,/data-rpt-export>导出文档<\/button>/,'报告导出按钮须改为「导出文档」');
- assert.match(app,/tell\(await exportReportDocument\(report\)\)/,'报告导出须 await 文档导出结果，不再调 shareChart');
+ assert.match(app,/tell\(await exportReportDocument\(viewReport\(\)\)\)/,'报告导出须 await 文档导出结果，且只导出当前视图');
  const exBlock=app.slice(app.indexOf("d.querySelector('[data-rpt-export]')"),app.indexOf('/* 目录交互'));
  assert.doesNotMatch(exBlock,/shareChart\(/,'报告导出路径不得再出现 shareChart 长图调用');
  // 文档导出模块：自包含样式 + 报告正文 + 交互静态化，不依赖 App 运行时 CSS
@@ -529,7 +530,7 @@ test('导出可靠性：原生静默 guard 失败须回传结果，前端等待�
  assert.doesNotMatch(mod,/if\(native\)\{native\.postMessage\(\{name,text:html\}\);return '文档已生成/, '不得 postMessage 后立即报成功');
  assert.match(mod,/revokeObjectURL\(url\),60000/,'大文件下载回收须延长到 60 秒');
  const app=await read('../assets/console/app.js');
- assert.match(app,/await exportReportDocument\(report\)/,'调用方须 await 导出结果');
+ assert.match(app,/await exportReportDocument\(viewReport\(\)\)/,'调用方须 await 导出结果（且按筛选视图导出）');
  const swift=await read('../ios-src/AppDelegate.swift');
  assert.match(swift,/guard let data = text\.data\(using: \.utf8\), data\.count <= 8_000_000 else \{[\s\S]{0,120}notifyExportResult\(ok: false/,'超限须回传失败');
  assert.match(swift,/guard presentedViewController == nil else \{[\s\S]{0,120}notifyExportResult\(ok: false/,'已有面板须回传失败');

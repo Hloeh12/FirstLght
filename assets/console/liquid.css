@@ -1790,3 +1790,70 @@ button:focus-visible,a:focus-visible{
 .cal-basis small{display:inline;font-size:.66rem;color:#9c7186;font-weight:500}
 .calm-arrow{display:inline-block;margin:0 3px;color:#c9a6b8;font-size:.66rem}
 .calm-past{margin:6px 0 0;font-size:.66rem;color:var(--muted)}
+
+/* ===== 报告速览 / 全文检索 / 关注领域（v0.62.0）=====
+   三块都长在「读一份三万字的报告」这件事上：速览解决先看什么，检索解决找得到，
+   筛选解决只想读两三章。配色沿用报告卡片的浅粉底，不引入新色系。
+   正文色写死深色（不用 --ink）：报告始终是浅底纸，系统切暗色时 --ink 会翻成浅色，
+   那样卡片里的字就变成白底白字。 */
+.rpt-brief{margin:16px 0 10px;padding:14px 15px 12px;border-radius:18px;background:linear-gradient(158deg,#fff4f9,#fff 62%);border:1px solid #ffd9e8;box-shadow:0 12px 30px -26px rgba(160,40,90,.6)}
+.rpt-brief[hidden]{display:none}
+.rpt-brief-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;margin:0 0 10px}
+.rpt-brief-head b{font-size:1rem;color:#a8285d;letter-spacing:.04em}
+.rpt-brief-head small{font-size:.66rem;color:#9c7186}
+.rpt-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 12px}
+.rpt-metric{min-width:0;padding:7px 6px;border-radius:12px;background:#fff;border:1px solid #ffe1ec;text-align:center}
+.rpt-metric small{display:block;font-size:.6rem;color:#9c7186;line-height:1.3}
+.rpt-metric b{display:block;margin:2px 0 1px;font-size:.9rem;color:#8c2f5f;line-height:1.25;overflow-wrap:anywhere}
+.rpt-metric span{display:block;font-size:.58rem;color:#b08aa0;line-height:1.3;overflow-wrap:anywhere}
+.rpt-points{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.rpt-point{min-width:0}
+.rpt-point-go{display:grid;gap:3px;width:100%;padding:9px 10px;border-radius:12px;border:1px solid #ffe1ec;background:#fff;text-align:left;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rpt-point-go:active{background:#fff2f8}
+.rpt-point-t{font-size:.78rem;line-height:1.62;color:#2f2028;overflow-wrap:anywhere}
+.rpt-point-go em{font-style:normal;font-size:.62rem;color:#b06a8c}
+.rpt-point-ev{margin:3px 0 0 10px;font-size:.63rem;line-height:1.5;color:#9c7186;overflow-wrap:anywhere}
+.rpt-brief-act{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 0}
+.rpt-brief-act .rpt-act{flex:1 1 30%;min-width:86px;padding:8px 10px!important;text-align:center}
+.rpt-brief-act .rpt-act.ghost{background:#fff!important;color:#a8285d!important;border:1px solid #ffb7d3!important}
+.rpt-brief-note{margin:9px 0 0;font-size:.62rem;line-height:1.5;color:#a98b9c}
+.rpt-scope-note{margin:-4px 0 12px;padding:7px 10px;border-radius:10px;background:#fff2f8;border:1px dashed #ffb7d3;font-size:.66rem;line-height:1.5;color:#8c2f5f}
+.rpt-find{flex:none;padding:8px 12px 7px;border-bottom:1px solid var(--line);background:rgba(255,250,252,.97);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.rpt-find[hidden]{display:none}
+.rpt-find-row{display:flex;align-items:center;gap:5px}
+.rpt-find-row input{flex:1 1 auto;min-width:0;height:34px;padding:0 11px;border-radius:10px;border:1px solid #f3d7e4;background:#fff;font:inherit;font-size:.82rem;color:#2f2028;-webkit-appearance:none;appearance:none}
+.rpt-find-row input::-webkit-search-cancel-button{-webkit-appearance:none}
+.rpt-find-row input:focus{outline:none;border-color:#ff8ab8;box-shadow:0 0 0 2px rgba(255,79,139,.14)}
+.rpt-find-count{flex:none;min-width:40px;text-align:right;font-size:.68rem;font-weight:700;color:#a8285d;font-variant-numeric:tabular-nums}
+.rpt-find-row .icon{width:30px;height:30px;flex:none;font-size:14px;line-height:1}
+.rpt-find-list{max-height:36vh;overflow-y:auto;overscroll-behavior:contain;margin:6px 0 0;display:grid;gap:4px}
+.rpt-find-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px;padding:6px 9px;border-radius:9px;border:1px solid #f3d7e4;background:#fff;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.rpt-find-item b{font-size:.66rem;color:#a8285d;font-variant-numeric:tabular-nums}
+.rpt-find-item span{font-size:.72rem;color:#2f2028;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rpt-find-item em{font-style:normal;font-size:.64rem;color:#b06a8c;font-variant-numeric:tabular-nums}
+.rpt-find-item small{grid-column:1/-1;font-size:.63rem;line-height:1.45;color:#9c7186;overflow-wrap:anywhere}
+.rpt-find-item.on{border-color:#ff8ab8;background:#fff3f8}
+.rpt-find-empty,.rpt-find-tip{margin:2px 0 0;font-size:.64rem;line-height:1.55;color:#9c7186}
+mark.rpt-hit{background:#ffe08a;color:#3a2a00;border-radius:3px;padding:0 1px}
+mark.rpt-hit.is-cur{background:#ff4f8b;color:#fff}
+.rpt-scoperail{flex:none;display:flex;align-items:center;gap:8px;padding:6px 14px;background:#fff2f8;border-bottom:1px solid #ffdcea;font-size:.68rem;color:#8c2f5f}
+.rpt-scoperail[hidden]{display:none}
+.rpt-scoperail span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rpt-scoperail button{flex:none;padding:3px 9px;border-radius:999px;border:1px solid #ffb7d3;background:#fff;font-size:.66rem;color:#a8285d}
+.rpt-scope{display:flex;flex-wrap:wrap;gap:5px;padding:8px 14px;border-bottom:1px solid rgba(255,182,206,.32)}
+.rpt-scope button{flex:none;padding:4px 10px;border-radius:999px;border:1px solid #f3d7e4;background:#fff;font-size:.66rem;color:#8c2f5f;white-space:nowrap}
+.rpt-scope button[aria-pressed=true]{background:linear-gradient(135deg,#ff8ab5,#ff4f8b);border-color:#ff4f8b;color:#fff;font-weight:700}
+.rpt-sec[hidden]{display:none!important}
+@media(max-width:359px){.rpt-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* 报告正文始终按「纸」排：浅底黑字，所以速览、检索条与筛选提示也不跟随系统暗色，
+   否则同一份文档里一半深一半浅。抽屉本身是常暗玻璃，那里的筛选按钮才用深色底。 */
+/* 检索输入框：iOS 自带清除钮与我们自己的 × 重复，统一收掉 */
+.rpt-find-row input::-webkit-search-decoration,
+.rpt-find-row input::-webkit-search-results-button,
+.rpt-find-row input::-webkit-search-results-decoration{-webkit-appearance:none;display:none}
+/* 抽屉在浅色主题下也是深色玻璃，分区小标题沿用浅粉，避免深底深字 */
+.rpt-nav-drawer .rpt-toc-group{color:#ffb3d3;border-left-color:#ff4f8b}
+/* 系统暗色下 .sheet input 的深底 !important 会盖住检索框；报告是浅底纸，这里必须还原 */
+@media (prefers-color-scheme:dark){
+.report-content .rpt-find-row input{background:#fff!important;color:#2f2028!important;border-color:#f3d7e4!important;box-shadow:none!important}
+}

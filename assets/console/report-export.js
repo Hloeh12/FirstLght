@@ -74,7 +74,21 @@ table.rpt-table{width:100%;border-collapse:collapse;font-size:13px}
 .bazi-grid .bg-shensha{font-size:10px;line-height:1.35;color:#7a4a63}
 .bazi-grid .bg-shensha .term{font-size:10px;border-bottom:0}
 .bazi-grid .bg-dash,.bazi-grid .bg-unknown{color:#b99aab}
-@media print{body{background:#fff}.doc{max-width:none;padding:0;box-shadow:none}.rpt-sec h3{break-after:avoid}.rpt-table-wrap{overflow:visible}table{font-size:11px}}
+.rpt-brief{margin:18px 0 24px;padding:14px 16px;border:1px solid #ffd9e8;border-radius:12px;background:#fff6fa}
+.rpt-brief-head{margin:0 0 10px}.rpt-brief-head b{color:#a8326a;font-size:15px;margin-right:8px}.rpt-brief-head small{color:var(--sub);font-size:12px}
+.rpt-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 12px}
+.rpt-metric{padding:7px 6px;border:1px solid #ffe1ec;border-radius:9px;background:#fff;text-align:center}
+.rpt-metric small,.rpt-metric span{display:block;font-size:10.5px;color:var(--sub)}
+.rpt-metric b{display:block;font-size:14px;color:#8c2f5f}
+.rpt-points{margin:0;padding:0;list-style:none}
+.rpt-point{margin:0 0 8px}
+.rpt-point-go{padding:8px 10px;border:1px solid #ffe1ec;border-radius:9px;background:#fff}
+.rpt-point-t{display:block;font-size:12.5px;line-height:1.65}
+.rpt-point-go em{font-style:normal;font-size:10.5px;color:#b06a8c}
+.rpt-point-ev{margin:3px 0 0;font-size:10.5px;color:var(--sub)}
+.rpt-brief-note,.rpt-scope-note{margin:8px 0 0;font-size:10.5px;color:var(--sub)}
+.rpt-scope-note{margin:0 0 14px;padding:7px 10px;border:1px dashed #ffb7d3;border-radius:8px;background:#fff6fa}
+@media print{.rpt-brief{break-inside:avoid}body{background:#fff}.doc{max-width:none;padding:0;box-shadow:none}.rpt-sec h3{break-after:avoid}.rpt-table-wrap{overflow:visible}table{font-size:11px}}
 `;
 
 function staticBody(report){
@@ -83,6 +97,11 @@ function staticBody(report){
  box.innerHTML=reportHtml(report);
  box.querySelectorAll('script').forEach(n=>n.remove());
  box.querySelectorAll('[data-rpt-progress]').forEach(n=>n.remove());
+ // 速览里的出口按钮在离线文档里没有落点，连同容器一起去掉；要点按钮降级成卡片。
+ box.querySelectorAll('.rpt-brief-act').forEach(n=>n.remove());
+ box.querySelectorAll('button.rpt-point-go').forEach(b=>{
+  const d=document.createElement('div');d.className=b.className;d.innerHTML=b.innerHTML;b.replaceWith(d);
+ });
  box.querySelectorAll('button.rpt-toc-item').forEach(b=>{
   const d=document.createElement('div');d.className=b.className;d.innerHTML=b.innerHTML;b.replaceWith(d);
  });

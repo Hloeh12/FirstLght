@@ -70,10 +70,10 @@ test('v0.53.0 长报告：顶部章节定位条随滚动更新',async()=>{
 
 test('v0.53.0 长报告滚动节流：节点只查一次，一帧只算一次',async()=>{
  const app=await read('../assets/console/app.js');
- assert.match(app,/const cur=rptSecs\|\|\(rptSecs=\[\.\.\.rptDoc\.querySelectorAll\('\.rpt-sec'\)\]\)/,'章节节点须缓存，不能每次 scroll 重查');
+ assert.match(app,/const cur=rptSecs\|\|\(rptSecs=\[\.\.\.rptDoc\.querySelectorAll\('\.rpt-sec:not\(\[hidden\]\)'\)\]\)/,'章节节点须缓存，且只量可见章节（筛选后隐藏节点 offsetTop 恒为 0）');
  assert.match(app,/rptTocBtns\|\|\(rptTocBtns=\[\.\.\.d\.querySelectorAll\('\[data-toc\]'\)\]\)/,'目录按钮须缓存');
  assert.match(app,/if\(rptRaf\)return;\n  rptRaf=requestAnimationFrame/,'滚动回调须用 rAF 合并');
  assert.match(app,/rptSecs=null;rptTocBtns=null;/,'时点重排后须让缓存失效');
  // scrollTop 为 0 时不能把 offsetTop 全为 0 的章节判成「已到最后章」
- assert.match(app,/if\(at>2\)for\(let i=0;i<cur\.length;i\+\+\)/,'顶部须直接判为封面，不能一路顶到最后一章');
+ assert.match(app,/if\(at>2\)for\(const sec of cur\)/,'顶部须直接判为封面，不能一路顶到最后一章');
 });

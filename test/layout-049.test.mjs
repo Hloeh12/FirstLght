@@ -23,7 +23,7 @@ test('v0.49.0 排版3：报告段落分段、语义小节、章节去重编号',
  assert.match(js,/\[一二三四五六七八九十百零〇\]\+/,'须含中文序号的剥离规则');
  assert.match(js,/cleanSecTitle\(sec\.title\)/,'章节渲染须使用去重后的标题');
  // 不得再出现「01」+「一、」双重编号
- assert.match(js,/rpt-sec-no">\$\{String\(i\+1\)\.padStart\(2,'0'\)\}<\/span>\$\{esc\(cleanSecTitle/,'徽标与纯标题组合');
+ assert.match(js,/rpt-sec-no">\$\{String\(no\)\.padStart\(2,'0'\)\}<\/span>\$\{esc\(cleanSecTitle/,'徽标与纯标题组合');
 });
 
 test('v0.49.0 排版4：紫微宫格字号提升、连线不再雾化',async()=>{

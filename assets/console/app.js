@@ -1,6 +1,6 @@
 import {buildBaziKnowledgeReport,buildZiweiKnowledgeReport} from '../../www/js/rules.js';
 import {insightModel,summaryHtml,dimsHtml,digestBlockHtml,lifecycleBlockHtml,wireDims,SYSTEM_LABEL} from './insight.js';
-import {composeFullReport,reportHtml,tocItems,cleanSecTitle} from './full-report.js';
+import {composeFullReport,reportHtml,tocItems,cleanSecTitle,sectionGroup} from './full-report.js';
 import {periodSections} from './ui.js';
 import {installCivilPickers} from './civil-picker.js';
 import {ProfileMachine} from './profile-machine.js';
@@ -775,6 +775,8 @@ function openFullReport(prebuilt,opts={}){
  const names={bazi:'八字',ziwei:'紫微斗数',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘'};
  const d=document.getElementById('reportSheet');
  const report=prebuilt||composeFullReport(state,names);
+ // 关注领域：直接取正文分区，不维护第二份分组表——章节改了什么，筛选条就跟着改。
+ const scopeGroups=[...new Set((report.sections||[]).map(s=>sectionGroup(s.title)))];
  // 报告滚动节流的缓存：章节节点 / 目录按钮只查一次，时点重排后置空重取
  let rptSecs=null,rptTocBtns=null,rptRaf=0;
  // 报告历史：元数据 + 整份纯数据快照，供「我」页点开原样复盘（v0.48.0）。
@@ -784,8 +786,20 @@ function openFullReport(prebuilt,opts={}){
  d.innerHTML=`<div class="dialog-content report-content">
   <div class="rpt-topbar"><button type="button" class="icon" data-rpt-close aria-label="关闭报告">×</button>
    <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
+   <button type="button" class="rpt-act" data-rpt-find>检索</button>
    <button type="button" class="rpt-act" data-rpt-copy>复制</button>
    <button type="button" class="rpt-act primary" data-rpt-export>导出文档</button></div>
+  <div class="rpt-find" data-rpt-findbar hidden>
+   <div class="rpt-find-row">
+    <input type="text" inputmode="search" enterkeyhint="search" data-find-input placeholder="在全文里找术语、宫位、年份" autocomplete="off" aria-label="在报告中检索">
+    <span class="rpt-find-count" data-find-count aria-live="polite">0</span>
+    <button type="button" class="icon" data-find-prev aria-label="上一处">↑</button>
+    <button type="button" class="icon" data-find-next aria-label="下一处">↓</button>
+    <button type="button" class="icon" data-find-close aria-label="关闭检索">×</button>
+   </div>
+   <div class="rpt-find-list" data-find-list></div>
+  </div>
+  <div class="rpt-scoperail" data-scope-rail hidden></div>
   <div class="rpt-rail" data-rpt-rail aria-hidden="true">
    <span class="rpt-rail-no" data-rpt-rail-no></span>
    <span class="rpt-rail-title" data-rpt-rail-title>${esc(report.title||'')}</span>
@@ -798,6 +812,7 @@ function openFullReport(prebuilt,opts={}){
    <div class="rpt-nav-grip" data-rpt-nav-close aria-hidden="true"></div>
    <div class="rpt-nav-head"><div><b>章节目录</b><small>${esc(report.cover.system)} · ${report.sections?.length||0} 章 · 点选跳转</small></div><button type="button" class="icon" data-rpt-nav-close aria-label="收起目录">×</button></div>
    <div class="rpt-nav-progress"><span>阅读进度</span><b data-rpt-progress>0%</b></div>
+   ${scopeGroups.length>1?`<div class="rpt-scope" role="group" aria-label="关注领域"><button type="button" data-rpt-scope="全部" aria-pressed="true">全部</button>${scopeGroups.map(g=>`<button type="button" data-rpt-scope="${esc(g)}" aria-pressed="false">${esc(g)}</button>`).join('')}</div>`:''}
    <div class="rpt-nav-list" data-rpt-nav-list></div>
    <p class="rpt-nav-tip">点选章节直接跳转 · 下滑把手或点空白处收起</p>
   </aside>
@@ -862,6 +877,9 @@ function openFullReport(prebuilt,opts={}){
    const tocEl=d.querySelector('.rpt-toc-list');if(tocEl)tocEl.innerHTML=items;
    const navEl=d.querySelector('[data-rpt-nav-list]');if(navEl)navEl.innerHTML=items;
    rptSecs=null;rptTocBtns=null;
+   // 速览讲的是终身结构，换了时点就与正文不同源，宁可收起也不能张冠李戴。
+   const briefEl=d.querySelector('.rpt-brief');if(briefEl)briefEl.hidden=true;
+   if(scope!=='全部')applyScope('全部'); // 正文已整体重排，旧的领域筛选与章号对不上
    if(bodyEl)bodyEl.scrollTop=0;
    const body2=d.querySelector('#reportBody');if(body2)body2.scrollTo?.({top:0,behavior:'smooth'});
   }catch(err){tell('该时点重算失败：'+(err.message||err));}
@@ -911,13 +929,13 @@ function openFullReport(prebuilt,opts={}){
   flushLazy(); // 隐藏章节取不到 innerText，先全部就位
   const doc=d.querySelector('[data-full-report]');
   const text=[doc.querySelector('h2')?.innerText,doc.querySelector('.rpt-owner')?.innerText,
-   ...[...doc.querySelectorAll('.rpt-sec')].map(s=>s.innerText)].filter(Boolean).join('\n\n');
+   ...[...doc.querySelectorAll('.rpt-sec')].filter(s=>!s.hidden).map(s=>s.innerText)].filter(Boolean).join('\n\n');
   try{await navigator.clipboard.writeText(text);tell('报告文本已复制。');}
   catch{e=>tell('复制失败，请使用导出文档。');}
  };
   d.querySelector('[data-rpt-export]').onclick=async e=>{
   const b=e.currentTarget;b.disabled=true;
-  try{tell(await exportReportDocument(report));}
+  try{tell(await exportReportDocument(viewReport()));}
   catch(err){tell('导出失败：'+(err.message||err));}
   finally{b.disabled=false;}
  };
@@ -950,6 +968,190 @@ const pumpLazy=()=>{
  else{host.remove();rptSecs=null;rptTocBtns=null;}
 };
 if(rptDoc?.querySelector('[data-rpt-lazy]'))requestAnimationFrame(pumpLazy);
+
+/* ===== 报告全文检索（v0.62.0）=====
+   三万字报告靠目录只能「跳章」，找「化忌」「申宫」「2029」只能一路滚。
+   这里直接对正文文本节点做检索并把命中包成 <mark>：不做索引、不预建全文副本，
+   所以搜到的字就是正文里的字，位置不会和排版脱节。
+   上限 200 处：再多的命中列表也不再是一条条可用的线索，反而卡住输入。 */
+const findBar=d.querySelector('[data-rpt-findbar]');
+const findInput=d.querySelector('[data-find-input]');
+const findCount=d.querySelector('[data-find-count]');
+const findList=d.querySelector('[data-find-list]');
+let finds=[],findAt=-1,findTimer=0,findQuery='';
+const HIT_MAX=200;
+const clearHits=()=>{
+ const marks=d.querySelectorAll('mark.rpt-hit');
+ if(marks.length){
+  for(const m of marks)m.replaceWith(document.createTextNode(m.textContent));
+  rptDoc.normalize(); // 还原后合并文本节点，否则下一次检索会把同一句切成碎块
+ }
+ finds=[];findAt=-1;findQuery='';
+ if(findCount)findCount.textContent='0';
+ if(findList)findList.innerHTML='';
+};
+const jumpHit=at=>{
+ if(!finds.length||!rptBody)return;
+ findAt=(at+finds.length)%finds.length;
+ finds.forEach((f,i)=>f.mark.classList.toggle('is-cur',i===findAt));
+ const m=finds[findAt].mark;
+ // 用 rect 差值定位：mark 的 offsetParent 可能是 <p>，offsetTop 只到段落级，滚不到字上。
+ const rb=rptBody.getBoundingClientRect(),mr=m.getBoundingClientRect();
+ rptBody.scrollTop+=mr.top-rb.top-rptBody.clientHeight*0.32-mr.height;
+ if(findCount)findCount.textContent=(findAt+1)+'/'+finds.length;
+ for(const row of findList?.querySelectorAll('[data-find-sec]')||[])row.classList.toggle('on',Number(row.dataset.findSec)===finds[findAt].sec);
+};
+const paintFindList=()=>{
+ if(!findList)return;
+ if(!finds.length){findList.innerHTML=`<p class="rpt-find-empty">正文里没有「${esc(findQuery)}」。只搜正文各章（不含封面、盘面注与目录），可试术语（化忌、伏吟）、宫位（申宫）、年份（2029）。</p>`;return;}
+ const groups=new Map();
+ for(const f of finds){
+  const g=groups.get(f.sec)||{n:0,first:f};
+  g.n++;groups.set(f.sec,g);
+ }
+ findList.innerHTML=[...groups].map(([sec,g])=>`<button type="button" class="rpt-find-item" data-find-sec="${sec}"><b>${String(sec).padStart(2,'0')}</b><span>${esc(report.sections?.[sec-1]?.title||'')}</span><em>${g.n}</em><small>${esc(g.first.snip)}</small></button>`).join('')
+  +`<p class="rpt-find-tip">共 ${finds.length} 处${finds.length>=HIT_MAX?'（已达 200 处上限，换个更具体的词更准）':''} · 点章节跳到该章第一处</p>`;
+};
+const searchText=q=>{
+ clearHits();
+ findQuery=q;
+ if(!q)return;
+ flushLazy();
+ const host=rptDoc.querySelector('[data-report-body]')||rptDoc;
+ const walker=document.createTreeWalker(host,4);
+ const nodes=[];
+ let node;
+ while((node=walker.nextNode())){
+  if(!node.nodeValue||!node.nodeValue.trim())continue;
+  const p=node.parentElement;
+  if(!p||p.closest('button,script,style,.rpt-toc'))continue;
+  const secEl=p.closest('.rpt-sec');
+  if(secEl&&secEl.hidden)continue; // 已筛掉的章节不参与检索，否则「有命中却看不到」
+  nodes.push(node);
+ }
+ const ql=q.toLowerCase();
+ for(const textNode of nodes){
+  if(finds.length>=HIT_MAX)break;
+  const v=textNode.nodeValue,low=v.toLowerCase(),sec=Number(textNode.parentElement?.closest('.rpt-sec')?.dataset.sec||0);
+  let i=0,frag=null;
+  while(i<v.length&&finds.length<HIT_MAX){
+   const at=low.indexOf(ql,i);
+   if(at<0)break;
+   if(!frag)frag=document.createDocumentFragment();
+   if(at>i)frag.appendChild(document.createTextNode(v.slice(i,at)));
+   const mark=document.createElement('mark');
+   mark.className='rpt-hit';mark.textContent=v.slice(at,at+q.length);
+   frag.appendChild(mark);
+   finds.push({mark,sec,snip:`…${v.slice(Math.max(0,at-14),at).replace(/\s+/g,'')}${v.slice(at,at+q.length)}${v.slice(at+q.length,at+q.length+14).replace(/\s+/g,'')}…`});
+   i=at+q.length;
+  }
+  if(frag){
+   const tail=v.slice(i);
+   if(tail)frag.appendChild(document.createTextNode(tail));
+   textNode.replaceWith(frag);
+  }
+ }
+ paintFindList();
+ if(finds.length)jumpHit(0);
+ else if(findCount)findCount.textContent='0/0';
+};
+const openFind=()=>{
+ if(!findBar)return;
+ findBar.hidden=false;
+ findInput?.focus();
+ if(findInput?.value.trim())searchText(findInput.value.trim());
+};
+const closeFind=()=>{
+ if(!findBar)return;
+ findBar.hidden=true;
+ clearHits();
+ if(findInput)findInput.value='';
+};
+d.querySelector('[data-rpt-find]')?.addEventListener('click',openFind);
+d.querySelector('[data-find-close]')?.addEventListener('click',closeFind);
+d.querySelector('[data-find-prev]')?.addEventListener('click',()=>jumpHit(findAt-1));
+d.querySelector('[data-find-next]')?.addEventListener('click',()=>jumpHit(findAt+1));
+findInput?.addEventListener('input',()=>{
+ clearTimeout(findTimer);
+ // 190ms：中文输入法组字期间 value 会连续变，立刻检索等于每敲一个字全量重排一遍正文。
+ findTimer=setTimeout(()=>searchText(findInput.value.trim()),190);
+});
+findInput?.addEventListener('keydown',e=>{
+ if(e.key==='Enter'){e.preventDefault();jumpHit(findAt+1);}
+ if(e.key==='Escape'){e.preventDefault();closeFind();}
+});
+findList?.addEventListener('click',e=>{
+ const row=e.target.closest('[data-find-sec]');
+ if(!row)return;
+ const at=finds.findIndex(f=>f.sec===Number(row.dataset.findSec));
+ if(at>=0)jumpHit(at);
+});
+
+/* ===== 关注领域筛选（v0.62.0）=====
+   13 章里用户真正要读的常常只有两三章。筛选只隐藏节点、不重排正文：
+   章号沿用原编号，正文里「详见第九章」这类交叉引用不会错位；
+   导出与复制走 viewReport()，拿的是筛选后的拷贝，原报告不被改写、也不重算。 */
+let scope='全部';
+const scopeRail=d.querySelector('[data-scope-rail]');
+const groupOf=no=>sectionGroup(report.sections?.[no-1]?.title||'');
+const visibleNos=()=>[...rptDoc.querySelectorAll('.rpt-sec')].filter(s=>!s.hidden).map(s=>Number(s.dataset.sec)).filter(n=>n>0).sort((a,b)=>a-b);
+const viewReport=()=>{
+ const nos=visibleNos();
+ if(scope==='全部'||!nos.length||!report.sections?.length)return report;
+ return {...report,
+  scopeNote:`筛选视图：只看「${scope}」· 保留 ${nos.length}/${report.sections.length} 章（章号沿用原编号）`,
+  sections:nos.map(n=>({...report.sections[n-1],__no:n}))};
+};
+const applyScope=(g,opts={})=>{
+ scope=g;
+ flushLazy();
+ closeFind();
+ const secs=[...rptDoc.querySelectorAll('.rpt-sec')];
+ for(const sec of secs){
+  const no=Number(sec.dataset.sec);
+  sec.hidden=g!=='全部'&&groupOf(no)!==g;
+ }
+ const nos=visibleNos();
+ const items=nos.length?tocItems(nos.map(n=>report.sections[n-1]),nos):'';
+ const tocEl=d.querySelector('.rpt-toc-list');if(tocEl)tocEl.innerHTML=items;
+ const navEl=d.querySelector('[data-rpt-nav-list]');if(navEl)navEl.innerHTML=items;
+ for(const b of d.querySelectorAll('[data-rpt-scope]'))b.setAttribute('aria-pressed',String(b.dataset.rptScope===g));
+ if(scopeRail){
+  scopeRail.hidden=g==='全部';
+  scopeRail.innerHTML=g==='全部'?'':`<span>只看「${esc(g)}」· ${nos.length}/${secs.length} 章</span><button type="button" data-scope-reset>看全部</button>`;
+ }
+ rptSecs=null;rptTocBtns=null;
+ if(!opts.keepScroll&&rptBody)rptBody.scrollTo?.({top:0,behavior:'smooth'});
+ requestAnimationFrame(()=>rptOnScroll());
+};
+for(const b of d.querySelectorAll('[data-rpt-scope]'))b.addEventListener('click',()=>applyScope(b.dataset.rptScope));
+scopeRail?.addEventListener('click',e=>{if(e.target.closest('[data-scope-reset]'))applyScope('全部');});
+
+/* ===== 速览出口：择日 / 时点 / 复制（v0.62.0）=====
+   报告不该是死文档。择日带着本命喜忌、时点带着同一个案例，
+   三个出口都只做「转场」，不在报告里另起一套计算。 */
+for(const b of d.querySelectorAll('[data-brief-act]')){
+ b.addEventListener('click',async()=>{
+  const [kind,arg]=String(b.dataset.briefAct||'').split(':');
+  if(kind==='copy'){
+   const briefEl=d.querySelector('.rpt-brief');
+   const text=['【速览】',...(briefEl?[...briefEl.querySelectorAll('.rpt-point-t')].map(x=>'· '+x.textContent):[]),
+    ...(briefEl?[...briefEl.querySelectorAll('.rpt-metric')].map(x=>x.textContent):[])].join('\n');
+   try{await navigator.clipboard.writeText(text);tell('速览已复制。');}
+   catch{tell('复制失败，可直接用系统分享。');}
+   return;
+  }
+  if(kind==='period'){close(d);switchTab('period');return;}
+  if(kind==='cal'){
+   close(d);
+   // 择日页的状态是按页存的，这里种一份带事项的初始状态，跳过去就是本命口径的择日。
+   state.chartState.calendar={date:isoLocal(),days:7,event:arg||'general',sort:'score',excludeClash:false,compare:false,picked:[],token:0,result:null,error:''};
+   switchTab('chart','calendar');
+   tell('已按本命喜忌进入择日，可再切换事项。');
+  }
+ });
+}
+
  const setNav=on=>{
   rptContent?.classList.toggle('rpt-nav-open',on);
   if(rptNav)rptNav.setAttribute('aria-expanded',String(on));
@@ -966,7 +1168,9 @@ if(rptDoc?.querySelector('[data-rpt-lazy]'))requestAnimationFrame(pumpLazy);
  if(t&&rptDoc){
   // 目标章可能还在隐藏容器里：那里 offsetTop 恒为 0，先全部就位再量
   flushLazy();
-  const sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
+  let sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);
+   // 速览与目录都可能指向被筛掉的章节：先还原筛选再跳，否则会滚到 0（隐藏节点没有高度）。
+   if(sec&&sec.hidden){applyScope('全部',{keepScroll:true});sec=rptDoc.querySelector(`[data-sec="${t.dataset.toc}"]`);}
    if(sec&&rptBody){
     // v0.42.0 防跳动：只滚报告阅读容器自身，不用 scrollIntoView——
     // 后者会连带滚动 dialog / #mainScrollView 等祖先，造成「点目录整页跳一下」。
@@ -997,12 +1201,14 @@ const rptOnScroll=()=>{
  const p=total>0?Math.min(100,Math.round((rptBody.scrollTop/total)*100)):0;
  rptProg.forEach(x=>x.textContent=p+'%');
  if(rptRailFill)rptRailFill.style.width=p+'%';
- const cur=rptSecs||(rptSecs=[...rptDoc.querySelectorAll('.rpt-sec')]);
+ // 筛选后隐藏章节的 offsetTop 恒为 0，按序数推 active 会把高亮顶到第一章；
+ // 这里只量可见章节，并用 data-sec（原始章号）反查标题与目录项。
+ const cur=rptSecs||(rptSecs=[...rptDoc.querySelectorAll('.rpt-sec:not([hidden])')]);
  const at=rptBody.scrollTop;
  // scrollTop 为 0 时直接算成「封面」：对话框刚打开还没布局完，各章 offsetTop 都是 0，
  // 循环会把 active 一路顶到最后一章（实测出现「刚打开就显示 11 附、术语小词典」）。
  let active=0;
- if(at>2)for(let i=0;i<cur.length;i++){if(cur[i].offsetTop-rptBody.offsetTop<=at+80)active=i+1;}
+ if(at>2)for(const sec of cur){if(sec.offsetTop-rptBody.offsetTop<=at+80)active=Number(sec.dataset.sec)||0;}
  if(rptRail){
   // 未进正文时只留标题，进了正文才出现章号——避免封面下就挂一个「00」
   if(rptRailNo)rptRailNo.textContent=active>0?String(active).padStart(2,'0'):'';

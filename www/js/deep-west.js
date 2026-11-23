@@ -50,7 +50,11 @@ export function buildWesternDeepReport(w,at,analysis){
   `太阳在${sun?.sign||'—'}第${sun?.house||'—'}宫：你要成为的人是「${SIGN_TRAIT[signName(sun?.sign)]||'—'}」的，而第${sun?.house}宫（${HOUSE_THEME[sun?.house]||''}）是你投入生命力的主战场。`,
   `月亮在${moon?.sign||'—'}第${moon?.house||'—'}宫：情绪与安全感的配方是「${SIGN_TRAIT[signName(moon?.sign)]||'—'}」式的，在${HOUSE_THEME[moon?.house]||''}的场域里最容易放松和回血。`,
   `上升在${asc}：面对新环境的第一反应是「${SIGN_TRAIT[asc]||'—'}」；天顶（MC）在${mc}：事业与社会形象的方向带${SIGN_TRAIT[mc]||'—'}的色彩。上升—天顶轴线是全盘骨架。`,
-  `日月升三者的关系速读：${sun&&moon&&houseOf(sun)!==houseOf(moon)?`太阳与月亮不同宫——「想要的我」与「需要的我」有落差，人生课题之一是让二者协作而非互搏。`:`日月同宫或同主题——内外较为一致，目标感强。`}`
+  `日月升三者的关系速读：${sun&&moon&&houseOf(sun)!==houseOf(moon)?`太阳与月亮不同宫——「想要的我」与「需要的我」有落差，人生课题之一是让二者协作而非互搏：${HOUSE_THEME[sun.house]||''}是你想赢的地方，${HOUSE_THEME[moon.house]||''}是你真正能放松的地方，把这两件事排进同一周，人就不拧。`:`日月同宫或同主题——内外较为一致，目标感强，代价是「换个场景就不知道怎么放松」。`}`,
+  // 三要素只回答了「是什么」，还要回答「怎么串起来」——命主星是那根线。
+  `【一句话画像】用「${SIGN_TRAIT[asc]||''}」的方式进场，用「${SIGN_TRAIT[signName(sun?.sign)]||''}」的方式证明自己，靠「${SIGN_TRAIT[signName(moon?.sign)]||''}」的方式回血。这三句连起来就是别人对你的完整体验：先看到你的壳（上升），再看到你争什么（太阳），最后才发现你真正在乎什么（月亮）。`,
+  ...(rulerName?[`【串起来的那根线】命主星是${rulerName}，落第${analysis.chartRuler?.house||'—'}宫（${HOUSE_THEME[analysis.chartRuler?.house]||''}）${analysis.chartRuler?.dignity?`·${analysis.chartRuler.dignity}`:''}——上升决定你「怎么出场」，命主星决定「出场之后往哪走」。这颗星所在的宫位，是你这一生反复回到的战场；它的尊贵度，决定你在这件事上是顺手还是硬扛。`]:[]),
+  `【读法提醒】三要素是骨架，不是全部。太阳星座常被当成「我就是什么座」，其实它只回答「你想成为什么」；真正决定你日常反应的，是月亮（情绪）与上升（应对），以及后文相位与宫位给出的具体配置。`
  ];
 
  /* 二、逐星解读 */
@@ -77,7 +81,41 @@ export function buildWesternDeepReport(w,at,analysis){
   `空宫不是缺失：没有行星的宫位，看它的守护星（星座守护者）落在哪一宫、与谁成相位——议题由宫主星承接。`
  ];
 
- /* 三、相位格局 */
+ /* 二·五、十二宫逐宫：宫头星座 + 宫内行星 + 宫主星落宫链条
+   空宫不是没有议题——它由宫主星承接，宫主星落在哪一宫，这件事就在哪个场合被解决。
+   旧报告只写了「空宫看宫主星」这句方法论，从没真的把这条链走一遍。 */
+const SIGN_NAMES=['白羊座','金牛座','双子座','巨蟹座','狮子座','处女座','天秤座','天蝎座','射手座','摩羯座','水瓶座','双鱼座'];
+const RULER_OF={'白羊座':'火星','金牛座':'金星','双子座':'水星','巨蟹座':'月亮','狮子座':'太阳','处女座':'水星','天秤座':'金星','天蝎座':'冥王星','射手座':'木星','摩羯座':'土星','水瓶座':'天王星','双鱼座':'海王星'};
+const RULER_CLASSIC={'天蝎座':'火星','水瓶座':'土星','双鱼座':'木星'};
+const CN2KEY={'太阳':'sun','月亮':'moon','水星':'mercury','金星':'venus','火星':'mars','木星':'jupiter','土星':'saturn','天王星':'uranus','海王星':'neptune','冥王星':'pluto'};
+const signAtLon=lon=>SIGN_NAMES[Math.floor((((Number(lon)||0)%360)+360)%360/30)];
+const cuspsAll=w?.cusps||[];
+const ascIdx=Math.max(0,SIGN_NAMES.indexOf(asc));
+const houseCusp=h=>cuspsAll.length?signAtLon(cuspsAll[h-1]):SIGN_NAMES[(ascIdx+h-1)%12];
+const HOUSE_ASK={1:'别人第一眼看到的你、以及你遇到新事的第一反应',2:'你怎么赚钱、怎么花钱、值不值钱的标准',3:'你怎么说话、怎么学东西、和身边人怎么往来',4:'你的家、你的根、你独处时回血的方式',5:'你怎么玩、怎么谈恋爱、怎么创造',6:'你的日常节奏、工作方式与身体状况',7:'你会被什么样的人吸引、合作怎么谈',8:'深度绑定：共同的钱、亲密关系里的信任与掌控',9:'你信什么、往哪里走、靠什么理解世界',10:'社会怎么看你、你爬到哪个位置',11:'你和群体的关系、你想要什么样的未来',12:'你不愿承认的部分、你怎么消化情绪'};
+const houseLines=Array.from({length:12},(_,i)=>{
+ const h=i+1,sign=houseCusp(h);
+ const inside=planets.filter(p=>Number(p.house)===h);
+ const ruler=RULER_OF[sign]||'';
+ const rp=planets.find(p=>p.name===ruler);
+ const classic=RULER_CLASSIC[sign];
+ const rpDign=rp?dignOf(rp):null;
+ const chain=rp
+  ?`宫主${ruler}落第${rp.house}宫（${HOUSE_THEME[rp.house]||''}）${rpDign?`·${rpDign}`:''}——这一宫的议题最终会在「${HOUSE_THEME[rp.house]||''}」的场合里被解决，而不是在它自己的地盘上。`
+  :`宫主${ruler}未在盘上定位。`;
+ const insideTxt=inside.length
+  ?`宫内${inside.map(p=>`${p.name}${p.retro?'℞':''}`).join('、')}——${inside.map(p=>PLANET_CORE[p.key]?.split('——')[0]).filter(Boolean).join('；')}，这几股能量主要在这个场域里使。另看${chain}`
+  :`空宫——议题「外包」给宫主星：${chain}`;
+ const classicHouse=classic?planets.find(p=>p.name===classic)?.house:null;
+ const classicNote=classic&&!inside.length&&classicHouse!==rp?.house?`（古典占星以${classic}为${sign}的守护，按古法读则改为落第${classicHouse??'—'}宫——两种读法都成立，差别在于「用什么在管这件事」）`:'';
+ return `【第${h}宫 · ${HOUSE_THEME[h]}】宫头${sign}。${insideTxt}${classicNote}这一宫回答的是：${HOUSE_ASK[h]}。`;
+});
+const houseIntro=[
+ `十二宫是「人生的十二个房间」：行星说能量、星座说风格、宫位说场域。同一颗金星，落第2宫是「把钱花在美的东西上」，落第7宫是「用审美与和气经营关系」——星没变，房间变了。`,
+ `读法：宫内有星，议题显性、由这颗星主导；宫空不等于没这回事，而是议题「外包」给了宫主星——宫主星落在哪一宫，这件事就在哪个房间被处理。本盘逐宫如下，先看自己的第1、2、7、10宫，那是自我、钱、关系、事业四条主线。`
+];
+
+/* 三、相位格局 */
  const NATURE_OF=a=>[60,120].includes(a)?'和谐':[90,180].includes(a)?'张力':a===0?'融合':'次要';
  const phaseState=x=>typeof x.applying==='boolean'?(x.applying?'入相位':'出相位'):null;
  const sorted=[...aspects].sort((a,b)=>(a.orb??99)-(b.orb??99)).slice(0,12);
@@ -88,10 +126,22 @@ export function buildWesternDeepReport(w,at,analysis){
   return `<tr><td>${x.a} ${ASPECT_MEANING[x.angle]?.slice(0,3)||x.type||''} ${x.b}</td><td>${x.angle??'—'}°</td><td>${(x.orb??0).toFixed(1)}°<small class="rpt-orb-${tier}">${tier}</small></td><td>${nature}${state?' · '+state:''}<small>${weight}；${dynamic}</small></td></tr>`;
  }).join('');
  const aspTable=aspRows?`<table class="rpt-table"><thead><tr><th>相位</th><th>角度</th><th>容许度</th><th>性质与动态</th></tr></thead><tbody>${aspRows}</tbody></table>`:'';
+ // 表格只给数值，读者仍不知道「这组相位在我身上是什么样」——按容许度取前六条逐条落到本盘。
+const ANGLE_SENSE={0:'两者绑在一起，同进同退，常常分不清哪部分是自己的',60:'可以互相借力，但需要主动开口才会动',90:'两个需求互相卡住，只能在实践里找折中，没有一次性解法',120:'天赋回路：顺到容易不用，越用它越稳',180:'两端拉扯，成熟的做法是轮流满足，而不是选一边站',30:'轻微助力，属于「有更好、没有也行」',45:'轻微摩擦，长期积累会变成习惯性烦躁',135:'节奏对不上：一方快一方慢，配合需要额外协调',150:'错位：两边都在做对的事，但时机总差一点'};
+const NATURE_ACTION={和谐:'把它当资源用，别当护身符——不用就不会兑现。',张力:'把它当课题做：这类拉扯不会消失，只能被驯服成手感。',融合:'注意边界：分不清彼此的时候，容易替对方承担。',次要:'背景音，不必为它做决定。'};
+const keyAspects=sorted.slice(0,6).map((x,i)=>{
+ const ka=CN2KEY[x.a],kb=CN2KEY[x.b];
+ const ca=PLANET_CORE[ka]?.split('——')[0]||x.a,cb=PLANET_CORE[kb]?.split('——')[0]||x.b;
+ const nat=NATURE_OF(x.angle);
+ const tier=ORB_TIER(x.orb);
+ return `【${x.a} ${ASPECT_MEANING[x.angle]?.replace(/（.*/,'')||x.type||''} ${x.b} · 容许 ${(x.orb??0).toFixed(1)}° ${tier}】${ca} 与 ${cb}：${ANGLE_SENSE[x.angle]||'两者之间有持续互动'}。${i===0?'其中容许度最小、也最响的一组：它几乎定义了你处理这类事的方式。':tier==='极紧'?'同属最紧的一档，日常里持续起作用。':tier==='紧'?'分量很重，日常里会反复出现。':'属于背景层，关键时刻才会显形。'}${NATURE_ACTION[nat]||''}`;
+});
  const aspLines=[
   `相位是行星之间的「对话」。容许度（orb，与精确角度的偏差）越小，对话声音越大——上表按紧到松排列，每行列明松紧等级与权重：极紧／紧是人格里最响的主旋律，宽／松是背景和声。`,
   `入相位（applying）＝两星仍在接近精确角度，能量上升、议题趋于事件化，权重加一档；出相位（separating）＝已过精确点正在远离，能量退潮、议题转为内化沉淀。同一组相位，入与出的读法不同（本盘若未标注出入相位，则仅按容许度判读）。`,
-  `和谐相位（六合/拱）是天赋的顺水推舟；张力相位（刑/冲）是成长的心脏压——两者都要「用」才会兑现。多相位指向同一主题时才形成稳定行为模式——单相位不定人格。`
+  `和谐相位（六合/拱）是天赋的顺水推舟；张力相位（刑/冲）是成长的心脏压——两者都要「用」才会兑现。多相位指向同一主题时才形成稳定行为模式——单相位不定人格。`,
+  ...(keyAspects.length?[`【本盘最紧的 ${keyAspects.length} 组相位】`]:[]),
+  ...keyAspects
  ];
  // 宫主星互融（Reception）：A 落在 B 守护的星座＝B 在家接待 A，比单纯相位更稳的结构性支援。
  const recps=analysis?.receptions||[];
@@ -213,23 +263,31 @@ export function buildWesternDeepReport(w,at,analysis){
   `用法：木星过境＝播种窗口（该宫领域主动争取）；土星过境＝验收期（该宫领域补结构、还旧账）；天海冥过境＝时代级课题（该宫领域的深层改版）。正激活（容许度≤2.5°）是当下最强音，临近（≤5°）是未来数月将进入的主题。`
  ];
 
- /* 六、领域速览与建议 */
- const findHouse=h=>planets.filter(p=>p.house===h).map(p=>p.name);
+ /* 七、领域速览与建议：每个领域都走一遍「宫头—宫内星—宫主星」链条，不再只给一句口号 */
+ const houseOf2=h=>({sign:houseCusp(h),inside:planets.filter(p=>Number(p.house)===h),ruler:RULER_OF[houseCusp(h)]||'',rulerP:planets.find(p=>p.name===(RULER_OF[houseCusp(h)]||''))});
+ const h10=houseOf2(10),h2=houseOf2(2),h8=houseOf2(8),h7=houseOf2(7),h6=houseOf2(6);
+ const chainOf=(o,label)=>{
+  if(!o.rulerP)return `${label}宫主${o.ruler}未定位`;
+  return `${label}宫主${o.ruler}落第${o.rulerP.house}宫（${HOUSE_THEME[o.rulerP.house]}）${dignOf(o.rulerP)?`·${dignOf(o.rulerP)}`:''}`;
+ };
+ const insideTxt=o=>o.inside.length?o.inside.map(p=>`${p.name}${p.retro?'℞':''}（${PLANET_CORE[p.key]?.split('——')[0]||''}）`).join('、'):'空宫';
  const domains=[
-  `事业：看天顶${mc}、第10宫${findHouse(10).join('、')||'空宫（看宫主星）'}与第6宫（${findHouse(6).join('、')||'日常工作象限'}）——方向在${SIGN_TRAIT[mc]||'—'}，成色看土星与木星的状态。`,
-  `财富：看第2宫${findHouse(2).join('、')||'（宫主星）'}与第8宫${findHouse(8).join('、')||'（共同资源）'}——金星与金牛/天蝎轴线给出赚钱与用钱的风格。`,
-  `感情：看金星（${byKey('venus')?.sign||'—'}第${byKey('venus')?.house||'—'}宫）与第7宫${findHouse(7).join('、')||'（宫主星）'}、月亮与第4宫（家的需求）——爱的方式由金星定，关系里的安全感由月亮定。`,
-  `成长节奏：推运（次限/行运/日返月返）是时间层——行运触发本命相位时旧主题重现；排盘页可切换各推运逐段核对。重大决策建议交叉核对本命与行运两层。`,
-  `本报告由行星落点、相位容许度与格局几何逐条推导。占星为传统文化与自我观察工具，不构成事实预测、投资、心理或医疗建议。`
+  `【事业】第10宫（社会角色）宫头${mc}，宫内${insideTxt(h10)}；${chainOf(h10,'第10')}。第6宫（日常与工作方式）宫内${insideTxt(h6)}。这两宫合看是「你想被看作什么」与「你每天实际在做什么」——${h10.inside.length?'第10宫有星，事业议题显性，你会主动争取舞台':`第10宫空，事业方向由宫主${h10.ruler}所在的「${HOUSE_THEME[h10.rulerP?.house]||''}」定义，而不是由职位名称定义`}。往「${SIGN_TRAIT[mc]||'务实'}」的方向走，成色看土星与木星的状态。`,
+  `【财富】第2宫（自己的钱）宫头${h2.sign}，宫内${insideTxt(h2)}；${chainOf(h2,'第2')}。第8宫（共同的钱、他人的资源）宫头${h8.sign}，宫内${insideTxt(h8)}；${chainOf(h8,'第8')}。${byKey('venus')?`金星在${byKey('venus').sign}第${byKey('venus').house}宫——你花钱的方式是${SIGN_TRAIT[signName(byKey('venus').sign)]?.split('——')[1]||'按感觉走'}，赚钱的方式则看第2与第10两条链。`:''}${h2.inside.length?'钱的事你愿意正面处理，适合自己管账。':'第2宫空：钱容易「不主动管」，建议把记账、定投这类事交给固定流程而不是自律。'}`,
+  `【感情】第7宫（伴侣与合作）宫头${h7.sign}，宫内${insideTxt(h7)}；${chainOf(h7,'第7')}。${byKey('venus')?`金星（爱的方式）在${byKey('venus').sign}第${byKey('venus').house}宫——${PLANET_CORE.venus.split('——')[0]}落在「${HOUSE_THEME[byKey('venus').house]}」，所以你的吸引力在这个场域里最有效。`:''}${byKey('moon')?`月亮（安全感）在${byKey('moon').sign}第${byKey('moon').house}宫——关系里真正让你安心的，是${HOUSE_THEME[byKey('moon').house]}这件事被满足。`:''}${h7.inside.length?'第7宫有星：关系议题会反复成为人生主线，晚婚或关系形态非典型都属正常。':'第7宫空：不是不重视关系，而是关系的模样由宫主星决定，随大限行运成形。'}`,
+  `【成长节奏】推运（次限／行运／日返月返）是时间层：行运触发本命相位时，旧主题会重演一次，这次可以做得不一样。重大决定建议交叉核对本命与行运两层——本命说「你是什么结构」，行运说「现在这个结构正在被什么推着」。`,
+  `【怎么用这份报告】先读第一章的三要素（你是谁），再读第三章十二宫（你在哪几个房间最用力），最后读第七章的领域（钱、关系、事业各走哪条链）。凡是本报告没给证据的句子，都可以不信——占星的价值在于提供一套可核对的观察语言，不在预测。`,
+  `本报告由行星落点、宫头、宫主星链条、相位容许度与格局几何逐条推导。占星为传统文化与自我观察工具，不构成事实预测、投资、心理或医疗建议。`
  ];
 
- const sections=[
+const sections=[
   {title:'一、核心三要素与人格骨架',lines:core},
   {title:'二、逐星解读（星座×宫位）',lines:planetIntro,html:planetSec},
-  {title:'三、相位格局',lines:aspLines,table:aspTable},
-  {title:'四、盘面格局与元素',lines:patternSec},
-  {title:'五、所选时点行运触发点（星历实算）',lines:transitIntro,html:transitSec},
-  {title:'六、领域速览与成长建议',lines:domains}
+  {title:'三、十二宫逐宫解读（宫头×宫内星×宫主星）',lines:houseIntro.concat(houseLines)},
+  {title:'四、相位格局',lines:aspLines,table:aspTable},
+  {title:'五、盘面格局与元素',lines:patternSec},
+  {title:'六、所选时点行运触发点（星历实算）',lines:transitIntro,html:transitSec},
+  {title:'七、领域速览与成长建议',lines:domains}
  ];
  return {title:'西洋占星 · 本命详批',sections,glossary:gloss,kind:'west'};
 }

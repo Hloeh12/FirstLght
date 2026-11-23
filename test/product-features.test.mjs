@@ -46,7 +46,13 @@ test('深度报告：八字真实引擎数据驱动——大运/流年逐年逐�
  const r=composeFullReport(state,NAMES);
  const items=(r.body.match(/class="rpt-list/g)||[]).length;
  assert.ok(items>=2,'大运与流年应各自成列表，实际 '+items);
- assert.match(r.body,new RegExp(String(d.years[0].year)),'首个流年应入批');
+ // v0.63.0：流年章只列未来十年。旧实现把出生那年起全生命周期铺进来，
+ // 标题却写「未来十年」，一岁婴儿的「宜演讲、设计、自媒体」占满整章。
+ const nowY=new Date().getFullYear();
+ const future=d.years.filter(y=>y.year>=nowY);
+ assert.ok(future.length,'引擎应给出未来年份');
+ assert.ok(r.body.includes(String(future[0].year)),'首个未来年份应入批');
+ assert.ok(!r.body.includes(`${d.years[0].year}（`),'已过的年份不应再作为流年列出');
  assert.match(r.body,/第1步/);
 });
 
@@ -91,7 +97,8 @@ test('深度报告：西洋真实盘——星群/三角/元素检测可用',asyn
  const full=chart({Y:1990,M:6,D:15,h:14,mi:30,gender:'男',city:CITY},{baseOnly:true});
  const r=buildWesternDeepReport(full.western);
  assert.ok(r.sections.length>=5);
- const patternSec=r.sections.find(x=>x.title.startsWith('四'));
+ // 章号会随新增章节变动，按标题关键词定位
+ const patternSec=r.sections.find(x=>x.title.includes('盘面格局'));
  assert.match(patternSec.lines.join(''),/元素分布/);
  assert.doesNotMatch(patternSec.lines.join(''),/undefined/);
 });
@@ -763,7 +770,7 @@ test('深挖v0.40：西占模式失衡（基本/固定/变动）接入格局章�
  const an=analyze(full.western);
  assert.ok(an.modalities?.percentages,'analysis 须产出 modalities');
  const withAn=buildWesternDeepReport(full.western,undefined,an);
- const patSec=withAn.sections.find(s=>s.title.startsWith('四'));
+ const patSec=withAn.sections.find(s=>s.title.includes('盘面格局'));
  const txt=patSec.lines.join('');
  assert.match(txt,/模式分布/,'格局章须含模式分布');
  assert.match(txt,/基本 \d+% · 固定 \d+% · 变动 \d+%/,'须给出三模式百分比');
@@ -772,7 +779,7 @@ test('深挖v0.40：西占模式失衡（基本/固定/变动）接入格局章�
  assert.doesNotMatch(txt,/undefined|NaN|step|。。/,'不得有脏数据');
  // 无 analysis 时按本盘行星自行兜底，报告仍自足
  const noAn=buildWesternDeepReport(full.western);
- const noTxt=noAn.sections.find(s=>s.title.startsWith('四')).lines.join('');
+ const noTxt=noAn.sections.find(s=>s.title.includes('盘面格局')).lines.join('');
  assert.match(noTxt,/模式分布/,'无 analysis 时仍须自足给出模式分布');
  assert.doesNotMatch(noTxt,/undefined|NaN/);
 });

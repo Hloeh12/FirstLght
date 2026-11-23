@@ -28,6 +28,8 @@ function baziReportData(state){
  const selected=pick(cs.selected,rd.selected,[]);
  return {
   ...merged,
+  // 配偶星按性别取（男以财为妻、女以官为夫），性别必须从档案带下来，不能默认男。
+  gender:state.profile?.gender||'',
   guidance:pick(cs.guidance,rd.guidance,{}),
   strength:pick(cs.strength,rd.strength,{}),
   natalStrength:pick(cs.natalStrength,rd.natalStrength,rd.strength,{}),

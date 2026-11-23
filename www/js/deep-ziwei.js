@@ -205,7 +205,14 @@ export function buildZiweiDeepReport(chart,flow,at){
   `命宫在${life?.earthlyBranch||'—'}宫，主星为${lifeStars.length?lifeStars.map(s=>`${s.name}${brightnessOf(s)}`).join('、'):'空宫（借对宫'+(life?.borrowedStars||[]).map(s=>s.name).join('、')+'参断）'}。命宫是全盘总开关——${lifeStars.map(s=>STAR_CORE[s.name]?.person).filter(Boolean).join('；')||'空宫之人可塑性强，随境遇与大限成型'}。`,
   `五行局为${chart?.fiveElementsClass||'—'}，命主${chart?.soul||'—'}、身主${chart?.body||'—'}——传统以命主定先天禀赋、身主定后天依托。身宫落${bodyPalace?bodyPalace.name+'宫（'+PALACE_KEYWORD[bodyPalace.name]+'，此领域是后半生发力重心）':'待考'}。`,
   lifeStars.map(s=>{const c=STAR_CORE[s.name];return c?`${s.name}坐命：${c.career}；感情上${c.love}；注意${c.risk}。`:''}).filter(Boolean).join(''),
-  `本命格局：${(chart?.patterns||[]).length?(chart.patterns||[]).map(p=>typeof p==='string'?p:[p.name,p.description].filter(Boolean).join('——')).join('；'):'未见传世名格——平凡命格占绝大多数，格局不如「大限走得好」重要，后文逐限详批。'}`
+  `本命格局：${(chart?.patterns||[]).length?`共检出 ${(chart.patterns||[]).length} 格——${(chart.patterns||[]).map(p=>typeof p==='string'?p:p.name).join('、')}。格局不是吉凶标签，而是「这台机器出厂时的配置」，下面逐格给出判据、加成与破格条件，你可以拿盘面自己核对。`:'未见传世名格——平凡命格占绝大多数，格局不如「大限走得好」重要，后文逐限详批。'}`,
+  // 引擎已经算出格局（含判据与古籍出处），旧报告只报了个名字——这是最典型的「有数据没解读」。
+  ...(chart?.patterns||[]).map(pt=>{
+   if(typeof pt==='string')return `「${pt}」：见盘面会照。`;
+   const lv={excellent:'上格',good:'吉格',caution:'须留意'}[pt.level]||'参考格';
+   const where=(pt.palaces||[]).map(x=>pnOf(x)).filter(Boolean).join('、');
+   return `「${pt.name}」（${lv}${where?`，落${where}`:''}）：${pt.description}${pt.conditions?.required?.length?`判据：${pt.conditions.required.join('、')}。`:''}${pt.conditions?.bonus?.length?`加成：${pt.conditions.bonus.join('、')}——盘上具备则力量再上一档。`:''}${pt.conditions?.breaking?.length?`破格条件：${pt.conditions.breaking.join('；')}——若盘上已见此象，此格按打折处理，别按书上最好的那句读。`:''}${pt.source?`（${pt.source}）`:''}`;
+  })
  ];
 
  /* 二、三方四正 */
@@ -215,13 +222,43 @@ export function buildZiweiDeepReport(chart,flow,at){
   const stars=[...(p.majorStars||[]),...(p.majorStars?.length?[]:p.borrowedStars||[])];
   return `${pnOf(p.name)}（${PALACE_KEYWORD[p.name]}）：${stars.length?stars.map(s=>`${s.name}${brightnessOf(s)}${s.mutagen?'化'+s.mutagen:''}`).join('、'):'空宫'}${p.flying?.length?`；宫干飞化：${p.flying.map(f=>`${f.star}化${f.type}`).join('、')}`:''}`;
  });
- const sanction=[
-  `三方四正（命宫+官禄+财帛+迁移）是紫微断事的骨架——命宫看是什么人，三方看这台机器的配置：`,
-  ...triadText,
-  `配置判读：${(life?.majorStars?.length||0)>=1&&triadPalaces.some(p=>(p.majorStars||[]).length>=2)?'三方星曜厚实，格局有支撑，大限走到吉位即有爆发力。':'三方星曜偏薄，成败更看大限四化的引动与个人深耕，忌频繁换赛道。'}`
+ // 亮度六档里「庙旺得利」可用、「平」中性、「不陷」偏弱；煞星六颗（羊陀火铃空劫）在三方则要写清代价。
+const SAN_SHA=['擎羊','陀罗','火星','铃星','地空','地劫'];
+const SAN_GOOD='庙旺得利';
+const triadStars=triadPalaces.flatMap(p=>[...(p.majorStars||[]),...(p.majorStars?.length?[]:p.borrowedStars||[])].map(s=>({...s,palace:p.name})));
+const goodCount=triadStars.filter(s=>SAN_GOOD.includes(s.brightness)).length;
+const weakCount=triadStars.filter(s=>'不陷'.includes(s.brightness)).length;
+const shaAll=palaces.flatMap(p=>(p.minorStars||[]).filter(s=>SAN_SHA.includes(s.name)).map(s=>({name:s.name,palace:p.name})));
+const shaInTriad=shaAll.filter(x=>triadPalaces.some(p=>p.name===x.palace));
+const triadNames=new Set(triadPalaces.map(p=>p.name));
+const relevantPatterns=(chart?.patterns||[]).filter(p=>typeof p!=='string'&&(p.palaces||[]).some(x=>triadNames.has(x))).map(p=>p.name);
+const goodText=goodCount>=3?'过半主星在可用档位——这是「本钱够」的盘，走对方向就能兑现，问题只在选路。'
+ :goodCount>=1?'部分主星可用、部分偏弱——顺境时能打，逆境时容易掉档，所以要挑「容错率高」的赛道，而不是最赚钱的赛道。'
+ :'三方主星多在弱势档位——不是不能成事，而是每一步都要靠外部条件配合；与其硬拼，不如选一个「大环境本身在涨」的行业，借势比逆势省力十倍。';
+// 六煞按性质分三类：羊陀（切割拖延）、火铃（急爆）、空劫（虚耗）。逐颗拼会把同类话说两遍。
+const shaCost=(()=>{
+ const g1=shaInTriad.filter(x=>['擎羊','陀罗'].includes(x.name)).map(x=>x.name);
+ const g2=shaInTriad.filter(x=>['火星','铃星'].includes(x.name)).map(x=>x.name);
+ const g3=shaInTriad.filter(x=>['地空','地劫'].includes(x.name)).map(x=>x.name);
+ const parts=[];
+ if(g1.length)parts.push(`${g1.join('与')}主切割与拖延：做事要么果断收尾、要么长期磨，最忌半途反复`);
+ if(g2.length)parts.push(`${g2.join('与')}主急爆：情绪与决策容易在短时间内过冲，重大决定前强制冷静一晚`);
+ if(g3.length)parts.push(`${g3.join('与')}主「看起来有、实际没有」：合同与口头承诺务必落到纸面`);
+ return parts.join('；');
+})();
+const shaText=shaAll.length
+ ?`全盘见 ${shaAll.map(x=>`${x.name}（${x.palace}）`).join('、')}。${shaInTriad.length?`其中 ${[...new Set(shaInTriad.map(x=>x.name))].join('、')} 落在三方四正——这是「代价」所在：${shaCost}。`:'三方四正不见六煞，煞星落在其他宫位——代价不在主战场，而在旁支，注意别让次要的事拖垮主线。'}全盘煞星合计 ${shaAll.length} 颗，${shaAll.length<=2?'属轻，抗压主要靠大限，不靠意志硬扛':shaAll.length<=4?'属中等，人生会有几次明显的「被推倒重来」':'偏重，这一生至少要经历两到三次结构性重来，重点是留好退路与现金流'}。`
+ :'全盘不见六煞——结构干净，代价多半来自「太顺而缺乏警觉」，需要有意识地给自己设压力测试。';
+const sanction=[
+ `三方四正＝命宫、官禄、财帛，加上命宫的对宫（迁移）。它是紫微断事的骨架：命宫答「你是什么人」，官禄答「你靠什么立身」，财帛答「钱从哪里来」，迁移答「你在外面的样子」。四宫合看，才是一台完整的机器——只看命宫一颗星，会把「看起来很凶但成大事」的人读成命不好。`,
+ ...triadText,
+ `星曜厚度：三方四正共 ${triadStars.length} 颗主星，庙旺得利 ${goodCount} 颗、平 ${Math.max(0,triadStars.length-goodCount-weakCount)} 颗、不陷 ${weakCount} 颗。${goodText}`,
+ `煞星分布：${shaText}`,
+ ...(relevantPatterns.length?[`三方成格：${relevantPatterns.join('、')}——判据与破格条件见第一章，此处只看它们在「事业—财富—外出」这条链上意味着什么：成格给的是上限，破格条件决定这个上限能不能拿到。`]:[]),
+ `配置判读：${(life?.majorStars?.length||0)>=1&&triadPalaces.some(p=>(p.majorStars||[]).length>=2)?'三方星曜厚实，格局有支撑，大限走到吉位即有爆发力。':'三方星曜偏薄，成败更看大限四化的引动与个人深耕，忌频繁换赛道。'}${lifeStars.length?`具体说：命宫${lifeStars.map(s=>s.name).join('、')}，官禄${(findName('官禄')?.majorStars||[]).map(s=>s.name).join('、')||'空'}，财帛${(findName('财帛')?.majorStars||[]).map(s=>s.name).join('、')||'空'}——这条链的意思是「立身方式决定钱从哪里来」，而不是反过来。先定「靠什么被需要」，收入结构自然跟着成型。`:''}`
  ];
 
- /* 三、十二宫逐宫详解 */
+/* 三、十二宫逐宫详解 */
  const palaceLines=palaces.filter(p=>p.name&&p.name!=='').sort((a,b)=>PALACE_ORDER.indexOf(a.name)-PALACE_ORDER.indexOf(b.name)).map(p=>{
   const stars=p.majorStars?.length?p.majorStars:p.borrowedStars||[];
   const starTexts=stars.map((s,i)=>starEntry(s,p.name,gloss,i));
@@ -323,22 +360,38 @@ export function buildZiweiDeepReport(chart,flow,at){
  ];
 
  /* 七、流年指向性事件（所选流年） */
- const flowEvents=[];
- if(flow?.mutagens?.length){
-  for(const m of flow.mutagens){
-   const p=find(m.branch);
-   const ev=SIHUA_EVENTS[m.type]?.[p?.name];
-   gloss['化'+m.type]=({禄:'福泽与机缘',权:'权力与担当',科:'名声与文书',忌:'执念与阻滞'})[m.type];
-   if(ev)flowEvents.push(`【指向事件】${m.star}化${m.type}入${pnOf(p.name)}（${flow.label||'流年'}${flow.ganZhi||''}）：${ev}。`);
-  }
- }
- const flowSec=[
-  flowEvents.length?flowEvents.join(''):flow?'所选运限未见可核之四化飞星。':'尚未选择流年——在紫微排盘页选任一年份后重新生成报告，此处将逐条列出该年四化落宫触发的指向性事件（进财/升迁/文书/置产/感情/健康六类）。',
-  `指向性事件的用法：四化落宫指明「哪一域被点亮」，触发方式仍取决于你本年是否有对应动作（求职才有升迁、签约才有置产）。吉化（禄权科）入宫是顺水推舟之年，凶化（忌）入宫是提前布防之年——知忌而不惧忌，即为趋吉避凶。`,
-  `叠加判读：流年四化若与本命四化、大限四化同宫重叠（禄叠禄、忌叠忌），该主题显著加强——双禄之年进财力度倍增，双忌之年务必保守。`
+// 旧实现直接取 flow.mutagens，而 flow 的 scope 可以是「流日」——
+// 于是「流年指向性事件」章里出现「流日丙子」的四化，层级整个错位。
+// 本章一律以「流年天干」起四化；所选时点（流月/流日）的四化另列，供当日择时用。
+const flowYear=Number(flow?.year)||nowYear;
+const flowBranchIdx=((flowYear-4)%12+12)%12;
+const flowYearGz=`${STEMS[((flowYear-4)%10+10)%10]}${BRANCHES[flowBranchIdx]}`;
+const yearMut=sihuaFor(STEMS[((flowYear-4)%10+10)%10],flow?.school);
+const natalMutMap=(chart?.sihua||[]).reduce((m,x)=>{m[x.star]=x.type;return m;},{});
+const yearEvents=['禄','权','科','忌'].map(t=>{
+ const starName=yearMut?.[t];
+ const sp=starName?findStarPalace(starName):null;
+ const ev=sp?SIHUA_EVENTS[t]?.[sp.name]:null;
+ gloss['化'+t]=({禄:'福泽与机缘',权:'权力与担当',科:'名声与文书',忌:'执念与阻滞'})[t];
+ if(!sp||!ev)return null;
+ const natal=natalMutMap[starName];
+ const stack=natal===t?`；生年同星亦化${t}，双${t}叠至，此主题今年显著放大`:natal==='禄'&&t==='忌'||natal==='忌'&&t==='禄'?`；生年化${natal}遇今年化${t}，禄忌交战，得利须防暗耗`:'';
+ return `【${t==='忌'?'防守科':'机会'}】${starName}化${t}入${pnOf(sp.name)}：${ev}${stack}。`;
+}).filter(Boolean);
+const spotEvents=(flow?.mutagens||[]).map(m=>{
+ const p=find(m.branch);
+ const ev=SIHUA_EVENTS[m.type]?.[p?.name];
+ return ev?`${m.star}化${m.type}入${pnOf(p.name)}——${ev}`:null;
+}).filter(Boolean);
+const flowSec=[
+ `本章按「流年」的层级给事件：以 ${flowYear} 年（${flowYearGz}）的天干起四化，落宫即该年被点亮的领域。${yearEvents.length?`今年四化落点——${yearEvents.join('')}`:'该年四化未能在盘上定位，以下仅作原则参考。'}`,
+ yearEvents.length?`读法：化禄入宫是「有资源进来」，化成败看该宫主星强弱；化权入宫是「必须担起来」，躲不掉但做完就升级；化科入宫是「名声与文书先到」，适合考证、发表、立口碑；化忌入宫是「今年要还的旧账」，提前布防即可，不必恐惧。`:'',
+ spotEvents.length?`所选时点（${flow?.label||'运限'}${flow?.ganZhi||''}）自己的四化：${spotEvents.join('；')}。这一层用于挑具体日子做事，不构成年度判断——层级混淆会把一天的起伏读成一年的走向。`:'',
+ `叠加判读：流年四化若与本命四化同星，该主题显著加强（禄叠禄进财力度倍增，忌叠忌务必保守）；若与本命相反，则是「机遇与消耗并存」，进财时同时准备一笔应急。`,
+ `用法：四化落宫指明「哪一域被点亮」，触发方式仍取决于你今年是否有对应动作——求职才有升迁，签约才有置产。知忌而不惧忌，即为趋吉避凶。`
  ];
 
- /* 八、流月逐月详批（斗君起正月，月四化落宫） */
+/* 八、流月逐月详批（斗君起正月，月四化落宫） */
 const MONTH_STEM_START={甲:2,己:2,乙:4,庚:4,丙:6,辛:6,丁:8,壬:8,戊:0,癸:0};
 let lunarMeta={};
 try{lunarMeta=typeof chart?.lunarDate==='string'?JSON.parse(chart.lunarDate):(chart?.lunarDate||{});}catch{lunarMeta={};}
@@ -415,12 +468,17 @@ const flowDaySec=[
 const flowDayHtml=`${flowDayTable||''}${flowHourTable||''}`;
 
 /* 十、综合建议 */
- const advice=[
-  `总纲：紫微看命，先认格局（命宫主星）、再排时机（大限四化）、后取动作（流年指向）。你的底盘是${lifeStars.map(s=>s.name).join('、')||'空宫'}，后半生身宫发力点在${bodyPalace?.name||'待考'}。`,
-  `择业建议：${lifeStars.map(s=>STAR_CORE[s.name]?.career).filter(Boolean).join('；')||'空宫之人宜借大限星曜定赛道——走到哪步大限，就借该限主星的行业东风。'}`,
-  `感情建议：${(findName('夫妻')?.majorStars||findName('夫妻')?.borrowedStars||[]).map(s=>STAR_CORE[s.name]?.love+'。').join('')||'夫妻宫空宫，伴侣形象随大限成形；相处之道重沟通。'}命宫与夫妻宫合参：${lifeStars.map(s=>STAR_CORE[s.name]?.love).filter(Boolean).join('；')}。`,
-  `时机建议：大限详批中标注【当前十年】的行限是当下主舞台；每逢流年四化入命宫/官禄/财帛的年份，是十年内的关键行动窗口，宜提前半年布局。`,
-  `本报告由盘面星曜、亮度、四化与宫垣主题逐条推导；斗数为传统术数文化，供自我观察与时机参考，不构成事实预测、投资或婚姻决策依据。`
+const currentDecade=(chart?.decades||[]).find(d=>{const [a,b]=d.yearRange||[];return a<=nowYear&&nowYear<=b;});
+const currentDecadeStars=currentDecade?.palaceName?[...(findName(currentDecade.palaceName)?.majorStars||[])]:[];
+const advice=[
+ `总纲：紫微看命三步——先认底盘（命宫主星），再排时机（大限四化），后取动作（流年指向）。你的底盘是${lifeStars.length?lifeStars.map(s=>s.name).join('、'):'空宫'}，${bodyPalace?`后半生的发力重心在${bodyPalace.name}宫（${PALACE_KEYWORD[bodyPalace.name]||''}）`:''}。这意味着：${lifeStars.length?`你不是靠「稳」取胜的人，${STAR_CORE[lifeStars[0].name]?.career||'要在具体的事上被检验'}——方向对了就很快，方向不对会反复重来。`:'空宫之人可塑性极强，命运更多取决于「跟谁、在哪」，而不是「天生是什么」。'}`,
+ `强项：${[...new Set(triadStars.map(s=>s.name))].map(n=>STAR_CORE[n]?.career).filter(Boolean).slice(0,3).join('；')||'三方主星少见，强项要靠大限引出'}。这些不是「适合的行业清单」，而是「你做起来比周围人省力的事」——第一份工作、第一次创业都该压在这上面。`,
+ `代价与防法：${shaInTriad.length?`${[...new Set(shaInTriad.map(x=>x.name))].join('、')}落三方——${shaCost}。这不是「命不好」，而是「这台机器有已知的故障点」：把这几句话变成规矩，故障点就不会变成事故。`:'三方不见六煞，结构干净。代价会来自「太顺」，所以更要主动设压力测试：每隔一段做一次「如果收入断掉三个月」的推演。'}`,
+ `择业：${lifeStars.map(s=>STAR_CORE[s.name]?.career).filter(Boolean).join('；')||'空宫宜借大限星曜定赛道——走到哪步大限，就借该限主星的行业东风'}。${relevantPatterns.includes('杀破狼')?'杀破狼格的人最忌「一进公司就等升职」：你的路径是「做成一件事→被看见→换更大的事」，而不是熬资历。':relevantPatterns.includes('武贪格')?'武贪格「不发少年人」：三十岁前是攒本事与人脉，三十五岁后才进入兑现期，别在前期因为「没起色」而换赛道。':''}`,
+ `财富：财帛宫${(findName('财帛')?.majorStars||[]).map(s=>s.name).join('、')||'空宫（看宫主星）'}——${(findName('财帛')?.majorStars||[]).map(s=>STAR_CORE[s.name]?.wealth).filter(Boolean).join('；')||'收入结构随事业成型，不宜独立看待'}。${shaInTriad.some(x=>['地空','地劫'].includes(x.name))?'空劫在三方：最忌「看起来能赚」的项目——先看现金流，再看故事。':''}`,
+ `感情：夫妻宫${(findName('夫妻')?.majorStars||findName('夫妻')?.borrowedStars||[]).map(s=>s.name+(s.brightness||'')).join('、')||'空宫'}——${(findName('夫妻')?.majorStars||findName('夫妻')?.borrowedStars||[]).map(s=>STAR_CORE[s.name]?.love).filter(Boolean).join('；')||'伴侣形象随大限成形，相处重沟通'}。命宫${lifeStars.map(s=>s.name).join('、')||'空'}的相处底色是「${lifeStars.map(s=>STAR_CORE[s.name]?.love).filter(Boolean)[0]||'务实'}」——两句话合起来：${lifeStars.some(s=>['破军','七杀','贪狼'].includes(s.name))?'关系里最容易出问题的是「把对方当成需要改造的项目」；先接受，再谈磨合。':'关系里最容易出问题的是「不说」，把需求讲出来比忍让更有效。'}`,
+ `时机：${currentDecade?`当前走${currentDecade.palaceName||'—'}宫大限（${(currentDecade.yearRange||[]).join('–')}），${currentDecadeStars.length?`限内主星${currentDecadeStars.map(s=>s.name).join('、')}——这十年主舞台在「${PALACE_KEYWORD[currentDecade.palaceName]||currentDecade.palaceName}」`:'限内星曜偏薄，十年以积累为主'}。`:''}${yearEvents.length?`今年（${flowYear}）四化落点已列在第七章：${yearEvents.slice(0,2).map(x=>x.replace(/^【[^】]+】/,'').split('：')[0]).join('、')}——把这几件事当作今年的主线，其余都是支线。`:'今年四化未能在盘上定位，按大限主线推进即可。'}`,
+ `本报告由盘面星曜、亮度、四化与宫垣主题逐条推导；斗数为传统术数文化，供自我观察与时机参考，不构成事实预测、投资或婚姻决策依据。`
  ];
 
  const sections=[

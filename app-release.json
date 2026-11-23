@@ -1,8 +1,19 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.55.0",
-  "build": 157,
+  "version": "0.56.0",
+  "build": 158,
   "releases": [
+    {
+      "version": "0.56.0",
+      "build": 158,
+      "date": "2026-11-23",
+      "title": "体系切换提速：共振卡片延后一帧，盘面先出",
+      "items": [
+        "体系统切换（尤其西洋/印度）时，onSelectTimeNode 原先同步调用 forceRefreshAllInsights，其中 paintResonance 同步重建整张共振卡片（6 组 details + 每组 6 条），实测占 71ms，挡在盘面渲染之前。现在把这次共振刷新包进 requestAnimationFrame：共振本就是异步次要内容，延后一帧不影响数据口径，activeTimeSystem 仍同步置位。",
+        "收益：点击体系按钮到盘面 DOM 出现的感知响应从 109–122ms 降到 53–64ms（约快一倍，probe-perceived.mjs 五次取范围）。forceRefreshAllInsights 原有 revision 防串台、loading 态先置再发请求的语义全部保留；快速连切后行为与基线一致，无控制台异常。",
+        "定位过程（probe-hunt2/wv-marks.mjs 函数级打点）：切换全稳定耗时约 310ms，但 westernView 仅 5–27ms、render 其余部分近 0；真正可优化的是其后 71ms 的共振同步刷新。全量测试 276/276（新增 test/perf-056.test.mjs 2 条契约）。"
+      ]
+    },
     {
       "version": "0.55.0",
       "build": 157,

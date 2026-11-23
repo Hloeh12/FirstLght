@@ -639,7 +639,9 @@ function renderDynamicInsightBySystem(){
 const selectedPeriodCard = renderDynamicInsightBySystem;
 function onSelectTimeNode(system){
  state.activeTimeSystem=system;
- forceRefreshAllInsights();
+ // 共振卡片是异步次要内容：延后到下一帧刷新，让盘面先完成渲染。
+ // forceRefreshAllInsights 内部本就先置 loading 态再发请求，延后一帧不影响数据口径。
+ requestAnimationFrame(()=>forceRefreshAllInsights());
  if(state.tab==='chart'&&['west','vedic'].includes(system)){
   // 排盘页的共振宿主在体系容器内（西洋/印占均如此），直接从 root 找，避免作用域过窄漏掉。
   const host=root.querySelector('[data-period-resonance]');

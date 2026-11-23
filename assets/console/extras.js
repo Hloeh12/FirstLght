@@ -59,11 +59,12 @@ function suiyunLine(x){
  return `<p class="cal-sui"><span>岁运</span>${parts.join('')}${span}</p>`;
 }
 function calendar(ctx){
- const id='calendar',s=stateFor(ctx,id,{date:isoLocal(),days:7,event:'general',sort:'score',excludeClash:false}),r=s.result;
+ const id='calendar',s=stateFor(ctx,id,{date:isoLocal(),days:7,event:'general',sort:'score',excludeClash:false,compare:false,picked:[]}),r=s.result;
  const list=(r?.dates||[]).filter(x=>!s.excludeClash||!x.minus.some(m=>/六冲|相刑|相害|相破|冲本命生肖/.test(m.k)));
  const ordered=[...list].sort(s.sort==='date'?(a,b)=>a.date.localeCompare(b.date):(a,b)=>b.score-a.score||a.date.localeCompare(b.date));
  const byScore=[...list].sort((a,b)=>b.score-a.score||a.date.localeCompare(b.date));
  const top=byScore[0],basis=r?.basis;
+ const picked=new Set(s.picked||[]);
  const basisLine=!r?'':basis
   ?`本命 ${esc(basis.dayMaster)}${esc(basis.use.join('、')?'·喜用 '+basis.use.join('、'):'')}${basis.avoid.length?' · 忌 '+esc(basis.avoid.join('、')):''} · ${esc(basis.source==='调候'?'调候口径（减半）':basis.source==='均衡'?'五行均衡':'扶抑口径')}`
   :'未关联案例：仅按公共黄历与建除取用，选一个案例可得到个性化评分';
@@ -72,11 +73,14 @@ function calendar(ctx){
  const hourCell=(date,h,isBest)=>`<button type="button" class="cal-hour" role="listitem" data-tier="${h.tier}" data-cal-hour="${date}|${h.branch}"${isBest?' data-best="1"':''} aria-label="${esc(date+' '+h.branch+'时 '+h.range+'，'+h.score+' 分 '+h.tier+'，点开看时点盘')}"><b>${esc(h.branch)}</b><small>${esc(h.range)}</small><span>${h.score}</span></button>`;
  const hours=x=>`<div class="cal-hours" role="list">${x.hours.map(h=>hourCell(x.date,h,x.bestHours.some(b=>b.branch===h.branch))).join('')}</div>`;
  const momentRail=x=>x.bestHours.length
-  ?`<div class="cal-moments" role="group" aria-label="推荐时段，点开看该时辰时点盘">${x.bestHours.map(h=>`<button type="button" class="cal-moment" data-cal-moment="${x.date}|${h.branch}"><b>${esc(h.branch)}时</b><small>${esc(h.range)}</small><span>${h.score}</span></button>`).join('')}</div>`
+  ?`<div class="cal-moments" role="group" aria-label="推荐时段，点开看时点盘">${x.bestHours.map(h=>`<button type="button" class="cal-moment" data-cal-moment="${x.date}|${h.branch}"><b>${esc(h.branch)}时</b><small>${esc(h.range)}</small><span>${h.score}</span></button>`).join('')}</div>`
   :'<p class="cal-best">当日无明显吉时，宜按事就人</p>';
  const pick=x=>x.bestHours[0]?.branch||'巳';
- const actions=x=>`<div class="cal-actions"><button type="button" class="cal-act primary" data-cal-moment="${x.date}|${pick(x)}">看这一刻的时点盘</button><button type="button" class="cal-act" data-cal-plan="${x.date}|${pick(x)}">存入日程</button></div>`;
- const card=x=>`<article class="cal-day" data-tier="${x.tier}">
+ // 对比模式只留一个动作：选中/取消。两个出口按钮此时反而抢注意力。
+ const actions=x=>s.compare
+  ?`<div class="cal-actions"><button type="button" class="cal-act${picked.has(x.date)?' on':''}" data-cal-pick="${x.date}">${picked.has(x.date)?'已选 · 点此取消':'加入对比'}</button></div>`
+  :`<div class="cal-actions"><button type="button" class="cal-act primary" data-cal-moment="${x.date}|${pick(x)}">看这一刻的时点盘</button><button type="button" class="cal-act" data-cal-plan="${x.date}|${pick(x)}">存入日程</button></div>`;
+ const card=x=>`<article class="cal-day" data-tier="${x.tier}"${picked.has(x.date)?' data-picked="1"':''}>
  <div class="cal-day-head"><div class="cal-date"><b>${x.date.slice(5)}</b><small>${esc(x.weekday+' · '+x.lunar)}</small></div>
  <div class="cal-gz"><b>${esc(x.gz)}</b><small>${esc(x.zhiXing+'日 · '+x.tianShen+'·'+x.tianShenLuck)}</small></div>
  <div class="cal-score"><b>${x.score}</b><span>${x.rank?'第'+x.rank+' · ':''}${x.tier}</span></div></div>
@@ -89,12 +93,13 @@ function calendar(ctx){
  <p class="cal-yiji">宜 ${esc(x.yi.join('、')||'—')}<br>忌 ${esc(x.ji.join('、')||'—')}</p>
  <p class="cal-sub">吉神 ${esc(x.good.join('、')||'—')} · 凶煞 ${esc(x.bad.join('、')||'—')} · 冲${esc(x.chong)} · 旬空 ${esc(x.xunKong)}${x.tenGod?' · 日干十神 '+esc(x.tenGod):''}</p>
  </details></article>`;
- ctx.root.innerHTML=`<section id="calendar"><div class="spread"><h1>择日 · 择时</h1>${btn('日期与筛选','data-calendar-filter')}</div>
+ ctx.root.innerHTML=`<section id="calendar"><div class="spread"><h1>择日 · 择时</h1><div class="rail">${btn('年运轴','data-cal-agenda')}${btn('日期与筛选','data-calendar-filter')}</div></div>
  <p class="cal-basis">${basisLine}</p>
  <div class="cal-events" role="group" aria-label="择日事项">${CAL_EVENTS.map(k=>`<button type="button" class="cal-chip" data-cal-event="${k}" aria-pressed="${s.event===k}">${esc(CAL_LABELS[k]||k)}</button>`).join('')}</div>
  ${r?`<div class="cal-summary"><div><b>${esc(r.eventLabel)}</b><small>${esc(s.date)} 起 ${r.dates.length} 天${s.excludeClash?' · 已排除冲刑破害':''}</small></div>
  <div class="cal-summary-top">${top?`<span>最优 ${esc(top.date.slice(5))} ${top.weekday}</span><b>${top.score}</b><small>${esc(top.tier)}</small>`:''}</div></div>
- <div class="cal-sort" role="group" aria-label="排序"><button type="button" data-cal-sort="score" aria-pressed="${s.sort!=='date'}">按分数</button><button type="button" data-cal-sort="date" aria-pressed="${s.sort==='date'}">按日期</button></div>`:''}
+ <div class="cal-sort" role="group" aria-label="排序"><button type="button" data-cal-sort="score" aria-pressed="${s.sort!=='date'}">按分数</button><button type="button" data-cal-sort="date" aria-pressed="${s.sort==='date'}">按日期</button><button type="button" data-cal-compare-mode aria-pressed="${s.compare}">选日对比</button></div>`:''}
+ ${s.compare?`<div class="cal-cmpbar"><span>已选 <b>${picked.size}</b>/3 天${picked.size<2?' · 至少两天才能对比':''}</span><div class="rail">${picked.size?btn('清空','data-cal-clear'):''}${btn('并排对比','data-cal-compare class="primary"')}</div></div>`:''}
  <p data-extra-status role="status">${esc(s.error)}</p>
  ${ordered.map(card).join('')}
  ${r&&!list.length?'<p class="empty">当前条件下没有可推荐的日期，试试放宽排除项或延长天数。</p>':''}
@@ -102,9 +107,27 @@ function calendar(ctx){
  ${r?`<p class="thin method">${esc(r.method)}</p>`:''}</section>`;
  for(const chip of ctx.root.querySelectorAll('[data-cal-event]')){
   chip.onclick=()=>{if(s.event===chip.dataset.calEvent)return;s.event=chip.dataset.calEvent;s.result=null;
-   load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event});};
+   load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event,events:CAL_EVENTS});};
  }
  for(const b of ctx.root.querySelectorAll('[data-cal-sort]'))b.onclick=()=>{s.sort=b.dataset.calSort;calendar(ctx);};
+ $('[data-cal-compare-mode]',ctx.root)?.addEventListener('click',()=>{
+  s.compare=!s.compare;if(!s.compare)s.picked=[];
+  if(s.compare&&(s.days??7)<3){s.days=7;s.result=null;calendar(ctx);
+   load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event,events:CAL_EVENTS});return;}
+  calendar(ctx);
+ });
+ $('[data-cal-agenda]',ctx.root).onclick=()=>agendaSheet(ctx,s);
+ $('[data-cal-clear]',ctx.root)?.addEventListener('click',()=>{s.picked=[];calendar(ctx);});
+ $('[data-cal-compare]',ctx.root)?.addEventListener('click',()=>compareSheet(ctx,s));
+ for(const b of ctx.root.querySelectorAll('[data-cal-pick]')){
+  b.onclick=()=>{
+   const date=b.dataset.calPick,picks=s.picked||[];
+   if(picks.includes(date))s.picked=picks.filter(x=>x!==date);
+   else if(picks.length>=3)ctx.tell('最多并排三天，先取消一个再选');
+   else s.picked=[...picks,date];
+   calendar(ctx);
+  };
+ }
  const dayOf=date=>(r?.dates||[]).find(d=>d.date===date);
  const openHour=(date,branch)=>{const day=dayOf(date);const hour=day?.hours.find(h=>h.branch===branch);if(day&&hour)hourSheet(ctx,s,day,hour);};
  for(const b of ctx.root.querySelectorAll('[data-cal-hour]'))b.onclick=()=>{const [date,branch]=b.dataset.calHour.split('|');openHour(date,branch);};
@@ -117,12 +140,98 @@ function calendar(ctx){
   <label class="checks wide"><input type="checkbox" name="exclude" ${s.excludeClash?'checked':''}>排除冲、刑、破、害日</label><button class="primary wide">重新择日</button></form>`);
   $('form',dialog).onsubmit=e=>{
    e.preventDefault();const f=new FormData(e.currentTarget);
-   s.date=f.get('date');s.days=+f.get('days');s.event=f.get('event');s.excludeClash=f.has('exclude');s.result=null;ctx.close(dialog);
-   load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event});
+   s.date=f.get('date');s.days=+f.get('days');s.event=f.get('event');s.excludeClash=f.has('exclude');s.result=null;s.picked=[];ctx.close(dialog);
+   load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event,events:CAL_EVENTS});
   };
  };
- if(!r&&!s.pending&&!s.error)load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days??7,event:s.event||'general'});
+ if(!r&&!s.pending&&!s.error)load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days??7,event:s.event||'general',events:CAL_EVENTS});
 }
+
+// 并排对比：同一事项下选三天，先看分，再看「为什么差」——差异项才是决策依据，
+// 所以共同项只列一次，差异项按影响大小排。
+function compareSheet(ctx,s){
+ const cands=(s.picked||[]).map(d=>(s.result?.dates||[]).find(x=>x.date===d)).filter(Boolean);
+ if(cands.length<2){ctx.tell('至少选两天才能对比');return;}
+ const label=s.result?.eventLabel||'择日';
+ const attr=(name,fn)=>`<tr><th>${esc(name)}</th>${cands.map(d=>`<td>${fn(d)}</td>`).join('')}</tr>`;
+ const base=`<table class="cmp-table"><thead><tr><th></th>${cands.map(d=>`<th>${d.date.slice(5)}</th>`).join('')}</tr></thead><tbody>
+ ${attr('干支',d=>`<b>${esc(d.gz)}</b>`)}
+ ${attr('分档',d=>`<b class="cmp-${d.tier}">${d.score}</b> ${esc(d.tier)}`)}
+ ${attr('建除',d=>esc(d.zhiXing+'日'))}
+ ${attr('值神',d=>esc(d.tianShen+'·'+d.tianShenLuck))}
+ ${attr('对比事项',d=>{const b=d.byEvent?.[s.event];return b?`${b.score} · ${esc(b.tier)}<small>${b.delta===0?'±0':signed(b.delta)}</small>`:'—';})}
+ ${attr('推荐时段',d=>esc(d.bestHours[0]?d.bestHours[0].branch+'时 '+d.bestHours[0].range:'—'))}
+ ${attr('冲·旬空',d=>esc((d.chong||'—')+' · '+(d.xunKong||'—')))}
+ </tbody></table>`;
+ // 12 事项 × 3 天：同一基盘换事项层，所以这张表是「这几天各适合做什么」的横向切片。
+ const matrix=`<table class="cmp-table cmp-matrix"><thead><tr><th>事项</th>${cands.map(d=>`<th>${d.date.slice(5)}</th>`).join('')}</tr></thead><tbody>
+ ${CAL_EVENTS.map(k=>{
+  const vals=cands.map(d=>d.byEvent?.[k]?.score??null);
+  const best=Math.max(...vals.filter(v=>v!=null));
+  return `<tr${k===s.event?' class="on"':''}><th>${esc(CAL_LABELS[k]||k)}</th>${vals.map(v=>`<td${v===best?' class="best"':''}>${v??'—'}</td>`).join('')}</tr>`;
+ }).join('')}</tbody></table>`;
+ const maps=cands.map(d=>new Map([...d.plus,...d.minus].map(t=>[t.k,t.v])));
+ const keys=[...new Set(cands.flatMap(d=>[...d.plus,...d.minus].map(t=>t.k)))];
+ const common=keys.filter(k=>maps.every(m=>m.has(k)));
+ const diff=keys.filter(k=>!common.includes(k)).sort((a,b)=>Math.max(...maps.map(m=>Math.abs(m.get(b)??0)))-Math.max(...maps.map(m=>Math.abs(m.get(a)??0))));
+ const diffTable=diff.length?`<table class="cmp-table cmp-diff"><thead><tr><th>差异项</th>${cands.map(d=>`<th>${d.date.slice(5)}</th>`).join('')}</tr></thead><tbody>
+ ${diff.map(k=>`<tr><th>${esc(k)}</th>${maps.map(m=>{const v=m.get(k);return v==null?'<td class="mut">—</td>':`<td class="${v>0?'up':'down'}">${signed(v)}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`
+  :'<p class="thin">这三天在证据层面完全一致，分数差异只来自同一批项的累积。</p>';
+ const commonLine=common.length?`<p class="cmp-common">共同项 · ${esc(common.join('、'))}</p>`:'';
+ const ranked=[...cands].sort((a,b)=>(b.byEvent?.[s.event]?.score??b.score)-(a.byEvent?.[s.event]?.score??a.score));
+ const lead=ranked[0],gap=ranked.length>1?(ranked[0].byEvent?.[s.event]?.score??ranked[0].score)-(ranked[1].byEvent?.[s.event]?.score??ranked[1].score):0;
+ const verdict=`<p class="cmp-verdict">按「${esc(label)}」看，<b>${esc(lead.date.slice(5))}</b> 最高${gap>0?`，领先 ${gap} 分`:'（并列）'}；共 ${diff.length} 条证据不同，影响最大的是「${esc(diff[0]||'无')}」。</p>`;
+ const d=ctx.sheet('toolSheet',`并排对比 · ${label}`,`${verdict}<div class="cmp-scroll">${base}</div><h3 class="cmp-h">同一件事，这三天各适合做什么</h3><div class="cmp-scroll">${matrix}</div><p class="thin">分值仍是择日同一套公式（本命喜忌＋四柱冲合＋黄历事项＋建除值神＋岁运＋硬忌），只是把「事项层」换成十二件事分别算一遍。</p><h3 class="cmp-h">分数差在哪</h3>${diffTable}${commonLine}
+ ${cands.map(x=>`<div class="cal-actions"><button type="button" class="cal-act" data-cmp-open="${x.date}">看 ${x.date.slice(5)} 的时点盘</button><button type="button" class="cal-act" data-cmp-plan="${x.date}">把 ${x.date.slice(5)} 存入日程</button></div>`).join('')}`);
+ for(const b of d.querySelectorAll('[data-cmp-open]'))b.onclick=()=>{
+  const day=cands.find(x=>x.date===b.dataset.cmpOpen);const hour=day?.bestHours[0];
+  if(!day||!hour)return;ctx.close(d);hourSheet(ctx,s,day,hour);
+ };
+ for(const b of d.querySelectorAll('[data-cmp-plan]'))b.onclick=()=>{
+  const day=cands.find(x=>x.date===b.dataset.cmpPlan);if(!day)return;ctx.close(d);planSheet(ctx,s,day,day.bestHours[0]?.branch||'巳',day.bestHours[0]);
+ };
+}
+
+// 年运轴：把择日放回大运流年里。十二流月按节气切，每月给「本事项最优日」与「最宜三事」，
+// 点月看全月、点事直接跳到那一天，避免在 365 天里盲翻。
+async function agendaSheet(ctx,s){
+ const year=Number(s.agendaYear||String(s.date).slice(0,4));
+ const d=ctx.sheet('toolSheet',`${year} 年 · 运程轴`,'<p class="thin">正在计算全年十二流月…</p>');
+ const body=$('.sheet-body',d);
+ let data=null,error='';
+ try{data=await ctx.request('/api/console/year-agenda',{birth:ctx.birth,year,events:CAL_EVENTS,event:s.event});}
+ catch(e){error=e.message;}
+ if(!data){body.innerHTML=`<p class="thin">${esc(error||'无法计算该年的运程轴')}</p>`;return;}
+ let sel=data.months.findIndex(m=>m.start<=String(s.date)&&String(s.date)<=m.end);
+ if(sel<0)sel=0;
+ const paint=()=>{
+  const m=data.months[sel];
+  const luckTxt=data.luck?`大运 ${esc(data.luck.gz)}${favorChip(data.luck.favor)} ${data.luck.startYear}–${data.luck.endYear}`:'未定位到大运';
+  body.innerHTML=`
+  <p class="cal-basis">${esc(String(data.year))} 年 ${esc(data.yearGz.gz)}${favorChip(data.yearGz.favor)} · ${luckTxt}</p>
+  <p class="cal-agenda-note">按节气切十二流月（立春到立春），分数与择日同一公式，只算到日不到时辰。</p>
+  <div class="cal-months" role="group" aria-label="十二流月">${data.months.map((x,i)=>`<button type="button" class="cal-mth" data-agenda-month="${i}" aria-pressed="${i===sel}" data-favor="${x.favor.role}"><b>${esc(x.label)}</b><small>${esc(x.gz)}</small><span>${x.bestFor?x.bestFor.score:'—'}</span></button>`).join('')}</div>
+  <div class="cal-mth-detail"><div><b>${esc(m.label)} ${esc(m.gz)}${favorChip(m.favor)}</b><small>${esc(m.start+' → '+m.end)} · ${esc(s.result?.eventLabel||'本事项')}最优 ${m.bestFor?esc(m.bestFor.date.slice(5))+'（'+m.bestFor.score+'）':'无'} · 吉日 ${m.goodFor} 天</small></div></div>
+  <h3 class="cmp-h">本月最宜三事</h3>
+  <div class="cal-agenda-top">${m.top.map(t=>`<button type="button" class="cal-ago" data-agenda-go="${t.date}"><b>${esc(t.label)}</b><small>${t.date.slice(5)} · ${esc(t.tier)}日</small><span>${t.score}</span></button>`).join('')||'<p class="thin">该月无明显可用之日</p>'}</div>
+  <div class="cal-actions"><button type="button" class="cal-act primary" data-agenda-open="${m.start}">看这一整月</button><button type="button" class="cal-act" data-agenda-year="${data.year-1}">上一年</button><button type="button" class="cal-act" data-agenda-year="${data.year+1}">下一年</button></div>
+  <p class="thin method">${esc(data.method)}</p>`;
+  // 只滚这条横轴自身（不碰祖先滚动容器），否则打开就是「选中格在屏外」。
+  const strip=body.querySelector('.cal-months'),on=strip?.querySelector('[aria-pressed="true"]');
+  if(strip&&on)strip.scrollLeft=Math.max(0,on.offsetLeft-(strip.clientWidth-on.offsetWidth)/2);
+  for(const b of body.querySelectorAll('[data-agenda-month]'))b.onclick=()=>{sel=+b.dataset.agendaMonth;paint();};
+  for(const b of body.querySelectorAll('[data-agenda-go]'))b.onclick=()=>jump(b.dataset.agendaGo,7);
+  for(const b of body.querySelectorAll('[data-agenda-open]'))b.onclick=()=>jump(b.dataset.agendaOpen,31);
+  for(const b of body.querySelectorAll('[data-agenda-year]'))b.onclick=()=>{s.agendaYear=+b.dataset.agendaYear;ctx.close(d);agendaSheet(ctx,s);};
+ };
+ const jump=(date,days)=>{
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date)))return;
+  s.date=date;s.days=days;s.result=null;s.picked=[];ctx.close(d);
+  load(ctx,'calendar',s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event||'general',events:CAL_EVENTS});
+ };
+ paint();
+}
+
 // 时辰详情：先给这个时辰自己的加减分，再给两条出口——出时点盘 / 存日程。
 function hourSheet(ctx,s,day,hour){
  const ev=s.result?.eventLabel||'择日';

@@ -1,4 +1,4 @@
-// 个性化择日引擎 v1（v0.58.0）
+// 个性化择日引擎 v2（v0.60.0）：日课基盘与事项层分离，支持多事项并排比较与全年运程轴
 // 旧实现只有「黄历宜忌 + 日课与本命冲合（每项 ±2）」，看不出分从哪来，也不能按要做的事排序。
 // 本模块把择日拆成可核对的六层证据，每一分都带 label/delta/why，前端原样展示：
 //   1 本命喜忌（扶抑 useful/caution；中和盘改取《穷通宝鉴》调候用神，权重减半）
@@ -177,7 +177,10 @@ function scoreHours({s,lunar,day,basis}){
  });
 }
 
-function scoreDay({s,natal,event}){
+// 日课基盘：除「黄历宜忌 × 事项」之外的全部层。
+// 事项层只改加减分、不改时辰，所以一次基盘可以复用给任意多个事项——
+// 这是「多事项并排对比」与「全年运程轴」不至于把手机算卡的成本前提。
+function dayBase({s,natal}){
  const lunar=s.getLunar();
  const gz=lunar.getDayInGanZhi();
  const stem=gz[0],branch=gz[1];
@@ -224,16 +227,6 @@ function scoreDay({s,natal,event}){
  if(natal?.pillars?.[2]&&CONTROL[stemElem]===stemElements[STEMS.indexOf(natal.pillars[2].stem)]&&CLASH[natal.pillars[2].branch]===branch){
   add(minus,'天克地冲本命日柱',-2,'日干克本命日干、日支冲本命日支，本命主题最易被动摇');
  }
- // 3 黄历宜忌与事项
- const terms=EVENTS[event]?.terms||[];
- const eventHits={yi:[],ji:[]};
- if(terms.length){
-  const yi=lunar.getDayYi(),ji=lunar.getDayJi();
-  eventHits.yi=terms.filter(t=>yi.some(x=>x.includes(t)));
-  eventHits.ji=terms.filter(t=>ji.some(x=>x.includes(t)));
-  if(eventHits.yi.length)add(plus,'黄历宜·'+eventHits.yi.join('、'),Math.min(5,eventHits.yi.length*2.5),'所选事项在当日宜项内');
-  if(eventHits.ji.length)add(minus,'黄历忌·'+eventHits.ji.join('、'),Math.max(-6,-eventHits.ji.length*3),'所选事项在当日忌项内');
- }
  // 4 建除十二神与日值神
  const zhiXing=lunar.getZhiXing();
  if(ZHIXING.破.includes(zhiXing))add(minus,`建除·${zhiXing}日`,-3,'破日传统不举大事');
@@ -273,41 +266,137 @@ function scoreDay({s,natal,event}){
   add(minus,'日支冲本命生肖',-3,'当日地支冲本命年支，大事宜缓');
  }
 
- const raw=[...plus,...minus].reduce((n,x)=>n+x.v,0);
- const score=scoreOf(raw,9);
- const tier=tierOf(score);
- const hours=scoreHours({s,lunar,day:gz,basis:natal});
- const bestHours=[...hours].sort((a,b)=>b.score-a.score).filter(h=>h.score>=55).slice(0,3);
+ return {lunar,gz,stem,branch,stemElem,branchElem,plus,minus,zhiXing,tianShen,luck,suiYun,
+  sum:[...plus,...minus].reduce((n,x)=>n+x.v,0)};
+}
 
+// 事项层：只比对黄历宜忌与所选事项词。预取 yi/ji 可让一年 365 天只取一次黄历数组。
+function eventLayer(lunar,event,pre){
+ const terms=EVENTS[event]?.terms||[];
+ const hits={yi:[],ji:[]},plus=[],minus=[];
+ if(terms.length){
+  const yi=pre?.yi??lunar.getDayYi(),ji=pre?.ji??lunar.getDayJi();
+  hits.yi=terms.filter(t=>yi.some(x=>x.includes(t)));
+  hits.ji=terms.filter(t=>ji.some(x=>x.includes(t)));
+  if(hits.yi.length)plus.push({k:'黄历宜·'+hits.yi.join('、'),v:round1(Math.min(5,hits.yi.length*2.5)),why:'所选事项在当日宜项内'});
+  if(hits.ji.length)minus.push({k:'黄历忌·'+hits.ji.join('、'),v:round1(Math.max(-6,-hits.ji.length*3)),why:'所选事项在当日忌项内'});
+ }
+ return {hits,plus,minus,delta:round1([...plus,...minus].reduce((n,x)=>n+x.v,0))};
+}
+
+function scoreDay({s,natal,event,events=[],light=false}){
+ const base=dayBase({s,natal});
+ const key=EVENTS[event]?event:'general';
+ const layer=eventLayer(base.lunar,key);
+ const plus=[...base.plus,...layer.plus].sort((a,b)=>b.v-a.v);
+ const minus=[...base.minus,...layer.minus].sort((a,b)=>a.v-b.v);
+ const raw=round1(base.sum+layer.delta);
+ const score=scoreOf(raw,9),tier=tierOf(score);
+ // 多事项：同一基盘只换事项层，分数仍是同一条公式，才能并排比较而不用说「口径不同」。
+ const byEvent={};
+ for(const k of new Set([key,...events])){
+  if(!EVENTS[k])continue;
+  if(k===key){byEvent[k]={score,tier,delta:layer.delta,hits:layer.hits};continue;}
+  const extra=eventLayer(base.lunar,k);
+  const one=scoreOf(round1(base.sum+extra.delta),9);
+  byEvent[k]={score:one,tier:tierOf(one),delta:extra.delta,hits:extra.hits};
+ }
+ // light 模式跳过十二时辰（全年轴只到日），这是 365 天能进 0.3s 的关键。
+ const hours=light?[]:scoreHours({s,lunar:base.lunar,day:base.gz,basis:natal});
+ const bestHours=light?[]:[...hours].sort((a,b)=>b.score-a.score).filter(h=>h.score>=55).slice(0,3);
  return {
-  date:s.toYmd(),weekday:WEEK[s.getWeek()],lunar:lunar.getMonthInChinese()+'月'+lunar.getDayInChinese(),gz,
-  zhiXing,tianShen,tianShenLuck:luck,
-  chong:lunar.getDayChongDesc(),sha:lunar.getDaySha(),xunKong:lunar.getDayXunKong(),
-  yi:lunar.getDayYi(),ji:lunar.getDayJi(),good:lunar.getDayJiShen(),bad:lunar.getDayXiongSha(),
+  date:s.toYmd(),weekday:WEEK[s.getWeek()],lunar:base.lunar.getMonthInChinese()+'月'+base.lunar.getDayInChinese(),gz:base.gz,
+  zhiXing:base.zhiXing,tianShen:base.tianShen,tianShenLuck:base.luck,
+  chong:base.lunar.getDayChongDesc(),sha:base.lunar.getDaySha(),xunKong:base.lunar.getDayXunKong(),
+  yi:base.lunar.getDayYi(),ji:base.lunar.getDayJi(),good:base.lunar.getDayJiShen(),bad:base.lunar.getDayXiongSha(),
   score,tier,tierMean:TIER_MEAN[tier],raw:round1(raw),
-  plus:plus.sort((a,b)=>b.v-a.v),minus:minus.sort((a,b)=>a.v-b.v),
-  eventHits,tenGod:natal?tenGod(STEMS.indexOf(natal.dayMaster),STEMS.indexOf(stem)):null,
-  suiYun,hours,bestHours,links:[...plus,...minus].map(x=>x.k),
-  personal:Boolean(natal)
+  plus,minus,eventHits:layer.hits,tenGod:natal?tenGod(STEMS.indexOf(natal.dayMaster),STEMS.indexOf(base.stem)):null,
+  suiYun:base.suiYun,hours,bestHours,links:[...plus,...minus].map(x=>x.k),
+  byEvent,personal:Boolean(natal),lite:light
  };
 }
 const basisLabel=(natal,id)=>natal?.pillars?.[id]?.name||'命局';
 
-export function almanac({birth,date,days=1,event='general'}){
+export function almanac({birth,date,days=1,event='general',events=[]}){
  if(!Number.isInteger(days)||days<1||days>31)throw Error('最多查询 31 天');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date??''))throw Error('请选择有效公历日期');
  const solar=civilSolar(...date.split('-').map(Number));
  if(solar.toYmd()!==date)throw Error('该日期不存在');
  const natal=birth?natalBasis(birth):null;
  const key=EVENTS[event]?event:'general';
- const dates=Array.from({length:days},(_,i)=>scoreDay({s:solar.next(i),natal,event:key}));
+ const list=[...new Set(Array.isArray(events)?events:[])].filter(k=>EVENTS[k]).slice(0,12);
+ const dates=Array.from({length:days},(_,i)=>scoreDay({s:solar.next(i),natal,event:key,events:list}));
  const ranked=[...dates].sort((a,b)=>b.score-a.score||a.date.localeCompare(b.date));
  ranked.forEach((d,i)=>{d.rank=i+1;d.percentile=dates.length>1?Math.round((1-i/(dates.length-1))*100):100;});
  return {
-  dates,event:key,eventLabel:EVENTS[key].label,terms:EVENTS[key].terms,
+  dates,event:key,eventLabel:EVENTS[key].label,terms:EVENTS[key].terms,byEvent:list,
   best:ranked[0]?.date??null,worst:ranked.at(-1)?.date??null,
   basis:natal?{use:natal.use,avoid:natal.avoid,enemy:natal.enemy,source:natal.source,kind:natal.kind,
    dayMaster:natal.dayMaster,note:natal.note,tiaoHou:natal.tiaoHou}:null,
   method:'个人部分：日干／日支五行是否属本命喜用（忌神、仇神递减）＋日课地支与本命四柱的刑冲合害（日支＝夫妻宫权重最高，月支次之，年支、时支递减）＋日支是否冲本命生肖，累计原始分后以 tanh 映射到 0–98，避免极值堆叠。岁运层：按交运时刻定位当值大运、按立春定位流年，只把「日课与大运／流年」之间的刑冲合害（大运权重高于流年）、伏吟、天干相克、岁运并临计入分数；大运流年本身是喜是忌只作背景标注，不按日重复加减，避免整月分数被同一条拉平。另有岁破（日冲太岁）、月破（日冲月建）、天克地冲本命日柱三项硬忌单独计分。公共部分取黄历宜忌、建除十二神、日值神。时辰层另按「时干时支喜忌＋是否日破时＋与命局冲合＋时家值神＋旬空＋时冲生肖」计分。冲刑不代表绝对凶，只提示该日主题易起变动，须结合实际安排取舍；本命喜用取自扶抑模型，中和盘改用《穷通宝鉴》调候并减半计入。'
+ };
+}
+
+// 流月名：以月建地支对照农历月序，避免「第 8 月」与公历 8 月混淆。
+const MONTH_LABEL={寅:'正月',卯:'二月',辰:'三月',巳:'四月',午:'五月',未:'六月',申:'七月',酉:'八月',戌:'九月',亥:'十月',子:'冬月',丑:'腊月'};
+
+// 全年运程轴：按节气切十二流月，逐日套用与择日完全相同的公式（只到日、不到时辰），
+// 每月给出「该事项最优的一天」与「当月最宜的三件不同事项」，供择日页面直接跳转。
+export function yearAgenda({birth,year,events=[],event='general'}){
+ const y=Number(year);
+ if(!Number.isInteger(y)||y<1901||y>2099)throw Error('年份超出可查范围（1901–2099）');
+ const natal=birth?natalBasis(birth):null;
+ const base=EVENTS[event]?event:'general';
+ const list=[...new Set(Array.isArray(events)?events:[])].filter(k=>EVENTS[k]).slice(0,12);
+ const keys=[...new Set([base,...list])];
+ // 以立春为年界：十二流月正好寅月到丑月，年干支全年一致，
+ // 年头的子月、年尾的丑月不会被切成两个半截桶。
+ const from=civilSolar(y,6,1).getLunar().getJieQiTable()['立春'];
+ const to=civilSolar(y+1,6,1).getLunar().getJieQiTable()['立春'];
+ const start=civilSolar(...from.toYmd().split('-').map(Number));
+ const total=Math.round((Date.parse(to.toYmd()+'T00:00:00Z')-Date.parse(from.toYmd()+'T00:00:00Z'))/86400000);
+ const months=[];
+ let cur=null;
+ for(let i=0;i<total;i++){
+  const s=start.next(i);
+  const lunar=s.getLunar();
+  const yearGz=lunar.getYearInGanZhiByLiChun(),monthGz=lunar.getMonthInGanZhi();
+  const id=yearGz+monthGz;
+  if(!cur||cur.id!==id){
+   cur={id,gz:monthGz,yearGz,start:s.toYmd(),end:s.toYmd(),days:0,good:{},best:{}};
+   months.push(cur);
+  }
+  cur.end=s.toYmd();cur.days++;
+  const day=dayBase({s,natal});
+  const pre={yi:day.lunar.getDayYi(),ji:day.lunar.getDayJi()};
+  for(const k of keys){
+   const score=scoreOf(round1(day.sum+eventLayer(day.lunar,k,pre).delta),9);
+   if(score>=68)cur.good[k]=(cur.good[k]||0)+1;
+   const prev=cur.best[k];
+   if(!prev||score>prev.score)cur.best[k]={event:k,label:EVENTS[k].label,date:s.toYmd(),score,tier:tierOf(score)};
+  }
+ }
+ for(const m of months){
+  m.favor=favorOf(m.gz,natal);
+  m.label=MONTH_LABEL[m.gz[1]]||m.gz[1]+'月';
+  // 先按分数排序，再优先挑不同日期：三件都落在同一天时，读者会以为是重复而非「这天多能」。
+  const sorted=Object.values(m.best).sort((a,b)=>b.score-a.score||a.date.localeCompare(b.date));
+  const picked=[],used=new Set();
+  for(const t of sorted){if(used.has(t.date))continue;used.add(t.date);picked.push(t);if(picked.length===3)break;}
+  for(const t of sorted){if(picked.length>=3)break;if(!picked.includes(t))picked.push(t);}
+  m.top=picked.sort((a,b)=>b.score-a.score||a.date.localeCompare(b.date));
+  m.bestFor=m.best[base]||null;
+  m.goodFor=m.good[base]||0;
+ }
+ const yGz=months[0]?.yearGz||civilSolar(y,6,1).getLunar().getYearInGanZhiByLiChun();
+ const luck=luckAt(natal,`${y}-06-01`);
+ const ranked=months.flatMap(m=>m.top.map(t=>({...t,month:m.label,monthGz:m.gz}))).sort((a,b)=>b.score-a.score||a.date.localeCompare(b.date)).slice(0,5);
+ return {
+  year:y,months,event:base,eventLabel:EVENTS[base].label,byEvent:list,
+  yearGz:{gz:yGz,favor:favorOf(yGz,natal)},
+  luck:luck?{gz:luck.stem+luck.branch,startYear:luck.startYear,endYear:luck.endYear??luck.startYear+9,age:luck.age??null,favor:favorOf(luck.stem+luck.branch,natal)}:null,
+  top:ranked,
+  basis:natal?{use:natal.use,avoid:natal.avoid,enemy:natal.enemy,source:natal.source,kind:natal.kind,dayMaster:natal.dayMaster,note:natal.note}:null,
+  method:'按节气切十二流月，逐日套用与择日相同的计分公式（本命喜忌＋四柱刑冲合害＋黄历事项＋建除值神＋岁运层＋岁破月破等硬忌），全年只算到日、不到时辰，因此单月最优日可能与逐时细算相差一两分。每月「最优」取所选事项在该月得分最高的一天；「最宜三事」取当月各事项各自最优日中分数最高的三件不同事项，不对同一件事重复占位。'
  };
 }

@@ -9,6 +9,7 @@ import {westernPro} from './western-pro.mjs';
 import {baziPro,reverseBazi,convertBirth,relations} from './bazi-pro.mjs';
 import {baziMatch,ziweiMatch} from './match-making.mjs';
 import {boneWeight,qizheng,yijing,almanac} from './traditions.mjs';
+import {yearAgenda} from './almanac.mjs';
 import {searchPlaces,resolvePlace} from './geo.mjs';
 import {lunarToSolar} from './lunar.mjs';
 import {todaySky,dailyGuidance} from './today-sky.mjs';
@@ -57,7 +58,7 @@ export const consoleRoutes={
  '/api/console/vedic':vedicPro,'/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,
  '/api/console/reverse-bazi':reverseBazi,'/api/console/convert':convertBirth,
  '/api/console/bones':({birth})=>boneWeight(birth),'/api/console/qizheng':({birth})=>qizheng(birth),
- '/api/console/yijing':yijing,'/api/console/calendar':almanac,
+ '/api/console/yijing':yijing,'/api/console/calendar':almanac,'/api/console/year-agenda':yearAgenda,
  '/api/console/today-sky':todaySky,'/api/console/daily-guidance':dailyGuidance,
  '/api/console/relationship':data=>pairReading(data).fit
 };

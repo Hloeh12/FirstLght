@@ -606,8 +606,15 @@ function addAlmanacPlan({date,hourBranch='巳',eventLabel='择日',score,tier,gz
  tell(native?'已存入日程，并设好当天提醒':'已存入日程与案例札记');
  return true;
 }
-const PAGE_TITLES={cases:'案例库',chart:'排盘',period:'时点专项',insights:'洞见',me:'我的'};
-const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘',calendar:'历法'};
+// 择日日程读回（v0.61.0）：月历与日卡片都要知道「这天有没有已经定下来的事」，只读不写。
+function almanacPlans(date){
+ if(!state.profile)return [];
+ const data=stored(relationStorageKey,{links:[],notes:{},reminders:{}});
+ const list=data.reminders?.[state.profile.id]||[];
+ return list.filter(r=>r&&r.kind==='almanac'&&(!date||r.date===date))
+  .sort((a,b)=>String(a.when).localeCompare(String(b.when)));
+}
+const PAGE_TITLES={cases:'案例库',chart:'排盘',period:'时点专项',insights:'洞见',me:'我的'};const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘',calendar:'历法'};
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
  const pageTitle=$('#pageTitle');if(pageTitle)pageTitle.textContent=PAGE_TITLES[state.tab]||'排盘';
@@ -1411,7 +1418,7 @@ const definitions={
  日主:'出生日的天干，是十神关系和扶助比例的参照。',正官:'克日主且阴阳相异，常用来观察规则、责任和约束。',七杀:'克日主且阴阳相同，常用来观察压力、竞争和行动。',正印:'生日主且阴阳相异，常用来观察正规支持和学习。',偏印:'生日主且阴阳相同，常用来观察非标准的学习和支持。',比肩:'与日主同五行同阴阳，常用来观察同辈和自主性。',劫财:'与日主同五行异阴阳，常用来观察共享与竞争。',食神:'日主所生且阴阳相同，常用来观察输出与创造。',伤官:'日主所生且阴阳相异，常用来观察表达与打破常规。',正财:'日主所克且阴阳相异，常用来观察稳定资源。',偏财:'日主所克且阴阳相同，常用来观察流动资源与机会。',空亡:'以干支十位一旬计，两支未配天干，即为该旬空亡。',天乙贵人:'按年干或日干查出的地支标记，传统用来描述支持与援助。',驿马:'按三合局取对冲的生地，常用来观察移动、变换和外部往来。',咸池桃花:'按年支或日支查表，传统用来观察社交与吸引力。',华盖:'按三合局墓支取，常用来观察独处、专注和技艺。',羊刃:'阳日干的特定旺支，传统用来观察力量集中和张力。',劫煞:'按年支或日支所属三合局查表，传统用来观察竞争或突变。',天医:'以月支前一支取，属于传统辅助标记。',文昌:'按年干或日干查表，传统用来观察学习、书写和表达。',太极贵人:'按年干或日干查表，传统用来观察学习和钻研。'
 };
 const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,switchTab,onSelectTimeNode,download,
- openFullReport,openMomentReport,addPlan:addAlmanacPlan,clockForBranch,
+ openFullReport,openMomentReport,addPlan:addAlmanacPlan,clockForBranch,almanacPlans,
  get birth(){return state.profile?normalized(state.profile):null;},
  explain(word,text,source){sheet('termSheet',word,termCard(word,text,source,definitions[DICTIONARY[word]?word:word]||definitions[word]));}
 };

@@ -1715,3 +1715,78 @@ button:focus-visible,a:focus-visible{
 .cal-basis i,.cal-mth-detail i{font-style:normal;padding:0 4px;border-radius:5px;font-size:.63rem;line-height:1.5;background:#eef1f4;color:#5d6b78;vertical-align:1px}
 .cal-basis i[data-role=use],.cal-mth-detail i[data-role=use]{background:#ffe4ee;color:#b3195a}
 .cal-basis i[data-role=avoid],.cal-mth-detail i[data-role=avoid]{background:#e9edf2;color:#4d5a66}
+
+/* ===== 日程月历 + 方案存档 + 跨体系择时（v0.61.0）=====
+   月历要能一眼看出「哪几天已经定下来了」，所以颜色只分档、不渐变；
+   方案存档沿用 cal-ev 的证据样式，保证「当时的证据」和列表里读到的是同一种排版。 */
+.cal-plan{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:0 0 6px;font-size:.68rem;color:#8a5568}
+.cal-plan span{padding:1px 6px;border-radius:6px;background:#fff0f6;border:1px solid #ffd3e4;font-variant-numeric:tabular-nums}
+.cal-plan-badge{padding:1px 6px;border-radius:6px;background:#ff4f8b;color:#fff;font-size:.63rem;font-weight:750}
+.calm-head{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 0 4px}
+.calm-head span{text-align:center;font-size:.64rem;color:var(--muted);font-weight:650}
+.calm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 0 6px}
+.calm-blank{display:block;min-height:44px;border-radius:10px;background:#faf6f8}
+.calm-day{position:relative;display:grid;justify-items:center;justify-content:center;text-align:center;gap:0;min-height:44px;padding:4px 1px;border-radius:10px;background:#fff;border:1px solid #f3d7e4;color:var(--ink);font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.calm-day b{text-align:center;font-size:.8rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.calm-day small{text-align:center;font-size:.62rem;line-height:1.2;color:#a8285d;font-variant-numeric:tabular-nums}
+.calm-day[data-tier=上吉]{background:#ffe4ee;border-color:#ff9dbf}
+.calm-day[data-tier=吉]{background:#fff0f6;border-color:#ffd0e2}
+.calm-day[data-tier=平]{background:#fff}
+.calm-day[data-tier=慎]{background:#fff6ec;border-color:#f0d6b4}
+.calm-day[data-tier=避]{background:#f4f6f8;border-color:#dde3e8;color:#5d6b78}
+.calm-day[data-tier=避] small{color:#6b7a86}
+.calm-day[aria-pressed=true]{box-shadow:inset 0 0 0 1.6px #ff4f8b}
+.calm-marks{position:absolute;right:3px;bottom:2px;display:flex;align-items:center;gap:1px}
+.calm-dot{width:4px;height:4px;border-radius:50%;background:#ff4f8b}
+.calm-dec{font-style:normal;font-size:.5rem;line-height:1;font-weight:800;color:#fff;background:#a8285d;border-radius:3px;padding:1px 2px}
+.calm-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 8px;font-size:.62rem;color:var(--muted)}
+.calm-legend span{padding:1px 5px;border-radius:5px;background:#fff;border:1px solid #eedbe6}
+.calm-legend span[data-tier=上吉]{background:#ffe4ee;border-color:#ff9dbf;color:#a8285d}
+.calm-legend span[data-tier=吉]{background:#fff0f6;color:#a8285d}
+.calm-legend span[data-tier=慎]{background:#fff6ec;border-color:#f0d6b4;color:#b06a2c}
+.calm-legend span[data-tier=避]{background:#f4f6f8;color:#5d6b78}
+.calm-legend small{font-size:.62rem;color:var(--muted)}
+.calm-detail{margin:0 0 9px;padding:9px 11px;border-radius:15px;background:linear-gradient(135deg,#fff7fb,#fff);border:1px solid #ffdcea}
+.calm-dhead{display:flex;align-items:center;gap:7px;margin:0 0 6px}
+.calm-dhead>div{flex:1 1 auto;min-width:0}
+.calm-dhead b{display:block;font-size:.86rem;color:var(--ink)}
+.calm-dhead small{display:block;font-size:.65rem;color:var(--muted);overflow-wrap:anywhere}
+.calm-dscore{flex:none;font-size:1.4rem;line-height:1;color:#c2185b;font-variant-numeric:tabular-nums}
+.calm-dtier{flex:none;font-size:.64rem;color:#8a5568}
+.calm-decnote{margin:6px 0 0;font-size:.66rem;color:#a8285d}
+.calm-planlist{display:grid;gap:4px;margin:0 0 9px}
+.calm-planrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px;padding:5px 8px;border-radius:9px;background:#fdf4f8;font-size:.68rem}
+.calm-planrow b{font-variant-numeric:tabular-nums;color:#a8285d}
+.calm-planrow span{color:var(--ink-secondary);overflow-wrap:anywhere}
+.calm-planrow button{font-size:.64rem;padding:2px 7px;border-radius:7px}
+.book-card{margin:0 0 9px;padding:10px 12px;border-radius:16px;background:var(--liquid-card-bg);border:1px solid rgba(255,255,255,.7);box-shadow:0 8px 20px -14px rgba(160,40,90,.28)}
+.book-card[data-tier=上吉]{border-color:#ff9dbf}
+.book-head{display:flex;align-items:center;gap:8px}
+.book-head>div{min-width:0}
+.book-head b{display:block;font-size:.88rem;color:var(--ink)}
+.book-head small{display:block;font-size:.66rem;color:var(--muted);overflow-wrap:anywhere}
+.book-plan{flex:none;padding:3px 8px;border-radius:8px;background:linear-gradient(135deg,#ff8ab5,#ff4f8b);color:#fff;font-size:.7rem;font-weight:750;white-space:nowrap}
+.book-meta{margin:5px 0 0;font-size:.64rem;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.book-ev{margin-top:6px;padding-top:5px;border-top:1px dashed #f0d6e2}
+.book-ev>summary{font-size:.7rem;color:var(--muted);cursor:pointer;list-style:none}
+.book-ev>summary::-webkit-details-marker{display:none}
+.book-ev>summary::before{content:'▸ '}
+.book-ev[open]>summary::before{content:'▾ '}
+.xsys-host{margin:10px 0 0}
+/* 单列而非两列：中文摘要在 390 宽的两列里一行只剩十来个字，读起来比多滚一屏更累。 */
+.xsys{display:grid;grid-template-columns:1fr;gap:7px;margin:0 0 7px}
+.xsys-card{min-width:0;padding:8px 9px;border-radius:13px;background:#fff;border:1px solid #f0d9e5}
+.xsys-card[data-tier=上吉],.xsys-card[data-tier=吉]{background:#fff6fa;border-color:#ffc6dd}
+.xsys-card[data-tier=避]{background:#f6f8f9;border-color:#e2e8ec}
+.xsys-card header{display:flex;align-items:baseline;justify-content:space-between;gap:4px;margin:0 0 4px}
+.xsys-card header b{font-size:.72rem;color:#a8285d;white-space:nowrap}
+.xsys-card header span{font-size:.66rem;font-weight:700;color:var(--ink-secondary);font-variant-numeric:tabular-nums;white-space:nowrap}
+.xsys-na{color:var(--muted)!important;font-weight:600!important}
+.xsys-line{margin:0 0 4px;font-size:.66rem;line-height:1.5;color:var(--ink-secondary);overflow-wrap:anywhere}
+.xsys-card .cal-ev{margin:4px 0 0;gap:3px}
+.xsys-card .cal-ev li{padding:3px 5px;font-size:.64rem;background:#fdf7fa}
+.xsys-conv{margin:0 0 6px;font-size:.7rem;line-height:1.55;color:var(--ink-secondary);overflow-wrap:anywhere}
+.xsys-conv b{display:inline-block;margin-right:5px;padding:0 5px;border-radius:5px;background:#ffe4ee;color:#b3195a;font-size:.64rem}
+.cal-basis small{display:inline;font-size:.66rem;color:#9c7186;font-weight:500}
+.calm-arrow{display:inline-block;margin:0 3px;color:#c9a6b8;font-size:.66rem}
+.calm-past{margin:6px 0 0;font-size:.66rem;color:var(--muted)}

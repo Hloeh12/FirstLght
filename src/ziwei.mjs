@@ -78,6 +78,50 @@ export function ziweiFlow({dateStr,timeIndex,gender,flowYear,astroType,scope,mon
 }
 
 
+// 流时（v0.61.0）：择时不能只走八字时柱，紫微要给出「这一时辰的流时命宫落在本命哪一宫、
+// 流时四化落何宫」。iztro 的 horoscope(date,timeIndex) 本身含 hourly 层，这里只做映射与取用，
+// 不另造一套流时算法。亮度权重沿用本文件 ziweiChart 的明示权重（庙1→陷1/7），不是概率。
+export function ziweiHourFlow({dateStr,timeIndex,gender,flowDate,hourIndex=0,astroType,ziweiLeap,ziweiSchool:schoolId}){
+ const type=validateAstroType(astroType),policy=leapPolicy(ziweiLeap),school=ziweiSchool(schoolId);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(flowDate)))throw Error('流时日期无效');
+ const idx=Number(hourIndex);
+ if(!Number.isInteger(idx)||idx<0||idx>12)throw Error('无效流时时辰');
+ const a=cachedAstro(dateStr,timeIndex,gender,type,policy);
+ const hour=a.horoscope(flowDate,idx).hourly;
+ const mingIndex=hour.palaceNames.indexOf('命宫');
+ if(mingIndex<0)throw Error('无法定位流时命宫');
+ const branch=a.palaces[mingIndex]?.earthlyBranch;
+ const natal=a.palaces.find(p=>p.earthlyBranch===branch);
+ if(!natal)throw Error('无法定位流时命宫所在本命宫位');
+ // 对宫按地支六冲取（子午、丑未…），空宫借对宫主星，权重乘 0.6，与 ziweiChart 的借星口径一致。
+ const opposite=a.palaces.find(p=>p.earthlyBranch===BRANCHES[(BRANCHES.indexOf(branch)+6)%12]);
+ const grade=name=>Math.max(0,'庙旺得利平不陷'.indexOf(name));
+ const weigh=palace=>Number(((palace?.majorStars)||[]).reduce((sum,star)=>sum+(7-grade(star.brightness))/7,0).toFixed(2));
+ const own=weigh(natal),borrowed=own>0?0:Number((weigh(opposite)*0.6).toFixed(2));
+ const majors=(natal.majorStars||[]).map(star=>({name:star.name,brightness:star.brightness||''}));
+ // 流时四化：按流时天干与当前四化口径（全书/北派）取四颗星，落宫用本命盘同一颗星所在宫位判定。
+ const mutagens=mutagensFor(hour.heavenlyStem,school.id).map((star,index)=>{
+  const palace=a.palaces.find(p=>[...(p.majorStars||[]),...(p.minorStars||[])].some(s=>s.name===star));
+  return {star,type:'禄权科忌'[index],palace:palace?.name??null,branch:palace?.earthlyBranch??null,
+   core:Boolean(palace&&(palace.name==='命宫'||palace.isBodyPalace))};
+ }).filter(x=>x.star);
+ // 时系星曜（时禄、时昌、时曲、时魁、时钺、时鸾、时喜、时马、时羊、时陀）落宫，仅作证据展示。
+ const hourStars=[];
+ (hour.stars||[]).forEach((list,index)=>{
+  const palace=hour.palaceNames[index],b=a.palaces[index]?.earthlyBranch;
+  for(const star of list||[])hourStars.push({name:star.name,kind:star.type||'',palace,branch:b});
+ });
+ return {
+  flowGz:hour.heavenlyStem+hour.earthlyBranch,
+  ming:{palace:natal.name,branch,major:majors,weight:own,borrowed,
+   opposite:opposite?.name??null,empty:majors.length===0},
+  mutagens,hourStars,
+  palaces:hour.palaceNames.map((name,i)=>({name,branch:a.palaces[i].earthlyBranch,
+   stars:[...(hour.stars?.[i]||[])].map(s=>s.name)})),
+  stemIndex:STEMS.indexOf(hour.heavenlyStem)
+ };
+}
+
 // Signed months distinguish regular and intercalary lunar months.
 function scopedFlow(a,year,scope,month,day,school){
  const levels={decadal:'大限',yearly:'流年',monthly:'流月',daily:'流日'};

@@ -312,6 +312,10 @@ function scoreDay({s,natal,event,events=[],light=false}){
   score,tier,tierMean:TIER_MEAN[tier],raw:round1(raw),
   plus,minus,eventHits:layer.hits,tenGod:natal?tenGod(STEMS.indexOf(natal.dayMaster),STEMS.indexOf(base.stem)):null,
   suiYun:base.suiYun,hours,bestHours,links:[...plus,...minus].map(x=>x.k),
+  // 流月干支与喜忌：月历要把「这一天」放回「这个流月」里看，两者同屏才读得出是月助还是月阻。
+  // 与岁运层同理，只作背景标注，不计入分数。
+  monthGz:base.lunar.getMonthInGanZhi(),monthFavor:favorOf(base.lunar.getMonthInGanZhi(),natal),
+  monthLabel:MONTH_LABEL[base.lunar.getMonthInGanZhi()[1]]||base.lunar.getMonthInGanZhi()[1]+'月',
   byEvent,personal:Boolean(natal),lite:light
  };
 }

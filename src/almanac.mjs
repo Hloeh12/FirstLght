@@ -45,6 +45,10 @@ const HIT={
 };
 const DAY_ELEM={use:{stem:3,branch:2},avoid:{stem:-3,branch:-2},enemy:{stem:-1.5,branch:-1},idle:{stem:0,branch:0}};
 const HOUR_ELEM={use:{stem:2,branch:1.5},avoid:{stem:-2,branch:-1.5},enemy:{stem:-1,branch:-.75},idle:{stem:0,branch:0}};
+// 岁运层（v0.59.0）：日课与当值大运／流年的刑冲合害。
+// 大运是十年环境，权重大于流年；流年六冲即「岁破」，已在硬忌里单列，这里不再重复计分。
+const LUCK_REL={六冲:-3,六合:2,三合局:1.5,相刑:-1.5,相害:-1.5,相破:-1};
+const YEAR_REL={六冲:0,六合:1.5,三合局:1,相刑:-1,相害:-1,相破:-.75};
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const round1=value=>Math.round(value*10)/10;
 const scoreOf=(raw,scale)=>clamp(Math.round(50+45*Math.tanh(raw/scale)),3,98);
@@ -77,6 +81,9 @@ export function natalBasis(birth){
   dayMaster:b.dayMaster?.stem||'',
   dayElement:b.dayMaster?.element||'',
   pillars:b.pillars.map(p=>({name:p.name,stem:p.stem,branch:p.branch})),
+  // 大运序列：择日要落在大运/流年背景里看，否则同一分数在「喜用十年」与「忌神十年」意义不同。
+  cycles:(b.cycles||[]).map(c=>({index:c.index,stem:c.stem,branch:c.branch,startYear:c.startYear,
+   endYear:c.endYear??c.startYear+9,startUtc:c.startUtc,endUtc:c.endUtc,age:c.age})),
   tiaoHou:b.tiaoHou?.gods||[]
  };
 }
@@ -94,6 +101,25 @@ const elemWeight=(table,role,part,basis)=>{
 };
 const dayAdd=(role,part,basis)=>elemWeight(DAY_ELEM,role,part,basis);
 const hourAdd=(role,part,basis)=>elemWeight(HOUR_ELEM,role,part,basis);
+
+// 岁运干支对本命的喜忌（只作背景标注，不计入日课分数）：
+// 天干权重 2、地支 1，喜用取正、忌神取负、仇神减半，合计符号即「喜／忌／平」。
+function favorOf(gz,basis){
+ if(!basis||basis.source==='均衡')return {label:'平',role:'idle',score:0};
+ const rs=roleOf(stemElements[STEMS.indexOf(gz[0])],basis),rb=roleOf(branchElements[branches.indexOf(gz[1])],basis);
+ const score=(rs==='use'?2:rs==='avoid'?-2:rs==='enemy'?-1:0)+(rb==='use'?1:rb==='avoid'?-1:rb==='enemy'?-.5:0);
+ return {label:score>0?'喜':score<0?'忌':'平',role:score>0?'use':score<0?'avoid':'idle',score};
+}
+// 定位某公历日所属的大运：优先按交运 UT 精确落位，缺 UT 时退回起止年。
+function luckAt(basis,date){
+ const cycles=basis?.cycles||[];
+ if(!cycles.length)return null;
+ const at=Date.parse(date+'T04:00:00Z');
+ const exact=cycles.find(c=>c.startUtc&&c.endUtc&&Date.parse(c.startUtc)<=at&&at<Date.parse(c.endUtc));
+ if(exact)return exact;
+ const year=Number(date.slice(0,4));
+ return cycles.find(c=>c.startYear<=year&&year<=(c.endYear??c.startYear+9))||null;
+}
 
 function dayRelations(natal,gz){
  if(!natal?.pillars?.length)return [];
@@ -215,6 +241,33 @@ function scoreDay({s,natal,event}){
  else add(minus,`建除·${zhiXing}日`,-1.5,'建满平收闭偏保守');
  const tianShen=lunar.getDayTianShen(),luck=lunar.getDayTianShenLuck();
  add(luck==='吉'?plus:minus,`日值神·${tianShen}`,luck==='吉'?1:-1,luck==='吉'?'值神为吉':'值神为凶');
+ // 6 岁运层：日课落在哪一步大运、哪一年，两者与本命是喜是忌只作背景标注；
+ //   真正逐日变化的是「日课干支 × 大运／流年干支」的刑冲合害与伏吟、天克。
+ const yearGz=lunar.getYearInGanZhiByLiChun();
+ const luckPillar=luckAt(natal,s.toYmd());
+ const suiYun={year:{gz:yearGz,favor:favorOf(yearGz,natal)},luck:null};
+ if(luckPillar){
+  const luckGz=luckPillar.stem+luckPillar.branch;
+  suiYun.luck={gz:luckGz,startYear:luckPillar.startYear,endYear:luckPillar.endYear??luckPillar.startYear+9,
+   age:luckPillar.age??null,favor:favorOf(luckGz,natal)};
+  for(const r of relations([{name:'日课',stem,branch},{name:'大运',stem:luckPillar.stem,branch:luckPillar.branch}]).filter(x=>x.ids.includes(1))){
+   const delta=LUCK_REL[r.type]||0;
+   if(!delta)continue;
+   add(delta>0?plus:minus,`大运·${r.type}`,delta,
+    r.type==='六冲'?'日课冲当值大运，一步之内最忌硬碰，宜留缓冲':r.type==='六合'?'日课与当值大运相合，行事易得环境配合':'日课与当值大运'+r.type+'，提示该月主题多牵制');
+  }
+  if(luckGz===gz)add(minus,'伏吟·运同日课',-2,'日课干支与大运完全相同，传统称伏吟，主反复拖沓');
+  const luckStemElem=stemElements[STEMS.indexOf(luckPillar.stem)];
+  if(CONTROL[stemElem]===luckStemElem||CONTROL[luckStemElem]===stemElem)add(minus,'运日天干相克',-1,'日课天干与当值大运天干相克，推进中阻力偏多');
+ }
+ for(const r of relations([{name:'日课',stem,branch},{name:'流年',stem:yearGz[0],branch:yearGz[1]}]).filter(x=>x.ids.includes(1))){
+  const delta=YEAR_REL[r.type]||0;
+  if(!delta)continue;
+  add(delta>0?plus:minus,`流年·${r.type}`,delta,
+   r.type==='六合'?'日课与流年相合，易得当年外力配合':'日课与流年'+r.type+'，当年主题易起摩擦');
+ }
+ if(yearGz===gz)add(minus,'伏吟·年同日课',-1.5,'日课干支与流年相同，传统称太岁伏吟，宜守成');
+ if(suiYun.luck&&suiYun.luck.gz===yearGz)add(minus,'岁运并临',-1,'大运与流年干支相同，该段主题高度集中，宜稳中取进');
  // 5 日支冲本命生肖
  if(natal?.pillars?.[0]&&relations([{name:'年',branch:natal.pillars[0].branch},{name:'日课',branch:gz[1]}]).some(r=>r.type==='六冲')){
   add(minus,'日支冲本命生肖',-3,'当日地支冲本命年支，大事宜缓');
@@ -234,7 +287,7 @@ function scoreDay({s,natal,event}){
   score,tier,tierMean:TIER_MEAN[tier],raw:round1(raw),
   plus:plus.sort((a,b)=>b.v-a.v),minus:minus.sort((a,b)=>a.v-b.v),
   eventHits,tenGod:natal?tenGod(STEMS.indexOf(natal.dayMaster),STEMS.indexOf(stem)):null,
-  hours,bestHours,links:[...plus,...minus].map(x=>x.k),
+  suiYun,hours,bestHours,links:[...plus,...minus].map(x=>x.k),
   personal:Boolean(natal)
  };
 }
@@ -255,6 +308,6 @@ export function almanac({birth,date,days=1,event='general'}){
   best:ranked[0]?.date??null,worst:ranked.at(-1)?.date??null,
   basis:natal?{use:natal.use,avoid:natal.avoid,enemy:natal.enemy,source:natal.source,kind:natal.kind,
    dayMaster:natal.dayMaster,note:natal.note,tiaoHou:natal.tiaoHou}:null,
-  method:'个人部分：日干／日支五行是否属本命喜用（忌神、仇神递减）＋日课地支与本命四柱的刑冲合害（日支＝夫妻宫权重最高，月支次之，年支、时支递减）＋日支是否冲本命生肖，累计原始分后以 tanh 映射到 0–98，避免极值堆叠。另有岁破（日冲太岁）、月破（日冲月建）、天克地冲本命日柱三项硬忌单独计分。公共部分取黄历宜忌、建除十二神、日值神。时辰层另按「时干时支喜忌＋是否日破时＋与命局冲合＋时家值神＋旬空＋时冲生肖」计分。冲刑不代表绝对凶，只提示该日主题易起变动，须结合实际安排取舍；本命喜用取自扶抑模型，中和盘改用《穷通宝鉴》调候并减半计入。'
+  method:'个人部分：日干／日支五行是否属本命喜用（忌神、仇神递减）＋日课地支与本命四柱的刑冲合害（日支＝夫妻宫权重最高，月支次之，年支、时支递减）＋日支是否冲本命生肖，累计原始分后以 tanh 映射到 0–98，避免极值堆叠。岁运层：按交运时刻定位当值大运、按立春定位流年，只把「日课与大运／流年」之间的刑冲合害（大运权重高于流年）、伏吟、天干相克、岁运并临计入分数；大运流年本身是喜是忌只作背景标注，不按日重复加减，避免整月分数被同一条拉平。另有岁破（日冲太岁）、月破（日冲月建）、天克地冲本命日柱三项硬忌单独计分。公共部分取黄历宜忌、建除十二神、日值神。时辰层另按「时干时支喜忌＋是否日破时＋与命局冲合＋时家值神＋旬空＋时冲生肖」计分。冲刑不代表绝对凶，只提示该日主题易起变动，须结合实际安排取舍；本命喜用取自扶抑模型，中和盘改用《穷通宝鉴》调候并减半计入。'
  };
 }

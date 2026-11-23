@@ -306,7 +306,7 @@ function caseDetail(c){
  <button class="wide">保存双向关系</button></form>`:''}
  <form id="caseNote"><label>个人札记<textarea name="note" maxlength="8000" rows="4">${esc(data.notes[c.id])}</textarea></label><button>保存札记</button></form>
  <form id="caseReminder" class="form-grid"><label>提醒时间<input name="when" type="datetime-local" required></label><label>提醒内容<input name="message" maxlength="80" required></label><button class="wide">添加提醒</button></form>
- <div class="stack">${reminders.map(r=>`<div class="spread"><span>${esc(r.when.replace('T',' '))} · ${esc(r.message)}</span>${btn('取消',`data-cancel-reminder="${esc(r.id)}"`)}</div>`).join('')}</div>`);
+ <div class="stack">${reminders.map(r=>`<div class="spread"><span>${r.kind==='almanac'?'<b class="plan-badge">择日</b>':''}${esc(r.when.replace('T',' '))} · ${esc(r.message)}</span>${btn('取消',`data-cancel-reminder="${esc(r.id)}"`)}</div>`).join('')}</div>`);
  const store=()=>save(relationStorageKey,data);
  const disclosure=$('details',d);
  if(disclosure)disclosure.ontoggle=()=>{if(disclosure.open&&!$('[data-galaxy]',d).hasChildNodes())fillGalaxy(d,c);};
@@ -543,6 +543,68 @@ async function instantChart(){
   if(system==='west')state.chartState.west={mode:'sky',at,result:null,token:0,error:'',requested:false,instant:{at:at.toISOString(),local:formatLocalDisplayTime(birth),place:birth.city.label,source:'设备本地时区 UTC'+birth.tz}};
   state.instantAt=at.toISOString();state.tab='chart';state.system=system;render();
  }catch(error){tell(error.message);}
+}
+/* ===== v0.59.0 择日闭环：选日 → 看那一刻的盘 → 定事并留痕 =====
+   择日页只给「哪天哪个时辰合适」，真正要下判断还得看那一刻的盘。
+   这里把「某日 + 某时辰」换算成 baziPro 的索引式 selection（大运/流年/流月/流日/流时），
+   直接调用时点专项的同一套内核出详批，避免另写一份口径。 */
+const BRANCHES='子丑寅卯辰巳午未申酉戌亥';
+// 子时取 00:30（早子时），与择日引擎按 00:00 采样日柱的口径一致；其余取该时辰中点。
+function clockForBranch(branch){
+ const i=Math.max(0,BRANCHES.indexOf(branch));
+ return i===0?'00:30':String(i*2).padStart(2,'0')+':30';
+}
+async function baziSelectionAt(date,hourBranch){
+ const birth=ctx.birth,year=Number(date.slice(0,4));
+ const probe=await request('/api/console/bazi',{birth,selection:{year},combine:false});
+ const cycles=probe.cycles||[],at=Date.parse(date+'T04:00:00Z');
+ const beforeStart=cycles.length?Date.parse(cycles[0].startUtc)>at:false;
+ let luck=cycles.findIndex(c=>c.startUtc&&c.endUtc&&Date.parse(c.startUtc)<=at&&at<Date.parse(c.endUtc));
+ if(luck<0)luck=cycles.findIndex(c=>c.startYear<=year&&year<=(c.endYear??c.startYear+9));
+ const months=probe.months||[];
+ let month=months.findIndex((m,i)=>m.date.slice(0,10)<=date&&date<(months[i+1]?.date.slice(0,10)??'9999'));
+ if(month<0&&months.length)month=0;
+ const selection={year};
+ if(!beforeStart&&luck>=0)selection.luck=luck;
+ if(month!=null)selection.month=month;
+ if(month!=null){
+  const withMonth=await request('/api/console/bazi',{birth,selection:{...selection},combine:false});
+  const day=(withMonth.days||[]).findIndex(d=>d.date===date);
+  if(day>=0)selection.day=day;
+ }
+ const hour=BRANCHES.indexOf(hourBranch);
+ if(hour>=0&&!birth.timeUnknown&&selection.day!=null)selection.hour=hour;
+ return selection;
+}
+async function openMomentReport({date,hourBranch='巳',label}){
+ if(!state.profile){tell('请先激活一个案例，再看该时刻的时点盘');return;}
+ try{
+  tell('正在按这一刻重排时点盘…');
+  const selection=await baziSelectionAt(date,hourBranch);
+  const spot=label||`${date} ${hourBranch}时`;
+  const report=await buildPeriodReport(ctx,'bazi','hour',selection,spot,'focus');
+  openFullReport(report);
+ }catch(error){tell('时点盘生成失败：'+error.message);}
+}
+// 择日结果写入案例日程：本地提醒 + 原生通知 + 札记留痕，三处同一条记录，便于回看。
+function addAlmanacPlan({date,hourBranch='巳',eventLabel='择日',score,tier,gz,clock}){
+ if(!state.profile){tell('请先激活一个案例，再把择日结果存入日程');return false;}
+ const at=clock||clockForBranch(hourBranch),when=date+'T'+at;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(at)){tell('请选择有效的日期与时间');return false;}
+ if(!(Date.parse(when)>Date.now())){tell('这个时段已经过去，换一个未来时段再存');return false;}
+ const message=`${eventLabel} · ${hourBranch}时 · ${tier||''} ${score??''} 分`.replace(/\s+/g,' ').trim();
+ const id=crypto.randomUUID?.()??String(Date.now());
+ const data=stored(relationStorageKey,{links:[],notes:{},reminders:{}});
+ data.reminders??={};data.notes??={};
+ (data.reminders[state.profile.id]??=[]).push({id,when,message,kind:'almanac',date,event:eventLabel,score,tier,gz});
+ const line=`【择日日程】${date} ${hourBranch}时（${at}）${eventLabel} · ${tier||'—'} ${score??'—'} 分 · ${gz||'—'}日`;
+ const note=String(data.notes[state.profile.id]||'');
+ if(!note.includes(line))data.notes[state.profile.id]=[note,line].filter(Boolean).join('\n');
+ save(relationStorageKey,data);
+ const native=window.webkit?.messageHandlers?.caseReminder;
+ if(native)native.postMessage({id,seconds:(Date.parse(when)-Date.now())/1000,message});
+ tell(native?'已存入日程，并设好当天提醒':'已存入日程与案例札记');
+ return true;
 }
 const PAGE_TITLES={cases:'案例库',chart:'排盘',period:'时点专项',insights:'洞见',me:'我的'};
 const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘',calendar:'历法'};
@@ -787,7 +849,7 @@ function openFullReport(prebuilt,opts={}){
    report.lead=`【时点专属详批】只围绕「${esc(spot)}」展开：盘面快照 + 该时点逐条推导，正文随所选时点变化，不重复本命全文。日主 ${esc(data.dayMaster?.stem||'—')}${esc(data.dayMaster?.element||'')} · ${esc(data.strength?.kind||'')}。`;
    const leadEl=d.querySelector('.rpt-lead');if(leadEl)leadEl.innerHTML=report.lead;
    const titleEl=d.querySelector('#reportTitle');if(titleEl)titleEl.textContent=report.title;
-   const chartTitle=d.querySelector('.rpt-chart-title');if(chartTitle)chartTitle.textContent=`八字七列详盘 · ${spot}`;
+   const chartTitle=d.querySelector('.rpt-chart-title');if(chartTitle)chartTitle.textContent=`八字${pillars.length}列详盘 · ${spot}`;
    const wordEl=d.querySelector('.rpt-meta');if(wordEl)wordEl.textContent=`全文 ${report.characters} 字`;
    const items=tocItems(secs);
    const tocEl=d.querySelector('.rpt-toc-list');if(tocEl)tocEl.innerHTML=items;
@@ -1349,6 +1411,7 @@ const definitions={
  日主:'出生日的天干，是十神关系和扶助比例的参照。',正官:'克日主且阴阳相异，常用来观察规则、责任和约束。',七杀:'克日主且阴阳相同，常用来观察压力、竞争和行动。',正印:'生日主且阴阳相异，常用来观察正规支持和学习。',偏印:'生日主且阴阳相同，常用来观察非标准的学习和支持。',比肩:'与日主同五行同阴阳，常用来观察同辈和自主性。',劫财:'与日主同五行异阴阳，常用来观察共享与竞争。',食神:'日主所生且阴阳相同，常用来观察输出与创造。',伤官:'日主所生且阴阳相异，常用来观察表达与打破常规。',正财:'日主所克且阴阳相异，常用来观察稳定资源。',偏财:'日主所克且阴阳相同，常用来观察流动资源与机会。',空亡:'以干支十位一旬计，两支未配天干，即为该旬空亡。',天乙贵人:'按年干或日干查出的地支标记，传统用来描述支持与援助。',驿马:'按三合局取对冲的生地，常用来观察移动、变换和外部往来。',咸池桃花:'按年支或日支查表，传统用来观察社交与吸引力。',华盖:'按三合局墓支取，常用来观察独处、专注和技艺。',羊刃:'阳日干的特定旺支，传统用来观察力量集中和张力。',劫煞:'按年支或日支所属三合局查表，传统用来观察竞争或突变。',天医:'以月支前一支取，属于传统辅助标记。',文昌:'按年干或日干查表，传统用来观察学习、书写和表达。',太极贵人:'按年干或日干查表，传统用来观察学习和钻研。'
 };
 const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,switchTab,onSelectTimeNode,download,
+ openFullReport,openMomentReport,addPlan:addAlmanacPlan,clockForBranch,
  get birth(){return state.profile?normalized(state.profile):null;},
  explain(word,text,source){sheet('termSheet',word,termCard(word,text,source,definitions[DICTIONARY[word]?word:word]||definitions[word]));}
 };

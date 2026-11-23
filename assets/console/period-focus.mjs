@@ -32,7 +32,8 @@ const STAGE = {
 
 function bazi(scope,label,data){
  const sel=(data.selected||[]).filter(Boolean);
- const cur=[...sel].reverse().find(p=>['流日','流月','流年','大运'].includes(S(p.name)))||sel.at(-1)||null;
+ // v0.59.0：从择日页可以带到「时辰」一层，流时比流日更细，须优先作为当前时点定性对象。
+ const cur=[...sel].reverse().find(p=>['流时','流日','流月','流年','大运'].includes(S(p.name)))||sel.at(-1)||null;
  const guide=data.guidance||{},st=data.strength||{},nat=data.natalStrength||st;
  const out=[];
  if(!cur){

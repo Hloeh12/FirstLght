@@ -124,6 +124,15 @@ export function mergeBackup(data,state,space){
   for(const r of items){
    if(!identifier(r?.id)||reminderIds.has(r.id)||!short(r.message,80)||!short(r.when,32)||!Number.isFinite(Date.parse(r.when)))continue;
    const restored={id:r.id,message:r.message,when:r.when,delivered:!!r.delivered};
+   // 择日日程的元数据随备份保留，否则导入后只剩一条「某时某刻」的提醒，看不出是哪种事项、多少分。
+   if(r.kind==='almanac'){
+    restored.kind='almanac';
+    if(typeof r.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.date))restored.date=r.date;
+    if(short(r.event,24))restored.event=r.event;
+    if(short(r.tier,4))restored.tier=r.tier;
+    if(short(r.gz,4))restored.gz=r.gz;
+    if(number(r.score))restored.score=r.score;
+   }
    (reminders[id]??=[]).push(restored);reminderIds.add(r.id);newReminders.push(restored);
   }
  }

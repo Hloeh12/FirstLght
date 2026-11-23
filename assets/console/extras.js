@@ -45,6 +45,19 @@ function yi(ctx){
 const CAL_EVENTS=['general','contract','open','travel','move','wedding','medical','exam','negotiate','build','pray','burial'];
 const CAL_LABELS=Object.fromEntries(Object.entries(CAL_EVENT_META).map(([k,v])=>[k,v.label]));
 const signed=value=>(value>0?'+':'−')+Math.abs(value);
+// v0.59.0：择日 → 时点盘 → 日程，三步在同一个卡片里走完。
+// 卡片仍是「结论在上、证据在下」，新增的只有两件事：岁运背景行，以及可点的时辰格。
+function favorChip(favor){
+ return favor?`<i data-role="${esc(favor.role)}">${esc(favor.label)}</i>`:'';
+}
+function suiyunLine(x){
+ const sy=x.suiYun;
+ if(!sy)return '';
+ const parts=[`<b>流年 ${esc(sy.year.gz)}${favorChip(sy.year.favor)}</b>`];
+ if(sy.luck)parts.push(`<b>大运 ${esc(sy.luck.gz)}${favorChip(sy.luck.favor)}</b>`);
+ const span=sy.luck?`<small>${sy.luck.startYear}–${sy.luck.endYear}</small>`:'';
+ return `<p class="cal-sui"><span>岁运</span>${parts.join('')}${span}</p>`;
+}
 function calendar(ctx){
  const id='calendar',s=stateFor(ctx,id,{date:isoLocal(),days:7,event:'general',sort:'score',excludeClash:false}),r=s.result;
  const list=(r?.dates||[]).filter(x=>!s.excludeClash||!x.minus.some(m=>/六冲|相刑|相害|相破|冲本命生肖/.test(m.k)));
@@ -56,15 +69,22 @@ function calendar(ctx){
   :'未关联案例：仅按公共黄历与建除取用，选一个案例可得到个性化评分';
  const tags=x=>[...x.plus.slice(0,2),...x.minus.slice(0,2)].map(t=>`<span class="cal-tag ${t.v>0?'up':'down'}">${esc(t.k)} ${signed(t.v)}</span>`).join('');
  const evidence=x=>`<ul class="cal-ev">${[...x.plus,...x.minus].map(t=>`<li class="${t.v>0?'up':'down'}"><span>${esc(t.k)}</span><b>${signed(t.v)}</b><small>${esc(t.why)}</small></li>`).join('')||'<li><span>当日无显著加减项</span></li>'}</ul>`;
- const hours=x=>`<div class="cal-hours" role="list">${x.hours.map(h=>`<div class="cal-hour" role="listitem" data-tier="${h.tier}"${x.bestHours.some(b=>b.branch===h.branch)?' data-best="1"':''}><b>${esc(h.branch)}</b><small>${esc(h.range)}</small><span>${h.score}</span></div>`).join('')}</div>`;
+ const hourCell=(date,h,isBest)=>`<button type="button" class="cal-hour" role="listitem" data-tier="${h.tier}" data-cal-hour="${date}|${h.branch}"${isBest?' data-best="1"':''} aria-label="${esc(date+' '+h.branch+'时 '+h.range+'，'+h.score+' 分 '+h.tier+'，点开看时点盘')}"><b>${esc(h.branch)}</b><small>${esc(h.range)}</small><span>${h.score}</span></button>`;
+ const hours=x=>`<div class="cal-hours" role="list">${x.hours.map(h=>hourCell(x.date,h,x.bestHours.some(b=>b.branch===h.branch))).join('')}</div>`;
+ const momentRail=x=>x.bestHours.length
+  ?`<div class="cal-moments" role="group" aria-label="推荐时段，点开看该时辰时点盘">${x.bestHours.map(h=>`<button type="button" class="cal-moment" data-cal-moment="${x.date}|${h.branch}"><b>${esc(h.branch)}时</b><small>${esc(h.range)}</small><span>${h.score}</span></button>`).join('')}</div>`
+  :'<p class="cal-best">当日无明显吉时，宜按事就人</p>';
+ const pick=x=>x.bestHours[0]?.branch||'巳';
+ const actions=x=>`<div class="cal-actions"><button type="button" class="cal-act primary" data-cal-moment="${x.date}|${pick(x)}">看这一刻的时点盘</button><button type="button" class="cal-act" data-cal-plan="${x.date}|${pick(x)}">存入日程</button></div>`;
  const card=x=>`<article class="cal-day" data-tier="${x.tier}">
  <div class="cal-day-head"><div class="cal-date"><b>${x.date.slice(5)}</b><small>${esc(x.weekday+' · '+x.lunar)}</small></div>
  <div class="cal-gz"><b>${esc(x.gz)}</b><small>${esc(x.zhiXing+'日 · '+x.tianShen+'·'+x.tianShenLuck)}</small></div>
  <div class="cal-score"><b>${x.score}</b><span>${x.rank?'第'+x.rank+' · ':''}${x.tier}</span></div></div>
  <div class="cal-meter" role="img" aria-label="${x.score} 分"><i style="width:${x.score}%"></i></div>
+ ${suiyunLine(x)}
  <div class="cal-tags">${tags(x)||'<span class="cal-tag neu">无显著加减项</span>'}</div>
- <p class="cal-best">${x.bestHours.length?'推荐时段 '+x.bestHours.map(h=>esc(h.branch+' '+h.range)).join(' · '):'当日无明显吉时，宜按事就人'}</p>
- <details class="cal-detail"><summary>${x.plus.length+x.minus.length} 条评分依据 · 12 时辰</summary>
+ ${momentRail(x)}${actions(x)}
+ <details class="cal-detail"><summary>${x.plus.length+x.minus.length} 条评分依据 · 12 时辰可点</summary>
  ${evidence(x)}${hours(x)}
  <p class="cal-yiji">宜 ${esc(x.yi.join('、')||'—')}<br>忌 ${esc(x.ji.join('、')||'—')}</p>
  <p class="cal-sub">吉神 ${esc(x.good.join('、')||'—')} · 凶煞 ${esc(x.bad.join('、')||'—')} · 冲${esc(x.chong)} · 旬空 ${esc(x.xunKong)}${x.tenGod?' · 日干十神 '+esc(x.tenGod):''}</p>
@@ -85,6 +105,11 @@ function calendar(ctx){
    load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days,event:s.event});};
  }
  for(const b of ctx.root.querySelectorAll('[data-cal-sort]'))b.onclick=()=>{s.sort=b.dataset.calSort;calendar(ctx);};
+ const dayOf=date=>(r?.dates||[]).find(d=>d.date===date);
+ const openHour=(date,branch)=>{const day=dayOf(date);const hour=day?.hours.find(h=>h.branch===branch);if(day&&hour)hourSheet(ctx,s,day,hour);};
+ for(const b of ctx.root.querySelectorAll('[data-cal-hour]'))b.onclick=()=>{const [date,branch]=b.dataset.calHour.split('|');openHour(date,branch);};
+ for(const b of ctx.root.querySelectorAll('[data-cal-moment]'))b.onclick=()=>{const [date,branch]=b.dataset.calMoment.split('|');openHour(date,branch);};
+ for(const b of ctx.root.querySelectorAll('[data-cal-plan]'))b.onclick=()=>{const [date,branch]=b.dataset.calPlan.split('|');const day=dayOf(date);if(day)planSheet(ctx,s,day,branch);};
  $('[data-calendar-filter]',ctx.root).onclick=()=>{
   const dialog=ctx.sheet('toolSheet','择日条件',`<form class="form-grid"><label>起始日期<input type="date" name="date" value="${esc(s.date)}" required></label>
   <label>连续天数<input name="days" type="number" min="1" max="31" value="${s.days??7}" required></label>
@@ -97,6 +122,43 @@ function calendar(ctx){
   };
  };
  if(!r&&!s.pending&&!s.error)load(ctx,id,s,'/api/console/calendar',{birth:ctx.birth,date:s.date,days:s.days??7,event:s.event||'general'});
+}
+// 时辰详情：先给这个时辰自己的加减分，再给两条出口——出时点盘 / 存日程。
+function hourSheet(ctx,s,day,hour){
+ const ev=s.result?.eventLabel||'择日';
+ const luckTxt=day.suiYun?.luck?' · 大运 '+esc(day.suiYun.luck.gz):'';
+ const d=ctx.sheet('toolSheet',`${day.date} · ${hour.branch}时`,`
+ <div class="cal-hr-head"><div><b>${esc(hour.branch)}时</b><small>${esc(hour.range)} · ${esc(hour.time)} · 时值神 ${esc(hour.god)}（${esc(hour.traditional)}）</small></div>
+ <div class="cal-hr-score"><b>${hour.score}</b><span>${esc(hour.tier)}</span></div></div>
+ <ul class="cal-ev">${[...hour.plus,...hour.minus].map(t=>`<li class="${t.v>0?'up':'down'}"><span>${esc(t.k)}</span><b>${signed(t.v)}</b><small>${esc(t.why)}</small></li>`).join('')||'<li><span>该时辰无显著加减项</span></li>'}</ul>
+ <p class="cal-yiji">日课 ${esc(day.gz)} · ${esc(day.zhiXing)}日 · ${esc(day.tianShen)}·${esc(day.tianShenLuck)}${luckTxt} · 流年 ${esc(day.suiYun?.year?.gz||'')}</p>
+ <p class="cal-yiji">宜 ${esc(day.yi.join('、')||'—')}<br>忌 ${esc(day.ji.join('、')||'—')}</p>
+ <div class="cal-actions"><button type="button" class="cal-act primary" data-hour-open>出这一刻的时点详批</button><button type="button" class="cal-act" data-hour-plan>加入日程提醒</button></div>
+ <p class="thin">时点详批会带上大运、流年、流月、流日、流时五层，按这一刻的干支重排，不是重复本命全文。</p>`);
+ $('[data-hour-open]',d).onclick=()=>{ctx.close(d);ctx.openMomentReport({date:day.date,hourBranch:hour.branch,label:`${day.date} ${hour.branch}时`});};
+ $('[data-hour-plan]',d).onclick=()=>{ctx.close(d);planSheet(ctx,s,day,hour.branch,hour);};
+}
+// 存入日程：时间按该时辰中点预填，写入案例提醒（原生通知）与札记，形成可回看的日程。
+function planSheet(ctx,s,day,branch,hour){
+ if(!ctx.state.profile){ctx.tell('请先激活一个案例，再把择日结果存入日程');return;}
+ const clock=hour?.range?hour.range.slice(0,5):ctx.clockForBranch(branch),ev=s.result?.eventLabel||'择日';
+ // 从时辰详情进来时，日程要带该时辰的分与档；从卡片进来时才是当日分。
+ const score=hour?.score??day.score,tier=hour?.tier??day.tier;
+ const d=ctx.sheet('toolSheet','存入案例日程',`
+ <form class="form-grid"><label>日期时间<input type="datetime-local" name="when" value="${esc(day.date+'T'+clock)}" min="${esc(day.date+'T00:00')}" max="${esc(day.date+'T23:59')}" required></label>
+ <label>事项<input name="event" value="${esc(ev)}" maxlength="24" required></label>
+ <p class="wide thin">${esc(day.date)} ${esc(branch)}时 · ${esc(day.gz)}日 · ${esc(tier)} ${score} 分${day.suiYun?.luck?` · 大运 ${esc(day.suiYun.luck.gz)}`:''}</p>
+ <button class="primary wide">存入日程</button></form>
+ <p class="thin">只保存所选的这一天（分数只对这天成立）；会同时写入「案例空间 · 提醒」与案例札记，已安装原生壳时会排一条本地通知。</p>`);
+ $('form',d).onsubmit=e=>{
+  e.preventDefault();
+  const f=new FormData(e.currentTarget),when=String(f.get('when')||''),date=when.slice(0,10),time=when.slice(11,16);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){ctx.tell('请选择有效日期');return;}
+  // 分数只对所选那天成立：换日就必须回列表重选，否则会存下「某日分数 + 另一日日期」的错配。
+  if(date!==day.date){ctx.tell('本次分数只对 '+day.date+' 成立，换日请回列表重新择日');return;}
+  const ok=ctx.addPlan({date,hourBranch:branch,clock:time,eventLabel:String(f.get('event')||ev),score,tier,gz:day.gz});
+  if(ok)ctx.close(d);
+ };
 }
 function calculatePair(ctx,s,other){
  s.other=other.id;s.result=null;s.error='';

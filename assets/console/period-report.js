@@ -53,7 +53,7 @@ function ziweiSnapshot(chart,flow,profile){
 /* v0.50.0 时点落点：从一份盘面数据反查「当前到底在看哪一刻」，
    统一给「时点杆 / 盘内 caption / 报告标题」三处使用，避免三套文案各说各话。 */
 export function baziMoment(data,sel={}){
- const cycles=data?.cycles||[],years=data?.years||[],months=data?.months||[];
+ const cycles=data?.cycles||[],years=data?.years||[],months=data?.months||[],days=data?.days||[],hours=data?.hours||[];
  const gz=p=>p&&p.stem?`${p.stem}${p.branch}`:'';
  const li=Number.isInteger(sel.luck)?sel.luck:null;
  const c=li!=null?cycles[li]:null;
@@ -61,11 +61,17 @@ export function baziMoment(data,sel={}){
  const y=yi<0?null:years[yi];
  const mi=Number.isInteger(sel.month)?sel.month:0;
  const m=months[mi]||null;
+ // v0.59.0：择日页会带到「日 + 时辰」两层，落点必须能说到哪一天哪一个时辰，
+ // 否则报告标题停在流月，用户看不出这是「那一时辰」的盘。
+ const d=Number.isInteger(sel.day)?days[sel.day]||null:null;
+ const hr=Number.isInteger(sel.hour)?hours[sel.hour]||null:null;
+ const dayLabel=d?`${d.date.slice(5)} ${gz(d)}日`:'';
+ const hourLabel=hr?`${hr.branch}时`:'';
  const nextStart=months[mi+1]?.date?.slice(5,10);
  const range=c&&c.startYear?`${c.startYear}–${c.endYear??c.startYear+9}`:'';
  return {
-  // 落点卡主行：年·干支 + 月·干支，一眼确认是哪一年哪一月
-  title:[y?`${y.year} ${gz(y)}年`:'',m?`${m.label||''} ${gz(m)}月`:''].filter(Boolean).join(' · '),
+  // 落点卡主行：年·干支 + 月·干支，一眼确认是哪一年哪一月；带日/时时继续往后接
+  title:[[y?`${y.year} ${gz(y)}年`:'',m?`${m.label||''} ${gz(m)}月`:''].filter(Boolean).join(' · '),dayLabel,hourLabel].filter(Boolean).join(' · '),
   // 次行：第几步大运 + 起止年（不再把节气区间挤在同一行，避免折成两截）
   sub:li!=null?`第${li+1}步 ${gz(c)}大运${range?' · '+range:''}`:'本命原局（未叠流运）',
   // 第三行：该月节气区间，单独成 chip
@@ -76,8 +82,8 @@ export function baziMoment(data,sel={}){
    m?.date?`${m.date.slice(5,10)}${nextStart?'→'+nextStart:''}`:''
   ].filter(Boolean).join(' · '),
   // 报告标题/章节前缀用短式：长串会把封面标题挤成三行
-  brief:[y?`${y.year} ${gz(y)}年`:'',m?`${m.label||''}${gz(m)}月`:''].filter(Boolean).join(' '),
-  cue:[li!=null?`第${li+1}步大运`:'',y?`${y.year} 年`:''].join(' · ')
+  brief:[[y?`${y.year} ${gz(y)}年`:'',m?`${m.label||''}${gz(m)}月`:''].filter(Boolean).join(' '),dayLabel,hourLabel].filter(Boolean).join(' '),
+  cue:[li!=null?`第${li+1}步大运`:'',y?`${y.year} 年`:'',hourLabel].filter(Boolean).join(' · ')
  };
 }
 // 供 app.js 级联重算后重建选项与盘面：把后端返回的 selected 反查成三组索引。
@@ -85,6 +91,7 @@ export function baziSelOf(data){
  const cycles=data?.cycles||[],years=data?.years||[],months=data?.months||[];
  const sel=data?.selected||[];
  const c=sel.find(p=>p?.name==='大运'),y=sel.find(p=>p?.name==='流年'),m=sel.find(p=>p?.name==='流月');
+ const d=sel.find(p=>p?.name==='流日'),h=sel.find(p=>p?.name==='流时');
  const nowY=new Date().getFullYear();
  const luck=Number.isInteger(c?.index)?c.index:(()=>{
   const i=cycles.findIndex(x=>(x.startYear??9999)<=nowY&&nowY<(x.endYear??x.startYear+10));
@@ -92,7 +99,10 @@ export function baziSelOf(data){
  })();
  const year=Number.isInteger(y?.year)?y.year:(years.find(x=>x.year===nowY)?.year??years[0]?.year);
  const month=Number.isInteger(m?.index)?m.index:0;
- return {luck,year,month};
+ // 日/时只有在确实被选中时才回填，否则盘面会平白多两列、而选择器又改不动它们。
+ return {luck,year,month,
+  day:Number.isInteger(d?.index)?d.index:null,
+  hour:Number.isInteger(h?.index)?h.index:null};
 }
 /* v0.50.0：三组下拉与流月速选条的选项 HTML 统一由这里产出。
    初次渲染与切换后的级联重建共用同一份逻辑，避免两边选项口径漂移。 */
@@ -109,7 +119,7 @@ export function baziPickOptions(data,sel={}){
  const yearRail=years.map(y=>`<button type="button" class="bf-year${String(y.year)===String(sel.year)?' on':''}" data-bf-year="${esc(String(y.year))}" aria-pressed="${String(y.year)===String(sel.year)}" title="${esc(y.year+' '+(y.stem||'')+(y.branch||'')+' 年')}"><b>${esc(String(y.year).slice(2))}</b><small>${esc((y.stem||'')+(y.branch||''))}</small></button>`).join('');
  return {cOpts,yOpts,mOpts,monthRail,yearRail};
 }
-// 八字时点七列详盘：本命四柱 + 大运 + 流年 + 流月，完整十神/藏干/星运/神煞/纳音。
+// 八字时点详盘：本命四柱 + 大运/流年/流月（择日页进入时再叠流日/流时），完整十神/藏干/星运/神煞/纳音。
 // v0.50.0：三组 select 改为真正级联——改大运 → 流年列表收窄到该运年份；改流年 → 流月重排；
 // 任一处变更都回后端按新选择重算，所以盘面、落点文案、报告正文三者永远同源。
 // v0.49 之前的版本只换大运那一列，流年/流月停在「今天」，于是出现「选了第8步、右边还是2026」。
@@ -120,7 +130,10 @@ function baziSnapshot(data,selection={},scope='luck'){
  const moment=baziMoment(data,sel);
  const pickFlow=(l,y,m)=>{
   const yi=years.findIndex(x=>String(x.year)===String(y));
-  return [cycles[l],yi<0?null:years[yi],months[m]].filter(p=>p&&p.stem&&p.branch).map(p=>({...p}));
+  // 择日页带来的「流日 + 流时」也要落到盘上，否则说「看这一刻」却只画到流月。
+  const day=Number.isInteger(sel.day)?(data?.days||[])[sel.day]:null;
+  const hour=Number.isInteger(sel.hour)?(data?.hours||[])[sel.hour]:null;
+  return [cycles[l],yi<0?null:years[yi],months[m],day,hour].filter(p=>p&&p.stem&&p.branch).map(p=>({...p}));
  };
  const gridOf=(l,y,m)=>{
   const pillars=[...natal,...pickFlow(l,y,m)];
@@ -235,7 +248,9 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
   const spot=moment.brief||[moment.title,moment.sub].filter(Boolean).join(' · ')||label;
   const sections=focus?focusedSections('bazi',scope,spot,data):[...rep.sections.slice(),focusSection('bazi',scope,spot,data)];
   return compose(sections,{spot,title:`八字 · ${spot}${focus?'':' · 时点聚焦'}`,kind:'bazi',
-   chartHtml:baziSnapshot(data,selection,scope),chartTitle:`八字七列详盘 · ${spot}`,
+   chartHtml:baziSnapshot(data,selection,scope),
+   // 列数随选中层级变化（七列 / 八列 / 九列），标题不写死「七列」，否则择日进入时名不副实。
+   chartTitle:`八字${(data.pillars||[]).filter(p=>p?.stem&&p?.branch).length+(data.selected||[]).filter(p=>p?.stem&&p?.branch).length}列详盘 · ${spot}`,
    // 说明文字放在盘内的 [data-bf-caption]，随切换器实时更新；此处留空避免重复两行。
    chartCaption:'',
    lead:`日主 ${escS(data.dayMaster?.stem||'—')}${escS(data.dayMaster?.element||'')} · ${escS(data.strength?.kind||'')}。`,gege:rep.gege});

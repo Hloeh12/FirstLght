@@ -1517,7 +1517,11 @@ button:focus-visible,a:focus-visible{
 /* 深色专业盘：参考测测——黑底、粗白宫线、大字单字行星、只留主要相位。
    做减法：隐藏小行星单字/行星引线/细刻度/外圈细字，相位只突出 0/90/120/180。 */
 .wheel-dark{background:#0f1118;border-radius:18px}
+/* 底填色只作用于盘面装饰圆，点击热区必须透明——否则每个字外多一个实心圆圈 */
 .wheel-dark circle{fill:#0f1118}
+.wheel-dark .wheel-star-hit{fill:transparent!important;stroke:none!important}
+/* 特异性必须高于 .wheel-dark .wheel-ring circle 的 stroke!important，否则热区被描成圆圈 */
+.wheel-dark .wheel-ring .wheel-star-hit{fill:transparent!important;stroke:none!important;stroke-width:0!important}
 /* 宫位线：加粗改白，成为主视觉骨架 */
 .wheel-dark .wheel-ring line[stroke="#e2c7d9"]{stroke:rgba(255,255,255,.42)!important;stroke-width:1.2!important}
 /* 同心圆保留但压淡 */
@@ -1532,9 +1536,9 @@ button:focus-visible,a:focus-visible{
 .wheel-dark .wheel-ring .wheel-axis-name,
 .wheel-dark .wheel-star-lead,
 .wheel-dark .wheel-star-dot{display:none}
-.wheel-dark .wheel-star-short,.wheel-dark .wheel-axis-short{display:block;font-size:13px!important}
+.wheel-dark .wheel-star-short,.wheel-dark .wheel-axis-short{display:block;font-size:10.5px!important}
 /* 行运双圈：外圈单字更小、半透明，与本命区分层，避免叠字 */
-.wheel-dark [data-wheel-body="outer"] .wheel-star-short{font-size:11px!important;opacity:.72}
+.wheel-dark [data-wheel-body="outer"] .wheel-star-short{font-size:9.5px!important;opacity:.68}
 .wheel-dark [data-wheel-body="outer"] .wheel-star-short::first-letter{font-weight:600}
 .wheel-dark [data-star-key="south"] .wheel-star-short,
 .wheel-dark [data-star-key="fortune"] .wheel-star-short,
@@ -1563,4 +1567,3 @@ button:focus-visible,a:focus-visible{
 .wheel-dark .wheel-aspect[data-aspect-angle="180"]{opacity:.95!important;stroke-width:1.7!important}
 .wheel-dark .wheel-star-halo{display:none}
 /* 外圈行运单字加方框区分，内圈不加，半径差 + 框线让双圈层次清楚 */
-.wheel-dark [data-wheel-body="outer"] .wheel-star-short{stroke:rgba(255,255,255,.5);stroke-width:.6;paint-order:stroke}

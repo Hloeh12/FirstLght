@@ -105,10 +105,13 @@ export function wheel(r,theme='light'){
  const axisNames={asc:'上升 ASC',dsc:'下降 DSC',mc:'天顶 MC',ic:'天底 IC'};
  const axes=Object.entries(a.axes).filter(([k])=>r.mode==='composite'||a.planets.some(p=>p.key===k)).map(([key,lon])=>{
   const [ax,ay]=xy(lon,161),[bx,by]=xy(lon,104),[lx,ly]=xy(lon,157);
+  // 深色盘把四轴单字推到刻度内侧（175），与本命/行运行星（117/137/151）分层，避免叠字；
+  // 浅色盘维持原半径 157，不动既有视觉。
+  const [sxp,syp]=xy(lon,dark?175:157);
   return line([ax,ay],[bx,by],'stroke="#a15781" stroke-width="1.4"')+
-   `<g class="wheel-body-glyph wheel-axis" role="button" tabindex="0" aria-pressed="false" data-wheel-focus="axis-${key}" aria-label="${axisNames[key]||key}"><circle class="wheel-star-hit" cx="${lx}" cy="${ly}" r="13" fill="transparent"/>`+
+   `<g class="wheel-body-glyph wheel-axis" role="button" tabindex="0" aria-pressed="false" data-wheel-focus="axis-${key}" aria-label="${axisNames[key]||key}"><circle class="wheel-star-hit" cx="${sxp}" cy="${syp}" r="13" fill="transparent"/>`+
    `<text class="wheel-axis-name" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="750" fill="#8b315e">${axisNames[key]||key}</text>`+
-   `<text class="wheel-axis-short" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="750" fill="#fff">${esc(shortOf(key))}</text></g>`;
+   `<text class="wheel-axis-short" x="${sxp}" y="${syp}" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="750" fill="#fff">${esc(shortOf(key))}</text></g>`;
  }).join('');
  const placements=radialLayout(wheelBodies(a),b?wheelBodies(b):[],xy);
  const stars=placements.map(p=>{

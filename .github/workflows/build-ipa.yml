@@ -4,7 +4,9 @@ on:
   push:
     branches: [main]
 permissions:
-  contents: read
+  # Release 附件需要写权限：Actions artifact 有独立配额，攒满后 upload-artifact 会整步失败，
+  # 而构建本身早已成功——把产物改发 Release，配额与构建解耦。
+  contents: write
 jobs:
   build:
     runs-on: macos-15
@@ -122,14 +124,25 @@ jobs:
           IPA_NAME="$(node -p '"FirstLight-"+require("./app-release.json").version+"-build"+require("./app-release.json").build+".ipa"')"
           cp build/FirstLight.ipa "build/$IPA_NAME"
           echo "IPA_FILE=$IPA_NAME" >> "$GITHUB_ENV"
-      - name: Upload unsigned IPA
+      - name: Publish unsigned IPA to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v$(node -p 'require("./app-release.json").version')"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG"             --title "$TAG" --notes "unsigned IPA · build $(node -p 'require("./app-release.json").build')"
+          gh release upload "$TAG" "build/$IPA_FILE" --clobber
+      # artifact 只作备份：配额满时不该让整条流水线变红（构建与校验已经完成）。
+      - name: Upload unsigned IPA (artifact backup)
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: FirstLight-IPA-unsigned
           path: build/${{ env.IPA_FILE }}
           if-no-files-found: error
+          retention-days: 3
       - name: Upload build diagnostics
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: FirstLight-build-diagnostics
@@ -138,5 +151,6 @@ jobs:
             build/mobile-*.png
             FirstLight.xcodeproj/project.pbxproj
           if-no-files-found: ignore
+          retention-days: 3
 
 

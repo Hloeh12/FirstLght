@@ -55,9 +55,11 @@ jobs:
           assert 'rules.js' not in html
           print(f'PASS: {bundle.stat().st_size} bytes; all offline corpus markers present')
           PY
+      # 产物只是留档，配额满时不该判整条校验失败
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: offline-console-${{ github.sha }}
           path: js/console.js
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 3

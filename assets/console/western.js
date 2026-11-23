@@ -81,7 +81,16 @@ export function wheel(r){
    return p&&q?line(xy(p.lon,outer?135:107),xy(q.lon,107),`class="wheel-aspect" data-aspect-from="${outer?'outer':'inner'}-${p.key}" data-aspect-to="inner-${q.key}" stroke="${aspectColors[x.angle]}" ${x.angle===180?'stroke-dasharray="4 3"':''}`):'';
   }).join('');
  };
- const ticks=Array.from({length:360},(_,i)=>line(xy(i,202),xy(i,i%30===0?177:i%10===0?194:i%5===0?197:200),`stroke="#b58ba7" stroke-width="${i%30===0?1:.42}"`)).join('');
+ /* 刻度原是 360 个独立 <line>（wheel 全盘 588 节点里占 61%）。刻度无交互、只有 4 种
+    样式，按样式分组串成 4 个 <path>：视觉完全一致，节点 360 → 4，体系切换/报告盘面
+    都受益。分档规则与原来逐条完全相同（30° 主 / 10° 中 / 5° 次 / 1° 细）。 */
+ const tickGroups={major:{w:1,r:177,d:[]},mid:{w:.42,r:194,d:[]},minor:{w:.42,r:197,d:[]},fine:{w:.42,r:200,d:[]}};
+ for(let i=0;i<360;i++){
+  const g=i%30===0?tickGroups.major:i%10===0?tickGroups.mid:i%5===0?tickGroups.minor:tickGroups.fine;
+  const p=xy(i,202),q=xy(i,g.r);
+  g.d.push('M'+p[0].toFixed(2)+' '+p[1].toFixed(2)+'L'+q[0].toFixed(2)+' '+q[1].toFixed(2));
+ }
+ const ticks=Object.values(tickGroups).map(g=>`<path d="${g.d.join('')}" stroke="#b58ba7" stroke-width="${g.w}"/>`).join('');
  const circles=[202,177,161,135,107].map((rad,i)=>`<circle cx="${c}" cy="${c}" r="${rad}" fill="${i%2?'#fffbfd':'#f8ebf3'}" stroke="#d6b3c9" stroke-width="1"/>`).join('');
  const houses=a.cusps.map((lon,i)=>{
   const mid=lon+norm(a.cusps[(i+1)%12]-lon)/2;

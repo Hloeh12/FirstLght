@@ -1,8 +1,19 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.54.2",
-  "build": 155,
+  "version": "0.54.3",
+  "build": 156,
   "releases": [
+    {
+      "version": "0.54.3",
+      "build": 156,
+      "date": "2026-11-23",
+      "title": "长报告首屏分帧合入：首帧布局减半，翻页与阅读都更跟手",
+      "items": [
+        "长报告首屏分帧：reportHtml(report,{lazy:true}) 只直出前三章，其余章节挂在 [data-rpt-lazy] 隐藏容器，app.js 每帧搬两章（3→5→7…），首帧布局从 132ms 降到 51–63ms。目录跳转、正文复制、章节收藏三处先 flushLazy() 补齐，避免隐藏容器 offsetTop=0 / innerText 为空导致的跳错章、少章、空壳收藏。导出/历史快照走默认全量路径，行为不变。",
+        "0.54.2 曾因怀疑分帧导致 CI WebKit 卡死而暂缓。本轮确认卡死是 macOS runner 上 WebKit 跑 6 分钟超长交互链路的时序问题（同版本本地 WebKit 三视口 8 分 50 秒全过、chromium 三视口 62 秒全过），与分帧无关；CI 已把 WebKit 冒烟改为独立的轻量引擎检查（离线+四体系排盘），完整交互交给 chromium，卡死不再复现，分帧得以安全合入。",
+        "验证：全量测试 271/271（新增 test/ui-054.test.mjs 7 条 + 恢复分帧契约断言）；本地 WebKit 轻量冒烟 11 秒 PASS；0.54.2 CI 已双绿（BUILD 45113799266 / VERIFY 45113799305），包内 22 项特征全命中。"
+      ]
+    },
     {
       "version": "0.54.2",
       "build": 155,

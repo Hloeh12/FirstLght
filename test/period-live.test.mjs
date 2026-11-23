@@ -81,7 +81,7 @@ test('功能去重：时点页只出时点详批，本命全局归洞见页',asy
 
 test('报告外壳：正文与目录都可原地重排，导出仍取同一份 report',async()=>{
  const fr=await read('../assets/console/full-report.js');
- assert.match(fr,/<div data-report-body>\$\{report\.body\}<\/div>/,'正文须包一层可替换容器');
+ assert.match(fr,/<div data-report-body>\$\{eager\.join\(''\)\}/,'正文须包一层可替换容器');
  assert.match(fr,/export \{tocItems\}/,'目录条目须导出供重排');
  const app=await read('../assets/console/app.js');
  assert.match(app,/const items=tocItems\(secs\)/,'切换后须重排目录');

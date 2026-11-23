@@ -98,9 +98,12 @@ function renderPara(line){
 export function cleanSecTitle(title){
  return String(title||'').replace(/^\s*[（(]?[一二三四五六七八九十百零〇]+[）)]?\s*[、.．]\s*/,'').trim();
 }
-function sectionHtml(report){
- return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(cleanSecTitle(sec.title))}<button type="button" class="rpt-fav" data-fav-sec="${i+1}" aria-label="收藏本章" title="收藏本章">☆</button></h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`).join('');
+/* 章节 HTML 拆成数组：首屏只直出前几章，其余由 app.js 分帧接管。
+   deep-* 五个知识库实测都没有嵌套 <section>（grep 计数为 0），所以按章拆分安全。 */
+function sectionHtmlList(report){
+ return report.sections.map((sec,i)=>`<section class="rpt-sec" id="rpt-sec-${i+1}" data-sec="${i+1}"><h3><span class="rpt-sec-no">${String(i+1).padStart(2,'0')}</span>${esc(cleanSecTitle(sec.title))}<button type="button" class="rpt-fav" data-fav-sec="${i+1}" aria-label="收藏本章" title="收藏本章">☆</button></h3>${sec.lines?.map(renderPara).join('')||''}${sec.table?`<div class="rpt-table-wrap">${sec.table}</div>`:''}${sec.html||''}</section>`);
 }
+function sectionHtml(report){return sectionHtmlList(report).join('');}
 /* 目录：章节锚点导航 + 滚动进度 + 主题分区。让 7000+ 字报告可按区跳转、可看读到哪。 */
 function sectionGroup(title){
  const t=String(title||'');
@@ -220,19 +223,27 @@ export function composeFullReport(state,names){
   body:sectionHtml(report),sections:report.sections};
 }
 
-export function reportHtml(report){
+/* v0.54.0 首屏分帧：一份 11 章的报告约 900 个节点、三万字符，一次性 innerHTML 后
+   首帧布局实测 132ms（390×844 WebKit），点「深度报告」会先白一下再出来。
+   首屏只留 RPT_EAGER 章，其余放进 [data-rpt-lazy] 隐藏容器，由 app.js 每帧搬两章出来。
+   默认 opts.lazy 关闭——导出、历史快照、测试都要求 reportHtml 是全量字符串。 */
+const RPT_EAGER=3;
+export function reportHtml(report,opts={}){
  const wordLine=report.characters?`<span class="rpt-meta">全文 ${report.characters} 字</span>`:'';
+ const list=report.sections?.length?sectionHtmlList(report):[report.body||''];
+ const eager=opts.lazy?list.slice(0,RPT_EAGER):list;
+ const rest=opts.lazy?list.slice(RPT_EAGER):[];
  return `<article class="rpt-doc" data-full-report data-report-kind="${report.kind}">
-  <header class="rpt-cover">
-   <p class="rpt-brand">FIRST LIGHT · 星谕初光</p>
-   <h2 id="reportTitle">${esc(report.title)}</h2>
-   <p class="rpt-owner">${esc(report.cover.name)} · ${esc(report.cover.system)}</p>
-   <p class="rpt-stamp">生成于 ${esc(report.cover.stamp)} ${wordLine}</p>
-  </header>
-  <p class="rpt-lead">${report.lead}</p>
-  ${report.chartHtml?`<section class="rpt-chart" aria-label="报告对应时点命盘"><h3 class="rpt-chart-title">${esc(report.chartTitle||'本报告的命盘快照')}</h3><div class="rpt-chart-stage">${report.chartHtml}</div>${report.chartCaption?`<p class="rpt-chart-caption">${esc(report.chartCaption)}</p>`:''}</section>`:''}
-  ${tocHtml(report)}
-  <div data-report-body>${report.body}</div>
-  <footer class="rpt-foot">本报告依传统术数规则与当前命盘条件生成，仅作文化与自我观察参考，不构成事实预测、投资、法律或医疗建议。<br>留一束初光，照见当下的自己。</footer>
- </article>`;
+ <header class="rpt-cover">
+  <p class="rpt-brand">FIRST LIGHT · 星谕初光</p>
+  <h2 id="reportTitle">${esc(report.title)}</h2>
+  <p class="rpt-owner">${esc(report.cover.name)} · ${esc(report.cover.system)}</p>
+  <p class="rpt-stamp">生成于 ${esc(report.cover.stamp)} ${wordLine}</p>
+ </header>
+ <p class="rpt-lead">${report.lead}</p>
+ ${report.chartHtml?`<section class="rpt-chart" aria-label="报告对应时点命盘"><h3 class="rpt-chart-title">${esc(report.chartTitle||'本报告的命盘快照')}</h3><div class="rpt-chart-stage">${report.chartHtml}</div>${report.chartCaption?`<p class="rpt-chart-caption">${esc(report.chartCaption)}</p>`:''}</section>`:''}
+ ${tocHtml(report)}
+ <div data-report-body>${eager.join('')}${rest.length?`<div class="rpt-lazy" data-rpt-lazy hidden>${rest.join('')}</div>`:''}</div>
+ <footer class="rpt-foot">本报告依传统术数规则与当前命盘条件生成，仅作文化与自我观察参考，不构成事实预测、投资、法律或医疗建议。<br>留一束初光，照见当下的自己。</footer>
+</article>`;
 }

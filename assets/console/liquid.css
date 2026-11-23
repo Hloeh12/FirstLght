@@ -1455,3 +1455,112 @@ button:focus-visible,a:focus-visible{
  .insight-page.is-swap .insight-bridges{animation:none}
  .insight-page .insight-system-tabs button:active{transform:none}
 }
+
+/* ===== v0.57.0 排版：印占分盘 rail 不再横滚截断 =====
+   实机 440px 下 6 个长标签（D9命宿/D10事业/D60因果…）单行需 422px > 412 可用，
+   最后一个被裁、需横滑才看得全。改成两行 flex-wrap：6 个分盘全部一眼可见可点，
+   按钮收紧凑字号；盘式切换单独一行保持完整。 */
+.vedic-varga-rail{
+ display:flex!important;flex-wrap:wrap!important;overflow:visible!important;
+ gap:6px!important;padding:2px 0!important;scroll-snap-type:none!important;
+}
+.vedic-varga-rail button{
+ flex:1 1 calc(33.333% - 6px)!important;min-width:0!important;
+ white-space:nowrap!important;text-align:center!important;
+ font-size:12px!important;padding:6px 4px!important;line-height:1.2!important;
+}
+.vedic-secondary{flex-wrap:nowrap!important}
+.vedic-layout-rail button{flex:1 1 auto!important;text-align:center!important}
+
+/* ===== v0.57.0 紫微盘面收敛：给下方时点控件与说明留呼吸 =====
+   仅收盘面高度，不动宫内字级——实测压字会与辅星叠字，可读性反而更差；
+   高度收下来后宫格内容以 overflow:hidden 自然裁切，比叠字好。 */
+.zi-board{height:clamp(400px,49svh,500px)!important;max-height:none!important}
+
+/* ===== v0.57.0 顶部区域重排：四层信息收紧为清晰三层 =====
+   基准行（时间+即刻天象）→ 体系标题行（标题+功能 chip）→ 时间口径说明。
+   功能按钮统一缩为小 chip，避免「生克合化」这种大按钮与 28px 标题争视觉重心。 */
+.chart-basis-row{padding:0 2px 2px!important;gap:6px!important}
+.chart-basis-row .chart-basis-time{font-size:11px!important;color:rgba(90,44,66,.62)!important}
+.chart-basis-row .chart-time-action{min-height:24px!important;padding:2px 9px!important;font-size:11px!important}
+#screen section[aria-label="四柱八字"]>.spread,
+#screen section[aria-label="西洋占星"]>.spread{padding:2px 0 3px!important;align-items:center!important}
+#screen section[aria-label="四柱八字"]>.spread [data-combine],
+#screen section[aria-label="西洋占星"]>.spread small{
+ font-size:11px!important;padding:3px 9px!important;min-height:26px!important;
+ border-radius:13px!important;background:rgba(255,255,255,.6)!important;
+ border:1px solid rgba(255,150,190,.3)!important;color:#8c2f5f!important;
+}
+.time-basis-note{margin:0 0 8px!important;font-size:11px!important;padding:4px 9px!important;line-height:1.45!important}
+
+/* ===== v0.57.0 深色专业盘 + 底部时间联动 ===== */
+.west-theme-row{display:flex;align-items:center;gap:8px;margin:2px 0 8px}
+.west-theme-row>span{flex:none;color:rgba(90,44,66,.62);font-size:11px}
+.west-theme-row .rail{flex:1;min-width:0}
+.west-theme-row .rail button{flex:1 1 auto;text-align:center;font-size:11.5px;padding:4px 8px}
+/* 底部时间联动条：常驻，像测测那样一眼看到当前推运时刻并可直接翻页 */
+.west-time-strip{margin-top:10px!important}
+.wts-head{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.wts-label{font-size:11px;color:rgba(90,44,66,.58);font-weight:600}
+.wts-head strong{font-size:14px;color:#8c2f5f;letter-spacing:-.01em}
+.wts-unit{font-size:10px;color:rgba(90,44,66,.5)}
+.wts-controls{display:flex;align-items:center;gap:8px;margin:8px 0 4px}
+.wts-nav{flex:0 0 44px!important;min-height:38px!important;font-size:20px!important;line-height:1!important;border-radius:12px!important;
+ background:rgba(255,255,255,.7)!important;border:1px solid rgba(255,150,190,.34)!important;color:#a03a68!important}
+.wts-date{flex:1 1 auto!important;min-height:38px!important;font-size:13px!important;font-weight:650!important;border-radius:12px!important;
+ background:linear-gradient(135deg,#ff9ec5,#ff5f9a)!important;color:#57132e!important;border:1px solid #ff78ad!important}
+.wts-step-rail{margin-top:2px}
+.wts-step-rail button{flex:1 1 auto;text-align:center;font-size:11px}
+
+/* 单字/轴线简称默认隐藏，仅深色盘显示——否则浅色盘长名与单字叠字 */
+.wheel .wheel-star-short,.wheel .wheel-axis-short{display:none}
+/* 深色专业盘：参考测测——黑底、粗白宫线、大字单字行星、只留主要相位。
+   做减法：隐藏小行星单字/行星引线/细刻度/外圈细字，相位只突出 0/90/120/180。 */
+.wheel-dark{background:#0f1118;border-radius:18px}
+.wheel-dark circle{fill:#0f1118}
+/* 宫位线：加粗改白，成为主视觉骨架 */
+.wheel-dark .wheel-ring line[stroke="#e2c7d9"]{stroke:rgba(255,255,255,.42)!important;stroke-width:1.2!important}
+/* 同心圆保留但压淡 */
+.wheel-dark .wheel-ring circle{stroke:rgba(255,255,255,.16)!important;stroke-width:.8!important}
+/* 360 细刻度与外圈星座中文在深色盘隐藏，避免花眼 */
+.wheel-dark .wheel-ring path[stroke="#b58ba7"],
+.wheel-dark .wheel-ring text[font-size="7"],
+.wheel-dark .wheel-ring text[font-size="13"]{display:none}
+/* 行星：只显示主要星体单字，隐藏小行星与度数/长名/引线/定位点 */
+.wheel-dark .wheel-star-visual .wheel-star-name,
+.wheel-dark .wheel-star-visual .wheel-star-degree,
+.wheel-dark .wheel-ring .wheel-axis-name,
+.wheel-dark .wheel-star-lead,
+.wheel-dark .wheel-star-dot{display:none}
+.wheel-dark .wheel-star-short,.wheel-dark .wheel-axis-short{display:block;font-size:13px!important}
+/* 行运双圈：外圈单字更小、半透明，与本命区分层，避免叠字 */
+.wheel-dark [data-wheel-body="outer"] .wheel-star-short{font-size:11px!important;opacity:.72}
+.wheel-dark [data-wheel-body="outer"] .wheel-star-short::first-letter{font-weight:600}
+.wheel-dark [data-star-key="south"] .wheel-star-short,
+.wheel-dark [data-star-key="fortune"] .wheel-star-short,
+.wheel-dark [data-star-key="vertex"] .wheel-star-short,
+.wheel-dark [data-star-key="chiron"] .wheel-star-short,
+.wheel-dark [data-star-key="lilith"] .wheel-star-short,
+.wheel-dark [data-star-key="juno"] .wheel-star-short,
+.wheel-dark [data-star-key="vesta"] .wheel-star-short,
+.wheel-dark [data-star-key="pallas"] .wheel-star-short,
+.wheel-dark [data-star-key="ceres"] .wheel-star-short{display:none}
+/* 单字按行星配色（呼应测测：火红、水蓝、木绿、金橙…） */
+.wheel-dark .wheel-star-short{fill:#fff!important}
+.wheel-dark [data-star-key="sun"] .wheel-star-short{fill:#ffcf5c!important}
+.wheel-dark [data-star-key="moon"] .wheel-star-short{fill:#cfd6e6!important}
+.wheel-dark [data-star-key="mercury"] .wheel-star-short{fill:#9fd8ef!important}
+.wheel-dark [data-star-key="venus"] .wheel-star-short{fill:#ffb0d6!important}
+.wheel-dark [data-star-key="mars"] .wheel-star-short{fill:#ff7a7a!important}
+.wheel-dark [data-star-key="jupiter"] .wheel-star-short{fill:#a8e0a0!important}
+.wheel-dark [data-star-key="saturn"] .wheel-star-short{fill:#c9a97e!important}
+.wheel-dark .wheel-axis-short{fill:#ffe08a!important}
+/* 相位：只留 0/90/120/180 四主相，其余压到极淡；主线加粗 */
+.wheel-dark .wheel-aspect{opacity:.3;stroke-width:1!important}
+.wheel-dark .wheel-aspect[data-aspect-angle="0"],
+.wheel-dark .wheel-aspect[data-aspect-angle="90"],
+.wheel-dark .wheel-aspect[data-aspect-angle="120"],
+.wheel-dark .wheel-aspect[data-aspect-angle="180"]{opacity:.95!important;stroke-width:1.7!important}
+.wheel-dark .wheel-star-halo{display:none}
+/* 外圈行运单字加方框区分，内圈不加，半径差 + 框线让双圈层次清楚 */
+.wheel-dark [data-wheel-body="outer"] .wheel-star-short{stroke:rgba(255,255,255,.5);stroke-width:.6;paint-order:stroke}

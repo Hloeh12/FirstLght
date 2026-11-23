@@ -16,13 +16,18 @@ const presets={default:'默认标准',strict:'古典严格',custom:'自定义'};
 const orbLabels={0:'合相',30:'半六合',45:'半刑',60:'六合',90:'刑相',120:'三合',135:'补八分',150:'梅花相',180:'对冲'};
 const defaultOrbs={0:8,30:2,45:2,60:5,90:7,120:7,135:2,150:2,180:8};
 const key='xy_astro_config';
-const defaultCfg={house:'placidus',zodiac:'tropical',ayan:'lahiri',visible:Object.keys(bodies).slice(0,16),node:'true',preset:'default',orbs:defaultOrbs,phaseWeight:false,nominalAge:false};
+const defaultCfg={house:'placidus',zodiac:'tropical',ayan:'lahiri',visible:Object.keys(bodies).slice(0,16),node:'true',preset:'default',orbs:defaultOrbs,phaseWeight:false,nominalAge:false,theme:'light'};
 const cfg=()=>({...defaultCfg,...stored(key,{})});
 const norm=x=>((x%360)+360)%360;
 const pad=x=>String(x).padStart(2,'0');
 const dms=d=>d.degrees+'°'+pad(d.minutes)+'′'+pad(d.seconds)+'″';
 const dateTime=localDisplayTime;
 const aspectColors={0:'#d192cd',30:'#cb87ac',45:'#df76a1',60:'#77aa99',90:'#eb5e91',120:'#7aaf9c',135:'#df76a1',150:'#b484bf',180:'#ac376a'};
+/* 深色专业盘的单字/双字标记：参考测测 App，聚焦行星身份、弱化长名与度数。
+   浅色盘不受影响（这些节点仅在 .wheel-dark 下显示）。 */
+const shortNames={sun:'日',moon:'月',mercury:'水',venus:'金',mars:'火',jupiter:'木',saturn:'土',uranus:'天',neptune:'海',pluto:'冥',
+ north:'北',south:'南',asc:'升',dsc:'降',mc:'顶',ic:'底',fortune:'福',vertex:'宿',chiron:'凯',lilith:'莉',juno:'婚',vesta:'灶',pallas:'智',ceres:'谷'};
+const shortOf=key=>shortNames[key]||String(key||'?' ).slice(0,1);
 const stateOf=ctx=>ctx.state.chartState.west??={mode:'natal',at:new Date(),result:null,token:0,pending:false,error:'',requested:false};
 function spaced(planets,min){
  const list=planets.map(p=>({...p,plot:norm(p.lon)})).sort((a,b)=>a.plot-b.plot);
@@ -65,8 +70,9 @@ function radialLayout(inner,outer,xy){
  return placed;
 }
 const wheelBodies=data=>data.planets.filter(p=>!['asc','dsc','mc','ic'].includes(p.key));
-export function wheel(r){
+export function wheel(r,theme='light'){
  const a=r.chart,b=r.outer,c=220;
+ const dark=theme==='dark';
  const angle=lon=>(180-norm(lon-a.axes.asc))*Math.PI/180;
  const xy=(lon,rad)=>[c+rad*Math.cos(angle(lon)),c-rad*Math.sin(angle(lon))];
  const pos=(lon,rad)=>xy(lon,rad).join(',');
@@ -78,7 +84,7 @@ export function wheel(r){
   const from=outer?b.planets:a.planets,to=a.planets;
   return list.filter(x=>[0,60,90,120,180].includes(x.angle)).map(x=>{
    const p=from.find(y=>y.key===x.aKey),q=to.find(y=>y.key===x.bKey);
-   return p&&q?line(xy(p.lon,outer?135:107),xy(q.lon,107),`class="wheel-aspect" data-aspect-from="${outer?'outer':'inner'}-${p.key}" data-aspect-to="inner-${q.key}" stroke="${aspectColors[x.angle]}" ${x.angle===180?'stroke-dasharray="4 3"':''}`):'';
+   return p&&q?line(xy(p.lon,outer?135:107),xy(q.lon,107),`class="wheel-aspect" data-aspect-angle="${x.angle}" data-aspect-from="${outer?'outer':'inner'}-${p.key}" data-aspect-to="inner-${q.key}" stroke="${aspectColors[x.angle]}" ${x.angle===180?'stroke-dasharray="4 3"':''}`):'';
   }).join('');
  };
  /* 刻度原是 360 个独立 <line>（wheel 全盘 588 节点里占 61%）。刻度无交互、只有 4 种
@@ -101,23 +107,25 @@ export function wheel(r){
   const [ax,ay]=xy(lon,161),[bx,by]=xy(lon,104),[lx,ly]=xy(lon,157);
   return line([ax,ay],[bx,by],'stroke="#a15781" stroke-width="1.4"')+
    `<g class="wheel-body-glyph wheel-axis" role="button" tabindex="0" aria-pressed="false" data-wheel-focus="axis-${key}" aria-label="${axisNames[key]||key}"><circle class="wheel-star-hit" cx="${lx}" cy="${ly}" r="13" fill="transparent"/>`+
-   `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="750" fill="#8b315e">${axisNames[key]||key}</text></g>`;
+   `<text class="wheel-axis-name" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="750" fill="#8b315e">${axisNames[key]||key}</text>`+
+   `<text class="wheel-axis-short" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="750" fill="#fff">${esc(shortOf(key))}</text></g>`;
  }).join('');
  const placements=radialLayout(wheelBodies(a),b?wheelBodies(b):[],xy);
  const stars=placements.map(p=>{
   const anchor=p.outer?135:104,color=p.outer?'#a84575':'#8a4f91';
   const [x,y]=xy(p.lon,anchor),[lx,ly]=xy(p.plot,p.radius);
   const degree=p.degree.degrees+'°'+pad(p.degree.minutes)+'′';
-  return `<g data-wheel-body="${p.outer?'outer':'inner'}" data-lon="${p.lon}" data-radius="${p.radius}">
-   <title>${esc(p.name+' '+p.sign+' '+dms(p.degree))}</title><circle cx="${x}" cy="${y}" r="1.7" fill="${color}"/>`+
-   line([x,y],[lx,ly],`stroke="${color}" stroke-opacity=".5" stroke-width=".65"`)+
+  return `<g data-wheel-body="${p.outer?'outer':'inner'}" data-star-key="${esc(p.key)}" data-lon="${p.lon}" data-radius="${p.radius}">
+   <title>${esc(p.name+' '+p.sign+' '+dms(p.degree))}</title><circle class="wheel-star-dot" cx="${x}" cy="${y}" r="1.7" fill="${color}"/>`+
+   line([x,y],[lx,ly],`class="wheel-star-lead" stroke="${color}" stroke-opacity=".5" stroke-width=".65"`)+
    `<g transform="translate(${lx} ${ly})"><g class="wheel-body-glyph" role="button" tabindex="0" aria-pressed="false" data-wheel-focus="${p.outer?'outer':'inner'}-${p.key}" aria-label="${p.outer?'行运':'本盘'} ${esc(p.name)}">
    <g class="wheel-star-visual"><circle class="wheel-star-halo" r="12" cy="2"/><circle class="wheel-star-hit" r="13" cy="2"/>
-   <text y="0" text-anchor="middle" dominant-baseline="central" font-size="8.5" font-weight="650" fill="${color}">${esc(p.symbol+' '+p.name)}</text>
-   <text y="10" text-anchor="middle" dominant-baseline="central" font-size="7.4" fill="${color}">${degree}</text></g></g></g></g>`;
+   <text class="wheel-star-name" y="0" text-anchor="middle" dominant-baseline="central" font-size="8.5" font-weight="650" fill="${color}">${esc(p.symbol+' '+p.name)}</text>
+   <text class="wheel-star-degree" y="10" text-anchor="middle" dominant-baseline="central" font-size="7.4" fill="${color}">${degree}</text>
+   <text class="wheel-star-short" y="0" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="750" fill="#fff">${esc(shortOf(p.key))}</text></g></g></g></g>`;
 
  }).join('');
- return `<svg id="westernChart" class="wheel" viewBox="0 0 440 440" role="group" aria-label="${b?'本命与行运双圈圆盘':'西洋占星圆盘'}">${circles}<g class="wheel-ring">${ticks}
+ return `<svg id="westernChart" class="wheel${dark?' wheel-dark':''}" viewBox="0 0 440 440" role="group" aria-label="${b?'本命与行运双圈圆盘':'西洋占星圆盘'}">${circles}<g class="wheel-ring">${ticks}
  ${symbols.map((s,i)=>label(i*30+15,184,s+'\uFE0E','font-size="13" fill="#8b557b"')+label(i*30+15,195,zodiacNames[i],'font-size="7" fill="#8b557b"')).join('')}${houses}
  ${aspectLayer(b?r.cross:a.aspects,!!b)}${axes}
  ${r.profection?`<path d="M220 220 L${pos(r.profection.wholeStart+(r.profection.house-1)*30,161)} A161 161 0 0 1 ${pos(r.profection.wholeStart+r.profection.house*30,161)} Z" fill="#d184b238"/>`:''}${stars}</g></svg>`;
@@ -227,17 +235,28 @@ function firdariaPanel(f){
 export function westernView(ctx){
  const s=stateOf(ctx),r=s.result;
  const sky=r?todaySky({at:(r.outer||r.chart).utc||s.at}):null;
+ const theme=cfg().theme||'light';
  const step=[['year',-1,'−1年'],['month',-1,'−1月'],['day',-1,'−1日'],['day',1,'＋1日'],['month',1,'＋1月'],['year',1,'＋1年']];
  const effects=r?.firdaria?firdariaPanel(r.firdaria):
   r?.profection?`<article class="card"><h2>古典小限</h2><p>${r.profection.age} ${r.profection.nominal?'虚岁':'周岁'} · 第 ${r.profection.house} 整宫 ${esc(r.profection.sign)} · 年主星 ${esc(r.profection.ruler)} 落本命第 ${r.profection.lordHouse} 宫。</p></article>`:'';
  const display=r?.chart;
  ctx.root.innerHTML=`<section aria-label="西洋占星"><div class="spread"><h1>西洋占星</h1><small>${esc(display?houses[display.houseSystem]:'')}</small></div>
- <div class="rail" aria-label="西洋推运盘类">${Object.entries(modes).filter(([id])=>!s.birthOverride||id==='sky').map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
+ <div class="rail west-mode-rail" aria-label="西洋推运盘类">${Object.entries(modes).filter(([id])=>!s.birthOverride||id==='sky').map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
+ <div class="west-theme-row"><span class="thin">盘面风格</span><div class="rail" aria-label="盘面风格">${btn('浅色经典',`data-wheel-theme="light" aria-pressed="${theme==='light'}"`)}${btn('深色专业',`data-wheel-theme="dark" aria-pressed="${theme==='dark'}"`)}</div></div>
  ${s.instant?`<p class="thin" data-instant-caption>即刻 ${esc(s.instant.local||localDisplayTime(s.instant.at))} 本地 · ${esc(s.instant.place)}（${esc(s.instant.source)}）</p>`:''}<p id="astroStatus" role="status" class="muted">${esc(s.error||(!r?'正在计算星历…':''))}</p>
  ${display?`<article class="card liquid-glass"><div class="orbit-info"><span>上升<b>${esc(zodiacNames[Math.floor(display.axes.asc/30)])}</b></span><span>天顶<b>${esc(zodiacNames[Math.floor(display.axes.mc/30)])}</b></span><span>黄道<b>${display.zodiac==='tropical'?'回归':'恒星 '+display.ayan}</b></span></div>
- <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(s.instant?.local||dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}
- ${periodAnalysis(r,s)}</article>`:''}
- ${s.mode!=='natal'?`<article class="card"><div class="spread"><b>推运时间</b><small>${esc(timeLabel(s))} 本地</small></div><div class="rail">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}${btn('选择时间','data-astro-date')}</div></article>`:''}
+ <div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r,theme)}<div class="wheel-focus-card" data-wheel-card role="status" aria-live="polite" hidden></div></div>${display.warning?`<p class="house-warning" role="status">${esc(display.warning)}</p>`:''}<small>${esc(s.instant?.local||dateTime((r.outer||display).utc))} · ${esc(display.warning||modes[r.mode])}</small>${r.returnEvent?`<p class="thin">回归黄经 ${r.returnEvent.longitude.toFixed(6)}° · 与本命差 ${r.returnEvent.errorDegrees.toExponential(2)}°</p>`:''}
+ </article>`:''}
+ <article class="card west-time-strip" aria-label="推运时间联动">
+  <div class="wts-head"><span class="wts-label">推运时刻</span><strong data-wts-display>${esc(timeLabel(s))}</strong><span class="wts-unit">本地</span></div>
+  <div class="wts-controls">
+   <button type="button" class="wts-nav" data-time-step="-1" aria-label="前一天">‹</button>
+   <button type="button" class="wts-date" data-astro-date aria-label="选择日期时间">${esc(s.mode==='natal'?'选日期起运':'📅 改期')}</button>
+   <button type="button" class="wts-nav" data-time-step="1" aria-label="后一天">›</button>
+  </div>
+  <div class="rail wts-step-rail" aria-label="时间步进">${step.map(([unit,n,title])=>btn(title,`data-unit="${unit}" data-step="${n}"`)).join('')}</div>
+ </article>
+ ${display?periodAnalysis(r,s):''}
  ${display?`<article class="card"><h2>四元素与三形态</h2>${bars(Object.fromEntries(Object.entries(display.analysis.elements.percentages).map(([k,v])=>[k,Number.isFinite(v)?v:0])))}
  <p class="thin">${display.analysis.elements.missing.length?'未覆盖 '+display.analysis.elements.missing.join('、'):'四元素均有星体'} · 主导 ${display.analysis.elements.dominant.join('、')}</p>
  ${bars(Object.fromEntries(Object.entries(display.analysis.modalities.percentages).map(([k,v])=>[k==='基本'?'本位':k,Number.isFinite(v)?v:0])))}</article>
@@ -282,7 +301,18 @@ export function westernView(ctx){
  }
  selectedRails(ctx.root);
  for(const b of ctx.root.querySelectorAll('[data-mode]'))b.onclick=()=>update(ctx,b.dataset.mode,s.at);
- for(const b of ctx.root.querySelectorAll('[data-unit]'))b.onclick=()=>update(ctx,s.mode,shift(s.at,b.dataset.unit,+b.dataset.step));
+ for(const b of ctx.root.querySelectorAll('[data-unit]'))b.onclick=()=>update(ctx,s.mode==='natal'?'transit':s.mode,shift(s.at,b.dataset.unit,+b.dataset.step));
+ // 底部时间条：按天翻页。本命态下翻页自动进入行运，与测测「选时刻看盘」一致。
+ for(const b of ctx.root.querySelectorAll('[data-time-step]'))b.onclick=()=>{
+  const mode=s.mode==='natal'?'transit':s.mode;
+  update(ctx,mode,shift(s.at,'day',+b.dataset.timeStep));
+ };
+ // 深浅双盘：仅切 CSS 主题并整页重绘，不重算星历（同一份盘面数据）
+ for(const b of ctx.root.querySelectorAll('[data-wheel-theme]'))b.onclick=()=>{
+  save(key,{...cfg(),theme:b.dataset.wheelTheme});
+  westernView(ctx);
+  if(s.result)ctx.onSelectTimeNode('west');
+ };
  const picker=$('[data-astro-date]',ctx.root);
  if(picker)picker.onclick=()=>{
   const d=ctx.sheet('toolSheet','选择推运时间',`<form class="form-grid" data-wheel-submit><label>日期<input type="date" name="date" value="${timeLabel(s).slice(0,10)}" required></label><label>本地时间<input type="time" name="clock" value="${timeLabel(s).slice(11,16)}" required></label></form>`);

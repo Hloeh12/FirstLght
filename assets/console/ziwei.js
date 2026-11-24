@@ -231,6 +231,8 @@ function detail(s){
   const t=palace(z,m.branch),[a,b,o]=t.relatedBranches.slice(1).map(id=>palace(z,id).name);
   return [m.star+' 化'+m.type,t.name+(t===p?' · 自化':''),a+'、'+b,o];
  })):'';
+ const ziHuaNote=p.ziHua?.length?`<p class="thin">本宫自化：${p.ziHua.map(h=>h.star+h.type).join('、')}——宫干引动落回本宫，力量内聚，事件多在本宫领域内部自行生灭。</p>`:'';
+ const laiYinNote=z.laiyin?.laiYinPalace===p.name?'<p class="thin">此宫为来因宫：生年天干落此，是本盘缘起的出发点，格局与执念多由此宫展开。</p>':'';
  return `<article class="card liquid-glass zi-detail" aria-live="polite" data-period-guidance><h2>${esc(heading)}</h2>${[...description,...ziweiPeriodEvidence(z,flow)].filter(Boolean).map(x=>'<p>'+esc(x)+'</p>').join('')}${flying?'<h3>四化飞星明细</h3>'+grid:''}<small>${esc(weight)} · 传统术数观察 · 借星按借入宫重查亮度，并以 0.6 系数计入参考。</small></article>`;
 }
 /* v0.54.0 逐限翻页：左右滑动 = 上/下一个大限，与八字时点页同一套手势口径。
@@ -263,7 +265,8 @@ export function ziweiView(ctx,arrival=false){
  const panel=ctx.root;
  observer?.disconnect();
  const mode=[['flying','飞星模式'],['triad','三合模式'],['transform','四化模式']];
- panel.innerHTML=`<section aria-label="紫微斗数">${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，命宫、身宫与生时星按正午 12:00 推定，仅供结构参考，不宜据此断具体应期；填入时刻后可重排。</p>':''}${board(ctx,s)}<article class="card" data-zi-practical>${practicalZiwei(s.chart,s.flow).map(x=>`<p><b>${esc(x.name+' · '+x.palace)}</b> ${esc(x.text)}</p>`).join('')||'<small>当前未触发双禄、禄冲或羊陀夹忌条件。</small>'}</article>
+ panel.innerHTML=`<section aria-label="紫微斗数">${ctx.birth?.timeUnknown?'<p class="time-unknown-note" role="note">出生时刻未知，命宫、身宫与生时星按正午 12:00 推定，仅供结构参考，不宜据此断具体应期；填入时刻后可重排。</p>':''}${board(ctx,s)}<article class="card" data-zi-laiyin>${z.laiyin?.laiYinPalace?`<h2>来因宫 · ${esc(z.laiyin.laiYinPalace)}</h2><p class="thin">生年天干落${esc(z.laiyin.laiYinPalace)}，此宫是本盘缘起；自化 ${z.laiyin.palaces.filter(q=>q.ziHua?.length).reduce((n,q)=>n+q.ziHua.length,0)} 处，详见各宫详情与四化模式。</p>`:''}</article>
+ <article class="card" data-zi-practical>${practicalZiwei(s.chart,s.flow).map(x=>`<p><b>${esc(x.name+' · '+x.palace)}</b> ${esc(x.text)}</p>`).join('')||'<small>当前未触发双禄、禄冲或羊陀夹忌条件。</small>'}</article>
  <div class="segments liquid-glass" aria-label="紫微模式">${mode.map(([id,label])=>btn(label,`data-mode="${id}" aria-pressed="${id===s.mode}"`)).join('')}</div>
  ${s.mode==='transform'?'<div class="rail" aria-label="四化分析">'+[['natal','生年四化'],['self','自化分析'],['track','飞星轨迹']].map(([id,label])=>btn(label,`data-filter="${id}" aria-pressed="${s.filter===id}"`)).join('')+'</div>':''}
  <section class="period-control liquid-glass" data-swipe-turn="1"><div class="period-control-head"><div><h2>大限与流限</h2><p>点任一格即切换下方当前阶段的专属分析，也可左右滑动换大限。</p></div>${btn('↺ 本命','class="period-master-reset" data-reset-period')}</div><div class="timeline">${row('大限',decades.map(x=>[x.yearRange[0],x.ageRange.join('–')+'岁 '+x.palaceName]),flow?.scope==='decadal'?flow?.year:d.yearRange[0])}

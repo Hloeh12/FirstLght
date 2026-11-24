@@ -302,6 +302,15 @@ const sanction=[
   `读法：化禄飞入财帛＝资源的入口在财；化忌飞入夫妻＝此生在亲密关系里最需修行的功课；权科同会一宫＝该宫领域靠专业立身。飞星与本宫生年四化叠加看——同星同化是「双重引动」，异化同宫是「禄忌交战」或「权科相随」。`
  ]:['飞星轨迹数据待排盘后生成（需完整宫位与四化）。'];
  const sihuaSec=sihuaLines.length?sihuaLines:['生年四化数据待排盘后生成。'];
+ // v0.67.0 来因宫与自化实装展示（引擎层 laiyin.palaces[].ziHua / laiYinPalace）
+ const laiYin=chart?.laiyin?.laiYinPalace;
+ const ziHuaRows=(chart?.laiyin?.palaces||[]).filter(q=>q.ziHua?.length);
+ if(laiYin)sihuaLines.unshift(`来因宫为${laiYin}：生年天干所落之宫，是全盘一切缘起的出发点——格局的根、执念的源都在此宫；论命先看此宫被谁引动。`);
+ if(ziHuaRows.length){
+  const ZI_MEAN={禄:'把本宫资源顺手外送又收回，宽松但易自我消化',权:'自我加压，该宫事务自己说了算也自己扛',科:'自我修饰，好名面但易流于表面功夫',忌:'自我耗损，该宫议题易内耗反复、钻牛角尖'};
+  sihuaLines.push(`自化共 ${ziHuaRows.reduce((n,q)=>n+q.ziHua.length,0)} 处——宫干四化落回本宫，力量不出宫墙，主「内部生灭」：`);
+  sihuaLines.push(...ziHuaRows.flatMap(q=>q.ziHua.map(h=>`「${h.star}${h.type}」在${h.palace}：${ZI_MEAN[h.type.slice(-1)]||''}——${PALACE_KEYWORD[h.palace]||h.palace}领域的事件多自行启动、自行收场，外力介入有限。`)));
+ }
  sihuaSec.push(`读法：化禄是资源入口、化权是责任所系、化科是名声所倚、化忌是亏欠所系。四化互看——禄忌同宫成「禄逢冲破」式的甜中带苦；权科同会，事业以专业立身。化忌所在不是绝地，而是此生必修的功课，修过即成专业。`);
  if(flyLines.length&&flyLines[0].startsWith('飞星轨迹'))sihuaSec.push(...flyLines);
 

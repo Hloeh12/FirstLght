@@ -1,5 +1,6 @@
 import {resolveBirthTime} from './birth.mjs';
 import {mutagensFor,ziweiSchool} from './ziwei-rules.mjs';
+import {enrichFlying,borrowForEmpty} from './ziwei-flying.mjs';
 import {generateChart,resolveEffectiveLunarDate,detectPatterns,calculateTrueSolarTime,resolveZiweiDayOffset,shiftGregorianDate,schoolStarBrightness} from './renhuai-engine.mjs';
 import { astro } from 'iztro';
 import { Lunar, LunarYear } from 'lunar-javascript';
@@ -47,6 +48,9 @@ export function ziweiChart(input){
   p.borrowedStars=p.majorStars.length?[]:opposite.majorStars.map(s=>({
    name:s.name,brightness:schoolStarBrightness(s.name,p.branch,'QS')||''
   }));
+  p.borrowedFrom=p.majorStars.length?null:opposite.name;
+  const natalMap={};for(const t of ['禄','权','科','忌']){const st=mutagensFor(STEMS[c.lunarInfo.yearStem],school.id)[t==='禄'?0:t==='权'?1:t==='科'?2:3];natalMap[st]=t;}
+  for(const bs of p.borrowedStars)bs.mutagen=natalMap[bs.name]||undefined;
   const basis=p.majorStars.length?p.majorStars:p.borrowedStars;
   const brightnessWeights={};
   for(const [i,grade] of [...'庙旺得利平不陷'].entries())brightnessWeights[grade]=(7-i)/7;
@@ -54,6 +58,10 @@ export function ziweiChart(input){
   p.flying=transformations(mutagensFor(p.heavenlyStem,school.id),palaces);
  }
  for(const p of palaces){p.triadWeight=Number(p.relatedBranches.reduce((sum,b)=>sum+palaces.find(q=>q.branch===b).starWeight,0).toFixed(2));}
+ borrowForEmpty(palaces);
+ const schoolObj=ziweiSchool(input.ziweiSchool);
+ const laiyin=enrichFlying(palaces,STEMS[c.lunarInfo.yearStem],schoolObj);
+ palaces.length=0;palaces.push(...laiyin.palaces);
  const effectiveDate=[year,String(month).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
  const a=cachedAstro(effectiveDate,hour,gender,astroType,ziweiLeap);
  for(const p of palaces){
@@ -61,7 +69,7 @@ export function ziweiChart(input){
   p.annualStars=[ring?.suiqian12,ring?.jiangqian12].filter(Boolean);
  }
  const decades=a.decadalList().map(({palaceName,ageRange,yearRange})=>({palaceName,ageRange,yearRange}));
- return {leapPolicy:ziweiLeap,leapLabel:ZIWEI_LEAP_RULES[ziweiLeap],school,astroType,decades,effectiveDate,effectiveTimeIndex:hour,soul:c.mingZhu,body:c.shenZhu,fiveElementsClass:c.wuxingJuName,lunarDate:JSON.stringify(c.lunarInfo),palaces,patterns,correction,sihua:palaces.flatMap(p=>p.stars.filter(s=>s.siHua).map(s=>({star:s.name,type:s.siHua,palace:p.name}))),source:'Renhuai123/ziwei-doushu a600484 · MIT · iztro',rules:{school:school.id,lateZishi:input.lateZishi||'next-day',brightness:'QS（斗数全书）上游默认表',dataset:false}};
+ return {leapPolicy:ziweiLeap,leapLabel:ZIWEI_LEAP_RULES[ziweiLeap],school,astroType,decades,effectiveDate,effectiveTimeIndex:hour,soul:c.mingZhu,body:c.shenZhu,fiveElementsClass:c.wuxingJuName,lunarDate:JSON.stringify(c.lunarInfo),palaces,patterns,correction,laiyin,sihua:palaces.flatMap(p=>p.stars.filter(s=>s.siHua).map(s=>({star:s.name,type:s.siHua,palace:p.name}))),source:'Renhuai123/ziwei-doushu a600484 · MIT · iztro',rules:{school:school.id,lateZishi:input.lateZishi||'next-day',brightness:'QS（斗数全书）上游默认表',dataset:false}};
 }
 export function ziweiFlow({dateStr,timeIndex,gender,flowYear,astroType,scope,month,day,ziweiSchool:schoolId,ziweiLeap}){
   const school=ziweiSchool(schoolId);

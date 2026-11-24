@@ -388,6 +388,8 @@ export function buildBaziDeepReport(data){
  const sampleGod=pillars.map(p=>p.tenGod||tenGodOf(dayStem,p.stem)).find(g=>g&&g!=='日主')||'正官';
  const gege=detectGege(pillars,ns,sbData);
  const gegeInfo=GEOGE_DEEP[gege.name]||GEOGE_DEEP.中和格;
+ const sp=ns.special;
+ const spLines=sp?[`特殊格局判定：${sp.kind}——${sp.note}（已优先于扶抑/从格取用，喜用 ${sp.use.join('、')}、忌 ${sp.avoid.join('、')}）。专旺/化气格不按常规身强身弱读：顺其势则昌，逆其势多滞，行运亦以生助化神为佳。`]:[];
  const useful=(ns.useful||[]).join('、'),caution=(ns.caution||[]).join('、');
  const strengthText=ns.kind==='身强'?'身强（自我与助力充足，能扛事也能担财）':ns.kind==='身弱'?'身弱（先天底气偏弱，贵在与人和、借势而行）':'中和（进可攻退可守，人生弹性大）';
 
@@ -399,6 +401,7 @@ export function buildBaziDeepReport(data){
   `本命判定为${G(gege.name)}：${gege.basis}。${gegeInfo.text}`,
   ...(gege.name.includes('从')&&gege.evidence?[`从格证据核对：扶助 ${gege.evidence.support.toFixed(1)}% · 通根 ${gege.evidence.rootCount} 处 · 透干有根 ${gege.evidence.touGanCount} 个 · ${gege.evidence.deLingOk?'月令得令':'月令不得令'}。从格最忌误判——若这几项与盘面观感不符，请优先按「身强/身弱正格」参断。`]:[]),
   `四柱排布如上表：年柱看祖上与早年、月柱看父母与立业、日柱看自己与婚姻、时柱看子女与晚景。表内「十神」即每一柱天干与日主的关系——例如「${sampleGod}」即${TEN_GOD_DEEP[sampleGod]?.gloss||'天干与日主的生克关系'}；详见文末术语小词典。`,
+  ...spLines,
   ...(ns.approach?[`取用口径：${ns.approach}这是本盘得出「喜用什么、忌什么」的规则；换一套派别结论可能不同，换盘时请先核对这一行。`]:[]),
   ...(ns.roles?[`十神角色补全：喜用 ${ns.roles.useful.join('、')||'未单列'} · 忌神 ${ns.roles.avoid.join('、')||'未单列'} · 仇神 ${ns.roles.enemy.join('、')||'本盘无独立仇神'} · 闲神 ${ns.roles.idle.join('、')||'无'}。${ns.roles.note}`]:[])
  ];

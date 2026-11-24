@@ -6,6 +6,7 @@ import {baziFromInput} from './baziInput.mjs';
 import {flowYears,tenGod,yearPillar,monthPillar,dayPillar,solarTerms} from './bazi.mjs';
 import {calculateTrueSolarTime} from './renhuai-engine.mjs';
 import {tiaoHouUse,detectCongGe} from './bazi-tiaohou.mjs';
+import {detectZhuanWang,detectHuaQi} from './bazi-zhuangge.mjs';
 
 export const stems='甲乙丙丁戊己庚辛壬癸',branches='子丑寅卯辰巳午未申酉戌亥';
 export const stemElements='木木火火土土金金水水',branchElements='水土木木土火火土金金土水';
@@ -129,10 +130,13 @@ function strength(pillars,relationships,enabled){
  // 从格优先：某五行成势且日主无本气根、印比微弱时，弃扶抑而顺其势
  const roots=pillars.map(p=>hidden[p.branch]?.[0]).map(s=>s?elementOf(s):'').filter(Boolean);
  const cong=detectCongGe(weights,roots,pillars[2].stem);
- const model=cong?'从格':kind;
- const effectiveUse=cong?cong.use:(kind==='身弱'?[resource,day]:kind==='身强'?[produce[day],control[day]]:[]);
- const effectiveAvoid=cong?[day,resource]:(kind==='身弱'?[produce[day],control[day]]:kind==='身强'?[resource,day]:[]);
- return {weights,percentages:Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,100*v/total])),support:support*100,kind,model,congGe:cong,
+ const zhuanWang=detectZhuanWang(weights,roots,pillars);
+ const huaQi=zhuanWang?null:detectHuaQi(pillars,pillars[1].branch,weights);
+ const special=zhuanWang||huaQi||null;
+ const model=special?(zhuanWang?'专旺格':'化气格'):(cong?'从格':kind);
+ const effectiveUse=special?special.use:(cong?cong.use:(kind==='身弱'?[resource,day]:kind==='身强'?[produce[day],control[day]]:[]));
+ const effectiveAvoid=special?special.avoid:(cong?[day,resource]:(kind==='身弱'?[produce[day],control[day]]:kind==='身强'?[resource,day]:[]));
+ return {weights,zhuanWang,huaQi,special,percentages:Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,100*v/total])),support:support*100,kind,model,congGe:cong,
   useful:effectiveUse,
   caution:effectiveAvoid,
   // 十神角色：喜用/忌神之外，明示仇神（生助忌神或克喜用）与闲神（其余），避免只给两分法

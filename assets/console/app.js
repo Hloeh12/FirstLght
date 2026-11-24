@@ -22,6 +22,7 @@ import {ziweiView,ziweiTools,ziweiPatterns,ziweiPeriodEvidence} from './ziwei.js
 import {baziView,baziTools,baziQuick,baziGrid} from './bazi.js';
 import {westernView,westernTools,astroHouse,houseOptions,houseLabels,setAstroHouse} from './western.js';
 import {extraView} from './extras.js';
+import {shareChart} from './share.js';
 import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES,baziMoment,baziSelOf,baziPickOptions,focusSectionsFor,focusBodyHtml} from './period-report.js';
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';

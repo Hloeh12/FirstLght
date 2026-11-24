@@ -19,6 +19,10 @@ import {exportReportDocument} from './report-export.js';import {exportReportPdf}
 import {answerHtml,presetQuestions,QA_CSS} from './report-qa.js';
 import {TOPICS,topicHtml,exportTopic} from './topic-report.js';
 import {firstRunHome,DEMO_CASES,refreshToday} from './first-run.js';
+import {installAppearance,setAppearance,appearanceMode,resolvedAppearance} from './appearance.js';
+import {maybeShowOnboarding,isOnboarded} from './onboarding.js';
+import {searchWorldCities} from '../../src/cities-world.mjs';
+import {validZone,offsetMinutes} from '../../src/tz.mjs';
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
 import {ziweiView,ziweiTools,ziweiPatterns,ziweiPeriodEvidence} from './ziwei.js';
 import {baziView,baziTools,baziQuick,baziGrid} from './bazi.js';
@@ -32,6 +36,7 @@ import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,so
 import {getFavorites,getHistory,getHistoryEntry,deleteHistory,toggleFavorite,isFavorite,recordHistory,favoritesHtml,historyHtml,compareHtml} from './library.js';
 
 installDiagnostics();
+installAppearance();
 try{migrateStorage(localStorage);}catch(error){console.error(error.message);}
 lockViewport();
 fitKeyboard();
@@ -130,7 +135,16 @@ function normalized(profile){
   ziweiSchool:state.settings.ziweiSchool||'quanshu',
   ziweiLeap:state.settings.ziweiLeap||'split',dst1988Rule:f.dstRule||state.settings.dst1988Rule||'iana',
   lateZishi:f.lateZishi||state.settings.lateZishi||'next-day',
-  city:{...f.city,lat:Number(f.city?.lat),lon:Number(f.city?.lon),tz:Number(f.city?.tz??8)}};
+  city:{...f.city,lat:Number(f.city?.lat),lon:Number(f.city?.lon),tz:Number(f.city?.tz??8),tzName:f.city?.tzName||null}};
+ // v0.71.0：IANA 时区换算。内核 resolveBirthTime 支持 tzName（含历史 DST），
+ // 但不少下游按数字 tz 做经度差/显示，这里把当时的 offset 写回 tz 数字，tzName 一并保留。
+ const birthCity=city;
+ if(birthCity.tzName){
+  try{
+   const d=new Date(Date.UTC(birth.Y,birth.M,birth.D,birth.h,birth.mi)),o=offsetMinutes(+d,birthCity.tzName);
+   birthCity.tz=o/60;birthCity.tzOffsetAt=o;
+  }catch{birthCity.tzName=null;}
+ }
 }
 function summary(result){
  const [year,,day]=result.bazi.pillars;
@@ -374,7 +388,7 @@ function birthSheet(profile,seed={}){
   <div id="cityMatches" class="rail wide" aria-label="城市搜索结果"></div>
   <label>纬度<input name="lat" type="number" step="any" value="${Number.isFinite(city.lat)?city.lat:''}" placeholder="−90 到 90"></label>
   <label>经度<input name="lon" type="number" step="any" value="${Number.isFinite(city.lon)?city.lon:''}" placeholder="−180 到 180"></label>
-  <label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(city.tz)}"></label>
+  <label>UTC 偏移<input name="tz" type="text" value="${esc(city.tz)}" placeholder="数字或 IANA（如 Asia/Tokyo）"></label>
   ${btn('使用当前位置','data-locate')}
   <div class="checks wide"><input name="unknown" type="checkbox" ${f.timeUnknown?'checked':''} hidden><label><input name="solar" type="checkbox" ${(f.useSolarTime??setting.useSolarTime??(Number.isFinite(city.lon)&&Math.abs(city.lon)<=180))?'checked':''}>真太阳时${(f.useSolarTime??setting.useSolarTime)==null&&Number.isFinite(city.lon)?'<small>（已按出生地经度默认开启）</small>':''}</label><label data-leap><input name="leap" type="checkbox" ${f.leapMonth?'checked':''}>闰月</label></div>
   <p class="wide muted" id="birthStatus" role="status"></p><button type="submit" class="wide primary">生成命盘</button>
@@ -406,6 +420,8 @@ function birthSheet(profile,seed={}){
   try{
    const result=await request('/api/geo/search?q='+encodeURIComponent(value));
    if(id!==query||!d.open)return;
+   // v0.71.0 全球城市：中国区划库命不中或较少时，合并 WORLD_CITIES（中/英文匹配）。
+   const world=searchWorldCities(value,8);
    for(const item of result.items.slice(0,8)){
     const b=document.createElement('button');b.type='button';b.textContent=item.name;
     b.onclick=async()=>{
@@ -416,6 +432,15 @@ function birthSheet(profile,seed={}){
       fields.city.value=location.label||item.name;fields.lat.value=location.lat;fields.lon.value=location.lon;fields.tz.value=8;autoSolar();
       matches.replaceChildren();
      }catch(error){feedback.textContent=error.message;}
+    };matches.append(b);
+   }
+   for(const w of world){
+    // IANA 时区：tz 字段先存 IANA 名，提交时 normalized() 换算成当时 offset。
+    const b=document.createElement('button');b.type='button';b.textContent=w.name+' · '+w.country;
+    b.onclick=()=>{
+     query++;matches.replaceChildren();
+     fields.city.value=w.name+'（'+w.nameEn+'）';fields.lat.value=w.lat;fields.lon.value=w.lon;fields.tz.value=w.tz;autoSolar();
+     matches.replaceChildren();
     };matches.append(b);
    }
   }catch{if(id===query)feedback.textContent='城市搜索暂不可用，可直接填写坐标';}
@@ -438,14 +463,21 @@ function birthSheet(profile,seed={}){
  const fresh=$('[data-new]',d);if(fresh)fresh.onclick=()=>birthSheet(null);
  form.onsubmit=async e=>{
   e.preventDefault();
-  const lat=Number(fields.lat.value),lon=Number(fields.lon.value),tz=fields.tz.value.trim()===''?(setting.tz??8):Number(fields.tz.value);
-  if([fields.lat,fields.lon].some(k=>k.value.trim()==='')||![lat,lon,tz].every(Number.isFinite)||Math.abs(lat)>90||Math.abs(lon)>180||tz< -12||tz>14){feedback.textContent='请填写有效经纬度和 UTC 偏移';return;}
+  const lat=Number(fields.lat.value),lon=Number(fields.lon.value),tzRaw=fields.tz.value.trim()===''?(setting.tz??8):fields.tz.value.trim();
+  if([fields.lat,fields.lon].some(k=>k.value.trim()==='')||![lat,lon].every(Number.isFinite)||Math.abs(lat)>90||Math.abs(lon)>180){feedback.textContent='请填写有效经纬度和 UTC 偏移';return;}
+  // v0.71.0 时区输入兼容：纯数字→固定 offset；IANA 名→先解析有效并把数字偏移存进 tz（提交后 normalized 会换算成当时的 offset）。
+  let tz=tzRaw;
+  if(!/^-?\d+(\.\d+)?$/.test(String(tzRaw))){
+   if(!validZone(tzRaw)){feedback.textContent='时区需为 UTC 偏移数字或 IANA 名称（如 Asia/Tokyo）';return;}
+   tz=8; // 占位：normalized() 会按 tzName 换算当时的 offset 写回 tz
+  }
+  const tzName=/^-?\d+(\.\d+)?$/.test(String(tzRaw))?null:String(tzRaw);
   const dateStr=fields.date.value.trim(),timeStr=fields.unknown.checked?'12:00':fields.clock.value;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)||!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(timeStr)){feedback.textContent='请填写有效出生日期和时间';return;}
   const [h,mi]=timeStr.split(':').map(Number),name=fields.name.value.trim()||'未命名案例';
   const next={...profile,id:profile?.id??(crypto.randomUUID?.()||Date.now().toString()),name,category:fields.category.value,updatedAt:new Date().toISOString(),
    fields:{housing:fields.homeDirection.value&&fields.homeMember.value?{direction:fields.homeDirection.value,member:fields.homeMember.value}:null,...splitDate(dateStr),dateStr,timeStr,h,mi,name,gender:fields.gender.value,calendar:fields.calendar.value,leapMonth:fields.calendar.value==='lunar'&&fields.leap.checked,
-    timeUnknown:fields.unknown.checked,useSolarTime:fields.solar.checked,lateZishi:setting.lateZishi||'next-day',city:{lat,lon,tz,label:fields.city.value.trim()||'手动坐标'}}};
+    timeUnknown:fields.unknown.checked,useSolarTime:fields.solar.checked,lateZishi:setting.lateZishi||'next-day',city:{lat,lon,tz,tzName,label:fields.city.value.trim()||'手动坐标'}}};
   const submit=$('[type=submit]',form);submit.disabled=true;feedback.textContent='正在排盘…';
   const token=++generation;flight?.abort();flight=new AbortController();
   let settled=false; // v0.44.0：骨架过渡已接管 pending，finally 不再提前清掉
@@ -476,6 +508,7 @@ function settingsForm(){
  <label>紫微闰月规则<select name="ziweiLeap">${[['split','15日分界'],['prev-month','视作本月'],['next-month','视作下月']].map(([id,label])=>`<option value="${id}" ${s.ziweiLeap===id?'selected':''}>${label}</option>`).join('')}</select></label>
  <label>1988 夏令时口径<select name="dst1988Rule"><option value="iana">公告 / IANA：4月17日</option><option value="compat-apr10" ${s.dst1988Rule==='compat-apr10'?'selected':''}>4月10日兼容（非公告）</option></select></label>
  <label>西洋分宫制<select name="house">${houseOptions(astroHouse())}</select></label>
+ <label>外观<select name="appearance">${[['auto','跟随系统'],['light','浅色'],['dark','深色']].map(([id,label])=>`<option value="${id}" ${(state.settings.appearance||'auto')===id?'selected':''}>${label}</option>`).join('')}</select></label>
  <label>默认地点<input name="place" value="${esc(s.place)}"></label><label>UTC 偏移<input name="tz" type="number" step="any" value="${esc(s.tz??8)}"></label>
  <label>纬度<input name="lat" type="number" step="any" value="${esc(s.lat)}"></label><label>经度<input name="lon" type="number" step="any" value="${esc(s.lon)}"></label>
  <button class="wide primary">保存设置</button></form>`;
@@ -485,7 +518,9 @@ function savePreferences(e){
  e.preventDefault();
  const f=new FormData(e.currentTarget),[lat,lon,tz]=['lat','lon','tz'].map(k=>f.get(k)===''?undefined:Number(f.get(k)));
  if([lat,lon,tz].some(v=>v!==undefined&&!Number.isFinite(v))||Math.abs(lat)>90||Math.abs(lon)>180||tz< -12||tz>14){tell('默认坐标或时区无效');return;}
- state.settings={ziweiLeap:f.get('ziweiLeap'),dst1988Rule:f.get('dst1988Rule'),ziweiSchool:f.get('ziweiSchool'),lateZishi:f.get('late'),useSolarTime:f.has('solar'),place:f.get('place'),lat,lon,tz:tz??8};
+ state.settings={ziweiLeap:f.get('ziweiLeap'),dst1988Rule:f.get('dst1988Rule'),ziweiSchool:f.get('ziweiSchool'),lateZishi:f.get('late'),useSolarTime:f.has('solar'),place:f.get('place'),lat,lon,tz:tz??8,appearance:f.get('appearance')||'auto'};
+ // v0.71.0 外观三态即时生效：跟随系统/浅色/深色，class 打在 body 上无需刷新。
+ setAppearance(state.settings.appearance);
  save(SETTINGS,state.settings);
  const drawer=e.currentTarget.closest('dialog');if(drawer)close(drawer);
  setAstroHouse(ctx,f.get('house'));
@@ -788,13 +823,16 @@ function openFullReport(prebuilt,opts={}){
   title:report.title,sections:report.sections?.length,characters:report.characters,snapshot:report});}catch{}}
  d.innerHTML=`<div class="dialog-content report-content">
   <div class="rpt-topbar"><button type="button" class="icon" data-rpt-close aria-label="关闭报告">×</button>
-   <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
-   <button type="button" class="rpt-act" data-rpt-find>检索</button>
-   <button type="button" class="rpt-act" data-rpt-qa>问答</button>
-   <button type="button" class="rpt-act" data-rpt-topic>专题</button>
-   <button type="button" class="rpt-act" data-rpt-copy>复制</button>
-   <button type="button" class="rpt-act primary" data-rpt-export>导出文档</button>
-   <button type="button" class="rpt-act" data-rpt-pdf hidden>导出 PDF</button></div>
+   <span class="rpt-topbar-title">${esc(report.title||('深度报告 · '+report.cover.system))}</span>
+   <button type="button" class="icon" data-rpt-menu aria-label="报告功能" aria-haspopup="menu" aria-expanded="false">•••</button>
+   <div class="rpt-menu" data-rpt-menu-pop hidden role="menu">
+    <button type="button" role="menuitem" data-rpt-find>🔍 检索</button>
+    <button type="button" role="menuitem" data-rpt-qa>💬 问答</button>
+    <button type="button" role="menuitem" data-rpt-topic>📑 专题</button>
+    <button type="button" role="menuitem" data-rpt-copy>📋 复制全文</button>
+    <button type="button" role="menuitem" data-rpt-export>📤 导出文档</button>
+    <button type="button" role="menuitem" data-rpt-pdf hidden>🖨 导出 PDF</button>
+   </div></div>
   <div class="rpt-find" data-rpt-findbar hidden>
    <div class="rpt-find-row">
     <input type="text" inputmode="search" enterkeyhint="search" data-find-input placeholder="在全文里找术语、宫位、年份" autocomplete="off" aria-label="在报告中检索">
@@ -932,6 +970,12 @@ function openFullReport(prebuilt,opts={}){
   };
  }
  d.querySelector('[data-rpt-close]').onclick=()=>close(d);
+ // 顶栏 ••• 功能菜单：点击展开/收起，选中一项后自动收起（v0.71.0 顶栏瘦身）
+ const menuPop=d.querySelector('[data-rpt-menu-pop]'),menuBtn=d.querySelector('[data-rpt-menu]');
+ menuBtn.onclick=e=>{e.stopPropagation();const open=menuPop.hidden;menuPop.hidden=!open;menuBtn.setAttribute('aria-expanded',String(open));};
+ d.addEventListener('click',e=>{if(!menuPop.hidden&&!e.target.closest('[data-rpt-menu-pop],[data-rpt-menu]')){menuPop.hidden=true;menuBtn.setAttribute('aria-expanded','false');}});
+ const closeMenu=()=>{menuPop.hidden=true;menuBtn.setAttribute('aria-expanded','false');};
+for(const act of ['data-rpt-find','data-rpt-qa','data-rpt-topic','data-rpt-copy','data-rpt-export','data-rpt-pdf']){const el=d.querySelector(`[${act}]`);el?.addEventListener('click',closeMenu);}
  d.querySelector('[data-rpt-copy]').onclick=async()=>{
   flushLazy(); // 隐藏章节取不到 innerText，先全部就位
   const doc=d.querySelector('[data-full-report]');
@@ -1688,6 +1732,7 @@ const ctx={state,root,render,request,tell,sheet,close,birthSheet,normalized,swit
  explain(word,text,source){sheet('termSheet',word,termCard(word,text,source,definitions[DICTIONARY[word]?word:word]||definitions[word]));}
 };
 function render(){
+ maybeShowOnboarding(ctx);
  profileTitle();
  
  const chartClock=$('#chartBasisTime'),chartRow=$('#chartBasisRow'),chartToggle=$('#instantToggle');

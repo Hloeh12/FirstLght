@@ -299,7 +299,7 @@ test('深度报告导出改用自包含 HTML 文档，不再走 canvas 长图（
  // 报告上万字本就不适合做成一张长图（canvas 超尺寸 + 模糊 + 难保存），改为导出文档。
  const app=await read('../assets/console/app.js');
  assert.match(app,/import \{exportReportDocument\} from '\.\/report-export\.js'/, 'app.js 须引入文档导出模块');
- assert.match(app,/data-rpt-export>导出文档<\/button>/,'报告导出按钮须改为「导出文档」');
+ assert.match(app,/data-rpt-export>📤 导出文档<\/button>/,'报告导出按钮须改为「导出文档」（v0.71.0 收进 ••• 菜单）');
  assert.match(app,/tell\(await exportReportDocument\(viewReport\(\)\)\)/,'报告导出须 await 文档导出结果，且只导出当前视图');
  const exBlock=app.slice(app.indexOf("d.querySelector('[data-rpt-export]')"),app.indexOf('/* 目录交互'));
  assert.doesNotMatch(exBlock,/shareChart\(/,'报告导出路径不得再出现 shareChart 长图调用');
@@ -563,9 +563,11 @@ test('v0.47.5 目录交互纠偏：遮罩透明不遮背景，浮层块儿实心
  assert.match(lastScrim,/backdrop-filter:none!important/,'遮罩须关闭模糊');
  // 浮层块儿必须实心不透明、关闭 backdrop-filter，不透出后面的报告文字
  const drawers=[...css.matchAll(/\.rpt-nav-drawer\{([\s\S]*?)\}/g)].map(m=>m[1]);
- const lastDrawer=drawers[drawers.length-1];
- assert.match(lastDrawer,/background:linear-gradient\(160deg,#[0-9a-f]{6}/i,'浮层块儿须实心不透明渐变');
- assert.match(lastDrawer,/backdrop-filter:none!important/,'浮层须关闭 backdrop-filter，不透后页文字');
+ // 取末尾含「实心渐变 + 关闭模糊」的最终生效块（v0.47.5 纠偏段），而非基础定位块
+ const lastDrawer=drawers.reverse().find(b=>/linear-gradient/.test(b)&&/backdrop-filter:\s*none/.test(b));
+ assert.ok(lastDrawer,'须存在最终生效的实心浮层规则块');
+ assert.match(lastDrawer,/background:linear-gradient\((160|180)deg,\s*#?[0-9a-f]{6}|linear-gradient\(180deg,rgba\(/i,'浮层块儿须实心不透明渐变');
+ assert.match(lastDrawer,/backdrop-filter:\s*none/i,'浮层须关闭 backdrop-filter，不透后页文字');
  // 序号「01」须 nowrap，避免被拆成「0 / 1」两行
  const nos=[...css.matchAll(/\.rpt-nav-list \.rpt-toc-item \.rpt-toc-no\{([^}]*)\}/g)].map(m=>m[1]);
  assert.ok(nos.length&&/white-space:nowrap!important/.test(nos[nos.length-1]),'目录序号须 nowrap 不换行');

@@ -13,7 +13,7 @@
   <key>CFBundleShortVersionString</key>
   <string>0.64.0</string>
   <key>CFBundleVersion</key>
-  <string>168</string>
+  <string>169</string>
   <key>NSPhotoLibraryAddUsageDescription</key><string>用于将您主动分享的命盘长图保存到相册。</string>
   <key>NSLocationWhenInUseUsageDescription</key><string>用于填写排盘出生地点坐标；也可手动选择地点。</string><key>LSRequiresIPhoneOS</key>
   <true/>

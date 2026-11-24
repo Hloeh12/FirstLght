@@ -11,7 +11,7 @@ const bodies={
 };
 const groups=[['经典十大主星',Object.keys(bodies).slice(0,10)],['轴线与虚点',Object.keys(bodies).slice(10,18)],['半人马与小行星',Object.keys(bodies).slice(18)]];
 const houses={placidus:'Placidus 普拉西德',whole:'Whole Sign 整宫',koch:'Koch 柯赫',equal:'Equal 等宫',regiomontanus:'Regiomontanus 芮氏',campanus:'Campanus 坎帕努斯',porphyry:'Porphyry 波菲利'};
-const modes={natal:'本命',sky:'天象',transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',profection:'小限'};
+const modes={natal:'本命',sky:'天象',transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',profection:'小限',arc:'太阳弧'};
 const presets={default:'默认标准',strict:'古典严格',custom:'自定义'};
 const orbLabels={0:'合相',30:'半六合',45:'半刑',60:'六合',90:'刑相',120:'三合',135:'补八分',150:'梅花相',180:'对冲'};
 const defaultOrbs={0:8,30:2,45:2,60:5,90:7,120:7,135:2,150:2,180:8};
@@ -186,6 +186,12 @@ function aspectStory(a,cross,idx=0){
 }
 function periodAnalysis(r,s){
  const cross=Boolean(r.outer);
+ if(r.mode==='arc'&&r.arc){
+  const hits=r.arc.hits||[];
+  const ANG={0:'合相',45:'梅花相位',90:'刑相',135:'梅花相位',180:'冲相'};
+  const evidence=hits.length?hits.slice(0,5).map(h=>`<p><b>弧推 ${esc(h.arc)} \u2192 本命 ${esc(h.natal)} ${ANG[h.angle]||h.angle+'\u00b0'}</b>，容许度 ${h.orb.toFixed(2)}°。太阳弧 ${r.arc.degrees.toFixed(1)}° 前进后触发该硬相位，对应领域压力/转折期观察。</p>`).join(''):'<p>本次太阳弧在 1\u00b0 容差内没有触发硬相位，不做事件推断。</p>';
+  return `<div class="period-result"><article class="card liquid-glass period-guidance" data-period-guidance><h2>太阳弧推运 · 弧长 ${r.arc.degrees.toFixed(2)}°（约 ${Math.floor(r.arc.years)} 岁）</h2><p>太阳弧把全盘星体统一推进 ${r.arc.degrees.toFixed(2)}°，与本命星成硬相位处为该年重点观察区。容差统一 1°，只列证据不做演绎。</p>${evidence}</article></div>`;
+ }
  const aspects=(cross?r.aspects:r.chart?.aspects)||[];
  const tight=aspects.filter(a=>Number.isFinite(a.orb)&&a.orb<=3).slice(0,4);
  const label=modes[r.mode]||'推运';
@@ -349,7 +355,7 @@ export function setAstroHouse(ctx,value){
 }
 export function westernTools(ctx,host){
  const s=stateOf(ctx);
- host.innerHTML='<h3>推运盘类</h3><div class="tool-grid">'+Object.entries(modes).filter(([id])=>!s.birthOverride&&['transit','secondary','tertiary','solar','lunar'].includes(id)).map(([id,label])=>btn(label,`data-west-tool="${id}" aria-pressed="${s.mode===id}"`)).join('')+'</div>'+
+ host.innerHTML='<h3>推运盘类</h3><div class="tool-grid">'+Object.entries(modes).filter(([id])=>!s.birthOverride&&['transit','secondary','tertiary','solar','lunar','arc'].includes(id)).map(([id,label])=>btn(label,`data-west-tool="${id}" aria-pressed="${s.mode===id}"`)).join('')+'</div>'+
   btn('分宫制与小行星配置','data-astro-config class="tool-full"');
  for(const b of host.querySelectorAll('[data-west-tool]'))b.onclick=()=>{ctx.close($('#toolSheet'));update(ctx,b.dataset.westTool,s.at);};
  $('[data-astro-config]',host).onclick=()=>configSheet(ctx);

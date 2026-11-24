@@ -143,7 +143,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  await until(()=>ring.getAttribute('transform')!=='rotate(90 220 220)','wheel momentum');
  click('[data-asc-reset]');
  await until(()=>ring.getAttribute('transform')==='rotate(0 220 220)','ASC reset');
- click('#toolsButton');assert.equal(many('[data-west-tool]').length,5);click('[data-astro-config]');
+ click('#toolsButton');assert.equal(many('[data-west-tool]').length,6);click('[data-astro-config]');
  assert(many('[data-wheel-body=outer][data-radius="151"]').length>0);
  assert.equal(many('#astroConfig [name=house] option').length,7);
  $('#astroConfig [name=house]').value='campanus';

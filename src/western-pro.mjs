@@ -173,13 +173,33 @@ function firdaria(birth,target,day){
  return {diurnal:day,age:(target-birth)/YEAR,periods,active,sub:active?.sub.find(contains)||null};
 }
 export function westernPro({birth,config,mode='natal',at}){
- if(!['natal','sky','transit','secondary','tertiary','solar','lunar','firdaria','profection'].includes(mode))throw Error('未知占星盘类');
+ if(!['natal','sky','transit','secondary','tertiary','solar','lunar','firdaria','profection','arc'].includes(mode))throw Error('未知占星盘类');
  const cfg=settings(config);
  const born=utcOf(birth),target=at?new Date(at):new Date();
  if(!Number.isFinite(+target)||target.getUTCFullYear()<1800||target.getUTCFullYear()>2399)throw Error('推运时间范围为 1800–2399');
  if(['secondary','tertiary','firdaria','profection'].includes(mode)&&target<born)throw Error('推运时间不能早于出生');
  const natal=chartAt(born,birth.city,cfg);
  if(mode==='natal')return {mode,chart:natal};
+ if(mode==='arc'){
+  // 太阳弧： progressed 太阳黄经 − 本命太阳黄经 = 弧长；所有行星统一前进该弧
+  const arcYears=(target-born)/YEAR;
+  const natalSun=natal.planets.find(p=>p.key==='sun')?.lon??bodyAt(born,0,cfg.sidereal?cfg.ayan:null).longitude;
+  const progressed=chartAt(new Date(+born+arcYears*DAY),birth.city,cfg); // 次限一天=一年取太阳弧长
+  const arc=normalize((progressed.planets.find(p=>p.key==='sun')||progressed.planets[0]).lon-natalSun+180)-180;
+  const arcPlanets=natal.planets.filter(p=>!Object.hasOwn({asc:1,dsc:1,mc:1,ic:1},p.key)).map(p=>({...p,lon:normalize(p.lon+arc),arcFromNatal:arc}));
+  // 弧推星 × 本命星：硬相位（合/半刑/刑/梅花/冲），容差统一 1°
+  const hits=[];
+  for(const p of arcPlanets)for(const q of natal.planets){
+   if(p.key===q.key)continue;
+   const gap=Math.abs(signed(normalize(q.lon-p.lon)+180)-180);
+   for(const ang of [0,45,90,135,180]){
+    const dev=Math.abs(gap-ang);
+    if(dev<=1)hits.push({arc:p.name,natal:q.name,angle:ang,orb:dev});
+   }
+  }
+  hits.sort((x,y)=>x.orb-y.orb);
+  return {mode,chart:natal,arc:{years:arcYears,degrees:arc,planets:arcPlanets,hits:hits.slice(0,24)}};
+ }
  if(mode==='firdaria')return {mode,chart:natal,firdaria:firdaria(born,target,natal.diurnal)};
  if(mode==='profection'){
   let age=target.getUTCFullYear()-born.getUTCFullYear();

@@ -529,7 +529,7 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .zi-board{height:auto!important;min-height:clamp(340px,58svh,540px)!important;grid-auto-rows:minmax(120px,auto)!important;align-content:start!important;overflow:hidden!important}
 
 /* Build 52: minor stars flow inline so dense palaces stay inside the square */
-.zi-board{height:clamp(340px,58svh,540px)!important;grid-auto-rows:minmax(0,1fr)!important;align-content:stretch!important}
+.zi-board{height:auto!important;min-height:clamp(420px,58svh,560px)!important;grid-auto-rows:minmax(96px,auto)!important;align-content:start!important}
 .zi-cell .zi-columns{display:block!important;overflow:hidden!important}
 .zi-cell .zi-major{display:block!important}
 .zi-cell .zi-assist{display:flex!important;flex-wrap:wrap!important;gap:0 5px!important;margin-top:3px!important;align-content:flex-start!important}

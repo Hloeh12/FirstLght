@@ -128,7 +128,7 @@ function normalized(profile){
  return {...f,...splitDate(date),name:profile.name,dateStr:date,timeStr:clock,h,mi,gender:f.gender||'女',
   useSolarTime:f.useSolarTime??state.settings.useSolarTime??(Number.isFinite(Number(f.city?.lon))&&Math.abs(Number(f.city?.lon))<=180),
   ziweiSchool:state.settings.ziweiSchool||'quanshu',
-  ziweiLeap:state.settings.ziweiLeap||'split',dst1988Rule:state.settings.dst1988Rule||'iana',
+  ziweiLeap:state.settings.ziweiLeap||'split',dst1988Rule:f.dstRule||state.settings.dst1988Rule||'iana',
   lateZishi:f.lateZishi||state.settings.lateZishi||'next-day',
   city:{...f.city,lat:Number(f.city?.lat),lon:Number(f.city?.lon),tz:Number(f.city?.tz??8)}};
 }
@@ -1726,11 +1726,11 @@ function render(){
     const profile={id:'demo-'+demo.key+'-'+Date.now(),name:demo.name,fields:demo.fields,note:demo.note,demo:true};
     b.disabled=true;
     try{
-     state.reading=await request('/api/console/reading',{birth:normalized(profile)});
+     const result=await request('/api/console/reading',{birth:normalized(profile)});
+     profile.summary=summary(result);
      state.cases=[profile,...state.cases.filter(c=>c.id!==profile.id)];
-     state.profile=profile;persist();
      tell('已载入示例案例：'+demo.name);
-     render();
+     activate(profile,false);persist();render();
     }catch(error){b.disabled=false;tell('示例排盘失败：'+(error.message||error));}
    };
    refreshToday(request);

@@ -6,7 +6,7 @@ import {esc} from './ui.js';
 
 export const DEMO_CASES=[
  {key:'dst-1988',name:'示例 · 夏令时首日',note:'1988-04-17 02:30 北京 · 演示 1986–91 夏令时双口径',
-  fields:{Y:1988,M:4,D:17,h:2,mi:30,gender:'女',calendar:'solar',timeUnknown:false,useSolarTime:true,lateZishi:'next-day',
+  fields:{Y:1988,M:4,D:17,h:2,mi:30,gender:'女',calendar:'solar',timeUnknown:false,useSolarTime:true,lateZishi:'next-day',dstRule:'compat-apr10',
    city:{label:'北京',lat:39.9042,lon:116.4074,tz:8}}},
  {key:'late-zi-1995',name:'示例 · 子夜出生',note:'1995-11-02 23:40 上海 · 演示晚子时换日',
   fields:{Y:1995,M:11,D:2,h:23,mi:40,gender:'男',calendar:'solar',timeUnknown:false,useSolarTime:true,lateZishi:'next-day',

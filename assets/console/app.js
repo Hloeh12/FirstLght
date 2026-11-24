@@ -15,13 +15,13 @@ import {lockViewport,fitKeyboard} from './viewport.js';
 import {diagnosticsPanel,installDiagnostics,resetCaches} from './diagnostics.js';
 import {soulWidgets,wireSoul} from './soul-home.js';
 import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
+import {exportReportDocument} from './report-export.js';import {exportReportPdf} from './report-export.js';
+import {firstRunHome,DEMO_CASES,refreshToday} from './first-run.js';
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
 import {ziweiView,ziweiTools,ziweiPatterns,ziweiPeriodEvidence} from './ziwei.js';
 import {baziView,baziTools,baziQuick,baziGrid} from './bazi.js';
 import {westernView,westernTools,astroHouse,houseOptions,houseLabels,setAstroHouse} from './western.js';
 import {extraView} from './extras.js';
-import {shareChart} from './share.js';
-import {exportReportDocument} from './report-export.js';
 import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES,baziMoment,baziSelOf,baziPickOptions,focusSectionsFor,focusBodyHtml} from './period-report.js';
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
@@ -788,7 +788,8 @@ function openFullReport(prebuilt,opts={}){
    <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
    <button type="button" class="rpt-act" data-rpt-find>检索</button>
    <button type="button" class="rpt-act" data-rpt-copy>复制</button>
-   <button type="button" class="rpt-act primary" data-rpt-export>导出文档</button></div>
+   <button type="button" class="rpt-act primary" data-rpt-export>导出文档</button>
+   <button type="button" class="rpt-act" data-rpt-pdf hidden>导出 PDF</button></div>
   <div class="rpt-find" data-rpt-findbar hidden>
    <div class="rpt-find-row">
     <input type="text" inputmode="search" enterkeyhint="search" data-find-input placeholder="在全文里找术语、宫位、年份" autocomplete="off" aria-label="在报告中检索">
@@ -939,6 +940,17 @@ function openFullReport(prebuilt,opts={}){
   catch(err){tell('导出失败：'+(err.message||err));}
   finally{b.disabled=false;}
  };
+ /* v0.64.0 PDF 直出按钮：仅原生壳存在 exportPdf 通道时显示（exportReportPdf 无通道返回 null）。 */
+ const pdfBtn=d.querySelector('[data-rpt-pdf]');
+ if(pdfBtn){
+  if(!window.webkit?.messageHandlers?.exportPdf)pdfBtn.hidden=true;
+  else pdfBtn.onclick=async e=>{
+   const b=e.currentTarget;b.disabled=true;
+   try{tell(await exportReportPdf(viewReport())??'当前环境不支持 PDF 导出。');}
+   catch(err){tell('PDF 导出失败：'+(err.message||err));}
+   finally{b.disabled=false;}
+  };
+ }
  /* 目录交互：顶部目录 + 侧边抽屉共用一套锚点跳转，滚动时两处同步高亮 */
  const rptBody=d.querySelector('#reportBody');
  const rptDoc=d.querySelector('[data-full-report]');
@@ -1658,9 +1670,23 @@ function render(){
   // v0.41.0 跳动修复：pending 时用固定高度的骨架占位（近似盘面高度），
   // 避免「一行加载字 → 整页盘面」的高度突变把页面顶一下。真实内容就绪后一次性替换。
   root.innerHTML=state.pending
-   ? `<div class="chart-loading" role="status" aria-live="polite"><span class="chart-loading-ring" aria-hidden="true"></span><span>正在排盘，稍候…</span></div>`
-   : `<p class="empty">${esc(state.error||'点按顶部命主气泡开始排盘。')}</p>${state.error&&state.profile?btn('重试','data-retry'):''}`;
-  const retry=$('[data-retry]',root);if(retry)retry.onclick=()=>activate(state.profile);
+    ? `<div class="chart-loading" role="status" aria-live="polite"><span class="chart-loading-ring" aria-hidden="true"></span><span>正在排盘，稍候…</span></div>`
+    : firstRunHome();
+   const retry=$('[data-retry]',root);if(retry)retry.onclick=()=>activate(state.profile);
+   // 示例案例：与手建案例同构建档（可编辑可删除），成功后走正常排盘激活流程。
+   for(const b of root.querySelectorAll('[data-demo-load]'))b.onclick=async()=>{
+    const demo=DEMO_CASES.find(c=>c.key===b.dataset.demoLoad);if(!demo)return;
+    const profile={id:'demo-'+demo.key+'-'+Date.now(),name:demo.name,fields:demo.fields,note:demo.note,demo:true};
+    b.disabled=true;
+    try{
+     state.reading=await request('/api/console/reading',{birth:normalized(profile)});
+     state.cases=[profile,...state.cases.filter(c=>c.id!==profile.id)];
+     state.profile=profile;persist();
+     tell('已载入示例案例：'+demo.name);
+     render();
+    }catch(error){b.disabled=false;tell('示例排盘失败：'+(error.message||error));}
+   };
+   refreshToday(request);
   return;
  }
  if(state.system==='ziwei')ziweiView(ctx);

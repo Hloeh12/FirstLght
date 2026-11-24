@@ -1857,3 +1857,22 @@ mark.rpt-hit.is-cur{background:#ff4f8b;color:#fff}
 @media (prefers-color-scheme:dark){
 .report-content .rpt-find-row input{background:#fff!important;color:#2f2028!important;border-color:#f3d7e4!important;box-shadow:none!important}
 }
+
+/* v0.64.0 首启体验：排盘空态的今日卡与示例案例卡 */
+.first-run .empty{margin:18px 0 14px}
+.fr-today{padding:16px 18px}
+.fr-today h2{margin:0 0 10px;font-size:16px}
+.fr-today-status{margin:0;color:var(--sub,#6a5563);font-size:13px}
+.fr-today-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.fr-today-list li{display:flex;gap:10px;font-size:13px;line-height:1.55}
+.fr-today-list li b{flex:0 0 auto;color:var(--brand,#a8326a);font-weight:700}
+.fr-today-list li span{color:inherit;min-width:0}
+.fr-today .thin{margin:12px 0 0;font-size:12px;color:var(--sub,#6a5563)}
+.fr-demo-card{margin-top:14px;padding:16px 18px}
+.fr-demo-card h2{margin:0 0 8px;font-size:16px}
+.fr-demo-card .thin{margin:0 0 12px;font-size:12px;color:var(--sub,#6a5563)}
+.fr-demo{display:grid;gap:10px}
+.fr-demo-item{appearance:none;-webkit-appearance:none;text-align:left;border:1px solid var(--line,#ecdbe4);background:#fff;border-radius:14px;padding:12px 14px;font:inherit;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+.fr-demo-item:active{transform:scale(.98)}
+.fr-demo-item b{display:block;font-size:14px;margin-bottom:3px}
+.fr-demo-item small{display:block;font-size:12px;color:var(--sub,#6a5563)}

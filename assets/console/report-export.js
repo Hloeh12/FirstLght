@@ -120,6 +120,30 @@ const safeName=(name,sys)=>{
  return base+'-'+(sys||'报告')+'-深度报告.html';
 };
 
+// v0.64.0 PDF 直出：复用 buildReportDocument 的自包含 HTML（内联打印样式），交给原生
+// exportPdf 通道在屏外 WKWebView 按文档实际高度渲染成整篇 PDF，再走系统分享面板。
+// 上万字的报告在主 WebView 里只渲染可视区，对主 WebView createPDF 会截断，必须走专用通道。
+// 无原生通道（Web 预览/测试环境）时返回 null，由调用方隐藏按钮，不再降级到「浏览器打开→打印」的教程路径。
+export function exportReportPdf(report){
+ const native=typeof window!=='undefined'&&window.webkit?.messageHandlers?.exportPdf;
+ if(!native)return null;
+ const name=safeName(report.cover?.name,report.cover?.system).replace(/\.html$/,'.pdf');
+ const html=buildReportDocument(report);
+ const bytes=new TextEncoder().encode(html).length;
+ if(bytes>8_000_000)return Promise.reject(new Error('报告文档超过 8 MB，无法导出 PDF'));
+ return new Promise(resolve=>{
+  let settled=false;
+  const finish=msg=>{if(settled)return;settled=true;clearTimeout(timer);try{delete window.__FL_PDF_DONE__;}catch{}resolve(msg);};
+  // 原生可能静默 guard 失败（超限/面板未关/上一份未完成），15s 内没有回传按未完成提示。
+  const timer=setTimeout(()=>finish('已提交 PDF 导出；若未见分享面板请重试。'),15_000);
+  window.__FL_PDF_DONE__=payload=>{
+   if(payload&&payload.ok)finish('PDF 已生成，可在分享面板保存。');
+   else finish(false,'PDF 导出失败：'+((payload&&payload.reason)||'未知原因'));
+  };
+  native.postMessage({name,text:html});
+ });
+}
+
 export function buildReportDocument(report){
  const title=escHtml(report.title||'深度报告');
  const owner=escHtml(report.cover?.name||'');

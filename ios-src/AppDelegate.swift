@@ -78,6 +78,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         config.userContentController.add(self, name: "findLocation")
         config.userContentController.add(self, name: "caseBackup")
         config.userContentController.add(self, name: "shareDocument")
+        config.userContentController.add(self, name: "exportPdf")
         config.userContentController.add(self, name: "interactionHaptic")
         config.userContentController.add(self, name: "copyDiagnostics")
         config.preferences.javaScriptEnabled = true
@@ -192,6 +193,13 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     // viewDidLoad/viewWillAppear 里的复位都早于此时，会被覆盖 —— 冷启动首屏放大即源于此。
     // 这里在导航完成后复位，并跨下一次主线程循环再锁一次，覆盖系统延迟应用的场景。
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // 屏外 PDF 渲染完成：布局稳定后按文档实际高度 createPDF 整篇成图。
+        if webView === pdfWebView, pdfLoadState != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.renderOffscreenPdf()
+            }
+            return
+        }
         applyZoomLock()
         // 把原生实际 frame 与两套缩放写进首屏快照，供诊断对比（确认加载时视口是否与屏幕一致、
         // zoomScale 是否被系统顶到非 1）。
@@ -235,6 +243,13 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if webView === pdfWebView {
+            pdfLoadState = nil
+            pdfWebView?.removeFromSuperview()
+            pdfWebView = nil
+            notifyPdfResult(ok: false, reason: error.localizedDescription)
+            return
+        }
         showRetryOverlay(error: error.localizedDescription)
     }
 
@@ -336,6 +351,11 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             exportDocument(text: text, name: name)
             return
         }
+        if message.name == "exportPdf", let payload = message.body as? [String: Any],
+           let name = payload["name"] as? String, let text = payload["text"] as? String {
+            exportPdf(html: text, name: name)
+            return
+        }
         guard message.name == "shareChart", presentedViewController == nil,
               let payload = message.body as? String, payload.count <= 12_000_000,
               payload.hasPrefix("data:image/png;base64,"),
@@ -370,6 +390,89 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     // 深度报告文档导出：把自包含 HTML 写成临时文件交给系统分享面板。
     // 文件名只保留安全字符并强制 .html 后缀，防止路径穿越；大小上限 8 MB。
     // 成功/失败都通过 window.__FL_EXPORT_DONE__ 回传，避免原生 guard 静默失败而前端误报成功。
+    // v0.64.0 PDF 直出：自包含报告 HTML 在屏外 WKWebView 按文档实际高度排版，
+    // 用 createPDF 成图后走系统分享面板。主 WebView 只渲染可视区且内容被虚拟化，
+    // 直接对主 WebView 截 PDF 会截断/漏章，必须用独立离屏 WebView 完整渲染。
+    private var pdfWebView: WKWebView?
+
+    private func exportPdf(html: String, name: String) {
+        guard let data = html.data(using: .utf8), data.count <= 8_000_000 else {
+            notifyPdfResult(ok: false, reason: "报告文档超过 8 MB，无法导出 PDF")
+            return
+        }
+        guard presentedViewController == nil else {
+            notifyPdfResult(ok: false, reason: "请先关闭当前面板，再导出 PDF")
+            return
+        }
+        let safe = name.replacingOccurrences(of: #"[/\\:*?\\"<>|\r\n]"#, with: "", options: .regularExpression)
+        let base = safe.isEmpty ? "FirstLight-report" : safe
+        let file = base.hasSuffix(".pdf") ? base : base + ".pdf"
+        pdfWebView?.removeFromSuperview()
+        let config = WKWebViewConfiguration()
+        let renderer = WKWebView(frame: CGRect(x: 0, y: 0, width: 768, height: 1024), configuration: config)
+        renderer.isHidden = true
+        view.addSubview(renderer)
+        pdfWebView = renderer
+        pdfLoadState = PdfLoadState(name: file, html: data)
+        renderer.loadHTMLString(html, baseURL: nil)
+    }
+
+    private struct PdfLoadState { let name: String; let html: Data }
+    private var pdfLoadState: PdfLoadState?
+
+    private func notifyPdfResult(ok: Bool, reason: String?) {
+        DispatchQueue.main.async {
+            let reasonJson = String(data: try! JSONEncoder().encode(reason ?? "未知原因"), encoding: .utf8)!
+            let payload = ok ? "{ok:true}" : "{ok:false,reason:" + reasonJson + "}"
+            self.webView.evaluateJavaScript("window.__FL_PDF_DONE__&&window.__FL_PDF_DONE__(" + payload + ")")
+        }
+    }
+
+    private func renderOffscreenPdf() {
+        guard let renderer = pdfWebView, pdfLoadState != nil else { return }
+        renderer.evaluateJavaScript("JSON.stringify({h:document.documentElement.scrollHeight,w:document.documentElement.scrollWidth})") { [weak self] result, _ in
+            guard let self = self else { return }
+            var width: CGFloat = 768
+            var height: CGFloat = 1024
+            if let str = result as? String, let data = str.data(using: .utf8),
+               let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+               let w = obj["w"] as? Int, let h = obj["h"] as? Int, h > 0 {
+                width = min(max(CGFloat(w), 320), 820)
+                height = min(CGFloat(h), 60_000)
+            }
+            let frame = CGRect(x: 0, y: 0, width: width, height: height)
+            renderer.frame = frame
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                guard let self = self, let renderer = self.pdfWebView else { return }
+                let config = WKPDFConfiguration()
+                config.rect = CGRect(origin: .zero, size: frame.size)
+                renderer.createPDF(configuration: config) { [weak self] result in
+                    switch result {
+                    case .success(let data): self?.finishPdf(data)
+                    case .failure(let error): self?.notifyPdfResult(ok: false, reason: error.localizedDescription)
+                    }
+                }
+            }
+        }
+    }
+
+    private func finishPdf(_ data: Data) {
+        guard let state = pdfLoadState else { return }
+        pdfLoadState = nil
+        pdfWebView?.removeFromSuperview()
+        pdfWebView = nil
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let url = folder.appendingPathComponent(state.name)
+            try data.write(to: url, options: .atomic)
+            presentShare(url)
+            notifyPdfResult(ok: true, reason: nil)
+        } catch {
+            notifyPdfResult(ok: false, reason: "暂时无法写入 PDF 文件")
+        }
+    }
+
     private func exportDocument(text: String, name: String) {
         guard let data = text.data(using: .utf8), data.count <= 8_000_000 else {
             notifyExportResult(ok: false, reason: "报告文档超过 8 MB，无法导出")

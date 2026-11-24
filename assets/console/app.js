@@ -16,6 +16,8 @@ import {diagnosticsPanel,installDiagnostics,resetCaches} from './diagnostics.js'
 import {soulWidgets,wireSoul} from './soul-home.js';
 import {feedbackEnabled,installFeedback,playSuccessSound,setFeedback} from './feedback.js';
 import {exportReportDocument} from './report-export.js';import {exportReportPdf} from './report-export.js';
+import {answerHtml,presetQuestions,QA_CSS} from './report-qa.js';
+import {TOPICS,topicHtml,exportTopic} from './topic-report.js';
 import {firstRunHome,DEMO_CASES,refreshToday} from './first-run.js';
 import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './ui.js';
 import {ziweiView,ziweiTools,ziweiPatterns,ziweiPeriodEvidence} from './ziwei.js';
@@ -788,6 +790,8 @@ function openFullReport(prebuilt,opts={}){
   <div class="rpt-topbar"><button type="button" class="icon" data-rpt-close aria-label="关闭报告">×</button>
    <span class="rpt-topbar-title">深度报告 · ${esc(report.cover.system)}</span>
    <button type="button" class="rpt-act" data-rpt-find>检索</button>
+   <button type="button" class="rpt-act" data-rpt-qa>问答</button>
+   <button type="button" class="rpt-act" data-rpt-topic>专题</button>
    <button type="button" class="rpt-act" data-rpt-copy>复制</button>
    <button type="button" class="rpt-act primary" data-rpt-export>导出文档</button>
    <button type="button" class="rpt-act" data-rpt-pdf hidden>导出 PDF</button></div>
@@ -808,6 +812,7 @@ function openFullReport(prebuilt,opts={}){
    <i class="rpt-rail-track"><b data-rpt-rail-fill></b></i>
   </div>
   <div class="sheet-body rpt-body" id="reportBody">${reportHtml(report,{lazy:true})}<div class="scroll-clearance" aria-hidden="true"></div></div>
+  <div class="rpt-overlay" data-rpt-overlay hidden></div>
   <button type="button" class="rpt-nav-fab" data-rpt-nav aria-expanded="false" aria-controls="reportNavDrawer" aria-label="打开章节目录"><span class="rpt-nav-fab-ico" aria-hidden="true">☰</span><span data-rpt-fab-label>目录</span><span class="rpt-nav-pct" data-rpt-progress>0%</span></button>
   <div class="rpt-nav-scrim" data-rpt-nav-close aria-hidden="true"></div>
   <aside class="rpt-nav-drawer" id="reportNavDrawer" data-rpt-drawer role="dialog" aria-label="章节目录" aria-hidden="true">
@@ -1080,6 +1085,47 @@ const closeFind=()=>{
  clearHits();
  if(findInput)findInput.value='';
 };
+/* v0.68.0 报告问答 + 专题报告（本地检索，附出处跳转） */
+ const overlay=d.querySelector('[data-rpt-overlay]');
+ const showOverlay=html=>{overlay.innerHTML=html;overlay.hidden=false;};
+ const hideOverlay=()=>{overlay.hidden=true;overlay.innerHTML='';};
+ overlay.addEventListener('click',e=>{
+  if(e.target===overlay){hideOverlay();return;}
+  const j=e.target.closest('[data-qa-jump]');
+  if(j){hideOverlay();const sec=overlay.parentElement.querySelectorAll('.rpt-sec')[Number(j.dataset.qaJump)-1];
+   if(sec){sec.hidden=false;sec.scrollIntoView({behavior:'smooth',block:'start'});}}
+ });
+ d.querySelector('[data-rpt-qa]').onclick=()=>{
+  const presets=presetQuestions(report.kind||state.system);
+  showOverlay(`<div class="qa-panel"><h3>报告问答</h3><p class="thin">从本报告原文检索证据作答，点出处跳回原文核对。</p>
+   <div class="qa-input"><input type="search" data-qa-input placeholder="如：我适合什么行业？哪些年份关键？" aria-label="输入问题"><button type="button" data-qa-go>问</button></div>
+   <div class="qa-bar">${presets.map(q=>`<button type="button" data-qa-preset="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+   <div data-qa-out></div></div>`);
+  const inp=overlay.querySelector('[data-qa-input]'),out=overlay.querySelector('[data-qa-out]');
+  const ask=q=>{const t=(q??inp.value).trim();if(!t)return;out.innerHTML=answerHtml(viewReport(),t);};
+  overlay.querySelector('[data-qa-go]').onclick=()=>ask();
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')ask();});
+  overlay.querySelectorAll('[data-qa-preset]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.qaPreset;ask(b.dataset.qaPreset);});
+  inp.focus();
+ };
+ d.querySelector('[data-rpt-topic]').onclick=()=>{
+  showOverlay(`<div class="qa-panel"><h3>专题报告</h3><p class="thin">从本报告按主题抽章重组，不新增断语，可导出分享。</p>
+   <div class="qa-bar">${TOPICS.map(t=>`<button type="button" data-topic-id="${t.id}">${esc(t.label)}</button>`).join('')}</div>
+   <div data-topic-out></div></div>`);
+  const out=overlay.querySelector('[data-topic-out]');
+  overlay.querySelectorAll('[data-topic-id]').forEach(b=>b.onclick=()=>{
+   const t=TOPICS.find(x=>x.id===b.dataset.topicId);
+   const html=topicHtml(viewReport(),t);
+   if(!html){out.innerHTML='<p class="thin">本报告没有该主题章节。</p>';return;}
+   out.innerHTML=html+`<div class="qa-bar"><button type="button" data-topic-export>导出专题 HTML</button></div>`;
+   out.querySelector('[data-topic-export]').onclick=async e=>{
+    const b2=e.currentTarget;b2.disabled=true;
+    try{tell(await exportTopic(viewReport(),t));}
+    catch(err){tell('导出失败：'+(err.message||err));}
+    finally{b2.disabled=false;}
+   };
+  });
+ };
 d.querySelector('[data-rpt-find]')?.addEventListener('click',openFind);
 d.querySelector('[data-find-close]')?.addEventListener('click',closeFind);
 d.querySelector('[data-find-prev]')?.addEventListener('click',()=>jumpHit(findAt-1));

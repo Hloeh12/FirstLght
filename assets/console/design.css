@@ -2252,3 +2252,24 @@ html{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important}
 @media (prefers-color-scheme:dark){
  .zi-board .zi-center,.zi-center-slot .zi-center{background:transparent!important;box-shadow:none!important;border:0!important}
 }
+
+/* v0.68.0 报告问答 / 专题报告浮层 */
+.rpt-overlay{position:absolute;inset:0;background:rgba(20,15,35,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.rpt-overlay[hidden]{display:none}
+.qa-panel{width:100%;max-height:78%;overflow-y:auto;background:#fbfaff;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(0,0,0,.18)}
+.qa-panel h3{margin:0 0 4px;font-size:17px}
+.qa-panel .thin{color:#8a8498;font-size:12px;margin:0 0 10px}
+
+.qa-card{margin:14px 0;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.06)}
+.qa-card .qa-q{font-weight:600;display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.qa-card .qa-tag{flex:none;font-size:12px;padding:2px 8px;border-radius:999px;background:#efeafd;color:#6b4fa8}
+.qa-card .qa-lead{font-size:15px;line-height:1.7;margin:6px 0}
+.qa-card .qa-evi{margin:8px 0 4px;padding-left:20px}
+.qa-card .qa-evi li{margin:8px 0;font-size:13px;line-height:1.6}
+.qa-card .qa-src{border:0;background:none;padding:0;color:#6b4fa8;font-weight:600;cursor:pointer;font-size:13px}
+.qa-card small{display:block;margin-top:8px;color:#8a8498;font-size:11px}
+.qa-bar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.qa-bar button{font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid rgba(107,79,168,.3);background:rgba(255,255,255,.6);color:#6b4fa8}
+.qa-input{display:flex;gap:8px;margin:10px 0}
+.qa-input input{flex:1;padding:10px 14px;border-radius:12px;border:1px solid rgba(0,0,0,.12);font-size:15px;background:#fff}
+.qa-input button{flex:none;padding:0 18px;border-radius:12px;border:0;background:#6b4fa8;color:#fff;font-size:15px}

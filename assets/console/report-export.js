@@ -159,9 +159,7 @@ export function exportReportDocument(report){
  const bytes=new TextEncoder().encode(html).length;
  if(bytes>8_000_000)return Promise.reject(new Error('报告文档超过 8 MB，无法导出'));
  const native=window.webkit?.messageHandlers?.shareDocument;
- if(native){
-  // 原生可能静默 guard 失败（超限时或已有面板未关），必须等它回传确认，不能先报成功。
-  return new Promise(resolve=>{
+ const viaNative=(name,html)=>new Promise(resolve=>{
    let settled=false;
    const finish=(ok,msg)=>{if(settled)return;settled=true;clearTimeout(timer);try{delete window.__FL_EXPORT_DONE__;}catch{}resolve(msg);};
    const timer=setTimeout(()=>finish(true,'已提交导出，请查看分享面板。'),3000);
@@ -171,10 +169,22 @@ export function exportReportDocument(report){
    };
    native.postMessage({name,text:html});
   });
- }
+ if(native)return viaNative(safeName(report.cover?.name,report.cover?.system),html);
  const url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
  const a=document.createElement('a');a.href=url;a.download=name;a.click();
  // 大 Blob 下载可能超过 5 秒，延长回收避免下载中断
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+ return Promise.resolve('文档已生成。');
+}
+
+/* 通用 HTML 文档导出（专题报告等复用）：同名校验 + 同一原生/浏览器双通道。 */
+export function exportHtmlDocument(html,fallbackName='document.html'){
+ const bytes=new TextEncoder().encode(html).length;
+ if(bytes>8_000_000)return Promise.reject(new Error('文档超过 8 MB，无法导出'));
+ const native=window.webkit?.messageHandlers?.shareDocument;
+ if(native)return viaNative(fallbackName,html);
+ const url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;a.download=fallbackName;a.click();
  setTimeout(()=>URL.revokeObjectURL(url),60000);
  return Promise.resolve('文档已生成。');
 }

@@ -177,7 +177,7 @@ test('bundled console creates fresh charts and progresses them without any netwo
  for(const [k,v] of Object.entries({name:'关联案例',date:'2000-08-16',clock:'12:00',lat:'31.23',lon:'121.47',tz:'8'}))form.elements[k].value=v;
  click('#birthForm [type=submit]');
  await until(()=>$('#activeProfile').textContent.includes('关联案例'),'second case');
- click('[data-tab=cases]');click('.case-card.active [data-action=detail]');
+ click('[data-tab=cases]');await until(()=>Boolean($('.case-card.active')),'active case card');click('.case-card.active [data-action=detail]');
  assert(!$('#addRelation input[type=range]'));
  click('#addRelation button');click('#toolSheet [data-close]');click('[data-galaxy-open]');
  await until(()=>Boolean($('.galaxy-planet')),'relationship planet');

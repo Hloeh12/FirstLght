@@ -38,6 +38,8 @@ try{
   if(engine==='webkit')page.setDefaultTimeout(90000);
   page.on('pageerror',error=>errors.push(error.message));
   page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/'))api.push(request.url());});
+  // v0.71.0 新手引导：冒烟测试走完整交互链，预置「已引导」标记避免 toolSheet 遮罩挡住点击。
+  await context.addInitScript(()=>{try{localStorage.setItem('xy_onboarded','1');}catch{}});
   await page.goto('http://127.0.0.1:18824/',{waitUntil:'networkidle'});
   const viewportGap=await page.evaluate(()=>{
    const scroll=document.getElementById('mainScrollView').getBoundingClientRect();

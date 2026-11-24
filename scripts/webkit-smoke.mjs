@@ -40,6 +40,8 @@ try{
   if(new URL(request.url()).pathname.startsWith('/api/'))api.push(request.url());
  });
  await page.goto('http://127.0.0.1:'+PORT+'/',{waitUntil:'networkidle'});
+ // v0.71.0 新手引导：预置「已引导」标记，避免 toolSheet 遮罩挡住冒烟交互。
+ await page.evaluate(()=>{try{localStorage.setItem('xy_onboarded','1');}catch{}});
 
  // 生成命盘：走页面本身的输入表单，不碰任何抽屉/分享长链路
  await page.evaluate(()=>{

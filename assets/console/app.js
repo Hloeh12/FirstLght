@@ -617,7 +617,7 @@ function almanacPlans(date){
  return list.filter(r=>r&&r.kind==='almanac'&&(!date||r.date===date))
   .sort((a,b)=>String(a.when).localeCompare(String(b.when)));
 }
-const PAGE_TITLES={cases:'案例库',chart:'排盘',period:'时点专项',insights:'洞见',me:'我的'};const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘',calendar:'历法'};
+const PAGE_TITLES={cases:'案例库',chart:'排盘',period:'时点专项',insights:'洞见',me:'我的'};const SYSTEM_NAMES={bazi:'八字',ziwei:'紫微',west:'西洋占星',vedic:'印度占星',synastry:'双人合盘',calendar:'历法',liuyao:'六爻纳甲',naming:'八字起名'};
 function profileTitle(){
  const p=state.profile,info=state.reading?.bazi.info;
  const pageTitle=$('#pageTitle');if(pageTitle)pageTitle.textContent=PAGE_TITLES[state.tab]||'排盘';
@@ -1648,9 +1648,9 @@ const MODULE_ICONS={
 };
 function modulePanel(){
  const ico=(paths)=>`<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
- const sysIcons={qizheng:ico('<circle cx="10" cy="10" r="2.2" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="6.4"/><path d="M10 1.6v2.2M10 16.2v2.2M1.6 10h2.2M16.2 10h2.2"/>'),yijing:ico('<path d="M6 3.2h8v13.6H6zM10 3.2v13.6M6.6 7h1.4M12 7h1.4M6.6 13h1.4M12 13h1.4"/>'),calendar:ico('<rect x="3.4" y="4.6" width="13.2" height="12" rx="2.2"/><path d="M3.4 8.4h13.2M7 2.8v3M13 2.8v3"/>')};
+ const sysIcons={qizheng:ico('<circle cx="10" cy="10" r="2.2" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="6.4"/><path d="M10 1.6v2.2M10 16.2v2.2M1.6 10h2.2M16.2 10h2.2"/>'),yijing:ico('<path d="M6 3.2h8v13.6H6zM10 3.2v13.6M6.6 7h1.4M12 7h1.4M6.6 13h1.4M12 13h1.4"/>'),calendar:ico('<rect x="3.4" y="4.6" width="13.2" height="12" rx="2.2"/><path d="M3.4 8.4h13.2M7 2.8v3M13 2.8v3"/>'),liuyao:ico('<circle cx="10" cy="10" r="7.2"/><circle cx="10" cy="10" r="3.6"/><path d="M10 2.8v1.6M10 15.6v1.6M2.8 10h1.6M15.6 10h1.6"/>')};
  const sys=['bazi','ziwei','west','vedic'].map(id=>[id,SYSTEM_NAMES[id],MODULE_ICONS[id],state.system===id&&state.tab==='chart']);
- const extra=[['qizheng','七政四余',sysIcons.qizheng,state.system==='qizheng'&&state.tab==='chart'],['yijing','易经推命',sysIcons.yijing,state.system==='yijing'&&state.tab==='chart'],['calendar','万年历择日',sysIcons.calendar,state.system==='calendar'&&state.tab==='chart']];
+ const extra=[['qizheng','七政四余',sysIcons.qizheng,state.system==='qizheng'&&state.tab==='chart'],['yijing','易经推命',sysIcons.yijing,state.system==='yijing'&&state.tab==='chart'],['calendar','万年历择日',sysIcons.calendar,state.system==='calendar'&&state.tab==='chart'],['liuyao','六爻纳甲',sysIcons.liuyao,state.system==='liuyao'&&state.tab==='chart']];
  const pair=[['synastry','双人合盘',MODULE_ICONS.pair,state.tab==='chart'&&state.system==='synastry'],['period','时点专项报告',MODULE_ICONS.insights,state.tab==='period'],['report','深度报告',MODULE_ICONS.insights,false],['share','分享长图',MODULE_ICONS.share,false]];
  const tabs=[['cases','案例库',MODULE_ICONS.cases,state.tab==='cases'],['insights','洞见',MODULE_ICONS.insights,state.tab==='insights'],['me','我的',MODULE_ICONS.me,state.tab==='me'],['birth','出生资料',MODULE_ICONS.birth,false]];
  const tools=[['diagnostics','运行诊断',MODULE_ICONS.diagnostics,false],['about','版本',MODULE_ICONS.about,false],['reset','回到首页',MODULE_ICONS.ziwei,false]];
@@ -1659,7 +1659,7 @@ function modulePanel(){
  for(const item of d.querySelectorAll('[data-module]')){
   item.onclick=()=>{
    const id=item.dataset.module;close(d);
-   if(['bazi','ziwei','west','vedic','synastry','qizheng','yijing','calendar'].includes(id)){switchTab('chart',id);return;}
+   if(['bazi','ziwei','west','vedic','synastry','qizheng','yijing','calendar','liuyao'].includes(id)){switchTab('chart',id);return;}
    if(['cases','period','insights','me'].includes(id)){switchTab(id);return;}
    if(id==='birth'){birthSheet(state.profile);return;}
    if(id==='report'){openFullReport();return;}

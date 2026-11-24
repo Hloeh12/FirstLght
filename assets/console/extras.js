@@ -3,6 +3,8 @@ import {aspectBrowser,bindAspectBrowser} from './aspects.js';
 import {bindWheel} from './wheel-gesture.js';
 import {$,btn,esc,term,table,isoLocal} from './ui.js';
 import {EVENTS as CAL_EVENT_META} from '../../src/almanac.mjs';
+import {qiGuaByTime} from '../../src/liuyao.mjs';
+import {naming} from './extras-naming.js';
 import {decisionsFor,decisionAt,saveDecision,removeDecision} from './plan-book.js';
 
 const stateFor=(ctx,id,defaults)=>ctx.state.chartState[id]??={...defaults,token:0,result:null,error:''};
@@ -28,6 +30,21 @@ function hexagram(heading,h){
  return `<article class="card liquid-glass"><h2>${esc(heading)} · ${term(h.name,h.reading||'可结合卦象与所选爻位阅读。','《周易》'+h.name+'卦：'+h.guaci+(h.line?' '+h.line:''))}</h2>
  <div class="hexagram" role="img" aria-label="${esc(h.name+'六爻卦象')}">${[...h.lines].reverse().map(x=>`<span class="${x?'solid':'broken'}"></span>`).join('')}</div>
  <blockquote>${esc(h.guaci)}</blockquote>${h.line?`<p>${esc(h.line)}</p>`:''}<p>${esc(h.reading)}</p></article>`;
+}
+
+function liuyao(ctx){
+ const b=ctx.state.birth;
+ const date=b?`${b.Y}-${String(b.M).padStart(2,'0')}-${String(b.D).padStart(2,'0')}T12:00:00`:new Date().toISOString().slice(0,19);
+ let r;try{r=qiGuaByTime({date});}catch(e){ctx.host.innerHTML='<p class="thin">起卦失败：'+esc(e.message)+'</p>';return;}
+ const POS=['初','二','三','四','五','上'];
+ ctx.host.innerHTML=`<div class="liuyao-view">
+  <h3>六爻纳甲 · 时间起卦</h3>
+  <p class="thin">起卦时间 ${esc(r.question_date)} · 本卦 ${esc(r.ben.name)}（${esc(r.ben.palace)}宫·${esc(r.ben.element)}）· 动爻第 ${r.move} 爻 · 世${POS[r.shi]}应${POS[r.ying]} · 变卦 ${esc(r.bian.name)}</p>
+  <table><thead><tr><th>六兽</th><th>六亲</th><th>纳甲</th><th>爻位</th></tr></thead><tbody>
+  ${r.ben.yao.map(y=>`<tr><td>${esc(y.animal)}</td><td><b>${esc(y.relative)}</b></td><td>${esc(y.gz)}</td><td>${POS[y.pos]}爻${y.pos+1===r.move?' ← 动':''}</td></tr>`).join('')}
+  </tbody></table>
+  <p class="thin">本卦属${esc(r.ben.palace)}宫，用神六亲按卦宫五行取；日辰${esc(r.question_date)}与爻支六冲处以「冲」标注，主应期。传统术数内容，仅供自我观察参考。</p>
+ </div>`;
 }
 function yi(ctx){
  const id='yijing',s=stateFor(ctx,id,{year:new Date().getFullYear()}),r=s.result;
@@ -502,4 +519,4 @@ function synastry(ctx){
  };
  if(other&&!r&&!s.pending&&!s.error)calculatePair(ctx,s,other);
 }
-export function extraView(ctx){({qizheng:qi,yijing:yi,calendar,synastry})[ctx.state.system]?.(ctx);}
+export function extraView(ctx){({qizheng:qi,yijing:yi,calendar,synastry,liuyao})[ctx.state.system]?.(ctx);}

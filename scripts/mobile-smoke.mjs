@@ -255,7 +255,7 @@ try{
   const internal=await page.locator('#toolSheet .sheet-body').evaluate(n=>({height:n.clientHeight,content:n.scrollHeight}));
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
-  await page.locator('#instantTop').click();await page.locator('#instantToggle[data-chart-action=restore]').waitFor();const instantClock=(await page.locator('#chartBasisTime').textContent()).split(' · ')[1];
+  await page.locator('#instantTop').click();await page.locator('#instantToggle[data-chart-action=restore]').waitFor({state:'attached'});const instantClock=(await page.locator('#chartBasisTime').textContent()).split(' · ')[1];
   assert((await page.locator('#chartBasisTime').textContent()).includes(instantClock));
   assert((await page.locator('[data-profile-name]').textContent()).includes('即刻天象'));
   assert((await page.locator('#chartBasisTime').textContent()).includes('即刻天象'));

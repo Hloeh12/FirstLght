@@ -1459,8 +1459,8 @@ function periodDashboard(){
    <div class="period-controls card liquid-glass"><label>具体时点<select data-period-value>${periodOptions(system,scopes[0]?.[0])}</select></label>
     ${['vedic','west'].includes(system)?'<label>月份<select data-period-month>'+Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?'selected':''}>${i+1} 月</option>`).join('')+'</select></label>':''}
    </div>
-   <p class="period-scope-note">只出这个时点的盘与详批，正文逐条按该时刻的干支重算；<b>本命终身结构</b>请看「洞见」页的深度报告，两处不重复。</p>
    <div class="period-action">${btn('生成这个时点 →','class="primary period-generate" data-period-generate')}<p class="thin" data-period-status role="status"></p></div>
+   <p class="period-footnote">只出这个时点的盘与详批，正文逐条按该时刻的干支重算；<b>本命终身结构</b>请看「洞见」页的深度报告，两处不重复。</p>
   </section>`;
   wirePeriodPage();
  };

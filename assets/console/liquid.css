@@ -2040,3 +2040,27 @@ dialog[open],.sheet[open]{opacity:1!important}
  background:#fff;color:#a8326a;font-size:20px;line-height:1;z-index:2;
 }
 .qa-panel h3{padding-right:44px}
+
+
+/* ===== v0.73.5 时点页说明移到底部小字 =====
+   原 .period-scope-note 是带粉框的提示块，夹在表单与按钮之间占一屏；
+   现在放到按钮下方，作为不抢操作的小字脚注。 */
+.period-footnote{
+ margin:12px 4px 0!important;padding:0!important;
+ border:0!important;background:none!important;
+ text-align:center;font-size:10.5px!important;line-height:1.65!important;
+ color:var(--muted,#8a7381)!important;
+}
+.period-footnote b{color:#a12a5e;font-weight:650}
+
+
+/* ===== v0.73.5 紫微底部「大限与流限」时间轨实底化 =====
+   逐元素实测：底部唯一仍在透字的是 .timeline，背景为
+   linear-gradient(rgba(255,255,255,.5),rgba(255,250,252,.4)) + blur(14px)。
+   时间轨必须像其他卡片一样 100% 实底，否则下面宫格文字会浮出来。 */
+#screen .timeline,.timeline.timeline{
+ background:#fffdfd!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}
+.liquid-bottom-nav.liquid-bottom-nav{background:#fffdfd!important}

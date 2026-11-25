@@ -1,8 +1,17 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.73.4",
-  "build": 182,
+  "version": "0.73.5",
+  "build": 183,
   "releases": [
+    {
+      "version": "0.73.5",
+      "build": 183,
+      "revision": "local",
+      "at": "2026-11-25T07:10:00Z",
+      "items": [
+        "时点专项页「只出这个时点的盘与详批…」说明由表单中间的粉色提示块改为按钮下方的小字脚注。"
+      ]
+    },
     {
       "version": "0.73.4",
       "build": 182,

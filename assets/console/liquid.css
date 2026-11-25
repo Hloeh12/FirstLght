@@ -2008,3 +2008,35 @@ dialog#reportSheet.report-sheet{
  border:1px solid rgba(255,255,255,.9)!important;color:#a03a68!important;
 }
 #instantTop[hidden]{display:none!important}
+
+
+/* ===== v0.73.3 弹层/卡片 100% 实底（真机复测发现 .92~.97 仍透字） =====
+   配置抽屉实测背景为 linear-gradient(... .97/.94/.92)，后面紫微宫格文字仍可辨识。
+   玻璃感保留在顶缘高光与阴影上，底色一律实色。 */
+.sheet.liquid-glass,.drawer.liquid-glass,
+.sheet.sheet,.drawer.drawer,
+.liquid-glass.liquid-glass,.card.card,.card.liquid-glass.liquid-glass{
+ background:#fffdfd!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}
+/* 弹层入场动画在部分 WebKit 时序下会以 fill-mode:both 停在 opacity:0，直接锁为可见 */
+dialog[open],.sheet[open]{opacity:1!important}
+
+
+/* ===== v0.73.4 专题/问答浮层做成全屏页面，不再底部半屏留白 =====
+   用户实测：点「专题」后只有下方 184px 面板，上方整片空白，像没做完。
+   现在面板铺满视口、顶部从安全区开始，并给显式关闭按钮。 */
+.rpt-overlay{align-items:stretch!important}
+.qa-panel{
+ height:100%!important;max-height:100%!important;
+ border-radius:0!important;box-shadow:none!important;
+ padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(18px + env(safe-area-inset-bottom,0px))!important;
+ overflow-y:auto!important;
+}
+.qa-close{
+ position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;
+ width:34px;height:34px;border-radius:50%;border:1px solid #f3d7e4;
+ background:#fff;color:#a8326a;font-size:20px;line-height:1;z-index:2;
+}
+.qa-panel h3{padding-right:44px}

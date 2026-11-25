@@ -1134,14 +1134,14 @@ const closeFind=()=>{
  const showOverlay=html=>{overlay.innerHTML=html;overlay.hidden=false;};
  const hideOverlay=()=>{overlay.hidden=true;overlay.innerHTML='';};
  overlay.addEventListener('click',e=>{
-  if(e.target===overlay){hideOverlay();return;}
+  if(e.target===overlay||e.target.closest('[data-qa-close]')){hideOverlay();return;}
   const j=e.target.closest('[data-qa-jump]');
   if(j){hideOverlay();const sec=overlay.parentElement.querySelectorAll('.rpt-sec')[Number(j.dataset.qaJump)-1];
    if(sec){sec.hidden=false;sec.scrollIntoView({behavior:'smooth',block:'start'});}}
  });
  d.querySelector('[data-rpt-qa]').onclick=()=>{
   const presets=presetQuestions(report.kind||state.system);
-  showOverlay(`<div class="qa-panel"><h3>报告问答</h3><p class="thin">从本报告原文检索证据作答，点出处跳回原文核对。</p>
+  showOverlay(`<div class="qa-panel"><button type="button" class="qa-close" data-qa-close aria-label="关闭">×</button><h3>报告问答</h3><p class="thin">从本报告原文检索证据作答，点出处跳回原文核对。</p>
    <div class="qa-input"><input type="search" data-qa-input placeholder="如：我适合什么行业？哪些年份关键？" aria-label="输入问题"><button type="button" data-qa-go>问</button></div>
    <div class="qa-bar">${presets.map(q=>`<button type="button" data-qa-preset="${esc(q)}">${esc(q)}</button>`).join('')}</div>
    <div data-qa-out></div></div>`);
@@ -1153,7 +1153,7 @@ const closeFind=()=>{
   inp.focus();
  };
  d.querySelector('[data-rpt-topic]').onclick=()=>{
-  showOverlay(`<div class="qa-panel"><h3>专题报告</h3><p class="thin">从本报告按主题抽章重组，不新增断语，可导出分享。</p>
+  showOverlay(`<div class="qa-panel"><button type="button" class="qa-close" data-qa-close aria-label="关闭">×</button><h3>专题报告</h3><p class="thin">从本报告按主题抽章重组，不新增断语，可导出分享。</p>
    <div class="qa-bar">${TOPICS.map(t=>`<button type="button" data-topic-id="${t.id}">${esc(t.label)}</button>`).join('')}</div>
    <div data-topic-out></div></div>`);
   const out=overlay.querySelector('[data-topic-out]');

@@ -255,11 +255,11 @@ try{
   const internal=await page.locator('#toolSheet .sheet-body').evaluate(n=>({height:n.clientHeight,content:n.scrollHeight}));
   assert(internal.content>internal.height,'settings must scroll inside the bounded sheet');
   await page.locator('#toolSheet [data-close]').click();
-  await page.locator('#instantToggle').click();await page.locator('#instantToggle[data-chart-action=restore]').waitFor();const instantClock=(await page.locator('#chartBasisTime').textContent()).split(' · ')[1];
+  await page.locator('#instantTop').click();await page.locator('#instantToggle[data-chart-action=restore]').waitFor();const instantClock=(await page.locator('#chartBasisTime').textContent()).split(' · ')[1];
   assert((await page.locator('#chartBasisTime').textContent()).includes(instantClock));
   assert((await page.locator('[data-profile-name]').textContent()).includes('即刻天象'));
   assert((await page.locator('#chartBasisTime').textContent()).includes('即刻天象'));
-  await page.locator('#instantToggle').click();
+  await page.locator('#instantTop').click();
   await page.waitForFunction(() => document.querySelector('#chartBasisTime').textContent.includes('本命基准'), null, {timeout: 15000});
   assert((await page.locator('[data-profile-name]').textContent()).includes('布局示例'));
   assert((await page.locator('#chartBasisTime').textContent()).includes('1998-11-21 00:02'));
@@ -369,7 +369,7 @@ try{
   await page.getByText(/契合度 \d+%/).first().waitFor();
   await page.locator('[data-pair-mode=composite]').click();await page.locator('.pair-reading').waitFor();assert.equal(await page.locator('#westernChart').count(),1);
   await page.screenshot({path:'build/mobile-'+engine+'-composite-'+width+'.png'});await shareSnapshot('composite');
-  await useSystem('west','西洋盘');const active=await page.evaluate(()=>localStorage.getItem('xy_active_profile'));await page.locator('#instantToggle').click();
+  await useSystem('west','西洋盘');const active=await page.evaluate(()=>localStorage.getItem('xy_active_profile'));await page.locator('#instantTop').click();
   await page.locator('[data-mode=sky][aria-pressed=true]').waitFor();await page.locator('#westernChart').waitFor();
   assert.equal(await page.evaluate(()=>localStorage.getItem('xy_active_profile')),active);
   assert((await page.locator('[data-instant-caption]').textContent()).includes('本地'));await shareSnapshot('instant');

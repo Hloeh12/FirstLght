@@ -1911,3 +1911,28 @@ body.dark .report-content .rpt-find-row input{background:#241d2b!important;color
 body.dark .rpt-nav-drawer{background:linear-gradient(180deg,rgba(36,29,42,.96),rgba(28,22,34,.92))!important;border-color:rgba(255,255,255,.14)!important}
 body.dark .rpt-overlay{background:rgba(10,6,14,.6)!important}
 body.dark .rpt-content{color:#eee4ec!important}
+
+/* ============================================================
+   v0.73.0 玻璃卡片实底化（真修复）：本文件在 design.css 之后加载，
+   同为 !important 时后加载者胜——0.72.0 写在 design.css 的实底化
+   被 liquid.css:470 的透明玻璃(.72/.62/.55)整条盖回，用户看到
+   「毫无变化」。此处以更高优先级(0,2,1)重写并压过上方玻璃材质。
+   ============================================================ */
+.liquid-glass.liquid-glass,.card.card,.card.liquid-glass.liquid-glass{
+ background:linear-gradient(158deg,rgba(255,255,255,.97) 0%,rgba(255,252,255,.94) 46%,rgba(255,243,250,.92) 100%)!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}
+/* 紫微盘面：宫格必须全实底，下层文字不得透出 */
+.zi-board.zi-board{background:#fffdfd!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.zi-cell.zi-cell{background:#fffdfd!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.zi-cell.selected.zi-cell{background:#f6e1eb!important}
+.zi-center.zi-center{background:#fffafb!important}
+/* 顶栏与主底栏：实底 */
+#appTopBar{background:linear-gradient(160deg,rgba(255,255,255,.97),rgba(255,249,253,.94))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.liquid-bottom-nav.liquid-bottom-nav{background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(252,250,255,.96) 100%)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* 体系切换胶囊/分段器：实底 */
+.segments.segments{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.rail-scroll>[data-system-switch],.rail-grid{background:linear-gradient(160deg,#fff 0%,#fdfbff 100%)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.cfg-card.cfg-card{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.profile-pill.profile-pill{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}

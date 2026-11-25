@@ -1,8 +1,17 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.73.5",
-  "build": 183,
+  "version": "0.73.6",
+  "build": 184,
   "releases": [
+    {
+      "version": "0.73.6",
+      "build": 184,
+      "revision": "local",
+      "at": "2026-11-25T07:28:00Z",
+      "items": [
+        "修复「全部模块 → 六爻纳甲」点击无反应：视图误用 ctx.host（其他模块用 ctx.root），抛 TypeError 后停留在原排盘页；现改用 ctx.root 正常渲染时间起卦结果。"
+      ]
+    },
     {
       "version": "0.73.5",
       "build": 183,

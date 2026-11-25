@@ -35,9 +35,9 @@ function hexagram(heading,h){
 function liuyao(ctx){
  const b=ctx.state.birth;
  const date=b?`${b.Y}-${String(b.M).padStart(2,'0')}-${String(b.D).padStart(2,'0')}T12:00:00`:new Date().toISOString().slice(0,19);
- let r;try{r=qiGuaByTime({date});}catch(e){ctx.host.innerHTML='<p class="thin">起卦失败：'+esc(e.message)+'</p>';return;}
+ let r;try{r=qiGuaByTime({date});}catch(e){ctx.root.innerHTML='<p class="thin">起卦失败：'+esc(e.message)+'</p>';return;}
  const POS=['初','二','三','四','五','上'];
- ctx.host.innerHTML=`<div class="liuyao-view">
+ ctx.root.innerHTML=`<div class="liuyao-view">
   <h3>六爻纳甲 · 时间起卦</h3>
   <p class="thin">起卦时间 ${esc(r.question_date)} · 本卦 ${esc(r.ben.name)}（${esc(r.ben.palace)}宫·${esc(r.ben.element)}）· 动爻第 ${r.move} 爻 · 世${POS[r.shi]}应${POS[r.ying]} · 变卦 ${esc(r.bian.name)}</p>
   <table><thead><tr><th>六兽</th><th>六亲</th><th>纳甲</th><th>爻位</th></tr></thead><tbody>

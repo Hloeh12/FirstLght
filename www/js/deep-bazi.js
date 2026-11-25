@@ -583,7 +583,7 @@ const strengthSec=[
   // 八步大运一并列出，但必须标清哪一步是现在——否则读者要自己数年份。
   const stage=c.startYear>nowYear?'未来':c.startYear+9<nowYear?'已过':'当前';
   const stageTag=stage==='当前'?` · <em class="rpt-stage rpt-stage-now">当前</em>`:stage==='已过'?` · <em class="rpt-stage">已过</em>`:'';
-  return `<li><b>第${(c.index??0)+1}步 · ${c.age?`虚岁 ${c.age}–${c.age+9} · `:''}${c.startYear?c.startYear+'–'+(c.startYear+9)+' · ':''}${c.stem}${c.branch}（${G(god)}）${stageTag}</b><span><b>${t.head}</b>。事业：${endDot(t.career)}财运：${endDot(t.wealth)}感情：${endDot(t.love)}健康：${endDot(t.health)}${t.trend}${rel}。</span></li>`;
+  return `<li><b>第${(c.index??0)+1}步 · ${c.age?`虚岁 ${c.age}–${c.age+9} · `:''}${c.startYear?c.startYear+'–'+(c.startYear+9)+' · ':''}${c.stem}${c.branch}（${G(god)}）${stageTag}</b><span><b>${endDot(t.head)}</b>事业：${endDot(t.career)}财运：${endDot(t.wealth)}感情：${endDot(t.love)}健康：${endDot(t.health)}${t.trend}${rel}。</span></li>`;
  }).join('');
  const cycleSec=cycleLines?`<ul class="rpt-list">${cycleLines}</ul>`:'大运数据待排盘后生成——在排盘页选择任意一步大运，本报告会随盘面同步更新。';
 
@@ -601,8 +601,9 @@ const strengthSec=[
   const t=periodTenor(god,ns,dayStem,y.branch,delta);
   const groups=groupRelations(hits,t.br);
   const clashText=groups.map(g=>g.label).join('、');
-  const tone=delta==null?'':delta>3?'● 顺年':delta<-3?'▲ 慎年':'○ 平年';
-  return `<li><b>${y.year}（${y.age??''}岁）${y.stem}${y.branch} · ${G(god)}${tone?' · '+tone:''}</b><span><b>${t.head}</b>。事业：${endDot(t.career)}财：${endDot(t.wealth)}感情：${endDot(t.love)}健康：${endDot(t.health)}${t.trend}${clashText?`与原局${clashText}——${groups.map(g=>g.text).join('；')}。`:'与原局无明显刑冲合害，按下列动作推进。'}</span></li>`;
+  // ●／▲／○ 紧跟在「·」后面会被读成「两个点」；语气改成带色标签，层级也更清楚
+ const tone=delta==null?null:delta>3?['up','顺年']:delta<-3?['down','慎年']:['flat','平年'];
+  return `<li><b>${y.year}（${y.age??''}岁）${y.stem}${y.branch} · ${G(god)}${tone?` · <em class="rpt-tone" data-t="${tone[0]}">${tone[1]}</em>`:''}</b><span><b>${endDot(t.head)}</b>事业：${endDot(t.career)}财：${endDot(t.wealth)}感情：${endDot(t.love)}健康：${endDot(t.health)}${t.trend}${clashText?`与原局${clashText}——${groups.map(g=>g.text).join('；')}。`:'与原局无明显刑冲合害，按下列动作推进。'}</span></li>`;
  }).join('');
  const yearSec=yearLines?`<p class="rpt-lede">以下从 ${yearList[0]?.year||nowYear} 年起，逐年给出 ${yearList.length} 年（虚岁见括号）。已过的年份不再列出——回看旧年对决策没有帮助。</p><ul class="rpt-list rpt-years">${yearLines}</ul>`:'流年数据待排盘后生成。';
 
@@ -614,7 +615,7 @@ const strengthSec=[
   const t=periodTenor(god,ns,dayStem,m.branch,null);
   const hitText=hits.length?hits.map(h=>relPhrase(h,t.br)).join('；'):'与原局无明显刑冲合害——依下列动作推进即可';
   const clashYear=m.branch===CLASH_MAP[pillars[1]?.branch||'']?'；【冲提纲】此月动摇月令根基，大决策建议顺延':'';
-  return `<li><b>${m.label||m.stem+m.branch} · ${m.stem}${m.branch} · ${G(god)}</b><span><b>${t.head}</b>。事业：${endDot(t.career)}财：${endDot(t.wealth)}感情：${endDot(t.love)}${hitText}${clashYear}。</span></li>`;
+  return `<li><b>${m.label||m.stem+m.branch} · ${m.stem}${m.branch} · ${G(god)}</b><span><b>${endDot(t.head)}</b>事业：${endDot(t.career)}财：${endDot(t.wealth)}感情：${endDot(t.love)}${hitText}${clashYear}。</span></li>`;
  }).join('');
  const monthSec=monthLines?`<ul class="rpt-list rpt-months">${monthLines}</ul>`:'';
 

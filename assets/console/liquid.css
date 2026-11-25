@@ -1936,3 +1936,52 @@ body.dark .rpt-content{color:#eee4ec!important}
 .rail-scroll>[data-system-switch],.rail-grid{background:linear-gradient(160deg,#fff 0%,#fdfbff 100%)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .cfg-card.cfg-card{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .profile-pill.profile-pill{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+
+
+/* ===== v0.63.1 章节导语与阶段标签 =====
+   0.63.0 在流年章首写了「已过的年份不再列出」的导语、在大运行加了「当前/已过」标签，
+   但只加了 class，没写样式——渲染出来是一段普通正文，读者看不出这是「读法说明」。 */
+.rpt-sec p.rpt-lede,.rpt-lede{
+ margin:0 0 14px!important;padding:9px 12px;
+ border-left:2px solid rgba(209,106,156,.5);border-radius:0 9px 9px 0;
+ background:rgba(255,120,170,.06);
+ font-size:12.4px!important;line-height:1.8!important;color:#6a4560!important;
+}
+.rpt-lede + .rpt-list{margin-top:2px!important}
+.rpt-stage{
+ display:inline-block;margin:0 2px;padding:1px 7px;border-radius:999px;
+ border:1px solid #f3d7e4;background:#fff;
+ font-size:10.5px;font-style:normal;font-weight:700;color:#a8326a;
+ vertical-align:1px;letter-spacing:.02em;
+}
+.rpt-stage-now{border-color:#ff8ab8;background:#ffe8f1;color:#a8285d}
+.rpt-tone{display:inline-block;font-style:normal;font-weight:750;font-size:11.5px!important;color:#b3245f;letter-spacing:.02em}
+.rpt-tone[data-t=down]{color:#7a5b68}
+.rpt-tone[data-t=flat]{color:#9c7186;font-weight:650}
+@media (prefers-color-scheme:dark){
+ .rpt-sec p.rpt-lede,.rpt-lede{background:rgba(255,120,170,.10)!important;color:#6a4560!important}
+ .rpt-tone{color:#b3245f!important}.rpt-tone[data-t=down]{color:#7a5b68!important}.rpt-tone[data-t=flat]{color:#9c7186!important}
+}
+
+/* ===== v0.73.1 真机玻璃卡片实底化（按 CSS 特异性修，不按加载顺序） =====
+   根因：design.css:1460 的 #screen .card.liquid-glass 特异性 (1,2,0)，
+   压过 v0.73.0 末尾 .card.liquid-glass.liquid-glass 的 (0,3,0)——ID 优先于任意数量的类。
+   所以必须带 ID 选择器，且改成 100% 实色（原 .97/.94/.92 仍会透出 8% 鬼影）。 */
+#screen .card.liquid-glass,
+#screen article.card,
+#screen section.card{
+ background:#fffdfd!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}
+/* liquid.css:476 的镜面高光 opacity:.9 + mix-blend-mode:screen 会把实底重新洗白 */
+#screen .card.liquid-glass::before,
+#screen article.card::before,
+#screen section.card::before{display:none!important}
+/* 白边：design.css:1007 把 #screen 左右 padding 提到 14px!important，
+   design.css:30 的 .zi-board{margin-inline:-9px} 只抵消 9px，卡片则完全没抵消。 */
+#screen section[aria-label="紫微斗数"],
+#screen section[aria-label="四柱八字"],
+#screen section[aria-label="西洋占星"],
+#screen section[aria-label="印度占星"]{margin-inline:-14px!important}
+.zi-board{margin-inline:0!important}

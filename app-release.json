@@ -1,8 +1,20 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.73.0",
-  "build": 177,
+  "version": "0.73.1",
+  "build": 178,
   "releases": [
+    {
+      "version": "0.73.1",
+      "build": 178,
+      "revision": "local",
+      "at": "2026-11-25T02:00:00Z",
+      "items": [
+        "修真机透字根因：design.css:1460 的 #screen .card.liquid-glass 特异性 (1,2,0) 压过 0.73.0 的双类实底化 (0,3,0)，卡片始终保持 .86/.7 透明并带 blur(22px)；现用带 ID 的选择器覆盖并改 100% 实底。",
+        "关掉卡片 ::before 镜面高光（opacity:.9 + mix-blend-mode:screen），避免实底被重新洗白。",
+        "去两侧白边：#screen 左右 padding 14px!important 只被 .zi-board 的 -9px 抵消一部分；现四个排盘 section 用 -14px 负边距铺满，board 归零，无横向溢出。",
+        "补回 0.63.1 报告版式与文字修复：章节导语/阶段标签/流年语气标签有样式，30 处行首孤立句号清零，十神与流年不再出现重复标点。"
+      ]
+    },
     {
       "version": "0.73.0",
       "build": 177,

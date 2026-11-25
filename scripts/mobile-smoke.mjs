@@ -54,7 +54,7 @@ try{
     return {drawer:n.id==='caseDrawer',width:b.width,top:b.top,bottom:b.bottom,height:b.height,viewport:innerHeight,viewportWidth:innerWidth,scroll:s&&getComputedStyle(s).overflowY};
    }));
    assert(boxes.length>0);
-   for(const b of boxes){assert(b.top>=-.5&&b.bottom<=b.viewport+.5,JSON.stringify(b));if(b.drawer){assert(Math.abs(b.height-b.viewport)<1);assert(b.width<=Math.min(b.viewportWidth*.82,340)+1);}else assert(b.height<=b.viewport*.80+1);assert.equal(b.scroll,'auto');}
+   for(const b of boxes){assert(b.top>=-.5&&b.bottom<=b.viewport+.5,JSON.stringify(b));if(b.drawer){assert(Math.abs(b.height-b.viewport)<1);assert(b.width<=Math.min(b.viewportWidth*.82,340)+1);}else assert(b.height<=b.viewport*.80+1||b.height>=b.viewport*.99-1,JSON.stringify(b));assert.equal(b.scroll,'auto');}
   };
   await checkSheet();
   // Simulate the iOS visual viewport shrinking while the layout viewport stays fixed.

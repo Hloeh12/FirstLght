@@ -1911,36 +1911,279 @@ body.dark .report-content .rpt-find-row input{background:#241d2b!important;color
 body.dark .rpt-nav-drawer{background:linear-gradient(180deg,rgba(36,29,42,.96),rgba(28,22,34,.92))!important;border-color:rgba(255,255,255,.14)!important}
 body.dark .rpt-overlay{background:rgba(10,6,14,.6)!important}
 body.dark .rpt-content{color:#eee4ec!important}
-
 /* ============================================================
-   v0.73.0 玻璃卡片实底化（真修复）：本文件在 design.css 之后加载，
-   同为 !important 时后加载者胜——0.72.0 写在 design.css 的实底化
-   被 liquid.css:470 的透明玻璃(.72/.62/.55)整条盖回，用户看到
-   「毫无变化」。此处以更高优先级(0,2,1)重写并压过上方玻璃材质。
+   v0.74.0 材质与图层系统 —— 整体重写 0.73 的“实底化”补丁
+   ------------------------------------------------------------
+   0.73 为了让下层文字不透出来，把所有表面改成 100% 实底并关掉
+   backdrop-filter，结果是原生态液态玻璃整块消失（用户原话：
+   “苹果原生态液态玻璃效果也没有了”）。这一版按「图层」修，不刷白：
+
+   1) 实测（Playwright WebKit，与 WKWebView 同引擎）：<dialog> 在 top layer
+      时 backdrop-filter 完全不生效，连它的子元素也一样——后面文字是「清晰
+      但被冲淡」，不是「模糊」。这就是 0.72 之前「半透明玻璃会透字」的真因：
+      不是透明度不够，是模糊压根没执行。
+   2) 所以分层按「背后有没有文字」来定：
+      · 背后只有页面渐变的表面（顶栏 / 底栏 / 体系轨 / 页面卡片）→ 半透明 +
+        保留 backdrop-filter，支持模糊的版本上就是真玻璃，不支持也只有 6~10%
+        的底色偏移，不会出现可读文字。
+      · 背后压着正文的表面（整页弹层 / 抽屉 / 报告浮层）→ 近实色乳白 + 顶部
+        斜向镜面扫光 + 亮边框。玻璃质感用「光」做，不用「透」做。
+   3) 紫微宫格单独修图层：撤销 .zi-columns 的 display:block（主星／辅星由
+      并排变上下堆叠）、清掉误命中的 #screen article+article{margin-top:12px}
+      （每格内容被下推 12px 顶穿页脚）、恢复 overflow:hidden、行高改按内容
+      自适应，辅星固定三列、四化角标改成色点，杜绝任何溢出与重叠。
    ============================================================ */
-.liquid-glass.liquid-glass,.card.card,.card.liquid-glass.liquid-glass{
- background:linear-gradient(158deg,rgba(255,255,255,.97) 0%,rgba(255,252,255,.94) 46%,rgba(255,243,250,.92) 100%)!important;
- backdrop-filter:none!important;
- -webkit-backdrop-filter:none!important;
+
+:root{
+ /* 页面级玻璃：0.92 是「即使 blur 不生效也不会露出可读文字」的下限 */
+ --glass-page:linear-gradient(160deg,rgba(255,255,255,.94) 0%,rgba(255,247,252,.90) 55%,rgba(253,248,255,.92) 100%);
+ --glass-card:linear-gradient(160deg,rgba(255,255,255,.93) 0%,rgba(255,249,253,.89) 58%,rgba(253,248,255,.91) 100%);
+ /* 弹层是整页模态：iOS 自己的整页 sheet 也是不透明的，透明只留给非模态浮层 */
+ --glass-panel:linear-gradient(172deg,#fffdfd 0%,#fffbfd 55%,#fdf9ff 100%);
+ --glass-edge:rgba(255,255,255,.86);
+ --glass-hi:inset 0 1px 0 rgba(255,255,255,.98),inset 0 -1px 0 rgba(255,152,197,.12);
+ --glass-lift:0 18px 42px -30px rgba(84,30,62,.55),0 3px 10px -6px rgba(84,30,62,.16);
 }
-/* 紫微盘面：宫格必须全实底，下层文字不得透出 */
-.zi-board.zi-board{background:#fffdfd!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.zi-cell.zi-cell{background:#fffdfd!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.zi-cell.selected.zi-cell{background:#f6e1eb!important}
-.zi-center.zi-center{background:#fffafb!important}
-/* 顶栏与主底栏：实底 */
-#appTopBar{background:linear-gradient(160deg,rgba(255,255,255,.97),rgba(255,249,253,.94))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.liquid-bottom-nav.liquid-bottom-nav{background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(252,250,255,.96) 100%)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-/* 体系切换胶囊/分段器：实底 */
-.segments.segments{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.rail-scroll>[data-system-switch],.rail-grid{background:linear-gradient(160deg,#fff 0%,#fdfbff 100%)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.cfg-card.cfg-card{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.profile-pill.profile-pill{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 
+/* ---------- 1) 页面级玻璃：顶栏 / 底栏 / 体系切换轨 ---------- */
+#appTopBar,#appTopBar.liquid-glass,.chrome.liquid-glass,
+#bottomNav,.liquid-bottom-nav,.dock-rail{
+ background:var(--glass-page)!important;
+ -webkit-backdrop-filter:blur(24px) saturate(190%)!important;
+ backdrop-filter:blur(24px) saturate(190%)!important;
+ border-color:var(--glass-edge)!important;
+ box-shadow:var(--glass-hi),var(--glass-lift)!important;
+}
+/* 体系胶囊、模块按钮：玻璃上的小玻璃，用高光边区分层次，不再实底 */
+.rail-scroll>[data-system-switch],.rail-grid,.profile-pill.profile-pill,#instantTop{
+ background:linear-gradient(158deg,rgba(255,255,255,.92),rgba(255,243,249,.82))!important;
+ -webkit-backdrop-filter:blur(12px) saturate(170%)!important;
+ backdrop-filter:blur(12px) saturate(170%)!important;
+ border:1px solid rgba(255,255,255,.92)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.98),0 4px 12px -8px rgba(130,45,85,.35)!important;
+}
+/* 玻璃的「折射」不是靠透明度做出来的，是靠这层斜向镜面扫光 + 亮边。
+   WKWebView 下 backdrop-filter 不稳（dialog / 卡片实测不生效），
+   所以在近实底之上补这一层，让顶栏、底栏、悬浮胶囊读起来是玻璃而不是白纸。 */
+#appTopBar,#appTopBar.liquid-glass,.chrome.liquid-glass,
+#bottomNav,.liquid-bottom-nav{position:relative;isolation:isolate}
+#appTopBar::before,#bottomNav::before{
+ content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+ background:linear-gradient(116deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.22) 20%,rgba(255,255,255,0) 44%,rgba(255,255,255,0) 60%,rgba(255,255,255,.30) 84%,rgba(255,255,255,.66) 100%);
+ mix-blend-mode:screen;opacity:.62;
+}
+.liquid-bottom-nav{box-shadow:inset 0 1px 0 rgba(255,255,255,.98),inset 0 -1px 0 rgba(255,150,190,.18),0 16px 40px -26px rgba(96,32,68,.5)!important}
+#appTopBar{box-shadow:inset 0 -1px 0 rgba(255,150,190,.14),0 10px 30px -26px rgba(96,32,68,.45)!important}
 
-/* ===== v0.63.1 章节导语与阶段标签 =====
-   0.63.0 在流年章首写了「已过的年份不再列出」的导语、在大运行加了「当前/已过」标签，
-   但只加了 class，没写样式——渲染出来是一段普通正文，读者看不出这是「读法说明」。 */
+/* 选中的体系胶囊保持品牌粉，不做玻璃（对比度优先） */
+.rail-scroll>[data-system-switch][aria-pressed=true]{
+ background:linear-gradient(135deg,#ff7cb0,#ff4f8b)!important;
+ border-color:#ff9dc0!important;color:#fff!important;
+ box-shadow:0 8px 18px -10px rgba(255,79,139,.85),inset 0 1px 0 rgba(255,255,255,.55)!important;
+}
+
+/* ---------- 2) 页面卡片：玻璃回来了，但只此一层 ---------- */
+#screen .card.liquid-glass,#screen .card,#screen article.card,#screen section.card{
+ background:var(--glass-card)!important;
+ -webkit-backdrop-filter:blur(20px) saturate(180%)!important;
+ backdrop-filter:blur(20px) saturate(180%)!important;
+ border:1px solid var(--glass-edge)!important;
+ box-shadow:var(--glass-hi),0 16px 36px -30px rgba(84,30,62,.5)!important;
+}
+/* 镜面斜高光恢复（0.73.1 曾用 display:none 关掉，卡片因此变成死白） */
+#screen .card.liquid-glass::before,#screen article.card::before,#screen section.card::before{
+ display:block!important;opacity:.46!important;
+}
+
+/* ---------- 3) 弹层：外层玻璃 + 内层实色（图层的分界线） ---------- */
+/* 弹层本体不做半透明：实测 WKWebView / WebKit 下 <dialog> 位于 top layer 时
+   backdrop-filter 不生效（子元素也不生效），半透明只剩「透字」没有「模糊」。
+   所以整页模态用近实色 + 顶部一层粉白渐变 + 内高光，保证任何渲染路径都不透字；
+   玻璃质感交给它内部的按钮、胶囊、卡片。 */
+dialog.sheet,dialog.drawer,
+.sheet.liquid-glass,.drawer.liquid-glass,
+dialog#reportSheet.report-sheet{
+ background:var(--glass-panel)!important;
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ border:0!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.9)!important;
+}
+/* 遮罩只做压暗，不做滤镜：::backdrop 一旦带 backdrop-filter 会成为新的
+   backdrop root，dialog 自己的 blur 就只能采样到这块纯色遮罩 → 弹层变成
+   “半透明但没模糊”，后面宫格照样看得出形状。模糊统一交给 dialog 本体。 */
+dialog::backdrop,.sheet::backdrop,.drawer::backdrop,#caseDrawer::backdrop{
+ background:rgba(246,243,250,.42)!important;
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ box-shadow:none!important;outline:none!important;
+}
+/* 弹层内部的次级表面：不带滤镜，只有近实色乳白。
+   这样既不会出现“采样自己”的假透明，也不会把 dialog 的模糊再糊一遍。 */
+dialog .card,dialog .cfg-card,dialog .case-card,dialog .drawer-case,
+dialog .rpt-toc-item,dialog .rpt-nav-list,dialog .segments{
+ background:rgba(255,253,253,.97)!important;
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ border-color:rgba(255,255,255,.92)!important;
+}
+/* 报告里的专题 / 问答浮层同样在 reportSheet 内，按内层处理 */
+.rpt-overlay{background:rgba(250,248,252,.97)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ---------- 4) 弹层几何（保留 0.73.4 / 0.73.7 的成果） ---------- */
+dialog#reportSheet.report-sheet{padding-left:0!important;padding-right:0!important;padding-bottom:0!important}
+dialog[open],.sheet[open]{opacity:1!important}
+dialog.sheet:not(#inputSheet),.sheet.sheet:not(#inputSheet){
+ inset:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
+ width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;
+ margin:0!important;border-radius:0!important;
+ padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)!important;
+}
+dialog.sheet:not(#inputSheet) .dialog-content,.sheet.sheet:not(#inputSheet) .dialog-content{
+ height:100%!important;max-height:100%!important;min-height:0!important;
+}
+.sheet-grip{display:none!important}
+/* 输入弹层例外：键盘弹起时按 visualViewport 收高，保持底部半屏并上移 */
+#inputSheet{
+ height:auto!important;
+ max-height:calc(var(--sheet-limit,80dvh) - 50px - env(safe-area-inset-bottom,0px))!important;
+ bottom:var(--keyboard-inset,0px)!important;top:auto!important;
+}
+/* 全屏页面的关闭按钮：叠在玻璃上，用高光边而不是白块 */
+.qa-close{
+ position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;
+ width:34px;height:34px;border-radius:50%;
+ border:1px solid rgba(255,255,255,.92);
+ background:rgba(255,255,255,.72);color:#a8326a;font-size:20px;line-height:1;z-index:2;
+ -webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);
+ box-shadow:inset 0 1px 0 #fff,0 6px 14px -8px rgba(120,40,80,.5);
+}
+.qa-panel{
+ height:100%!important;max-height:100%!important;
+ border-radius:0!important;box-shadow:none!important;
+ padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(18px + env(safe-area-inset-bottom,0px))!important;
+ overflow-y:auto!important;
+}
+.qa-panel h3{padding-right:44px}
+.rpt-overlay{align-items:stretch!important}
+
+/* ---------- 5) 紫微宫格：图层与溢出修复 ---------- */
+/* (a) 每个宫格是 <article>，被 #screen article+article{margin-top:12px} 命中，
+       内容整体下移 12px；在固定行高里直接顶穿页脚。 */
+#screen .zi-board .zi-cell{margin:0!important}
+/* (b) 宫格内容区：主星一行 → 辅星网格 → 页脚，三段各自占位，互不覆盖。
+       design.css 的 .zi-columns 原本是「主星列 / 辅星列」双列，但 .zi-major
+       实际是 block 里的行内星曜，max-content 撑到 130px 把辅星列挤成 0 宽，
+       于是辅星只能一格一字地竖着漏到格子右边外面。这里直接写死为纵向栈。 */
+#screen .zi-cell .zi-columns{
+ display:block!important;
+ flex:0 0 auto!important;min-height:0!important;
+ overflow:hidden!important;
+}
+#screen .zi-cell .zi-major{
+ display:flex!important;flex-wrap:wrap!important;align-items:baseline!important;
+ gap:2px 6px!important;min-width:0!important;
+}
+#screen .zi-cell .zi-major .zi-star{
+ display:inline-flex!important;width:auto!important;max-width:100%!important;flex:0 0 auto!important;
+}
+/* (c) 辅星：固定三列网格，长名省略号截断，超出只在格内裁掉，绝不压到页脚或下一格 */
+#screen .zi-cell .zi-assist{
+ display:grid!important;
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:0 4px!important;margin-top:4px!important;
+ min-height:0!important;overflow:hidden!important;
+ align-content:start!important;
+}
+#screen .zi-cell .zi-assist .zi-star{
+ display:block!important;min-width:0!important;overflow:hidden!important;
+ line-height:1.34!important;
+}
+#screen .zi-cell .zi-assist .term{
+ display:block!important;white-space:nowrap!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;
+}
+/* (d) 宫格本体重新裁切，任何内容都不得画出格子边界 */
+#screen .zi-cell{overflow:hidden!important}
+/* (e) 页脚压在辅星之上（辅星滚动时不会糊住宫名） */
+#screen .zi-cell .zi-foot{position:relative;z-index:1;background:transparent}
+/* (f) 宫格底色恢复 0.71 的粉色渐变（0.73 改成死白，盘面像表格） */
+#screen .zi-cell{
+ background:linear-gradient(145deg,#fffcfe 0%,#fff6f9 58%,#fff4ee 100%)!important;
+ border:1px solid #eec3d8!important;
+ box-shadow:0 1px 2px rgba(170,86,112,.08)!important;
+}
+#screen .zi-cell.related{background:linear-gradient(145deg,#fffafc,#fdeef5)!important;outline:1px dashed #d189ae!important;outline-offset:-2px}
+#screen .zi-cell.selected{background:linear-gradient(145deg,#fdeaf2,#f9d8e7)!important;border-color:#e39ab8!important}
+#screen .zi-cell.transform{background:linear-gradient(145deg,#f7effc,#f0e3f9)!important}
+#screen .zi-center{background:linear-gradient(160deg,#fffafc,#fff5f9)!important}
+#screen .zi-board{background:transparent!important;border:0!important}
+/* 盘面行高：design.css 把 4 行钉成 1fr（等于把行高锁死），宫格内容一多就
+   顶出格子。改成按内容自适应、只保底最小高度，并让行从顶部排。 */
+#screen .zi-board{
+ grid-template-rows:none!important;
+ grid-auto-rows:minmax(118px,auto)!important;
+ align-content:start!important;align-items:stretch!important;
+ height:auto!important;min-height:clamp(420px,58svh,600px)!important;
+ overflow:hidden!important;
+}
+/* 宫名行：与辅星之间留出可见分界；宫名不是词条，去掉点线下划线 */
+#screen .zi-cell .zi-palace-line{margin-top:2px!important}
+#screen .zi-cell .zi-palace-line .term{border-bottom:0!important}
+/* (h) 三方四正连线是 SVG 叠在宫格之上的（z-index:2），细线会直接压在宫名和
+       辅星文字上，看起来像「字被划掉」。改成 multiply：白底上仍是粉线，压到
+       深色字上等于不改变字色，视觉上线就跑到文字后面去了。 */
+#screen .zi-overlay{mix-blend-mode:multiply!important}
+#screen .zi-overlay .zi-laser{opacity:.28!important}
+/* (g) 辅星列只有 30px 宽：四化角标若带文字会另起一行，把行数撑乱。
+       在辅星里改成 7px 色点（颜色仍按 禄/权/科/忌），信息不丢、行数稳定。 */
+#screen .zi-cell .zi-assist .zi-star{
+ position:relative!important;display:block!important;
+ padding-right:6px!important;
+}
+#screen .zi-cell .zi-assist .zi-star .badge{
+ position:absolute!important;right:0!important;top:1px!important;
+ width:5px!important;height:6px!important;min-width:0!important;flex:none!important;
+ padding:0!important;border-radius:1.5px!important;font-size:0!important;line-height:0!important;
+ margin:0!important;box-shadow:none!important;overflow:hidden!important;
+}
+/* 体系切换轨原本 padding 被清零，最右的「模块」胶囊贴着屏幕边缘，圆角看着像被切掉 */
+.dock-rail{padding:0 14px!important}
+
+/* 体系切换轨上方：内容滚到此处会被「半截字」切断。把原来的 18px 渐变
+   加高加实，让文字在进入悬浮条之前就淡出，而不是被硬切一刀。 */
+.dock-rail::before{
+ top:-42px!important;
+ background:linear-gradient(to top,#f7f6fb 0%,#f7f6fb 54%,rgba(247,246,251,.94) 72%,rgba(247,246,251,.55) 86%,rgba(247,246,251,0) 100%)!important;
+}
+
+/* 报告页顶栏下方那条阅读进度轨，原本把文档标题又写一遍（顶栏已经有），
+   看起来像重影。只保留章节号与进度线。 */
+.rpt-rail-title{display:none!important}
+.rpt-rail{background:transparent!important;border-bottom:0!important}
+.rpt-rail-no{opacity:1!important}
+
+/* ---------- 6) 保留的功能性样式 ---------- */
+/* 去两侧白边：design.css 把 #screen 左右 padding 提到 14px，四个排盘 section 用负边距铺满 */
+#screen section[aria-label="紫微斗数"],
+#screen section[aria-label="四柱八字"],
+#screen section[aria-label="西洋占星"],
+#screen section[aria-label="印度占星"]{margin-inline:-14px!important}
+.zi-board{margin-inline:0!important}
+/* 顶栏紧凑「即刻天象」入口 */
+#instantTop{
+ display:inline-flex!important;align-items:center;justify-content:center;
+ width:30px!important;height:30px!important;padding:0!important;
+ border-radius:15px!important;font-size:14px!important;color:#a03a68!important;
+}
+#instantTop[hidden]{display:none!important}
+/* 时点页说明：按钮下方小字 */
+.period-footnote{
+ margin:12px 4px 0!important;padding:0!important;
+ border:0!important;background:none!important;
+ text-align:center;font-size:10.5px!important;line-height:1.65!important;
+ color:var(--muted,#8a7381)!important;
+}
+.period-footnote b{color:#a12a5e;font-weight:650}
+
+/* ===== v0.63.1 报告版式：章节导语 / 阶段标签 / 语气标签 ===== */
 .rpt-sec p.rpt-lede,.rpt-lede{
  margin:0 0 14px!important;padding:9px 12px;
  border-left:2px solid rgba(209,106,156,.5);border-radius:0 9px 9px 0;
@@ -1958,136 +2201,37 @@ body.dark .rpt-content{color:#eee4ec!important}
 .rpt-tone{display:inline-block;font-style:normal;font-weight:750;font-size:11.5px!important;color:#b3245f;letter-spacing:.02em}
 .rpt-tone[data-t=down]{color:#7a5b68}
 .rpt-tone[data-t=flat]{color:#9c7186;font-weight:650}
-@media (prefers-color-scheme:dark){
- .rpt-sec p.rpt-lede,.rpt-lede{background:rgba(255,120,170,.10)!important;color:#6a4560!important}
- .rpt-tone{color:#b3245f!important}.rpt-tone[data-t=down]{color:#7a5b68!important}.rpt-tone[data-t=flat]{color:#9c7186!important}
+
+/* ---------- 7) 暗色：同一套图层逻辑，换一组深色玻璃 ---------- */
+body.dark{
+ --glass-page:linear-gradient(160deg,rgba(40,33,48,.82) 0%,rgba(30,24,38,.72) 60%,rgba(26,21,33,.78) 100%);
+ --glass-card:linear-gradient(160deg,rgba(44,35,52,.88) 0%,rgba(34,27,42,.80) 60%,rgba(29,23,36,.84) 100%);
+ --glass-panel:linear-gradient(168deg,rgba(40,33,48,.94) 0%,rgba(31,25,39,.90) 55%,rgba(27,22,34,.92) 100%);
+ --glass-edge:rgba(255,255,255,.14);
+ --glass-hi:inset 0 1px 0 rgba(255,255,255,.10);
+ --glass-lift:0 18px 42px -26px rgba(0,0,0,.7);
 }
-
-/* ===== v0.73.1 真机玻璃卡片实底化（按 CSS 特异性修，不按加载顺序） =====
-   根因：design.css:1460 的 #screen .card.liquid-glass 特异性 (1,2,0)，
-   压过 v0.73.0 末尾 .card.liquid-glass.liquid-glass 的 (0,3,0)——ID 优先于任意数量的类。
-   所以必须带 ID 选择器，且改成 100% 实色（原 .97/.94/.92 仍会透出 8% 鬼影）。 */
-#screen .card.liquid-glass,
-#screen article.card,
-#screen section.card{
- background:#fffdfd!important;
- backdrop-filter:none!important;
- -webkit-backdrop-filter:none!important;
+body.dark #appTopBar,body.dark #appTopBar.liquid-glass,body.dark .chrome.liquid-glass,
+body.dark #bottomNav,body.dark .liquid-bottom-nav,body.dark .dock-rail{
+ background:var(--glass-page)!important;border-color:var(--glass-edge)!important;color:#eee4ec;
 }
-/* liquid.css:476 的镜面高光 opacity:.9 + mix-blend-mode:screen 会把实底重新洗白 */
-#screen .card.liquid-glass::before,
-#screen article.card::before,
-#screen section.card::before{display:none!important}
-/* 白边：design.css:1007 把 #screen 左右 padding 提到 14px!important，
-   design.css:30 的 .zi-board{margin-inline:-9px} 只抵消 9px，卡片则完全没抵消。 */
-#screen section[aria-label="紫微斗数"],
-#screen section[aria-label="四柱八字"],
-#screen section[aria-label="西洋占星"],
-#screen section[aria-label="印度占星"]{margin-inline:-14px!important}
-.zi-board{margin-inline:0!important}
-
-
-/* ===== v0.73.2 报告弹层白边与遮罩透字 =====
-   实测：dialog#reportSheet 自身 padding:0 18px 16px（来自 .drawer/.sheet），
-   .rpt-overlay 是 position:absolute;inset:0，参照的是内容盒，所以只盖住中间 404px，
-   左右各留 18px 浅色竖条；同时 6px 模糊下仍能看见报告文字。 */
-dialog#reportSheet.report-sheet{
- padding-left:0!important;padding-right:0!important;padding-bottom:0!important;
+body.dark dialog.sheet,body.dark dialog.drawer,body.dark .sheet.liquid-glass,body.dark .drawer.liquid-glass{
+ background:var(--glass-panel)!important;color:#eee4ec;
 }
-.rpt-overlay{
- background:#f7f6fb!important;
- backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+body.dark dialog::backdrop{background:rgba(10,7,14,.62)!important}
+body.dark dialog .card,body.dark dialog .cfg-card,body.dark dialog .case-card,
+body.dark dialog .drawer-case,body.dark dialog .rpt-toc-item,body.dark dialog .rpt-nav-list{
+ background:rgba(38,31,46,.96)!important;border-color:rgba(255,255,255,.12)!important;
 }
-.qa-panel{border-radius:20px 20px 0 0!important}
-/* 顶栏紧凑即刻天象：替代被收起的横向 basis 条 */
-#instantTop{
- display:inline-flex!important;align-items:center;justify-content:center;
- width:30px!important;height:30px!important;padding:0!important;
- border-radius:15px!important;font-size:14px!important;
- background:linear-gradient(135deg,#fff,#ffeaf3)!important;
- border:1px solid rgba(255,255,255,.9)!important;color:#a03a68!important;
+body.dark #screen .card.liquid-glass,body.dark #screen .card,body.dark #screen article.card,body.dark #screen section.card{
+ background:var(--glass-card)!important;border-color:var(--glass-edge)!important;
 }
-#instantTop[hidden]{display:none!important}
-
-
-/* ===== v0.73.3 弹层/卡片 100% 实底（真机复测发现 .92~.97 仍透字） =====
-   配置抽屉实测背景为 linear-gradient(... .97/.94/.92)，后面紫微宫格文字仍可辨识。
-   玻璃感保留在顶缘高光与阴影上，底色一律实色。 */
-.sheet.liquid-glass,.drawer.liquid-glass,
-.sheet.sheet,.drawer.drawer,
-.liquid-glass.liquid-glass,.card.card,.card.liquid-glass.liquid-glass{
- background:#fffdfd!important;
- backdrop-filter:none!important;
- -webkit-backdrop-filter:none!important;
+body.dark .rpt-overlay{background:rgba(14,10,20,.96)!important}
+body.dark #screen .zi-cell{background:linear-gradient(145deg,rgba(48,39,57,.96),rgba(38,31,46,.96))!important;border-color:rgba(255,150,190,.22)!important}
+body.dark #screen .zi-cell.selected{background:linear-gradient(145deg,rgba(112,58,84,.92),rgba(86,44,66,.92))!important}
+body.dark #screen .zi-cell.related{background:linear-gradient(145deg,rgba(60,48,72,.95),rgba(48,39,58,.95))!important}
+body.dark #screen .zi-center{background:linear-gradient(160deg,rgba(44,36,53,.96),rgba(34,27,42,.96))!important}
+body.dark .rail-scroll>[data-system-switch],body.dark .rail-grid,body.dark .profile-pill.profile-pill,body.dark #instantTop{
+ background:linear-gradient(158deg,rgba(52,42,62,.92),rgba(38,31,46,.88))!important;
+ border-color:rgba(255,255,255,.16)!important;color:#eee4ec!important;
 }
-/* 弹层入场动画在部分 WebKit 时序下会以 fill-mode:both 停在 opacity:0，直接锁为可见 */
-dialog[open],.sheet[open]{opacity:1!important}
-
-
-/* ===== v0.73.4 专题/问答浮层做成全屏页面，不再底部半屏留白 =====
-   用户实测：点「专题」后只有下方 184px 面板，上方整片空白，像没做完。
-   现在面板铺满视口、顶部从安全区开始，并给显式关闭按钮。 */
-.rpt-overlay{align-items:stretch!important}
-.qa-panel{
- height:100%!important;max-height:100%!important;
- border-radius:0!important;box-shadow:none!important;
- padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(18px + env(safe-area-inset-bottom,0px))!important;
- overflow-y:auto!important;
-}
-.qa-close{
- position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;
- width:34px;height:34px;border-radius:50%;border:1px solid #f3d7e4;
- background:#fff;color:#a8326a;font-size:20px;line-height:1;z-index:2;
-}
-.qa-panel h3{padding-right:44px}
-
-
-/* ===== v0.73.5 时点页说明移到底部小字 =====
-   原 .period-scope-note 是带粉框的提示块，夹在表单与按钮之间占一屏；
-   现在放到按钮下方，作为不抢操作的小字脚注。 */
-.period-footnote{
- margin:12px 4px 0!important;padding:0!important;
- border:0!important;background:none!important;
- text-align:center;font-size:10.5px!important;line-height:1.65!important;
- color:var(--muted,#8a7381)!important;
-}
-.period-footnote b{color:#a12a5e;font-weight:650}
-
-
-/* ===== v0.73.5 紫微底部「大限与流限」时间轨实底化 =====
-   逐元素实测：底部唯一仍在透字的是 .timeline，背景为
-   linear-gradient(rgba(255,255,255,.5),rgba(255,250,252,.4)) + blur(14px)。
-   时间轨必须像其他卡片一样 100% 实底，否则下面宫格文字会浮出来。 */
-#screen .timeline,.timeline.timeline{
- background:#fffdfd!important;
- backdrop-filter:none!important;
- -webkit-backdrop-filter:none!important;
-}
-.liquid-bottom-nav.liquid-bottom-nav{background:#fffdfd!important}
-
-
-/* ===== v0.73.7 所有弹层统一：无模糊暗罩 + 100% 实底 + 全屏页面 =====
-   实测 dialog::backdrop 仍有 blur(12px)+暗色，模块/配置弹层上方是模糊涂层；
-   本段把遮罩改全不透明、去掉滤镜，并把 .sheet 从底部半屏改为从顶部开始的完整页面。 */
-dialog::backdrop,.sheet::backdrop,.drawer::backdrop,#caseDrawer::backdrop{
- background:#f7f6fb!important;
- backdrop-filter:none!important;
- -webkit-backdrop-filter:none!important;
- box-shadow:none!important;
- outline:none!important;
-}
-dialog.sheet:not(#inputSheet),.sheet.sheet:not(#inputSheet){
- inset:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
- width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;
- margin:0!important;border-radius:0!important;border:0!important;
- padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)!important;
- background:#fffdfd!important;
- backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-}
-dialog.sheet:not(#inputSheet) .dialog-content,.sheet.sheet:not(#inputSheet) .dialog-content{
- height:100%!important;max-height:100%!important;min-height:0!important;
-}
-.sheet-grip{display:none!important}
-
-/* 输入弹层例外：键盘弹起时必须能按 visualViewport 收高，保持原有底部半屏行为 */
-#inputSheet{height:auto!important;max-height:calc(var(--sheet-limit,80dvh) - 50px - env(safe-area-inset-bottom,0px))!important;bottom:var(--keyboard-inset,0px)!important;top:auto!important}

@@ -2244,3 +2244,47 @@ body.dark .rail-scroll>[data-system-switch],body.dark .rail-grid,body.dark .prof
  background:linear-gradient(158deg,rgba(52,42,62,.92),rgba(38,31,46,.88))!important;
  border-color:rgba(255,255,255,.16)!important;color:#eee4ec!important;
 }
+
+/* ===== v0.75.0 印度页分盘筛选：下拉不再截字，原生控件换成品牌胶囊 =====
+   实机问题：1) 「全部分盘」下拉显示成「D1 本」——max-width:96px 装不下
+   「D1 本命」+ 原生箭头，最后一个字被吃掉；2) WebKit 原生 <select> 自带的灰边框
+   和大号黑色三角与粉色胶囊完全不是一套；3) 六个分盘胶囊与这一行只隔 7px，
+   读起来像压在一起。
+   修法：去掉原生外观、自绘箭头、宽度交给 flex 分配；行距放到 10px，并在次级行
+   上方加一条细分割线，把「常用分盘」与「全部分盘 + 盘式」明确分成两组。 */
+.vedic-filters{gap:10px!important;margin-bottom:12px!important}
+.vedic-varga-rail{padding:0!important}
+.vedic-secondary{
+ gap:8px!important;align-items:center!important;
+ padding-top:9px!important;border-top:1px solid rgba(190,120,150,.14)!important;
+}
+.vedic-varga-select{
+ flex:1 1 auto!important;min-width:0!important;
+ align-items:center!important;gap:7px!important;
+ font-size:11.5px!important;color:#907484!important;
+}
+.vedic-varga-select>span{flex:0 0 auto!important;letter-spacing:.02em!important;white-space:nowrap!important}
+.vedic-secondary .vedic-varga-select select{
+ flex:1 1 auto!important;width:100%!important;min-width:0!important;max-width:none!important;
+ height:31px!important;min-height:31px!important;
+ padding:0 27px 0 11px!important;
+ -webkit-appearance:none!important;appearance:none!important;
+ border:1px solid rgba(255,150,190,.34)!important;
+ border-radius:11px!important;
+ background-color:rgba(255,255,255,.94)!important;
+ background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1.6 2.1l4.4 4.3 4.4-4.3' fill='none' stroke='%23a8326a' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+ background-repeat:no-repeat!important;
+ background-position:right 10px center!important;
+ color:#7d2a55!important;font-size:12px!important;font-weight:650!important;
+ text-overflow:ellipsis!important;
+}
+.vedic-secondary .vedic-layout-rail{flex:0 0 auto!important;gap:6px!important;padding:0!important;overflow:visible!important}
+.vedic-secondary .vedic-layout-rail button{
+ flex:0 0 auto!important;min-width:64px!important;height:31px!important;
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+}
+@media (max-width:365px){
+ .vedic-varga-select{font-size:10.5px!important;gap:5px!important}
+ .vedic-secondary .vedic-layout-rail button{min-width:54px!important;padding:0 8px!important}
+}
+

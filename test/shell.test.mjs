@@ -162,7 +162,9 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert.equal(many('.firdaria-period').length,9);
  assert(many('.firdaria-period').every(node=>node.querySelectorAll('li').length===7));
  click('#caseDrawerButton');assert.equal($('.drawer-accordion').children.length,7);
- click('[data-tab=me]');assert($('.soul-card .soul-mini'));assert($('.soul-card .soul-w5'));assert($('.soul-card [data-goto-insights]'));
+ click('[data-tab=me]');assert($('.soul-card .soul-mini'));assert($('.soul-card .soul-w5'));
+ // v0.75.0：SOUL 卡片只做画像，不再挂「看完整深度报告」跳转（与洞见页重复）
+ assert.equal(many('.soul-card [data-goto-insights]').length,0);
  assert(!$('#screen #prefs'));
  assert($('#toolsButton').hidden);
  await until(()=>Boolean($('.sky-compass')),'local sky');

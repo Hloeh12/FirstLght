@@ -469,7 +469,10 @@ test('v0.46 目录条取消/年份扩展/浮层深色/时点详批/SOUL块',asyn
  assert.doesNotMatch(fr,/<summary class="rpt-toc-head"/,'不得再有可见的 rpt-toc 入口条');
  const app=await read('../assets/console/app.js');
  assert.match(app,/length:23/,'vedic/west 时点年份须扩到今年前后 23 年（不再只到 +5）');
- assert.match(app,/data-goto-insights/,'SOUL 卡片 CTA 须接到洞见页');
+ // v0.75.0：SOUL 卡片去掉「看完整深度报告」CTA，洞见页本身就是报告入口，避免功能重复
+ const csSoul=await read('../assets/console/case-space.js');
+ assert.doesNotMatch(csSoul,/data-goto-insights/,'SOUL 卡片不得再挂深度报告跳转');
+ assert.doesNotMatch(app,/data-goto-insights/,'SOUL 卡片 CTA 的点击绑定须一并移除');
  const liq=await read('../assets/console/liquid.css');
  assert.match(liq,/\.rpt-nav-drawer\{[\s\S]{0,400}background:linear-gradient\(160deg,rgba\(48,38,56/,'目录浮层须深色玻璃，不得纯白外框');
  assert.match(liq,/\.soul-w5\{/,'SOUL 五行权重条样式须在包内');

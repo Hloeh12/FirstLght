@@ -484,18 +484,23 @@ function planSheet(ctx,s,day,branch,hour){
   if(ok){ctx.close(d);calendar(ctx);}
  };
 }
+// v0.75.0：第二人允许两种来源——案例库里的案例，或一次性输入的生辰（s.otherInline）。
+// 后者自带 birth 对象，直接送进接口，不用再走 normalized()。
+const pairBirth=(ctx,other)=>other?.birth||ctx.normalized(other);
 function calculatePair(ctx,s,other){
  s.other=other.id;s.result=null;s.error='';
- load(ctx,'synastry',s,'/api/synastry/chart',{a:ctx.birth,b:ctx.normalized(other),mode:s.mode||'synastry'});
+ load(ctx,'synastry',s,'/api/synastry/chart',{a:ctx.birth,b:pairBirth(ctx,other),mode:s.mode||'synastry'});
 }
 function synastry(ctx){
  const id='synastry',s=stateFor(ctx,id,{mode:'synastry',aspects:{filter:'main',expanded:false}}),r=s.result;
  s.mode??='synastry';s.aspects??={filter:'main',expanded:false};
- const cases=ctx.state.cases.filter(c=>c.id!==ctx.state.profile.id);
- const other=cases.find(c=>c.id===s.other);
+ const self=ctx.state.profile;
+ if(!self){ctx.root.innerHTML='<section><h1>双人合盘</h1><p class="empty">请先排出第一个人的本命盘，再来做合盘。</p></section>';return;}
+ const cases=ctx.state.cases.filter(c=>c.id!==self.id);
+ const other=cases.find(c=>c.id===s.other)||(s.otherInline?.birth?{...s.otherInline,id:s.otherInline.id||'inline'}:null);
  ctx.root.innerHTML=`<section><div class="spread"><h1>双人合盘</h1>${btn(other?'更换第二人':'选择第二人','data-select-other')}</div>
  <div class="pair-mode-rail" aria-label="双人合盘盘类">${[['synastry','比较盘 Synastry'],['composite','组合中点盘 Composite']].map(([id,label])=>btn(label,`data-pair-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
- <p>${esc(ctx.state.profile.name)} × ${esc(other?.name||'待选择')}</p><p data-extra-status role="status">${esc(s.error)}</p>
+ <p>${esc(self?.name||'当前案例')} × ${esc(other?.name||'待选择')}</p><p data-extra-status role="status">${esc(s.error)}</p>
  ${r?.composite?`<article class="card liquid-glass"><h2>组合中点盘</h2><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r.composite)}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div><p class="thin">${esc(r.composite.method)}</p>${r.composite.ambiguity.map(x=>`<p>${esc(x)}</p>`).join('')}</article><article class="card pair-reading"><h2>关系本质 · 共同主题</h2>${r.composite.readings.map(x=>`<h3>${esc(x.title)}</h3><p>${esc(x.text)}</p>`).join('')}</article><article class="card"><h2>组合星体与位置</h2>${planetList(r.composite.chart.planets)}</article><article class="card"><h2>组合核心相位</h2>${aspectBrowser(r.composite,s.aspects)}</article>`:''}
  ${r?`<article class="card"><h2>契合度 ${r.fit.percent}%</h2>${r.fit.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')}<small>印度八项合盘双向平均；此分数不代表组合盘评分 · 传统参考</small></article>
  ${r.baziMatch?.items?`<article class="card"><h2>八字合婚证据（非分数）</h2>${r.baziMatch.items.map(x=>`<p><b>${esc(x.name)}</b> · ${x.level==='support'?'助力':x.level==='challenge'?'需磨合':'中性'} · ${esc(x.text)}</p>`).join('')}<small>${esc(r.baziMatch.method)}</small></article>`:''}
@@ -511,10 +516,21 @@ function synastry(ctx){
   bindWheel(stage,s,key=>{const p=r.composite.chart.planets.find(p=>'inner-'+p.key===key);card.hidden=!p;card.innerHTML=p?`<b>${esc(p.symbol+' '+p.name)}</b><span>${esc(p.sign)} · 第${p.house}宫</span>`:'';});
  }
  $('[data-select-other]',ctx.root).onclick=()=>{
-  const d=ctx.sheet('toolSheet','选择第二个案例',`<div class="stack">${cases.map(c=>btn(c.name,`data-other="${esc(c.id)}"`)).join('')||'<p>请先在案例页添加第二个人。</p>'}</div>`);
+  const d=ctx.sheet('toolSheet','选择第二人',`<div class="stack">${cases.map(c=>btn(c.name,`data-other="${esc(c.id)}"`)).join('')||'<p class="muted">案例库里还没有第二个人，直接用下面的「输入生辰」即可。</p>'}</div>
+  <div class="tool-grid">${btn('＋ 直接输入生辰','class="primary" data-other-inline')}</div>
+  <p class="thin">输入的生辰只用于这次合盘，不会写进案例库；之后想复用可以再存成案例。</p>`);
   for(const b of d.querySelectorAll('[data-other]'))b.onclick=()=>{
    const p=cases.find(c=>c.id===b.dataset.other);
    ctx.close(d);calculatePair(ctx,s,p);
+  };
+  // 合盘不该强迫用户先回案例页建人：这里直接开一张生辰表单，算完就回传。
+  $('[data-other-inline]',d).onclick=()=>{
+   ctx.close(d);
+   ctx.birthSheet(null,{onBirth:(profile,birth)=>{
+    const inline={id:'inline',name:profile.name,birth,fields:profile.fields};
+    s.otherInline=inline;s.result=null;s.error='';
+    calculatePair(ctx,s,inline);
+   }});
   };
  };
  if(other&&!r&&!s.pending&&!s.error)calculatePair(ctx,s,other);

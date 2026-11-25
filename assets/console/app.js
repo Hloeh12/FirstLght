@@ -478,6 +478,13 @@ function birthSheet(profile,seed={}){
   const next={...profile,id:profile?.id??(crypto.randomUUID?.()||Date.now().toString()),name,category:fields.category.value,updatedAt:new Date().toISOString(),
    fields:{housing:fields.homeDirection.value&&fields.homeMember.value?{direction:fields.homeDirection.value,member:fields.homeMember.value}:null,...splitDate(dateStr),dateStr,timeStr,h,mi,name,gender:fields.gender.value,calendar:fields.calendar.value,leapMonth:fields.calendar.value==='lunar'&&fields.leap.checked,
     timeUnknown:fields.unknown.checked,useSolarTime:fields.solar.checked,lateZishi:setting.lateZishi||'next-day',city:{lat,lon,tz,tzName,label:fields.city.value.trim()||'手动坐标'}}};
+  // v0.75.0：合盘第二人可「只输生辰不建案例」——传 seed.onBirth 时把算好的资料回传，
+  // 不写进案例库、不切标签页。这样双人合盘不再强迫用户先去案例页建第二个人。
+  if(typeof seed.onBirth==='function'){
+   let clean;
+   try{clean=normalized(next);}catch(error){feedback.textContent=error.message;return;}
+   close(d);seed.onBirth(next,clean);return;
+  }
   const submit=$('[type=submit]',form);submit.disabled=true;feedback.textContent='正在排盘…';
   const token=++generation;flight?.abort();flight=new AbortController();
   let settled=false; // v0.44.0：骨架过渡已接管 pending，finally 不再提前清掉
@@ -542,8 +549,14 @@ function caseDrawer(){
   ['天机排盘工坊',[['东方盘',['ziwei','bazi','qizheng']],['西洋盘',['west']],['印度盘',['vedic']]]],
   ['推运时空',[['西洋推运',['transit','secondary','tertiary','solar','lunar','firdaria']],['每日时空',['calendar']]]],
   ['易经古籍',[['卦象与经典',['yijing']]]],
-  ['关系星系',[['双向案例',['galaxy','synastry']]]],
- ].map(([title,sections])=>`<details><summary>${title}</summary><div>${sections.map(([name,items])=>`<details><summary>${name}</summary><div class="tool-grid">${items.map(id=>btn(labels[id]||{transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',galaxy:'关系图谱'}[id],`data-destination="${id}"`)).join('')}</div></details>`).join('')}</div></details>`).join('')}
+  // v0.75.0：关系星系不再套「双向案例」中间层——展开即见「关系图谱 / 双人合盘」，
+  // 从展开到进入只用一次点击（原来是 展开 → 双向案例 → 按钮，三层）。
+  ['关系星系',['galaxy','synastry']],
+ ].map(([title,sections])=>{
+  const labelOf=id=>labels[id]||{transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',galaxy:'关系图谱',synastry:'双人合盘'}[id]||id;
+  const grid=items=>`<div class="tool-grid">${items.map(id=>btn(labelOf(id),`data-destination="${id}"`)).join('')}</div>`;
+  return `<details><summary>${title}</summary><div>${typeof sections[0]==='string'?grid(sections):sections.map(([name,items])=>`<details><summary>${name}</summary>${grid(items)}</details>`).join('')}</div></details>`;
+ }).join('')}
  ${state.reading?`<details><summary>盘面工具</summary><div class="tool-grid">${btn('快捷八字','data-quick-bazi')}${state.system==='ziwei'&&state.tab==='chart'?btn('格局神煞','data-ziwei-patterns'):''}${state.tab==='chart'?btn('分享长图','data-share-chart'):''}</div></details>`:''}
  <details><summary>⚙️ 命理口径与算法配置</summary><div>${settingsForm()}<p class="thin" role="status" data-pref-status></p></div></details></div>
  <div class="tool-grid">${btn('＋ 新建案例','class="primary" data-fresh')}${btn('运行诊断与日志','data-diagnostics')}</div>`);
@@ -1527,9 +1540,9 @@ function preferences(){
  <section><h3>运行维护</h3><div class="tool-grid">${btn('运行诊断与日志','data-diagnostics')}${btn('清除排盘缓存','data-maintenance-cache')}</div><p class="thin" data-maintenance-status role="status"></p></section></div></details>
  <footer class="soul-footer"><p>缘分不过天时地利 承诺不过逝水轻浅</p><a href="/assets/console/credits.html">来源与许可</a></footer></section>`;
  wireSoul(ctx);
- // SOUL PALETTE 卡片底部 CTA：跳到洞见页看完整深度报告（增加功能性，不改动其他入口）
- const soulCta=$('[data-goto-insights]',root);
- if(soulCta)soulCta.onclick=()=>switchTab('insights');
+ // v0.75.0：SOUL PALETTE 卡片只留「体质画像」，底部「看完整深度报告」CTA 已移除。
+ // 理由：洞见页本身就是深度报告所在地，卡片里再放一个跳转按钮属于功能重复，
+ // 让「我的」页的区块职责变混（画像 / 资料库 / 运维诊断三条线应该各自干净）。
  $('[data-release-history]',root).onclick=()=>releaseHistory(ctx);
  // 资料库：收藏章节 / 报告历史 / 双案例对比
  $('[data-lib-fav]',root).onclick=()=>{

@@ -86,8 +86,7 @@ export function soulCard(reading,name){
  return `<article class="card soul-card liquid-glass"><span class="kicker">SOUL PALETTE · ${esc(name||'命主')}</span><h2>${esc(dayMaster?.stem||'')}${esc(dayMaster?.element||'')} · ${esc(info.t)}</h2>
  <p class="soul-meta">日${esc(sun?.sign||'—')}月${esc(moon?.sign||'—')} · ${esc(strength?.kind||'')} · 主导 ${esc(element)} ${Number(pct).toFixed(1)}%</p>
  <div class="soul-w5" role="img" aria-label="五行权重分布">${bar}</div>
- <div class="soul-mini"><div><b>天生优势 · ${esc(element)}</b><p>${esc(info.edge)}</p></div><div><b>成长课题 · ${esc(weak)} ${Number(weakPct).toFixed(1)}%</b><p>${esc(weakInfo.watch)}</p></div></div>
- <button type="button" class="soul-cta" data-goto-insights>看完整深度报告 <span aria-hidden="true">→</span></button></article>`;
+ <div class="soul-mini"><div><b>天生优势 · ${esc(element)}</b><p>${esc(info.edge)}</p></div><div><b>成长课题 · ${esc(weak)} ${Number(weakPct).toFixed(1)}%</b><p>${esc(weakInfo.watch)}</p></div></div></article>`;
 }
 
 export function mergeBackup(data,state,space){

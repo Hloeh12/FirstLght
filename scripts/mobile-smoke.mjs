@@ -364,7 +364,7 @@ try{
   await page.locator('[data-action=delete]').click();await checkSheet();await page.locator('[data-cancel-delete]').click();
   assert.equal(await page.locator('[data-case]').count(),1);
   await page.locator('[data-clear-search]').click();assert((await page.locator('[data-case]').first().textContent()).includes('布局示例'));
-  await page.locator('[data-tab=chart]').click();await page.getByRole('button',{name:'快捷案例',exact:true}).click();await page.locator('summary').filter({hasText:'关系星系'}).click();await page.locator('summary').filter({hasText:'双向案例'}).click();await page.locator('[data-destination=synastry]').click();
+  await page.locator('[data-tab=chart]').click();await page.getByRole('button',{name:'快捷案例',exact:true}).click();await page.locator('summary').filter({hasText:'关系星系'}).click();await page.locator('[data-destination=synastry]').click();
   await page.locator('[data-select-other]').click();await page.locator('[data-other]').first().click();
   await page.getByText(/契合度 \d+%/).first().waitFor();
   await page.locator('[data-pair-mode=composite]').click();await page.locator('.pair-reading').waitFor();assert.equal(await page.locator('#westernChart').count(),1);

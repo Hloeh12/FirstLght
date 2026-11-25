@@ -2132,6 +2132,15 @@ dialog.sheet:not(#inputSheet) .dialog-content,.sheet.sheet:not(#inputSheet) .dia
        深色字上等于不改变字色，视觉上线就跑到文字后面去了。 */
 #screen .zi-overlay{mix-blend-mode:multiply!important}
 #screen .zi-overlay .zi-laser{opacity:.28!important}
+/* (i) 宫格底部「干支 + 大限」：320~360px 宽度下 flex 会把干支压成「丁…」，
+       改成先缩字号再让大限省略，干支必须完整。 */
+#screen .zi-cell .zi-age{gap:3px!important;flex-wrap:nowrap!important}
+#screen .zi-cell .zi-age span{flex:0 0 auto!important;overflow:visible!important;text-overflow:clip!important}
+#screen .zi-cell .zi-age small{flex:0 1 auto!important;min-width:0!important}
+@media (max-width:365px){
+ #screen .zi-cell .zi-major .term{font-size:11.5px!important}
+ #screen .zi-cell .zi-age,#screen .zi-cell .zi-age span,#screen .zi-cell .zi-age small{font-size:8.5px!important;letter-spacing:-.01em!important}
+}
 /* (g) 辅星列只有 30px 宽：四化角标若带文字会另起一行，把行数撑乱。
        在辅星里改成 7px 色点（颜色仍按 禄/权/科/忌），信息不丢、行数稳定。 */
 #screen .zi-cell .zi-assist .zi-star{

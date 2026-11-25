@@ -1737,10 +1737,12 @@ function render(){
  
  const chartClock=$('#chartBasisTime'),chartRow=$('#chartBasisRow'),chartToggle=$('#instantToggle');
  const showBasis=state.tab==='chart';
- if(chartRow)chartRow.hidden=!showBasis;
+ if(chartRow)chartRow.hidden=true; /* 0.73.2：横向「即刻天象」条整体收起，入口移到顶栏 */
  chartClock.hidden=!showBasis||!state.profile||!state.reading;
  if(!chartClock.hidden)chartClock.textContent=(state.instantSnapshot?'即刻天象':'本命基准')+' · '+formatLocalDisplayTime(normalized(state.profile));
- if(chartToggle){chartToggle.hidden=!showBasis;const restore=Boolean(state.instantSnapshot);chartToggle.dataset.chartAction=restore?'restore':'instant';chartToggle.textContent=restore?'⟲ 恢复本命':'⏱ 即刻天象';chartToggle.setAttribute('aria-label',chartToggle.textContent);}
+ if(chartToggle){chartToggle.hidden=true;const restore=Boolean(state.instantSnapshot);chartToggle.dataset.chartAction=restore?'restore':'instant';chartToggle.textContent=restore?'⟲ 恢复本命':'⏱ 即刻天象';chartToggle.setAttribute('aria-label',chartToggle.textContent);}
+ const instantTop=$('#instantTop');
+ if(instantTop){const restore=Boolean(state.instantSnapshot);instantTop.hidden=!showBasis;instantTop.textContent=restore?'⟲':'⏱';instantTop.setAttribute('aria-label',restore?'恢复本命':'即刻天象');instantTop.title=instantTop.getAttribute('aria-label');}
  const sysSwitch=$('#chartSystemSwitch');
  if(sysSwitch){
   sysSwitch.hidden=!showBasis||!state.profile||!state.reading;
@@ -1811,6 +1813,7 @@ $('#toolsButton').onclick=toolPanel;
 $('#configButton').onclick=configPanel;
 $('#moduleButton').onclick=modulePanel;
 $('#instantToggle').onclick=()=>$('#instantToggle').dataset.chartAction==='restore'?restoreOriginal():instantChart();
+$('#instantTop').onclick=()=>$('#instantToggle').dataset.chartAction==='restore'?restoreOriginal():instantChart();
 $('#chartSystemSwitch').onclick=e=>{
  const b=e.target.closest('[data-system-switch]');
  if(!b||b.dataset.systemSwitch===state.system)return;

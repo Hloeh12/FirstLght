@@ -1,8 +1,19 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.73.1",
-  "build": 178,
+  "version": "0.73.2",
+  "build": 180,
   "releases": [
+    {
+      "version": "0.73.2",
+      "build": 180,
+      "revision": "local",
+      "at": "2026-11-25T03:00:00Z",
+      "items": [
+        "报告弹层左右白边：dialog#reportSheet 自带 18px 横向 padding，导致 .rpt-overlay 只盖中间 404px；现清零 dialog 横向/底部 padding，遮罩与专题面板铺满视口。",
+        "专题报告/问答浮层不再用 6px 背景模糊透出下层报告文字，改为近实色遮罩，做到「盖上就看不见」。",
+        "排盘页横向「即刻天象」条整体收起，入口改为顶栏紧凑 ⏱ 按钮（恢复本命时显示 ⟲），点击仍走同一套 instant/restore 逻辑。"
+      ]
+    },
     {
       "version": "0.73.1",
       "build": 178,

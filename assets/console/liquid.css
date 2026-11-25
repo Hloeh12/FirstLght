@@ -2064,3 +2064,27 @@ dialog[open],.sheet[open]{opacity:1!important}
  -webkit-backdrop-filter:none!important;
 }
 .liquid-bottom-nav.liquid-bottom-nav{background:#fffdfd!important}
+
+
+/* ===== v0.73.7 所有弹层统一：无模糊暗罩 + 100% 实底 + 全屏页面 =====
+   实测 dialog::backdrop 仍有 blur(12px)+暗色，模块/配置弹层上方是模糊涂层；
+   本段把遮罩改全不透明、去掉滤镜，并把 .sheet 从底部半屏改为从顶部开始的完整页面。 */
+dialog::backdrop,.sheet::backdrop,.drawer::backdrop,#caseDrawer::backdrop{
+ background:#f7f6fb!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+ box-shadow:none!important;
+ outline:none!important;
+}
+dialog.sheet,.sheet.sheet{
+ inset:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
+ width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;
+ margin:0!important;border-radius:0!important;border:0!important;
+ padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)!important;
+ background:#fffdfd!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+dialog.sheet .dialog-content,.sheet.sheet .dialog-content{
+ height:100%!important;max-height:100%!important;min-height:0!important;
+}
+.sheet-grip{display:none!important}

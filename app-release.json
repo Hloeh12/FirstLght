@@ -1,8 +1,17 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.73.8",
-  "build": 186,
+  "version": "0.73.9",
+  "build": 187,
   "releases": [
+    {
+      "version": "0.73.9",
+      "build": 187,
+      "revision": "local",
+      "at": "2026-11-25T08:00:00Z",
+      "items": [
+        "恢复输入弹层的 --keyboard-inset 底部定位：键盘弹起时弹层跟随 visualViewport 上移，避免关闭按钮被键盘遮挡。"
+      ]
+    },
     {
       "version": "0.73.8",
       "build": 186,

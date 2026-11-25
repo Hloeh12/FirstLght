@@ -2090,4 +2090,4 @@ dialog.sheet:not(#inputSheet) .dialog-content,.sheet.sheet:not(#inputSheet) .dia
 .sheet-grip{display:none!important}
 
 /* 输入弹层例外：键盘弹起时必须能按 visualViewport 收高，保持原有底部半屏行为 */
-#inputSheet{height:auto!important;max-height:calc(var(--sheet-limit,80dvh) - 50px - env(safe-area-inset-bottom,0px))!important;bottom:0!important;top:auto!important}
+#inputSheet{height:auto!important;max-height:calc(var(--sheet-limit,80dvh) - 50px - env(safe-area-inset-bottom,0px))!important;bottom:var(--keyboard-inset,0px)!important;top:auto!important}

@@ -29,3 +29,51 @@ export function localTemplateReport(res){
  sec['v-dasha']=[`当前大运：${cur?cur.lord+' 大运':'—'}（${cur?cur.start.slice(0,7)+' – '+cur.end.slice(0,7):''}）。月亮落 ${moonV.nakshatra} 第 ${moonV.pada} 步：${TEXTS.NAK[NAK_EN[moonV.nakIndex]]||''}`];
  return {kind:'local-template',notice:'此报告由公开客户端兜底模板复现，非原站服务端 AI 输出。',sections:sec};
 }
+
+/* v0.76.0 双人合婚报告：把 pairReading 返回的结构化证据转成分节自然段落。
+ * 口径与 console 内一致：八字干支/十神/用神互参、紫微命宫夫妻宫互参、印度八科分数、
+ * 西占组合主题。只描述可算结构，不虚构契合度结论，不作关系吉凶实证断言。 */
+export function pairReport(r,nameA='当前案例',nameB='第二人'){
+ const sec={};
+ const fit=r.fit||{},kt=fit.kootaBoth||{};
+ // 1) 关系概览：契合度（双向八科均值）+ 互动助力/留意
+ sec['p-overview']=[
+  `${nameA} × ${nameB} 的双人合盘以「八字干支互参 + 紫微命宫夫妻宫互参 + 印度八科 + 西占组合」四路证据交叉取象。`,
+  fit.percent!=null?`印度 Ashtakoota 八科双向平均得分率约 ${fit.percent}%（单项总分 ${fit.total}/${fit.max}）；此分数只反映八科结构，不代表组合盘评分，也不作关系质量实证结论。`:'印度八科分数暂不可用。',
+  ...(fit.insights||[]).map(i=>`${i.name}：${i.text}`)
+ ];
+ // 2) 八字合婚：日柱/日干/生肖/十神/用神逐项成文
+ if(r.baziMatch?.items?.length){
+  sec['p-bazi']=r.baziMatch.items.map(x=>{
+   const lv=x.level==='support'?'偏助力':x.level==='challenge'?'需磨合':x.level==='warn'?'偏张力':'中性';
+   return `${lv} · ${x.name}：${x.text}`;
+  }).concat([r.baziMatch.method]);
+ }
+ // 3) 印度八科：逐科断语 + 火星煞
+ const koota=kt.forward||r.vedic?.koota;
+ if(koota){
+  const low=koota.items.filter(x=>x.score<x.max/2);
+  const zh={varna:'心性层级',vashya:'相处引力',tara:'命星',yoni:'本能契合',maitri:'星谊',gana:'天性',bhakoot:'情位',nadi:'命脉'};
+  sec['p-vedic']=[
+   `八科总分 ${koota.total}/${koota.max}（${koota.percent}%）。${kt.reverse?`反向（${nameB}为基准）得分率 ${kt.reverse.percent}%，双向平均后即上方契合度。`:''}`,
+   ...(low.length?low.map(x=>`${zh[x.key]||x.zh}偏低（${x.score}/${x.max}）：${x.note}。适合在日常相处中核对双方需求，不以分数代替体验。`):['八科相对均衡，无明显偏低项。'])
+  ];
+ }
+ if(r.mangal?.ok)sec['p-mangal']=[r.mangal.a?.text,r.mangal.b?.text,r.mangal.text,r.mangal.method].filter(Boolean);
+ // 4) 紫微互参：命宫/夫妻宫/互落宫位
+ if(r.ziweiMatch?.items?.length)sec['p-ziwei']=r.ziweiMatch.items.map(x=>`${x.name}：${x.text}`).concat([r.ziweiMatch.method]);
+ // 5) 西占组合主题
+ if(r.composite?.readings?.length){
+  sec['p-western']=[
+   `组合中点盘（Composite）把两人各自行星取中点，得到「关系本身」的一张盘——它描述共同主题，而非任何一方的个人盘。`,
+   ...r.composite.readings.map(x=>`${x.title}：${x.text}`)
+  ];
+ }
+ if(r.crossRelations?.length)sec['p-cross']=[`八字跨盘干支：`,...r.crossRelations.map(x=>`${x.type} · ${x.pattern}（${x.pillars.join('／')}）`)];
+ // 6) 结语：口径声明
+ sec['p-notes']=[
+  '以上为多体系结构化取象，分属不同命理传统，彼此不互证、不折算成单一分数。',
+  '关系质量最终取决于双方真实沟通与经营，本报告仅供文化参考，不作吉凶判决。'
+ ];
+ return {kind:'pair-report',notice:'合婚报告由各体系公开规则程序化生成，非 AI 模型输出，仅供传统取象参考。',sections:sec,nameA,nameB};
+}

@@ -2288,3 +2288,12 @@ body.dark .rail-scroll>[data-system-switch],body.dark .rail-grid,body.dark .prof
  .vedic-secondary .vedic-layout-rail button{min-width:54px!important;padding:0 8px!important}
 }
 
+/* ===== v0.76.0 紫微双圈叠加图 ===== */
+/* v0.76.5：底色改为不透明（原来 .9/.82 半透明，叠加卡片渐变后仍有约 3~8% 背景透出，
+   真机上会看到圆环缝隙里透出下层色）；同时 position+z-index 抬到卡片 ::before 高光层之上，
+   避免左上角 62% 白色 screen 混合把宫名冲淡。 */
+.zi-twin-wrap{margin:6px 0 10px;padding:8px 6px;border-radius:14px;background:linear-gradient(160deg,#fffefd,#fff7fb);border:1px solid rgba(255,150,190,.18);position:relative;z-index:1}
+.zi-twin-wrap svg{display:block;margin:0 auto}
+.zi-twin-wrap .thin{margin-top:6px;text-align:center}
+
+

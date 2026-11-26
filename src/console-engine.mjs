@@ -7,7 +7,7 @@ import {ziweiChart,ziweiFlow} from './ziwei.mjs';
 import {localTemplateReport} from './report-template.mjs';
 import {westernPro} from './western-pro.mjs';
 import {baziPro,reverseBazi,convertBirth,relations} from './bazi-pro.mjs';
-import {baziMatch,ziweiMatch} from './match-making.mjs';
+import {baziMatch,ziweiMatch,mangalDosh} from './match-making.mjs';
 import {boneWeight,qizheng,yijing,almanac} from './traditions.mjs';
 import {qiGuaByTime} from './liuyao.mjs';
 import {suggestNames} from './bazi-naming.mjs';
@@ -38,9 +38,16 @@ function pairReading({a,b,mode,config}){
  const result=synastry({...solarA,skipZiwei:true},{...solarB,skipZiwei:true},mode||'synastry');
  // 多体系合婚：八字干支/十神/喜用 + 紫微命宫夫妻宫互参（不虚构契合度，分数仍取八科）
  const bm=baziMatch(ba,bb),zm=ziweiMatch(solarA,solarB);
+ const md=mangalDosh(result.vedic?.a?.d1,result.vedic?.b?.d1);
  const {total:forward,max}=result.vedic.koota;
- const reverse=ashtakoota(result.vedic.b.d1,result.vedic.a.d1).total;
+ const revKoota=ashtakoota(result.vedic.b.d1,result.vedic.a.d1);
+ const reverse=revKoota.total;
  const total=(forward+reverse)/2;
+ // 双向八科明细：前端可切换查看「以当前案例为基准」与「反向」两套分科得分
+ const bothKoota={
+  forward:{total:forward,max,items:result.vedic.koota.items,percent:result.vedic.koota.percent,label:'当前案例 × 第二人'},
+  reverse:{total:reverse,max:revKoota.max,items:revKoota.items,percent:revKoota.percent,label:'第二人 × 当前案例'}
+ };
  const pillars=[...ba.pillars.map(p=>({...p,name:'当前案例'+p.name})),...bb.pillars.map(p=>({...p,name:'关联案例'+p.name}))];
  const cross=relations(pillars).filter(r=>r.ids.some(i=>i<4)&&r.ids.some(i=>i>=4));
  const supportive=cross.find(r=>['天干五合','六合','三合局'].includes(r.type));
@@ -53,9 +60,9 @@ function pairReading({a,b,mode,config}){
   {name:'互动助力',text:[supportive?label(supportive):'',key?aspect(key):''].filter(Boolean).join('；')||'当前规则未检出突出的相合线索。'},
   {name:'相处留意',text:[challenging?label(challenging):'',tension?aspect(tension):''].filter(Boolean).join('；')||'当前规则未检出突出的冲克线索。'}
  ];
- const fit={total,max,percent:Math.round(100*total/max),highlight:supportive?label(supportive):challenging?label(challenging):key?aspect(key):'',insights};
+ const fit={total,max,percent:Math.round(100*total/max),kootaBoth:bothKoota,highlight:supportive?label(supportive):challenging?label(challenging):key?aspect(key):'',insights};
  const combined=mode==='composite'?compositePro({a,b,config}):null;
- return {ok:true,...result,ziwei:zm,baziMatch:bm,ziweiMatch:zm,western:combined?{...result.western,chart:combined.chart,composite:combined.chart}:result.western,fit,crossRelations:cross,composite:combined};
+ return {ok:true,...result,ziwei:zm,baziMatch:bm,ziweiMatch:zm,mangal:md,western:combined?{...result.western,chart:combined.chart,composite:combined.chart}:result.western,fit,crossRelations:cross,composite:combined};
 }
 export const consoleRoutes={
  '/api/console/vedic':vedicPro,'/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,

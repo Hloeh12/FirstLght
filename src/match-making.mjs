@@ -131,8 +131,43 @@ export function ziweiMatch(solarA,solarB){
   {key:'spouse',name:'夫妻宫主星',text:`甲方夫妻宫主星${stars(spouseA)}，乙方夫妻宫主星${stars(spouseB)}。夫妻宫传统用来看择偶偏好与关系课题——两人的夫妻宫主星若能互相呼应（同星、对星或三合），相处话题更容易同频。`},
   {key:'cross',name:'命宫互落宫',text:`甲方命宫落乙方命盘的${aLifeInB||'—'}，乙方命宫落甲方命盘的${bLifeInA||'—'}——互落的宫位说明「你在对方生命里扮演什么角色」，落夫妻/官禄/财帛宫时传统上视为更紧扣现实关系。`}
  ];
- return {ok:true,items,
+ const boardOf=ch=>(ch?.palaces||[]).map(p=>({name:p.name,branch:p.earthlyBranch,
+  majors:(p.majorStars||[]).map(s=>s.name),
+  life:ch.palaces.find(x=>x.name==='命宫')?.earthlyBranch===p.earthlyBranch,
+  spouse:ch.palaces.find(x=>x.name==='夫妻')?.earthlyBranch===p.earthlyBranch}));
+ const boards={a:boardOf(za),b:boardOf(zb)};
+ return {ok:true,items,boards,
   a:{life:lifeA?.earthlyBranch||null,stars:stars(lifeA),spouse:stars(spouseA)},
   b:{life:lifeB?.earthlyBranch||null,stars:stars(lifeB),spouse:stars(spouseB)},
   method:'双方分别用出生资料排紫微 D1，取命宫主星、夫妻宫主星与命宫地支互落宫位互参；只描述结构位置与角色，不折算契合度分数，不据此作关系吉凶断言。'};
+}
+
+/* Mangal Dosh（火星煞，印占合婚常用）：火星在 1/4/7/8/12 宫时传统视为「火星煞」，
+ * 若双方火星同落同一宫（如都在 7 宫），传统上视为彼此抵消（Mitigates）。
+ * 仅作婚配取象参考，不作关系吉凶断言。vedic 盘的行星已带 house（自命宫起 1–12）。 */
+const MANGAL_HOUSES=new Set([1,4,7,8,12]);
+const HOUSE_ZH={1:'命宫',2:'财帛',3:'兄弟',4:'田宅',5:'子女',6:'奴仆',7:'夫妻',8:'疾厄',9:'迁移',10:'官禄',11:'福德',12:'玄秘'};
+export function mangalDosh(va,vb){
+ const marsOf=v=>{const m=(v?.planets||[]).find(p=>p.key==='mars'||p.name==='火星');if(!m)return null;return {house:m.house,sign:v.lagna||null};};
+ const ma=marsOf(va),mb=marsOf(vb);
+ const dosh=h=>h?MANGAL_HOUSES.has(h):false;
+ const aDosh=dosh(ma?.house),bDosh=dosh(mb?.house);
+ const bothSame=aDosh&&bDosh&&ma.house===mb.house;
+ const aText=aDosh?`火星落 ${ma.house} 宫（${HOUSE_ZH[ma.house]||''}）`:`火星在 ${ma.house||'—'} 宫，不在 1/4/7/8/12，未成火星煞`;
+ const bText=bDosh?`火星落 ${mb.house} 宫（${HOUSE_ZH[mb.house]||''}）`:`火星在 ${mb.house||'—'} 宫，未成火星煞`;
+ return {
+  ok:true,
+  a:{dosh:aDosh,house:ma?.house??null,sign:ma?.sign??null,text:aText},
+  b:{dosh:bDosh,house:mb?.house??null,sign:mb?.sign??null,text:bText},
+  both:bothSame,
+  level:bothSame?'neutral':aDosh&&bDosh?'challenge':aDosh||bDosh?'warn':'calm',
+  text:bothSame
+   ?`双方火星同落 ${ma.house} 宫，传统视为互相抵消（Mitigates），火星煞的张力彼此化解。`
+   :aDosh&&bDosh
+   ?`双方各成火星煞（${ma.house}/${mb.house} 宫），传统视为两股张力叠加，宜以规则与分工化解。`
+   :aDosh||bDosh
+   ?`${aDosh?aText:bText}，单方成煞；传统上建议关注该宫对应课题，但不作吉凶判决。`
+   :`双方火星均不在 1/4/7/8/12 宫，无火星煞之象。`,
+  method:'火星落 1/4/7/8/12 宫判为火星煞（Mangal Dosh），双方同宫视为互抵；仅传统取象，不作实证结论。'
+ };
 }

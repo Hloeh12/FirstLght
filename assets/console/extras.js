@@ -769,9 +769,11 @@ function synastry(ctx){
  const cases=ctx.state.cases.filter(c=>c.id!==self.id);
  const other=cases.find(c=>c.id===s.other)||(s.otherInline?.birth?{...s.otherInline,id:s.otherInline.id||'inline'}:null);
  const nameA=self?.name||'当前案例',nameB=other?.name||'第二人';
- // 视角标签：比较盘/组合盘/时空盘为已实现，交盘/马盘先占位「规划中」，点选给出说明而非静默失败。
- const VIEWS=[['synastry','比较盘B'],['composite','组合盘'],['davison','时空盘'],['cross','交盘A'],['mars','马盘']];
- const doneViews=new Set(['synastry','composite','davison']);
+ // 视角标签：交盘A/交盘B/比较盘/组合盘/马盘A/马盘B（v0.82.0 交盘与马盘双向均已补齐）
+ // 注：davison 时空盘不在顶部标签列（由配置页「双人合盘功能」进入），但仍是可用视角。
+ const VIEWS=[['cross-a','交盘A'],['cross-b','交盘B'],['synastry','比较盘'],['composite','组合盘'],['mars-a','马盘A'],['mars-b','马盘B']];
+ const doneViews=new Set(['synastry','composite','davison','cross-a','cross-b','mars-a','mars-b']);
+ // davison 时空盘不在顶部标签显示（用户选择时通过 URL 或状态切换），但在主 tab 切换时保留
  const viewTabs=VIEWS.map(([id,label])=>doneViews.has(id)
   ? btn(label,`data-pair-mode="${id}" aria-pressed="${s.mode===id}"`)
   : btn(label+' · 规划中',`data-pair-coming="${id}" class="pair-view-coming"`)).join('');
@@ -798,6 +800,19 @@ function synastry(ctx){
    ${s.mode==='davison'&&r.western?.chart?`<article class="card liquid-glass"><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel({chart:r.western.chart,mode:'natal'})}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div><p class="thin">取两人出生时刻的 UTC 中点，经纬度取平均，得到一段「关系本身的时间与地点」，以此排出中点盘。${esc(r.limitations||'')}</p></article>
    <article class="card"><h2>中点星体与位置</h2>${planetList(r.western.chart.planets)}</article>
    <article class="card"><h2>中点盘相位明细</h2>${aspectBrowser({chart:r.western.chart,mode:'davison'},s.davisonAspects||(s.davisonAspects={filter:'main',expanded:false}))}</article>`:''}
+  </div>
+  <div class="pair-section-block" data-pair-block="cross-mars">
+   ${(()=>{const CM={ 'cross-a':{badge:'交盘A',h3:'Cross A · 交盘（当前案例 → 第二人宫位）',small:'当前案例本命星叠入第二人宫位系统，看其星体触发第二人的生活领域'},
+     'cross-b':{badge:'交盘B',h3:'Cross B · 交盘（第二人 → 当前案例宫位）',small:'第二人本命星叠入当前案例宫位系统，看其星体触发当前案例的生活领域'},
+     'mars-a':{badge:'马盘A',h3:'Mars A · 马盘（以当前案例上升锚定）',small:'把第二人盘行星整体平移，使第二人上升点与当前案例上升点重合，看对方心理层面如何呈现'},
+     'mars-b':{badge:'马盘B',h3:'Mars B · 马盘（以第二人上升锚定）',small:'把当前案例盘行星整体平移，使当前案例上升点与第二人上升点重合，看对方心理层面如何呈现'}}[s.mode];
+    if(!CM)return '';
+    const chart=r.western?.chart;if(!chart)return '';
+    const crossAsp=s.mode.startsWith('cross')?s.crossViewAspects||(s.crossViewAspects={filter:'main',expanded:false}):s.marsAspects||(s.marsAspects={filter:'main',expanded:false});
+    return `<header class="pair-section-head"><span class="pair-sec-badge">${esc(CM.badge)}</span><h3>${esc(CM.h3)}</h3><small>${esc(CM.small)}</small></header>
+     <article class="card liquid-glass"><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel({chart,mode:'natal'})}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div><p class="thin">${esc(r.limitations||'')}· 点行星看详细相位</p></article>
+     <article class="card"><h2>${esc(CM.badge)}星体与位置</h2>${planetList(chart.planets)}</article>
+     <article class="card"><h2>${esc(CM.badge)}相位明细</h2>${aspectBrowser({chart,mode:s.mode},crossAsp)}</article>`;})()}
   </div>
  </div>
  <article class="card"><h2>契合度 ${r.fit.percent}%</h2>${r.fit.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')}<small>印度八项合盘双向平均；此分数不代表组合盘评分 · 传统参考</small></article>
@@ -943,6 +958,9 @@ function synastry(ctx){
  if(r?.composite)bindAspectBrowser(ctx.root,r.composite,s.aspects);
  if(r?.western?.interAspects?.length)bindAspectBrowser(ctx.root,{outer:{planets:r.western.chart.planets},cross:r.western.interAspects,chart:{planets:r.western.chart.planets},mode:'synastry'},s.crossAspects||(s.crossAspects={filter:'main',expanded:false}));
  if(s.mode==='davison'&&r?.western?.chart)bindAspectBrowser(ctx.root,{chart:r.western.chart,mode:'davison'},s.davisonAspects||(s.davisonAspects={filter:'main',expanded:false}));
+ // v0.82.0：交盘/马盘相位明细浏览器绑定
+ if(['cross-a','cross-b'].includes(s.mode)&&r?.western?.chart)bindAspectBrowser(ctx.root,{chart:r.western.chart,mode:'cross'},s.crossViewAspects||(s.crossViewAspects={filter:'main',expanded:false}));
+ if(['mars-a','mars-b'].includes(s.mode)&&r?.western?.chart)bindAspectBrowser(ctx.root,{chart:r.western.chart,mode:'mars'},s.marsAspects||(s.marsAspects={filter:'main',expanded:false}));
  // v0.80.0：组合盘 / 时空盘盘面绑定行星点击中宫卡。
  // 注意：首次进入（r 为空，尚未排盘）时页面没有 .wheel-stage，stage 为 null，
  // 必须先判空再取 card，否则 querySelector 抛错会中断后续所有事件绑定（含选第二人、切盘重算）。
@@ -994,11 +1012,15 @@ export function extraView(ctx){({qizheng:qi,yijing:yi,calendar,synastry,liuyao})
 export function pairTools(ctx,host){
  const s=stateFor(ctx,'synastry',{mode:'synastry'});
  host.innerHTML='<h3>双人合盘功能</h3><div class="tool-grid">'+[
+  ['cross-a','交盘A','当前案例本命星叠入第二人宫位，看其星体触发第二人领域'],
+  ['cross-b','交盘B','第二人本命星叠入当前案例宫位，看其星体触发当前案例领域'],
   ['synastry','比较盘 Synastry','两人本命星位同框，跨盘相位看互动'],
   ['composite','组合中点盘 Composite','两人星位取中点，看关系共同主题'],
+  ['mars-a','马盘A','以当前案例上升锚定，看对方心理层面如何呈现'],
+  ['mars-b','马盘B','以第二人上升锚定，看对方心理层面如何呈现'],
   ['davison','戴维森中点盘 Davison','出生时刻/地点中点，看关系时空']
  ].map(([id,label,desc])=>`<button type="button" class="tool-full" data-pair-tool="${id}" aria-pressed="${s.mode===id?'true':'false'}"><b>${esc(label)}</b><small class="pair-tool-desc">${esc(desc)}</small></button>`).join('')+'</div>'+
-  '<p class="thin">三种盘各有独立相位明细：比较盘看跨盘互动，组合盘看共同主题，时空盘看关系的时间地点。</p>';
+  '<p class="thin">每种盘各有独立盘面与相位明细：交盘看星体触发领域，比较盘看跨盘互动，组合盘看共同主题，马盘看心理呈现，时空盘看关系时空。</p>';
  for(const b of host.querySelectorAll('[data-pair-tool]'))b.onclick=()=>{
   if(s.mode===b.dataset.pairTool)return;
   // 对齐页面内 [data-pair-mode] 的切盘逻辑：清 result 后由 synastry() 触发重算（离线走本地引擎）

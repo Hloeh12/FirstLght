@@ -33,7 +33,7 @@ function consoleReading({birth}){
   report:localTemplateReport({...full,ziwei})};
 }
 function pairReading({a,b,mode,config}){
- if(mode!==undefined&&!['synastry','composite','midpoint','davison'].includes(mode))throw Error('无效合盘类型');
+ if(mode!==undefined&&!['synastry','composite','midpoint','davison','cross-a','cross-b','mars-a','mars-b'].includes(mode))throw Error('无效合盘类型');
  const ba=baziPro({birth:a}),bb=baziPro({birth:b});
  const solarA=solarInput(a,ba),solarB=solarInput(b,bb);
  const result=synastry({...solarA,skipZiwei:true},{...solarB,skipZiwei:true},mode||'synastry');

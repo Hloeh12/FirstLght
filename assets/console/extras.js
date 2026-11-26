@@ -585,7 +585,7 @@ function pairCycleCard(cyc,sel){
   <line class="pc-mid" x1="${L}" y1="${y(50).toFixed(1)}" x2="${R}" y2="${y(50).toFixed(1)}"/>
   <path d="${area}" fill="url(#pairCycleFill)"/>
   <path class="pc-line" d="${path}"/>
-  ${m.map((d,i)=>`<circle class="pc-dot${d.score<0?' pc-neg':''}${i===idx?' pc-on':''}" data-cycle-i="${i}" cx="${x(i).toFixed(1)}" cy="${y(d.pct).toFixed(1)}" r="${i===idx?4.6:3}"/>`).join('')}
+  ${m.map((d,i)=>`<circle class="pc-dot${d.score<0?' pc-neg':''}${i===idx?' pc-on':''}" data-cycle-i="${i}" role="button" tabindex="0" aria-label="${esc(d.label+' '+d.gz+'，体感 '+(d.score>0?'+':'')+d.score)}" cx="${x(i).toFixed(1)}" cy="${y(d.pct).toFixed(1)}" r="${i===idx?4.6:3}"/>`).join('')}
   ${m.map((d,i)=>`<text class="pc-lbl${i===idx?' pc-on':''}" x="${x(i).toFixed(1)}" y="${B+14}" text-anchor="middle">${d.month}</text>`).join('')}
   <text class="pc-lbl" x="${L}" y="${T-4}">合</text>
   <text class="pc-lbl" x="${L}" y="${B-4}">冲</text>
@@ -662,9 +662,11 @@ function synastry(ctx){
  const kootaToggle=$('[data-koota-toggle]',ctx.root);if(kootaToggle)kootaToggle.onclick=()=>{s.kootaOpen=!s.kootaOpen;synastry(ctx);};
  for(const b of ctx.root.querySelectorAll('[data-koota-dir]'))b.onclick=()=>{if(s.kootaDir===b.dataset.kootaDir)return;s.kootaDir=b.dataset.kootaDir;synastry(ctx);};
  // 关系周期：点任一月切换下方细则（默认落在最高分月）
- for(const dot of ctx.root.querySelectorAll('[data-cycle-i]'))dot.onclick=()=>{
-  const i=Number(dot.dataset.cycleI);if(s.cycleSel===i)return;s.cycleSel=i;synastry(ctx);
- };
+ for(const dot of ctx.root.querySelectorAll('[data-cycle-i]')){
+  const pick=()=>{const i=Number(dot.dataset.cycleI);if(s.cycleSel===i)return;s.cycleSel=i;synastry(ctx);};
+  dot.onclick=pick;
+  dot.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}};
+ }
  // 合婚报告长图：复用排盘页同一套画布导出，把成文报告整段带上（默认 24 条会截断，这里放宽到 120 条）
  const expBtn=$('[data-pair-export]',ctx.root);
  if(expBtn)expBtn.onclick=async()=>{

@@ -2357,3 +2357,6 @@ body.dark .pair-rail-chips .chip{background:rgba(255,138,184,.12);color:#ffc3dc;
 .pair-doc .pair-report p{margin:4px 0;font-size:12.5px;line-height:1.72}
 body.dark .pair-doc .pair-report h3{color:#ffa8cb}
 .export-stage{position:fixed;left:-9999px;top:0;width:720px;pointer-events:none;opacity:0}
+.pc-dot:focus{outline:none}
+.pc-dot:focus-visible{stroke-width:3;stroke:#8d2f5c}
+body.dark .pc-dot:focus-visible{stroke:#ffd7e8}

@@ -333,6 +333,19 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .vedic-dasha small{display:block;font-size:.72rem}
 .pair-mode-rail{display:flex;gap:6px;overflow-x:auto;flex-wrap:nowrap;margin:8px 0}
 .pair-mode-rail button{white-space:nowrap;flex:none}
+/* v0.80.0：八科双向切换按钮缩小——两个按钮放一行，不再左右滑动（需求2/图3） */
+.koota-dir-rail{display:flex;gap:5px;margin:6px 0;flex-wrap:nowrap}
+.koota-dir-rail button{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+ font-size:11px!important;padding:4px 8px!important;min-height:30px!important;border-radius:12px!important}
+/* v0.80.0：双人合盘三分区（比较盘/组合盘/时空盘），测测式分区明显（需求5） */
+.pair-mode-rail-lg button{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px!important;padding:6px 8px!important}
+.pair-section-grid{display:grid;gap:14px}
+.pair-section-block{display:grid;gap:10px}
+.pair-section-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:2px 2px 0}
+.pair-sec-badge{flex:none;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:linear-gradient(135deg,#ff77aa,#ff4f8b);color:#fff}
+.pair-section-head h3{margin:0;font-size:15px;color:#8c2f5f}
+.pair-section-head small{font-size:11px;color:#a06d88}
+.pair-tool-desc{display:block;margin-top:3px;font-size:11px;font-weight:400;color:#a06d88}
 @media(max-width:340px){.profile-capsule [data-profile-rule]{flex-basis:33px;min-width:22px;font-size:9px}.profile-capsule .capsule-edit-btn{font-size:9px;padding-inline:2px}.profile-capsule .capsule-left{padding-inline:3px}.planet-row .planet-position{grid-template-columns:1fr}.planet-row .planet-meta{grid-column:1}}
 @media(prefers-reduced-motion:reduce){#bottomNav button,.tab-liquid-pill,.aspect-expansion{transition:none!important}#caseDrawer{animation:none}}
 

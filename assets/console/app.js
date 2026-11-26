@@ -27,7 +27,7 @@ import {$,esc,btn,stored,save,request,labels,splitDate,isoLocal,table} from './u
 import {ziweiView,ziweiTools,ziweiPatterns,ziweiPeriodEvidence} from './ziwei.js';
 import {baziView,baziTools,baziQuick,baziGrid} from './bazi.js';
 import {westernView,westernTools,astroHouse,houseOptions,houseLabels,setAstroHouse} from './western.js';
-import {extraView} from './extras.js';
+import {extraView,pairTools} from './extras.js';
 import {shareChart} from './share.js';
 import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES,baziMoment,baziSelOf,baziPickOptions,focusSectionsFor,focusBodyHtml} from './period-report.js';
 import {DICTIONARY} from './dictionary-data.js';
@@ -1613,7 +1613,7 @@ function download(text,name,type){
  const url=URL.createObjectURL(new Blob([text],{type}));
  const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
-const chartTools={ziwei:ziweiTools,bazi:baziTools,west:westernTools,vedic:vedicTools};
+const chartTools={ziwei:ziweiTools,bazi:baziTools,west:westernTools,vedic:vedicTools,synastry:pairTools};
 /* ===== 配置面板：分组行式，右对齐取值 + 尖角 ===== */
 function configRow(id,label,value,danger){
  return `<button type="button" class="cfg-row${danger?' cfg-danger':''}" data-config="${id}"><span class="cfg-label">${esc(label)}</span><span class="cfg-side"><span class="cfg-value">${esc(value||'')}</span><svg class="cfg-chev" viewBox="0 0 8 12" aria-hidden="true" width="7" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 1.6 6 6l-4.4 4.4"/></svg></span></button>`;

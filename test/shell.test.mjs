@@ -183,8 +183,11 @@ test('bundled console creates fresh charts and progresses them without any netwo
  assert(!$('#addRelation input[type=range]'));
  click('#addRelation button');
  // v0.78.0：案例库顶部「关系星系」入口已移除（与案例详情重复），关系星系改从详情内「查看关系星系」进入。
+ // jsdom 点击 summary 会把 details.open 置 true 但不会自动触发 toggle 事件，需手动派发以驱动 ontoggle。
  assert(!$('[data-galaxy-open]'),'案例库顶部不再有独立关系星系按钮');
- click('#toolSheet details summary'); // 展开「查看关系星系」
+ const galaxyDetails=$('#toolSheet details');
+ galaxyDetails.querySelector('summary').click();
+ galaxyDetails.dispatchEvent(new w.Event('toggle'));
  await until(()=>Boolean($('.galaxy-planet')),'relationship planet');
  $('.galaxy-planet').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
  const fit=$('#termSheet .relation-score').textContent;

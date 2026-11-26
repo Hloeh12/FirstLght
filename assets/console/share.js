@@ -14,7 +14,7 @@ function panel(g,x,y,w,h){
  const fill=g.createLinearGradient(x,y,x+w,y+h);fill.addColorStop(0,'rgba(255,255,255,.95)');fill.addColorStop(1,'rgba(255,234,244,.88)');
  g.shadowColor='#ff4f8b22';g.shadowBlur=18;g.shadowOffsetY=7;g.fillStyle=fill;g.fill();g.shadowBlur=0;g.shadowOffsetY=0;g.strokeStyle='#ffffff';g.lineWidth=1.5;g.stroke();
 }
-export async function shareChart(root,title){
+export async function shareChart(root,title,opts={}){
  const native=window.webkit?.messageHandlers?.shareChart;
  await document.fonts?.ready;
  const canvas=document.createElement('canvas'),g=canvas.getContext('2d');
@@ -26,7 +26,9 @@ export async function shareChart(root,title){
  const selectors='.zi-detail p,.period-guidance p,.period-guidance dd,.vedic-period h3,.vedic-period p,.pair-reading h3,.pair-reading p,.orbit-info span,[data-instant-caption]';
  let info=[...root.querySelectorAll(selectors)].map(x=>x.innerText.trim().replace(/\s+/g,' ')).filter(Boolean);
  if(!info.length)info=[...root.querySelectorAll('.card h2,.card p,.grid-table tbody tr')].slice(0,14).map(x=>x.innerText.trim().replace(/\s+/g,' '));
- info=[...new Set(info)].slice(0,24);
+ // 合婚成文报告段落多，允许调用方放宽条目上限（默认 24 条保持原行为）
+ const cap=Number.isInteger(opts.limit)?opts.limit:24;
+ info=[...new Set(info)].slice(0,cap);
  g.font='600 23px -apple-system,sans-serif';const heading=wrap(g,title.replace(/\s*▾$/,''),body);
  g.font='16px -apple-system,sans-serif';const lines=info.flatMap(x=>wrap(g,x,body-28)),header=90+heading.length*25;
  const height=header+visual+(visual?30:0)+lines.length*25+85;
@@ -57,7 +59,7 @@ export async function shareChart(root,title){
  if(native){native.postMessage(canvas.toDataURL('image/png'));return;}
  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
  if(!blob)throw Error('PNG 导出失败');
- const file=new File([blob],'FirstLight-chart.png',{type:'image/png'});
+ const file=new File([blob],opts.filename||'FirstLight-chart.png',{type:'image/png'});
  if(navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file]});return;}catch(error){if(error.name==='AbortError')return;}}
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);

@@ -4,10 +4,11 @@ import {resonance} from './resonance.mjs';
 import {ashtakoota} from './ashtakoota.mjs';
 import {chart,synastry} from './chart.mjs';
 import {ziweiChart,ziweiFlow} from './ziwei.mjs';
-import {localTemplateReport} from './report-template.mjs';
+import {baziMatch,ziweiMatch,mangalDosh,westernKeyStars} from './match-making.mjs';
+import {pairCycle} from './pair-cycle.mjs';
+import {localTemplateReport,pairReport} from './report-template.mjs';
 import {westernPro} from './western-pro.mjs';
 import {baziPro,reverseBazi,convertBirth,relations} from './bazi-pro.mjs';
-import {baziMatch,ziweiMatch,mangalDosh} from './match-making.mjs';
 import {boneWeight,qizheng,yijing,almanac} from './traditions.mjs';
 import {qiGuaByTime} from './liuyao.mjs';
 import {suggestNames} from './bazi-naming.mjs';
@@ -62,7 +63,25 @@ function pairReading({a,b,mode,config}){
  ];
  const fit={total,max,percent:Math.round(100*total/max),kootaBoth:bothKoota,highlight:supportive?label(supportive):challenging?label(challenging):key?aspect(key):'',insights};
  const combined=mode==='composite'?compositePro({a,b,config}):null;
- return {ok:true,...result,ziwei:zm,baziMatch:bm,ziweiMatch:zm,mangal:md,western:combined?{...result.western,chart:combined.chart,composite:combined.chart}:result.western,fit,crossRelations:cross,composite:combined};
+ // 西占重点星：只筛金星/火星/月亮的跨盘相位，按融合/和谐/张力归类，不并入八科总分
+ const keyStars=westernKeyStars(result.western.interAspects);
+ // 关系周期与婚期应期：流月/流年干支 × 双方婚姻宫
+ const cycle=pairCycle({ba,bb});
+ const base={ok:true,...result,ziwei:zm,baziMatch:bm,ziweiMatch:zm,mangal:md,keyStars,cycle,
+  western:combined?{...result.western,chart:combined.chart,composite:combined.chart}:result.western,fit,crossRelations:cross,composite:combined};
+ // 核心结论摘要：每条都指向一项可复核证据，不给笼统好话
+ const firstSentence=t=>{const s=String(t||'');const i=s.indexOf('。');return (i>0?s.slice(0,i):s).replace(/。$/,'');};
+ const bestBm=bm.items.find(x=>x.level==='support'),worstBm=bm.items.find(x=>x.level==='challenge');
+ const fly=zm.sihuaFly?.hits?.[0];
+ const summary=[
+  {key:'fit',label:'契合结构',text:`印度八科双向平均 ${fit.percent}%（${total}/${max}）；八科只量星宿结构，不等于关系质量。`},
+  {key:'bazi',label:'八字取向',text:[bestBm?'最有利的一项：'+bestBm.name+'——'+firstSentence(bestBm.text):'八字各项均无明显助力项',
+    worstBm?'最需磨合的一项：'+worstBm.name+'——'+firstSentence(worstBm.text):'八字未见明显冲克项'].join('；')},
+  {key:'ziwei',label:'紫微动力',text:fly?`${fly.side==='a'?'甲方':'乙方'}${fly.scope==='life'?'命宫':'夫妻宫'}宫干化${fly.type}（${fly.star}）${fly.self?'自化于本宫':'飞入对方「'+fly.inOther+'」'}——这是两人关系里最直接的「谁在给、给到哪」的线索。`:zm.ok?'双方命宫/夫妻宫四化未互飞入关键宫位，关系动力更多来自后天互动。':'紫微排盘不可用，不做互飞推断。'},
+  {key:'west',label:'情感三角',text:keyStars.core?.length?keyStars.top.text:keyStars.text}
+ ];
+ const report=pairReport({...base,summary},a.name||'当前案例',b.name||'第二人');
+ return {...base,summary,report};
 }
 export const consoleRoutes={
  '/api/console/vedic':vedicPro,'/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,

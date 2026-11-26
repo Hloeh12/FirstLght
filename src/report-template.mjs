@@ -42,6 +42,8 @@ export function pairReport(r,nameA='当前案例',nameB='第二人'){
   fit.percent!=null?`印度 Ashtakoota 八科双向平均得分率约 ${fit.percent}%（单项总分 ${fit.total}/${fit.max}）；此分数只反映八科结构，不代表组合盘评分，也不作关系质量实证结论。`:'印度八科分数暂不可用。',
   ...(fit.insights||[]).map(i=>`${i.name}：${i.text}`)
  ];
+ // 1b) 核心结论摘要：四条，各自指向可复核的证据
+ if(r.summary?.length)sec['p-summary']=r.summary.map(x=>`${x.label}：${x.text}`);
  // 2) 八字合婚：日柱/日干/生肖/十神/用神逐项成文
  if(r.baziMatch?.items?.length){
   sec['p-bazi']=r.baziMatch.items.map(x=>{
@@ -59,14 +61,35 @@ export function pairReport(r,nameA='当前案例',nameB='第二人'){
    ...(low.length?low.map(x=>`${zh[x.key]||x.zh}偏低（${x.score}/${x.max}）：${x.note}。适合在日常相处中核对双方需求，不以分数代替体验。`):['八科相对均衡，无明显偏低项。'])
   ];
  }
- if(r.mangal?.ok)sec['p-mangal']=[r.mangal.a?.text,r.mangal.b?.text,r.mangal.text,r.mangal.method].filter(Boolean);
- // 4) 紫微互参：命宫/夫妻宫/互落宫位
- if(r.ziweiMatch?.items?.length)sec['p-ziwei']=r.ziweiMatch.items.map(x=>`${x.name}：${x.text}`).concat([r.ziweiMatch.method]);
+ if(r.mangal?.ok){const lines=[r.mangal.a?.text,r.mangal.b?.text,r.mangal.text,r.mangal.method].filter(Boolean);sec['p-mangal']=[...new Set(lines)];}
+ // 4) 紫微互参：命宫/夫妻宫/互落宫位 + 四化互飞
+ if(r.ziweiMatch?.items?.length){
+  const fly=r.ziweiMatch.sihuaFly;
+  sec['p-ziwei']=r.ziweiMatch.items.map(x=>`${x.name}：${x.text}`)
+   .concat(fly?.ok?[`四化互飞：${fly.text}`]:[])
+   .concat([r.ziweiMatch.method]);
+ }
  // 5) 西占组合主题
  if(r.composite?.readings?.length){
   sec['p-western']=[
    `组合中点盘（Composite）把两人各自行星取中点，得到「关系本身」的一张盘——它描述共同主题，而非任何一方的个人盘。`,
    ...r.composite.readings.map(x=>`${x.title}：${x.text}`)
+  ];
+ }
+ // 5b) 西占重点星：金星/火星/月亮的跨盘相位（融合/和谐/张力）
+ if(r.keyStars?.items?.length){
+  sec['p-keystars']=[
+   r.keyStars.text,
+   ...r.keyStars.items.slice(0,8).map(x=>`${x.groupZh} · ${x.a} × ${x.b} ${x.type}（${x.orb}°）：${x.text}`),
+   r.keyStars.method
+  ];
+ }
+ // 5c) 关系周期与婚期应期
+ if(r.cycle?.months?.length){
+  sec['p-cycle']=[
+   r.cycle.text,
+   `未来 ${r.cycle.months.length} 个月关系体感（按流月干支对双方婚姻宫的合冲计分）：`+r.cycle.months.map(m=>`${m.label} ${m.gz} ${m.score>0?'+':''}${m.score}`).join('、')+'。',
+   r.cycle.method
   ];
  }
  if(r.crossRelations?.length)sec['p-cross']=[`八字跨盘干支：`,...r.crossRelations.map(x=>`${x.type} · ${x.pattern}（${x.pillars.join('／')}）`)];

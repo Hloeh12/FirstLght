@@ -678,7 +678,8 @@ test('深挖v0.39：八字合婚用神↔忌神双向 + 日主强弱 + 相刑入
  const CITY={lat:39.9042,lon:116.4074,tz:8};
  const mk=(Y,M,D,h,mi)=>baziPro({birth:{Y,M,D,h,mi,city:CITY,calendar:'solar'}});
  const r=baziMatch(mk(1990,3,15,10,0),mk(1991,8,22,14,0));
- assert.equal(r.items.length,9,'合婚 9 项');
+ assert.ok(r.items.length>=9,'合婚至少 9 项（v0.77.0 起加年命纳音共 10 项）');
+ assert.ok(r.items.find(x=>x.key==='yearNayin'),'v0.77.0 须含年命纳音项');
  assert.ok(r.items.find(x=>x.key==='usefulAvoid'),'须有用神忌神项');
  assert.ok(r.items.find(x=>x.key==='strengthBalance'),'须有日主强弱项');
  assert.match(r.method,/相刑|用神↔忌神|日主强弱/);

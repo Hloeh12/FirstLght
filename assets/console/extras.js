@@ -2,6 +2,7 @@ import {wheel,planetList} from './western.js';
 import {aspectBrowser,bindAspectBrowser} from './aspects.js';
 import {bindWheel} from './wheel-gesture.js';
 import {$,btn,esc,term,table,isoLocal} from './ui.js';
+import {shareChart} from './share.js';
 import {EVENTS as CAL_EVENT_META} from '../../src/almanac.mjs';
 import {qiGuaByTime} from '../../src/liuyao.mjs';
 import {naming} from './extras-naming.js';
@@ -561,6 +562,66 @@ function ziweiTwinWheel(m,otherName){
   <text x="215" y="304" text-anchor="middle" dominant-baseline="central" style="font-size:9.5px;fill:${B}">● ${esc(otherLbl)} · 内环</text>
  </svg><p class="thin">外环 ${esc(aLife||'—')} 宫为当前案例命宫，内环 ${esc(bLifeBranch||'—')} 宫为第二人命宫；两人命宫按 ${esc(rel)} 相对。粉色弧连两人命宫（沿内圈），虚线弧连夫妻宫（沿外圈）。</p></div>`;
 }
+// v0.77.0 双人：核心结论 / 关系周期 / 四化互飞 / 重点星 / 成文报告
+const PAIR_SEC_TITLE={'p-summary':'核心结论','p-overview':'关系概览','p-bazi':'八字合婚','p-vedic':'印度八科','p-mangal':'火星煞','p-ziwei':'紫微合参','p-western':'组合盘主题','p-keystars':'西占重点星','p-cycle':'关系周期与婚期应期','p-cross':'跨盘干支','p-notes':'口径说明'};
+const PAIR_SEC_ORDER=['p-summary','p-overview','p-bazi','p-vedic','p-mangal','p-ziwei','p-western','p-keystars','p-cycle','p-cross','p-notes'];
+function pairSummaryCard(r){
+ if(!r?.summary?.length)return '';
+ return `<article class="card pair-summary"><h2>核心结论</h2><div class="stack">${r.summary.map(s=>`<p><b>${esc(s.label)}</b> · ${esc(s.text)}</p>`).join('')}</div><small>四条结论各自对应下方一项可复核证据，不构成关系吉凶判决。</small></article>`;
+}
+function pairCycleCard(cyc,sel){
+ if(!cyc?.months?.length)return '';
+ const m=cyc.months,L=22,R=318,T=18,B=90,W=340,H=140;
+ const x=i=>L+(R-L)*i/(m.length-1), y=p=>B-(B-T)*Math.max(0,Math.min(100,Number(p)||0))/100;
+ const idx=Number.isInteger(sel)&&m[sel]?sel:m.reduce((bi,d,i)=>d.score>m[bi].score?i:bi,0);
+ const cur=m[idx];
+ const pts=m.map((d,i)=>[x(i),y(d.pct)]);
+ const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+ const area='M'+L+','+B+' '+pts.map(p=>'L'+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+' L'+R+','+B+' Z';
+ return `<article class="card pair-cycle"><h2>关系周期 · 未来 ${m.length} 个月</h2>
+ <svg viewBox="0 0 ${W} ${H}" class="pair-cycle-svg" role="img" aria-label="未来十二个月关系体感曲线">
+  <defs><linearGradient id="pairCycleFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e35d92" stop-opacity=".26"/><stop offset="1" stop-color="#e35d92" stop-opacity="0"/></linearGradient></defs>
+  <line class="pc-base" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>
+  <line class="pc-mid" x1="${L}" y1="${y(50).toFixed(1)}" x2="${R}" y2="${y(50).toFixed(1)}"/>
+  <path d="${area}" fill="url(#pairCycleFill)"/>
+  <path class="pc-line" d="${path}"/>
+  ${m.map((d,i)=>`<circle class="pc-dot${d.score<0?' pc-neg':''}${i===idx?' pc-on':''}" data-cycle-i="${i}" cx="${x(i).toFixed(1)}" cy="${y(d.pct).toFixed(1)}" r="${i===idx?4.6:3}"/>`).join('')}
+  ${m.map((d,i)=>`<text class="pc-lbl${i===idx?' pc-on':''}" x="${x(i).toFixed(1)}" y="${B+14}" text-anchor="middle">${d.month}</text>`).join('')}
+  <text class="pc-lbl" x="${L}" y="${T-4}">合</text>
+  <text class="pc-lbl" x="${L}" y="${B-4}">冲</text>
+ </svg>
+ <p class="pair-cycle-detail"><b>${esc(cur.label)}（${esc(cur.gz)}）</b> · 体感 ${cur.score>0?'+':''}${cur.score} · ${esc(cur.reasons.join('、')||'无强信号')}；${esc(cur.advice)}</p>
+ <div class="pair-rail-chips">${cyc.peakYears.length?cyc.peakYears.map(y=>`<span class="chip">婚期窗口 ${y.year} ${esc(y.gz)} · ${y.score>0?'+':''}${y.score}</span>`).join(''):'<span class="chip">近 8 年无明显合象窗口</span>'}</div>
+ <p class="thin">${esc(cyc.text)}</p><p class="thin">口径：${esc(cyc.method)}</p></article>`;
+}
+function pairSihuaCard(z,labelA,labelB){
+ const f=z?.sihuaFly;if(!f?.ok)return '';
+ const rows=[];
+ for(const [label,fly] of [[labelA,f.a],[labelB,f.b]]){
+  for(const scope of ['life','spouse']){
+   const g=fly?.[scope];if(!g?.items)continue;
+   for(const it of g.items)rows.push([`${label}${scope==='life'?'命宫':'夫妻宫'}（${g.stem}）`,it.type,it.star,it.self?'自化本宫':it.to,it.inOther||'—']);
+  }
+ }
+ return `<article class="card"><h2>紫微四化互飞 · 关系动力</h2><p>${esc(f.text)}</p><div class="pair-table-scroll">${table(['宫位（宫干）','四化','星','落本盘','落对方盘'],rows)}</div><small>${esc(f.method)}</small></article>`;
+}
+function pairKeyStarsCard(k){
+ if(!k?.items?.length)return '';
+ const line=x=>`<p><b>${esc(x.a)} × ${esc(x.b)} ${esc(x.type)}</b> · ${esc(x.groupZh)} · ${x.orb}° · ${esc(x.text)}</p>`;
+ const core=k.core||[],rest=k.items.filter(x=>!x.both);
+ return `<article class="card"><h2>西占重点星 · 金火月跨盘</h2><p>${esc(k.text)}</p>
+ ${core.length?`<div class="stack">${core.map(line).join('')}</div>`:'<p class="thin">金星、火星、月亮之间无直接相位，情感互动更多靠相处累积。</p>'}
+ ${rest.length?`<details><summary>含单端的其余 ${rest.length} 条相位</summary><div class="stack">${rest.map(line).join('')}</div></details>`:''}
+ <small>${esc(k.method)}</small></article>`;
+}
+function pairReportCard(r){
+ const sec=r?.report?.sections;if(!sec)return '';
+ const keys=PAIR_SEC_ORDER.filter(k=>sec[k]?.length);
+ if(!keys.length)return '';
+ return `<article class="card pair-doc"><div class="spread"><h2>合婚报告 · 成文</h2>${btn('导出长图','data-pair-export')}</div>
+ <p class="thin" data-pair-export-status role="status">${esc(r.report.notice||'')}</p>
+ <div class="pair-report" data-pair-doc>${keys.map(k=>`<h3>${esc(PAIR_SEC_TITLE[k]||k)}</h3>${sec[k].map(t=>`<p>${esc(t)}</p>`).join('')}`).join('')}</div></article>`;
+}
 // v0.75.0：第二人允许两种来源——案例库里的案例，或一次性输入的生辰（s.otherInline）。
 // 后者自带 birth 对象，直接送进接口，不用再走 normalized()。
 const pairBirth=(ctx,other)=>other?.birth||ctx.normalized(other);
@@ -578,23 +639,47 @@ function synastry(ctx){
  ctx.root.innerHTML=`<section><div class="spread"><h1>双人合盘</h1>${btn(other?'更换第二人':'选择第二人','data-select-other')}</div>
  <div class="pair-mode-rail" aria-label="双人合盘盘类">${[['synastry','比较盘 Synastry'],['composite','组合中点盘 Composite'],['davison','戴维森中点 Davison']].map(([id,label])=>btn(label,`data-pair-mode="${id}" aria-pressed="${s.mode===id}"`)).join('')}</div>
  <p>${esc(self?.name||'当前案例')} × ${esc(other?.name||'待选择')}</p><p data-extra-status role="status">${esc(s.error)}</p>
+ ${pairSummaryCard(r)}
  ${r?.composite?`<article class="card liquid-glass"><h2>组合中点盘</h2><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r.composite)}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div><p class="thin">${esc(r.composite.method)}</p>${r.composite.ambiguity.map(x=>`<p>${esc(x)}</p>`).join('')}</article><article class="card pair-reading"><h2>关系本质 · 共同主题</h2>${r.composite.readings.map(x=>`<h3>${esc(x.title)}</h3><p>${esc(x.text)}</p>`).join('')}</article><article class="card"><h2>组合星体与位置</h2>${planetList(r.composite.chart.planets)}</article><article class="card"><h2>组合核心相位</h2>${aspectBrowser(r.composite,s.aspects)}</article>`:''}
  ${s.mode==='davison'&&r?.western?.chart?`<article class="card liquid-glass"><h2>戴维森中点盘（Davison）</h2><p class="thin">取两人出生时刻的 UTC 中点，经纬度取平均，得到一段「关系本身的时间与地点」，以此排出中点盘。${esc(r.limitations||'')}</p><article class="card"><h2>中点星体与位置</h2>${planetList(r.western.chart.planets)}</article><article class="card"><h2>中点盘相位</h2>${table(['星体','相位','容许度'],r.western.chart.aspects.map(x=>[x.a+' · '+x.b,x.type,x.orb.toFixed(2)+'°']))}</article></article>`:''}
  ${r?`<article class="card"><h2>契合度 ${r.fit.percent}%</h2>${r.fit.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')}<small>印度八项合盘双向平均；此分数不代表组合盘评分 · 传统参考</small></article>
  ${r.mangal?.ok?`<article class="card"><h2>火星煞 · Mangal Dosh</h2>${r.mangal.level==='calm'?'<p class="calm">双方火星均未落 1/4/7/8/12 宫，无火星煞之象。</p>':'<p>'+esc(r.mangal.a.text)+'</p><p>'+esc(r.mangal.b.text)+'</p>'}<p>${esc(r.mangal.text)}</p><small>${esc(r.mangal.method)}</small></article>`:''}
  ${r.baziMatch?.items?`<article class="card"><h2>八字合婚证据（非分数）</h2>${r.baziMatch.items.map(x=>`<p><b>${esc(x.name)}</b> · ${x.level==='support'?'助力':x.level==='challenge'?'需磨合':'中性'} · ${esc(x.text)}</p>`).join('')}<small>${esc(r.baziMatch.method)}</small></article>`:''}
  ${r.ziweiMatch?.ok?`<article class="card"><h2>紫微合盘 · 命宫与夫妻宫互参</h2>${ziweiTwinWheel(r.ziweiMatch,other?other.name:'第二人')}${r.ziweiMatch.items.map(x=>`<p><b>${esc(x.name)}</b> · ${esc(x.text)}</p>`).join('')}<small>${esc(r.ziweiMatch.method)}</small></article>`:''}
+ ${pairSihuaCard(r.ziweiMatch,self?.name||'当前案例',other?.name||'第二人')}
+ ${pairKeyStarsCard(r.keyStars)}
+ ${pairCycleCard(r.cycle,s.cycleSel)}
  <article class="card"><h2>八字跨盘干支</h2>${table(['关系','干支','双方柱位'],r.crossRelations.map(x=>[x.type,x.pattern,x.pillars.join('／')]))}</article>
  ${(s.mode==='synastry'||s.mode==='davison')?`<article class="card"><h2>跨盘主要相位</h2>${table(['当前案例','第二人','相位','容许度'],[...r.western.interAspects].sort((a,b)=>a.orb-b.orb).slice(0,s.showPairAspects?undefined:12).map(x=>[x.a,x.b,x.type,x.orb.toFixed(2)+'°']))}${r.western.interAspects.length>12?btn(s.showPairAspects?'收起 ▴':'查看完整 '+r.western.interAspects.length+' 条相位明细 ▾','data-pair-expand class="aspect-toggle"'):''}</article>`:''}
  ${r.vedic.koota?(()=>{const kt=(r.fit.kootaBoth?.[s.kootaDir])||{total:r.vedic.koota.total,max:r.vedic.koota.max,items:r.vedic.koota.items,percent:r.vedic.koota.percent,label:'当前案例 × 第二人'};const shown=kt.items.filter(x=>x.score<x.max/2).slice(0,4);const low=kt.items.filter(x=>x.score<x.max/2).length;const rows=s.kootaOpen?kt.items:shown;return `<article class="card"><h2>印度八项合婚 · ${kt.total}/${kt.max}（${kt.percent}%）</h2>
  ${r.fit.kootaBoth?`<div class="pair-mode-rail" aria-label="八科方向">${[['forward',(r.fit.kootaBoth.forward.label)+' · '+r.fit.kootaBoth.forward.percent+'%'],['reverse',(r.fit.kootaBoth.reverse.label)+' · '+r.fit.kootaBoth.reverse.percent+'%']].map(([d,l])=>btn(l,`data-koota-dir="${d}" aria-pressed="${s.kootaDir===d}"`)).join('')}</div>`:''}
  ${s.kootaOpen?table(['项目','得分','依据'],rows.map(x=>[({varna:'Varna',vashya:'Vashya',tara:'Tara',yoni:'Yoni',maitri:'Graha Maitri',gana:'Gana',bhakoot:'Bhakoot',nadi:'Nadi'}[x.key])+' '+x.zh,x.score+'/'+x.max,x.note])):(rows.length?`<div class="stack">${rows.map(x=>`<p><b>${({varna:'Varna',vashya:'Vashya',tara:'Tara',yoni:'Yoni',maitri:'Graha Maitri',gana:'Gana',bhakoot:'Bhakoot',nadi:'Nadi'}[x.key])} ${esc(x.zh)}</b> · ${x.score}/${x.max} · ${esc(x.note)}</p>`).join('')}</div>`:'<p>八科相对均衡，无明显偏低项。</p>')}
  ${low>0&&!s.kootaOpen?btn('展开全部 '+kt.items.length+' 科（含 '+low+' 科偏低）▾','data-koota-toggle'):''}${s.kootaOpen?btn('收起 ▴','data-koota-toggle'):''}
- <p>${esc(kt.guidance||'各项分数相对均衡，仍需重视双方的实际需求。')}</p><small>${esc(r.vedic.koota.note)}</small></article>`;})():''}`:''}</section>`;
+ <p>${esc(kt.guidance||'各项分数相对均衡，仍需重视双方的实际需求。')}</p><small>${esc(r.vedic.koota.note)}</small></article>`;})():''}`:''}
+ ${pairReportCard(r)}</section>`;
  for(const b of ctx.root.querySelectorAll('[data-pair-mode]'))b.onclick=()=>{if(s.mode===b.dataset.pairMode)return;s.mode=b.dataset.pairMode;s.result=null;s.aspects={filter:'main',expanded:false};if(other)calculatePair(ctx,s,other);synastry(ctx);};
  const expand=$('[data-pair-expand]',ctx.root);if(expand)expand.onclick=()=>{s.showPairAspects=!s.showPairAspects;synastry(ctx);};
  const kootaToggle=$('[data-koota-toggle]',ctx.root);if(kootaToggle)kootaToggle.onclick=()=>{s.kootaOpen=!s.kootaOpen;synastry(ctx);};
  for(const b of ctx.root.querySelectorAll('[data-koota-dir]'))b.onclick=()=>{if(s.kootaDir===b.dataset.kootaDir)return;s.kootaDir=b.dataset.kootaDir;synastry(ctx);};
+ // 关系周期：点任一月切换下方细则（默认落在最高分月）
+ for(const dot of ctx.root.querySelectorAll('[data-cycle-i]'))dot.onclick=()=>{
+  const i=Number(dot.dataset.cycleI);if(s.cycleSel===i)return;s.cycleSel=i;synastry(ctx);
+ };
+ // 合婚报告长图：复用排盘页同一套画布导出，把成文报告整段带上（默认 24 条会截断，这里放宽到 120 条）
+ const expBtn=$('[data-pair-export]',ctx.root);
+ if(expBtn)expBtn.onclick=async()=>{
+  const doc=$('[data-pair-doc]',ctx.root),status=$('[data-pair-export-status]',ctx.root);
+  if(!doc)return;
+  expBtn.disabled=true;if(status)status.textContent='正在生成长图…';
+  const stage=document.createElement('div');stage.className='export-stage';
+  stage.innerHTML=`<div class="pair-reading">${doc.innerHTML}</div>`;
+  document.body.appendChild(stage);
+  try{
+   await shareChart(stage,`合婚报告 · ${self?.name||'当前案例'} × ${other?.name||'第二人'}`,{limit:120,filename:'FirstLight-pair.png'});
+   if(status)status.textContent='长图已生成。';
+  }catch(error){if(status)status.textContent='导出失败：'+error.message;}
+  finally{stage.remove();expBtn.disabled=false;}
+ };
  if(r?.composite){
   bindAspectBrowser(ctx.root,r.composite,s.aspects);
   const stage=$('.wheel-stage',ctx.root),card=$('[data-wheel-card]',stage);

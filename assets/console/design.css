@@ -2328,3 +2328,32 @@ body.dark .zi-board svg text{stroke:#262031}
 body.dark .bottom-nav-hint{color:#b9a8b6}
 body.dark .cfg-card{background:rgba(46,38,54,.7)!important}
 body.dark .rail button{background:rgba(46,38,54,.7);border-color:rgba(255,255,255,.16);color:#eee4ec}
+
+/* v0.77.0 双人：核心结论 / 关系周期曲线 / 四化互飞 / 成文报告 / 长图导出舞台 */
+.pair-summary p{margin:6px 0}
+.pair-cycle-svg{width:100%;height:auto;display:block;margin:6px 0 2px}
+.pc-base{stroke:#e8d3de;stroke-width:1}
+.pc-mid{stroke:#eedfe7;stroke-width:1;stroke-dasharray:3 3}
+.pc-line{fill:none;stroke:#b03a6e;stroke-width:1.8;stroke-linejoin:round}
+.pc-dot{fill:#fff;stroke:#b03a6e;stroke-width:1.6;cursor:pointer}
+.pc-dot.pc-neg{stroke:#7f9a78}
+.pc-dot.pc-on{fill:#a8326a;stroke:#a8326a;stroke-width:1.6}
+.pc-lbl{font-size:8px;fill:#8a7f76}
+.pc-lbl.pc-on{fill:#a8326a;font-weight:700}
+body.dark .pc-base{stroke:#4b3b48}
+body.dark .pc-mid{stroke:#3d3040}
+body.dark .pc-line{stroke:#ff8ab8}
+body.dark .pc-dot{fill:#2a2331;stroke:#ff8ab8}
+body.dark .pc-dot.pc-neg{stroke:#9fc39a}
+body.dark .pc-dot.pc-on{fill:#ff8ab8;stroke:#ff8ab8}
+body.dark .pc-lbl{fill:#b9a8b6}
+body.dark .pc-lbl.pc-on{fill:#ff8ab8}
+.pair-cycle-detail{margin:6px 0;font-size:12.5px;line-height:1.65}
+.pair-rail-chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.pair-rail-chips .chip{flex:none;font-size:11px;padding:3px 9px;border-radius:999px;background:#fdeef5;color:#8d2f5c;border:1px solid #f3d3e2}
+body.dark .pair-rail-chips .chip{background:rgba(255,138,184,.12);color:#ffc3dc;border-color:rgba(255,138,184,.28)}
+.pair-table-scroll{overflow-x:auto}
+.pair-doc .pair-report h3{margin:14px 0 4px;font-size:13.5px;color:#8d2f5c}
+.pair-doc .pair-report p{margin:4px 0;font-size:12.5px;line-height:1.72}
+body.dark .pair-doc .pair-report h3{color:#ffa8cb}
+.export-stage{position:fixed;left:-9999px;top:0;width:720px;pointer-events:none;opacity:0}

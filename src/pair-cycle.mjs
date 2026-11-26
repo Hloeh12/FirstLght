@@ -16,7 +16,7 @@ const KIND_ADVICE={
  '相害':'暗耗偏多，注意家庭期待带来的隐性压力',
  '相破':'小事易互相打乱，不宜安排高密度行程',
  '六冲':'冲则动，适合旅行、搬迁、换工作这类「以动应动」，不宜在情绪高点定终身',
- '天干五合':'心意被牵动，容易动念、也容易一时冲动，重要承诺留到冷静后',
+ '五合':'心意被牵动，容易动念、也容易一时冲动，重要承诺留到冷静后',
  '红鸾天喜':'红鸾/天喜照命，传统视为谈婚论嫁的动象，适合见家长、定名分',
  '无':'无强信号，按日常节奏走'
 };
@@ -35,7 +35,7 @@ function relationsOf({branch,stem,dayBranch,dayStem,yearBranch,tag}){
   const r=branchRelation(branch,yearBranch);
   out.push({scope:'年支',tag,kind:r.kind,hua:r.hua||null,weight:(WEIGHT[r.kind]??0)*0.6,advice:KIND_ADVICE[r.kind]||''});
  }
- if(dayStem&&STEM_HE[stem]===dayStem)out.push({scope:'日干',tag,kind:'天干五合',weight:0.8,advice:'日干被合，心意容易被牵动'});
+ if(dayStem&&STEM_HE[stem]===dayStem)out.push({scope:'日干',tag,kind:'五合',weight:0.8,advice:'日干被合，心意容易被牵动'}); // kind 只写「五合」：拼出来是「乙方日干五合」，不能再叠一个「天干」
  if(yearBranch){
   const i=idx(yearBranch);
   if(i>=0&&(idx(branch)===RED_LUAN(i)||idx(branch)===TIAN_XI(i)))out.push({scope:'年支',tag,kind:'红鸾天喜',weight:1,advice:'红鸾/天喜照命，传统视为谈婚论嫁的动象'});

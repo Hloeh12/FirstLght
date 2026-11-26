@@ -578,13 +578,17 @@ function pairCycleCard(cyc,sel){
  const pts=m.map((d,i)=>[x(i),y(d.pct)]);
  const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
  const area='M'+L+','+B+' '+pts.map(p=>'L'+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+' L'+R+','+B+' Z';
+ const cellW=(R-L)/(m.length-1); // 每月独占一列命中区，相邻列正好接缝，不重叠也不漏
  return `<article class="card pair-cycle"><h2>关系周期 · 未来 ${m.length} 个月</h2>
- <svg viewBox="0 0 ${W} ${H}" class="pair-cycle-svg" role="img" aria-label="未来十二个月关系体感曲线">
+ <svg viewBox="0 0 ${W} ${H}" class="pair-cycle-svg" role="group" aria-label="未来十二个月关系体感曲线，可逐月查看">
   <defs><linearGradient id="pairCycleFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e35d92" stop-opacity=".26"/><stop offset="1" stop-color="#e35d92" stop-opacity="0"/></linearGradient></defs>
   <line class="pc-base" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>
   <line class="pc-mid" x1="${L}" y1="${y(50).toFixed(1)}" x2="${R}" y2="${y(50).toFixed(1)}"/>
   <path d="${area}" fill="url(#pairCycleFill)"/>
   <path class="pc-line" d="${path}"/>
+  ${/* 透明命中列：视觉点只有 3px，手指点不中；按月份切成一列一列、彼此拼接不留缝，
+        纵向覆盖整条曲线，窄屏也不会缩成一个点；命中列在视觉点下层，选中逻辑与点一致 */''}
+  ${m.map((d,i)=>`<rect class="pc-hit" data-cycle-hit="${i}" x="${(x(i)-cellW/2).toFixed(1)}" y="${T-6}" width="${cellW.toFixed(1)}" height="${B+6-(T-6)}" aria-hidden="true"/>`).join('')}
   ${m.map((d,i)=>`<circle class="pc-dot${d.score<0?' pc-neg':''}${i===idx?' pc-on':''}" data-cycle-i="${i}" role="button" tabindex="0" aria-label="${esc(d.label+' '+d.gz+'，体感 '+(d.score>0?'+':'')+d.score)}" cx="${x(i).toFixed(1)}" cy="${y(d.pct).toFixed(1)}" r="${i===idx?4.6:3}"/>`).join('')}
   ${m.map((d,i)=>`<text class="pc-lbl${i===idx?' pc-on':''}" x="${x(i).toFixed(1)}" y="${B+14}" text-anchor="middle">${d.month}</text>`).join('')}
   <text class="pc-lbl" x="${L}" y="${T-4}">合</text>
@@ -661,11 +665,31 @@ function synastry(ctx){
  const expand=$('[data-pair-expand]',ctx.root);if(expand)expand.onclick=()=>{s.showPairAspects=!s.showPairAspects;synastry(ctx);};
  const kootaToggle=$('[data-koota-toggle]',ctx.root);if(kootaToggle)kootaToggle.onclick=()=>{s.kootaOpen=!s.kootaOpen;synastry(ctx);};
  for(const b of ctx.root.querySelectorAll('[data-koota-dir]'))b.onclick=()=>{if(s.kootaDir===b.dataset.kootaDir)return;s.kootaDir=b.dataset.kootaDir;synastry(ctx);};
- // 关系周期：点任一月切换下方细则（默认落在最高分月）
- for(const dot of ctx.root.querySelectorAll('[data-cycle-i]')){
-  const pick=()=>{const i=Number(dot.dataset.cycleI);if(s.cycleSel===i)return;s.cycleSel=i;synastry(ctx);};
-  dot.onclick=pick;
-  dot.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}};
+ // 关系周期：点任一月切换下方细则（默认落在最高分月）。
+ // 每次切换都会整段重渲染，DOM 一换焦点就掉回 body，所以切换后要把焦点放回该月；
+ // 另给 ←/→ 逐月移动，键鼠混用不必重新 Tab 一遍。
+ const monthCount=ctx.root.querySelectorAll('.pc-dot[data-cycle-i]').length;
+ const focusMonth=i=>{
+  const el=ctx.root.querySelector('.pc-dot[data-cycle-i="'+i+'"]');if(!el)return;
+  try{el.focus({preventScroll:true});}catch{el.focus();}
+ };
+ const applyMonth=i=>{s.cycleSel=i;synastry(ctx);focusMonth(i);};
+ for(const dot of ctx.root.querySelectorAll('.pc-dot[data-cycle-i]')){
+  const sel=()=>{const i=Number(dot.dataset.cycleI);if(s.cycleSel!==i)applyMonth(i);};
+  dot.onclick=sel;
+  dot.onkeydown=e=>{
+   const i=Number(dot.dataset.cycleI);
+   if(e.key==='Enter'||e.key===' '){e.preventDefault();sel();return;}
+   if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+    e.preventDefault();
+    const n=Math.max(0,Math.min(monthCount-1,i+(e.key==='ArrowRight'?1:-1)));
+    if(s.cycleSel!==n)applyMonth(n);else focusMonth(n);
+   }
+  };
+ }
+ // 透明命中圈只负责放大可点范围，选中逻辑与点一致
+ for(const hit of ctx.root.querySelectorAll('[data-cycle-hit]')){
+  hit.onclick=()=>{const i=Number(hit.dataset.cycleHit);if(s.cycleSel!==i)applyMonth(i);};
  }
  // 合婚报告长图：复用排盘页同一套画布导出，把成文报告整段带上（默认 24 条会截断，这里放宽到 120 条）
  const expBtn=$('[data-pair-export]',ctx.root);

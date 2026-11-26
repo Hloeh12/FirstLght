@@ -181,7 +181,10 @@ test('bundled console creates fresh charts and progresses them without any netwo
  await until(()=>$('#activeProfile').textContent.includes('关联案例'),'second case');
  click('[data-tab=cases]');await until(()=>Boolean($('.case-card.active')),'active case card');click('.case-card.active [data-action=detail]');
  assert(!$('#addRelation input[type=range]'));
- click('#addRelation button');click('#toolSheet [data-close]');click('[data-galaxy-open]');
+ click('#addRelation button');
+ // v0.78.0：案例库顶部「关系星系」入口已移除（与案例详情重复），关系星系改从详情内「查看关系星系」进入。
+ assert(!$('[data-galaxy-open]'),'案例库顶部不再有独立关系星系按钮');
+ click('#toolSheet details summary'); // 展开「查看关系星系」
  await until(()=>Boolean($('.galaxy-planet')),'relationship planet');
  $('.galaxy-planet').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
  const fit=$('#termSheet .relation-score').textContent;

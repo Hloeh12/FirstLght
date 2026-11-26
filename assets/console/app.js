@@ -94,14 +94,6 @@ function sheet(id,title,body){
 // v0.41.0 跳动修复：体系切换条只滚自身 scrollLeft，绝不用 scrollIntoView——
 // scrollIntoView 会连带滚动所有祖先滚动容器（含 #mainScrollView / dialog），
 // 与紧邻的 scrollTo(0,0) 相互打架，正是「输出排盘时界面跳动」的主因。
-function centerRail(){
- const rail=$('#chartSystemSwitch');
- if(!rail||rail.hidden)return;
- const active=rail.querySelector('[data-system-switch][aria-pressed=true]');
- if(!active)return;
- const target=active.offsetLeft-(rail.clientWidth-active.offsetWidth)/2;
- if(Math.abs(rail.scrollLeft-target)>1)rail.scrollLeft=Math.max(0,target);
-}
 function switchTab(tab,system=state.system){
  if(!['chart','insights'].includes(tab))restoreInstant();
  for(const d of document.querySelectorAll('dialog'))close(d);
@@ -111,7 +103,6 @@ function switchTab(tab,system=state.system){
  $('#mainScrollView').scrollTo?.(0,0);
  const screenEl=$('#screen');
  if(screenEl){screenEl.classList.remove('fl-swap');void screenEl.offsetWidth;screenEl.classList.add('fl-swap');}
- centerRail();
 }
 function switchNavTab(tabName,index){
  if(!['cases','chart','period','insights','me'].includes(tabName))return;
@@ -201,14 +192,15 @@ function caseCard(c){
  <div class="case-foot"><div class="chips">${summaryItems.map(([k,v])=>`<span class="chip">${k} · ${esc(v)}</span>`).join('')}</div>${btn('详情','class="case-detail" data-action="detail"')}</div></article>`;
 }
 function renderCases(){
- if(!$('[data-case-list]',root))root.innerHTML=`<section class="cases-page" aria-labelledby="casesTitle"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 案例</p><h1 id="casesTitle">案例</h1></div><div class="page-head-actions">${btn('关系星系','class="ghost-pill" data-galaxy-open')}${btn('＋','class="ghost-pill ghost-pill-sm" data-create aria-label="新建案例" title="新建案例"')}</div></header>
+ if(!$('[data-case-list]',root))root.innerHTML=`<section class="cases-page" aria-labelledby="casesTitle"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 案例</p><h1 id="casesTitle">案例</h1></div><div class="page-head-actions">${btn('＋','class="ghost-pill ghost-pill-sm" data-create aria-label="新建案例" title="新建案例"')}</div></header>
  <div class="case-search"><label><input id="caseSearch" class="liquid-glass" type="search" value="${esc(state.query)}" placeholder="搜索姓名、生辰、城市或标签" aria-label="搜索案例"></label>${btn('清除','data-clear-search aria-label="清除案例搜索"')}</div>
  <div class="case-cluster-row"><div class="rail" aria-label="特征聚类">${btn('同日元','data-cluster="day"')}${btn('同紫微命主','data-cluster="soul"')}${btn('全部特征','data-cluster=""')}</div><p class="thin" data-search-scope role="status"></p></div>
  <div class="rail case-groups" id="caseGroups" aria-label="案例分组"></div><div data-case-list></div></section>`;
  $('#caseSearch').oninput=e=>{state.query=e.target.value;renderCases();};
  $('[data-clear-search]',root).onclick=()=>{state.query='';$('#caseSearch').value='';renderCases();$('#caseSearch').focus();};
  $('[data-create]',root).onclick=()=>birthSheet(null);
- $('[data-galaxy-open]',root).onclick=()=>showGalaxy();
+ // v0.78.0：案例库顶部的「关系星系」入口与案例详情里的「查看关系星系」重复，已移除。
+ // 关系星系功能本身保留，从案例详情进入。
  const groups=['全部',...standardGroups,...state.groups];
  const groupRail=$('#caseGroups'),groupScroll=groupRail.scrollLeft;
  groupRail.innerHTML=groups.map(g=>btn(g,`data-group="${esc(g)}" aria-pressed="${state.filter===g}"`)).join('')+btn('+ 新建分组','data-add-group');
@@ -1680,7 +1672,13 @@ function configPanel(){
    if(id==='late'){const next=(state.settings.lateZishi||'next-day')==='next-day'?'current-day':'next-day';state.settings={...state.settings,lateZishi:next};save(SETTINGS,state.settings);if(state.profile)activate({...state.profile,fields:{...state.profile.fields,lateZishi:next}},false);configPanel();return;}
    if(id==='feedback'){setFeedback(!feedbackEnabled());configPanel();return;}
    if(id==='report'){close(d);openFullReport();return;}
-   if(id==='tools'||id==='share'){close(d);toolPanel();return;}
+   if(id==='tools'){
+    close(d);
+    // v0.78.0：双人合盘是专业功能，点「双人合盘功能」应回到专业合盘页，而不是分享长图。
+    if(state.system==='synastry'){switchTab('chart','synastry');return;}
+    toolPanel();return;
+   }
+   if(id==='share'){close(d);toolPanel();return;}
    if(id==='diagnostics'){close(d);diagnosticsPanel(ctx);return;}
    if(id==='about'){close(d);const about=sheet('termSheet','关于与版本',versionCard());about.querySelector('[data-release-history]').onclick=()=>releaseHistory(ctx);return;}
    if(id==='reset'){close(d);switchTab('chart');$('#mainScrollView').scrollTo?.({top:0,behavior:'smooth'});tell('已回到排盘首页。');}
@@ -1712,7 +1710,7 @@ function modulePanel(){
  const tabs=[['cases','案例库',MODULE_ICONS.cases,state.tab==='cases'],['insights','洞见',MODULE_ICONS.insights,state.tab==='insights'],['me','我的',MODULE_ICONS.me,state.tab==='me'],['birth','出生资料',MODULE_ICONS.birth,false]];
  const tools=[['diagnostics','运行诊断',MODULE_ICONS.diagnostics,false],['about','版本',MODULE_ICONS.about,false],['reset','回到首页',MODULE_ICONS.ziwei,false]];
  const group=(title,items)=>`<section class="mod-group"><h4>${esc(title)}</h4><div class="mod-grid">${items.map(([id,label,icon,on])=>`<button type="button" class="mod-item" data-module="${id}" aria-pressed="${on?'true':'false'}"><span class="mod-ico">${icon}</span><span class="mod-name">${esc(label)}</span></button>`).join('')}</div></section>`;
- const d=sheet('moduleSheet','全部模块',group('排盘体系',sys)+group('传统技艺',extra)+group('关系与输出',pair)+group('查阅',tabs)+group('工具',tools)+'<p class="mod-hint">底部轨道只放常用的排盘体系，其余功能都收在这里。</p>');
+ const d=sheet('moduleSheet','全部模块',group('排盘体系',sys)+group('传统技艺',extra)+group('关系与输出',pair)+group('查阅',tabs)+group('工具',tools)+'<p class="mod-hint">排盘体系与常用功能都收在这里，底部只保留模块入口。</p>');
  for(const item of d.querySelectorAll('[data-module]')){
   item.onclick=()=>{
    const id=item.dataset.module;close(d);
@@ -1758,12 +1756,11 @@ function render(){
  if(instantTop){const restore=Boolean(state.instantSnapshot);instantTop.hidden=!showBasis;instantTop.textContent=restore?'⟲':'⏱';instantTop.setAttribute('aria-label',restore?'恢复本命':'即刻天象');instantTop.title=instantTop.getAttribute('aria-label');}
  const sysSwitch=$('#chartSystemSwitch');
  if(sysSwitch){
+  // v0.78.0：底部不再放「八字/紫微/西洋/印度」四按钮——这些体系全部收进「模块」面板，
+  // dock 只保留模块入口 + 一行当前体系提示，避免与模块面板重复、显得厚重。
   sysSwitch.hidden=!showBasis||!state.profile||!state.reading;
-  for(const b of sysSwitch.querySelectorAll('[data-system-switch]')){
-   const active=b.dataset.systemSwitch===state.system;
-   b.setAttribute('aria-pressed',String(active));
-   b.setAttribute('aria-selected',String(active));
-  }
+  const now=$('#dockNowSystem');
+  if(now){const name=SYSTEM_NAMES[state.system]||'';now.textContent=name;now.hidden=!name;}
  }
  $('#toolsButton').hidden=true; /* Build 56: 入口统一到右上角配置，这里只保留程序化调用 */
  updateLiquidPill(state.tab);
@@ -1827,14 +1824,6 @@ $('#configButton').onclick=configPanel;
 $('#moduleButton').onclick=modulePanel;
 $('#instantToggle').onclick=()=>$('#instantToggle').dataset.chartAction==='restore'?restoreOriginal():instantChart();
 $('#instantTop').onclick=()=>$('#instantToggle').dataset.chartAction==='restore'?restoreOriginal():instantChart();
-$('#chartSystemSwitch').onclick=e=>{
- const b=e.target.closest('[data-system-switch]');
- if(!b||b.dataset.systemSwitch===state.system)return;
- const id=b.dataset.systemSwitch;
- if(!['bazi','ziwei','west','vedic'].includes(id))return;
- window.triggerHaptic?.('light');
- switchTab('chart',id);
-};
 $('#appTopBar').addEventListener('click',e=>{
  if(e.target!==e.currentTarget&&!e.target.closest('[data-scroll-top-title]'))return;
  $('#mainScrollView').scrollTo?.({top:0,behavior:'smooth'});

@@ -241,18 +241,23 @@ input,select,textarea{
 #inputSheet input:focus,#inputSheet select:focus,#screen form input:focus,
 input,select,textarea{font-size:16px!important}
 
-/* FL-THEME-CHECKBOX: 出生表单复选框去除浏览器默认深灰/黑色描边，改粉色主题勾选框（用户反馈的"黑色边框"） */
+/* FL-THEME-CHECKBOX: 出生表单复选框去除浏览器默认深灰/黑色描边，改粉色主题勾选框（用户反馈的"黑色边框"）
+ * padding 必须清零：design.css 的全局 input{padding:.55rem .65rem;border-radius:10px} 会把
+ * 这个 17px 勾选框撑成椭圆（真机反馈「重新做点击按钮跟App不搭配也变形了」）。 */
 #birthForm .checks label input[type=checkbox]{
   appearance:none;-webkit-appearance:none;
-  width:17px;height:17px;flex:0 0 17px;margin:0 6px 0 0;vertical-align:-3px;
-  border:1.5px solid #ff4f8b!important;border-radius:5px;background:#fff!important;
+  box-sizing:border-box!important;padding:0!important;
+  width:18px!important;height:18px!important;flex:0 0 18px!important;margin:0 7px 0 0;vertical-align:-3px;
+  border:1.5px solid #ff4f8b!important;border-radius:5px!important;background:#fff!important;
   position:relative;cursor:pointer;box-shadow:0 1px 3px rgba(255,79,139,.18)
 }
-#birthForm .checks label input[type=checkbox]:checked{background:#ff4f8b!important;border-color:#ff4f8b!important}
 #birthForm .checks label input[type=checkbox]:checked::after{
-  content:"";position:absolute;left:4px;top:0;width:5px;height:10px;
+  content:"";position:absolute;left:4.5px;top:1px;width:4.5px;height:9.5px;
   border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)
 }
+#birthForm .checks label{cursor:pointer;font-size:14px;font-weight:500}
+#birthForm .checks label[data-leap]{margin-left:14px}
+#birthForm .checks label input[type=checkbox]:checked{background:#ff4f8b!important;border-color:#ff4f8b!important}
 /* FL-THEME-SCROLLBAR: 滚动条改为融入主题的细条，去掉深色粗边 */
 ::-webkit-scrollbar{width:0;height:0;background:transparent}
 ::-webkit-scrollbar-track{background:transparent}

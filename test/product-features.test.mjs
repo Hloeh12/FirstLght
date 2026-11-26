@@ -827,8 +827,9 @@ test('v0.41 目录入口与防跳动：内联目录默认收起为点按展开�
  assert.doesNotMatch(fr,/<summary class="rpt-toc-head"/,'不得再有可见的正文目录入口条');
  assert.match(fr,/rpt-toc-list/,'隐藏数据源仍须含 rpt-toc-list 供 app.js 克隆到浮层');
  const app=await readFile(new URL('../assets/console/app.js',import.meta.url),'utf8');
- assert.match(app,/function centerRail\(/,'体系切换条须有独立居中函数');
- assert.match(app,/rail\.scrollLeft=Math\.max\(0,target\)/,'体系条只滚自身 scrollLeft');
+ // v0.78.0：底部四排盘按钮移除后不再需要 centerRail；dock 只保留模块入口 + 当前体系提示。
+ assert.doesNotMatch(app,/function centerRail\(/,'v0.78.0 已移除体系切换条独立居中函数');
+ assert.match(app,/dockNowSystem/,'dock 须显示当前体系提示');
  // switchTab 内不得再对 rail 用 scrollIntoView（会连带滚动主容器导致跳动）
  const sw=app.match(/function switchTab\([\s\S]*?\n\}/)[0];
  assert.doesNotMatch(sw,/scrollIntoView/,'switchTab 不得用 scrollIntoView 滚祖先容器');

@@ -618,13 +618,20 @@ function pairKeyStarsCard(k){
  ${rest.length?`<details><summary>含单端的其余 ${rest.length} 条相位</summary><div class="stack">${rest.map(line).join('')}</div></details>`:''}
  <small>${esc(k.method)}</small></article>`;
 }
-function pairReportCard(r){
+function pairReportCard(r,sel){
  const sec=r?.report?.sections;if(!sec)return '';
  const keys=PAIR_SEC_ORDER.filter(k=>sec[k]?.length);
  if(!keys.length)return '';
- return `<article class="card pair-doc"><div class="spread"><h2>合婚报告 · 成文</h2>${btn('导出长图','data-pair-export')}</div>
+ // v0.78.0：成文报告默认收起（整段平铺太占页），用「目录栏 + 按节展开」呈现，
+ // 点目录项跳到对应节；「导出长图」仍导出全文，不受收起影响。
+ const collapsed=sel!==true;
+ const toc=keys.map((k,i)=>`<button type="button" class="pair-toc-item" data-pair-toc="${esc(k)}" aria-pressed="${i===0&&!collapsed?'true':'false'}"><span class="pair-toc-num">${i+1}</span>${esc(PAIR_SEC_TITLE[k]||k)}</button>`).join('');
+ const body=collapsed?keys.slice(0,1).map(k=>`<section class="pair-rpt-sec" data-pair-sec="${esc(k)}"><h3>${esc(PAIR_SEC_TITLE[k]||k)}</h3>${sec[k].map(t=>`<p>${esc(t)}</p>`).join('')}</section>`).join('')
+  :keys.map(k=>`<section class="pair-rpt-sec" data-pair-sec="${esc(k)}"><h3>${esc(PAIR_SEC_TITLE[k]||k)}</h3>${sec[k].map(t=>`<p>${esc(t)}</p>`).join('')}</section>`).join('');
+ return `<article class="card pair-doc"><div class="spread"><h2>合婚报告 · 成文</h2><div class="pair-doc-actions">${btn(collapsed?'展开全文':'收起','data-pair-report-toggle')}${btn('导出长图','data-pair-export')}</div></div>
  <p class="thin" data-pair-export-status role="status">${esc(r.report.notice||'')}</p>
- <div class="pair-report" data-pair-doc>${keys.map(k=>`<h3>${esc(PAIR_SEC_TITLE[k]||k)}</h3>${sec[k].map(t=>`<p>${esc(t)}</p>`).join('')}`).join('')}</div></article>`;
+ <nav class="pair-toc" aria-label="报告目录"><div class="pair-toc-list">${toc}</div></nav>
+ <div class="pair-report" data-pair-doc>${body}</div></article>`;
 }
 // v0.75.0：第二人允许两种来源——案例库里的案例，或一次性输入的生辰（s.otherInline）。
 // 后者自带 birth 对象，直接送进接口，不用再走 normalized()。
@@ -634,8 +641,8 @@ function calculatePair(ctx,s,other){
  load(ctx,'synastry',s,'/api/synastry/chart',{a:ctx.birth,b:pairBirth(ctx,other),mode:s.mode||'synastry'});
 }
 function synastry(ctx){
- const id='synastry',s=stateFor(ctx,id,{mode:'synastry',aspects:{filter:'main',expanded:false},kootaDir:'forward',kootaOpen:false}),r=s.result;
- s.mode??='synastry';s.aspects??={filter:'main',expanded:false};s.kootaDir??='forward';s.kootaOpen??=false;
+ const id='synastry',s=stateFor(ctx,id,{mode:'synastry',aspects:{filter:'main',expanded:false},kootaDir:'forward',kootaOpen:false,reportOpen:false}),r=s.result;
+ s.mode??='synastry';s.aspects??={filter:'main',expanded:false};s.kootaDir??='forward';s.kootaOpen??=false;s.reportOpen??=false;
  const self=ctx.state.profile;
  if(!self){ctx.root.innerHTML='<section><h1>双人合盘</h1><p class="empty">请先排出第一个人的本命盘，再来做合盘。</p></section>';return;}
  const cases=ctx.state.cases.filter(c=>c.id!==self.id);
@@ -660,7 +667,7 @@ function synastry(ctx){
  ${s.kootaOpen?table(['项目','得分','依据'],rows.map(x=>[({varna:'Varna',vashya:'Vashya',tara:'Tara',yoni:'Yoni',maitri:'Graha Maitri',gana:'Gana',bhakoot:'Bhakoot',nadi:'Nadi'}[x.key])+' '+x.zh,x.score+'/'+x.max,x.note])):(rows.length?`<div class="stack">${rows.map(x=>`<p><b>${({varna:'Varna',vashya:'Vashya',tara:'Tara',yoni:'Yoni',maitri:'Graha Maitri',gana:'Gana',bhakoot:'Bhakoot',nadi:'Nadi'}[x.key])} ${esc(x.zh)}</b> · ${x.score}/${x.max} · ${esc(x.note)}</p>`).join('')}</div>`:'<p>八科相对均衡，无明显偏低项。</p>')}
  ${low>0&&!s.kootaOpen?btn('展开全部 '+kt.items.length+' 科（含 '+low+' 科偏低）▾','data-koota-toggle'):''}${s.kootaOpen?btn('收起 ▴','data-koota-toggle'):''}
  <p>${esc(kt.guidance||'各项分数相对均衡，仍需重视双方的实际需求。')}</p><small>${esc(r.vedic.koota.note)}</small></article>`;})():''}`:''}
- ${pairReportCard(r)}</section>`;
+ ${pairReportCard(r,s.reportOpen)}</section>`;
  for(const b of ctx.root.querySelectorAll('[data-pair-mode]'))b.onclick=()=>{if(s.mode===b.dataset.pairMode)return;s.mode=b.dataset.pairMode;s.result=null;s.aspects={filter:'main',expanded:false};if(other)calculatePair(ctx,s,other);synastry(ctx);};
  const expand=$('[data-pair-expand]',ctx.root);if(expand)expand.onclick=()=>{s.showPairAspects=!s.showPairAspects;synastry(ctx);};
  const kootaToggle=$('[data-koota-toggle]',ctx.root);if(kootaToggle)kootaToggle.onclick=()=>{s.kootaOpen=!s.kootaOpen;synastry(ctx);};
@@ -690,6 +697,17 @@ function synastry(ctx){
  // 透明命中圈只负责放大可点范围，选中逻辑与点一致
  for(const hit of ctx.root.querySelectorAll('[data-cycle-hit]')){
   hit.onclick=()=>{const i=Number(hit.dataset.cycleHit);if(s.cycleSel!==i)applyMonth(i);};
+ }
+ // 合婚报告：展开/收起 + 目录项点击跳到对应节
+ const reportToggle=$('[data-pair-report-toggle]',ctx.root);
+ if(reportToggle)reportToggle.onclick=()=>{s.reportOpen=!s.reportOpen;synastry(ctx);};
+ for(const tocItem of ctx.root.querySelectorAll('[data-pair-toc]')){
+  tocItem.onclick=()=>{
+   const k=tocItem.dataset.pairToc;
+   if(!s.reportOpen){s.reportOpen=true;synastry(ctx);}
+   const sec=ctx.root.querySelector('[data-pair-sec="'+k+'"]');
+   if(sec)setTimeout(()=>sec.scrollIntoView({behavior:'smooth',block:'start'}),30);
+  };
  }
  // 合婚报告长图：复用排盘页同一套画布导出，把成文报告整段带上（默认 24 条会截断，这里放宽到 120 条）
  const expBtn=$('[data-pair-export]',ctx.root);

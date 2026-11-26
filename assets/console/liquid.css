@@ -1501,11 +1501,7 @@ button:focus-visible,a:focus-visible{
 }
 .time-basis-note{margin:0 0 8px!important;font-size:11px!important;padding:4px 9px!important;line-height:1.45!important}
 
-/* ===== v0.57.0 深色专业盘 + 底部时间联动 ===== */
-.west-theme-row{display:flex;align-items:center;gap:8px;margin:2px 0 8px}
-.west-theme-row>span{flex:none;color:rgba(90,44,66,.62);font-size:11px}
-.west-theme-row .rail{flex:1;min-width:0}
-.west-theme-row .rail button{flex:1 1 auto;text-align:center;font-size:11.5px;padding:4px 8px}
+/* ===== v0.57.0 底部时间联动 ===== */
 /* 底部时间联动条：常驻，像测测那样一眼看到当前推运时刻并可直接翻页 */
 .west-time-strip{margin-top:10px!important}
 .wts-head{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
@@ -1520,61 +1516,75 @@ button:focus-visible,a:focus-visible{
 .wts-step-rail{margin-top:2px}
 .wts-step-rail button{flex:1 1 auto;text-align:center;font-size:11px}
 
-/* 单字/轴线简称默认隐藏，仅深色盘显示——否则浅色盘长名与单字叠字 */
+/* ===== v0.79.0 测测风格西洋盘：皮肤系统 =====
+   v0.57.0 的「浅色经典 / 深色专业」切换已取消（需求1），改为 6 种皮肤 +
+   文字/符号样式。盘面颜色全部由 .wheel-skin-xxx 上的 CSS 变量驱动，行星/相位
+   用语义配色（phaseColor/planetColor 已在 JS 侧决定）。 */
 .wheel .wheel-star-short,.wheel .wheel-axis-short{display:none}
-/* 深色专业盘：参考测测——黑底、粗白宫线、大字单字行星、只留主要相位。
-   做减法：隐藏小行星单字/行星引线/细刻度/外圈细字，相位只突出 0/90/120/180。 */
-.wheel-dark{background:#0f1118;border-radius:18px}
-/* 底填色只作用于盘面装饰圆，点击热区必须透明——否则每个字外多一个实心圆圈 */
-.wheel-dark circle{fill:#0f1118}
-.wheel-dark .wheel-star-hit{fill:transparent!important;stroke:none!important}
-/* 特异性必须高于 .wheel-dark .wheel-ring circle 的 stroke!important，否则热区被描成圆圈 */
-.wheel-dark .wheel-ring .wheel-star-hit{fill:transparent!important;stroke:none!important;stroke-width:0!important}
-/* 宫位线：加粗改白，成为主视觉骨架 */
-.wheel-dark .wheel-ring line[stroke="#e2c7d9"]{stroke:rgba(255,255,255,.42)!important;stroke-width:1.2!important}
-/* 同心圆保留但压淡 */
-.wheel-dark .wheel-ring circle{stroke:rgba(255,255,255,.16)!important;stroke-width:.8!important}
-/* 360 细刻度与外圈星座中文在深色盘隐藏，避免花眼 */
-.wheel-dark .wheel-ring path[stroke="#b58ba7"],
-.wheel-dark .wheel-ring text[font-size="7"],
-.wheel-dark .wheel-ring text[font-size="13"]{display:none}
-/* 行星：只显示主要星体单字，隐藏小行星与度数/长名/引线/定位点 */
-.wheel-dark .wheel-star-visual .wheel-star-name,
-.wheel-dark .wheel-star-visual .wheel-star-degree,
-.wheel-dark .wheel-ring .wheel-axis-name,
-.wheel-dark .wheel-star-lead,
-.wheel-dark .wheel-star-dot{display:none}
-.wheel-dark .wheel-star-short,.wheel-dark .wheel-axis-short{display:block;font-size:10.5px!important}
-/* 行运双圈：外圈单字更小、半透明，与本命区分层，避免叠字 */
-.wheel-dark [data-wheel-body="outer"] .wheel-star-short{font-size:9.5px!important;opacity:.68}
-.wheel-dark [data-wheel-body="outer"] .wheel-star-short::first-letter{font-weight:600}
-.wheel-dark [data-star-key="south"] .wheel-star-short,
-.wheel-dark [data-star-key="fortune"] .wheel-star-short,
-.wheel-dark [data-star-key="vertex"] .wheel-star-short,
-.wheel-dark [data-star-key="chiron"] .wheel-star-short,
-.wheel-dark [data-star-key="lilith"] .wheel-star-short,
-.wheel-dark [data-star-key="juno"] .wheel-star-short,
-.wheel-dark [data-star-key="vesta"] .wheel-star-short,
-.wheel-dark [data-star-key="pallas"] .wheel-star-short,
-.wheel-dark [data-star-key="ceres"] .wheel-star-short{display:none}
-/* 单字按行星配色（呼应测测：火红、水蓝、木绿、金橙…） */
-.wheel-dark .wheel-star-short{fill:#fff!important}
-.wheel-dark [data-star-key="sun"] .wheel-star-short{fill:#ffcf5c!important}
-.wheel-dark [data-star-key="moon"] .wheel-star-short{fill:#cfd6e6!important}
-.wheel-dark [data-star-key="mercury"] .wheel-star-short{fill:#9fd8ef!important}
-.wheel-dark [data-star-key="venus"] .wheel-star-short{fill:#ffb0d6!important}
-.wheel-dark [data-star-key="mars"] .wheel-star-short{fill:#ff7a7a!important}
-.wheel-dark [data-star-key="jupiter"] .wheel-star-short{fill:#a8e0a0!important}
-.wheel-dark [data-star-key="saturn"] .wheel-star-short{fill:#c9a97e!important}
-.wheel-dark .wheel-axis-short{fill:#ffe08a!important}
-/* 相位：只留 0/90/120/180 四主相，其余压到极淡；主线加粗 */
-.wheel-dark .wheel-aspect{opacity:.3;stroke-width:1!important}
-.wheel-dark .wheel-aspect[data-aspect-angle="0"],
-.wheel-dark .wheel-aspect[data-aspect-angle="90"],
-.wheel-dark .wheel-aspect[data-aspect-angle="120"],
-.wheel-dark .wheel-aspect[data-aspect-angle="180"]{opacity:.95!important;stroke-width:1.7!important}
-.wheel-dark .wheel-star-halo{display:none}
-/* 外圈行运单字加方框区分，内圈不加，半径差 + 框线让双圈层次清楚 */
+/* 盘面底色：由皮肤变量填充（不再分浅色/深色两套） */
+.wheel .wheel-bg{fill:var(--wheel-bg,#fffbfd)}
+.wheel-skin-degree{--wheel-bg:#f7f7f9;--wheel-panel:#ffffff;--wheel-ring:#3c3c44;--wheel-line:#c9c9d2;--wheel-tick:#9d9da8;--wheel-zodiac:#55555f;--wheel-num:#8a8a95;--wheel-star:#2f2f38;--wheel-accent:#2f6fed}
+.wheel-skin-classic{--wheel-bg:#0e1015;--wheel-panel:#161920;--wheel-ring:#111318;--wheel-line:rgba(255,255,255,.42);--wheel-tick:rgba(255,255,255,.30);--wheel-zodiac:#e8e8ee;--wheel-num:#b8b8c2;--wheel-star:#ffffff;--wheel-accent:#ffd166}
+.wheel-skin-cece{--wheel-bg:#1b1c24;--wheel-panel:#23242e;--wheel-ring:#2a2a33;--wheel-line:rgba(255,255,255,.35);--wheel-tick:rgba(255,255,255,.22);--wheel-zodiac:#f0f0f4;--wheel-num:#9d9da8;--wheel-star:#ffffff;--wheel-accent:#4f8cff}
+.wheel-skin-fresh{--wheel-bg:#eaf6fd;--wheel-panel:#ffffff;--wheel-ring:#8ecdf0;--wheel-line:#a8d9f0;--wheel-tick:#7db8dd;--wheel-zodiac:#2a6a8a;--wheel-num:#5a93b3;--wheel-star:#1a4a66;--wheel-accent:#29a3e0}
+.wheel-skin-cute{--wheel-bg:#fff0f7;--wheel-panel:#ffffff;--wheel-ring:#ffb7d5;--wheel-line:#f6b7d4;--wheel-tick:#e98fbc;--wheel-zodiac:#b0487e;--wheel-num:#c76a9b;--wheel-star:#8f2a5f;--wheel-accent:#ff4f8b}
+.wheel-skin-night{--wheel-bg:#0a1230;--wheel-panel:#12204a;--wheel-ring:#0d1b4c;--wheel-line:rgba(160,190,255,.40);--wheel-tick:rgba(160,190,255,.28);--wheel-zodiac:#cdd9ff;--wheel-num:#8fa3d8;--wheel-star:#ffffff;--wheel-accent:#7aa8ff}
+/* 圆环与刻度用皮肤变量着色 */
+.wheel .wheel-ring-circle{fill:none;stroke:var(--wheel-line,#d6b3c9)}
+.wheel .wheel-tick{stroke:var(--wheel-tick,#b58ba7)}
+.wheel .wheel-zodiac-glyph{fill:var(--wheel-zodiac,#8b557b)}
+.wheel .wheel-zodiac-name{fill:var(--wheel-zodiac,#8b557b);opacity:.85}
+.wheel .wheel-house-line{stroke:var(--wheel-line,#e2c7d9);stroke-width:.65}
+.wheel .wheel-house-num{fill:var(--wheel-num,#7e5372)}
+.wheel .wheel-axis-line{stroke:var(--wheel-accent,#a15781);stroke-width:1.4;opacity:.75}
+.wheel .wheel-axis-name{fill:var(--wheel-accent,#8b315e);font-weight:750}
+/* 行星文字/符号样式：text 用单字，symbol 用天文符号 */
+.wheel .wheel-star-name{fill:var(--wheel-star,#8a4f91)}
+.wheel .wheel-star-degree{fill:var(--wheel-num,#7e5372);opacity:.85}
+.wheel .wheel-star-dot{fill:var(--wheel-star,#8a4f91)}
+/* 相位线语义颜色已由 JS 内联 stroke 决定，这里只统一粗细/透明度 */
+.wheel .wheel-aspect{stroke-width:.95;opacity:.7}
+.wheel .wheel-aspect[data-aspect-kind=紧张]{stroke-width:1.1}
+.wheel .wheel-aspect[data-aspect-kind=和谐]{stroke-width:1.0}
+.wheel .wheel-aspect[data-aspect-kind=中性]{stroke-width:.8;opacity:.5}
+.wheel .wheel-aspect[data-highlight=false]{opacity:.15}
+.wheel .wheel-aspect[data-highlight=true]{opacity:1;stroke-width:2;filter:drop-shadow(0 0 3px var(--wheel-accent,#ff9cc6))}
+
+/* v0.79.0 盘面工具条：左上皮肤/样式、中上现代古典、右上参数 */
+.fl-wheel-toolbar{display:flex;align-items:center;gap:6px;margin:2px 0 8px}
+.fl-toolbar-left{display:flex;gap:6px;flex:none}
+.fl-toolbar-right{display:flex;gap:6px;flex:none}
+.fl-icon-btn{flex:none;min-width:36px!important;min-height:36px!important;padding:0!important;border-radius:12px!important;
+ font-size:15px!important;background:rgba(255,255,255,.75)!important;border:1px solid rgba(255,150,190,.34)!important;color:#a03a68!important}
+.fl-era-switch{flex:1;display:flex;gap:4px;padding:3px;border-radius:14px;background:rgba(255,150,190,.14);border:1px solid rgba(255,150,190,.28)}
+.fl-era-switch button{flex:1;min-height:30px!important;font-size:12px!important;padding:3px 8px!important;border-radius:10px!important;
+ background:transparent!important;border:0!important;color:#a03a68!important}
+.fl-era-switch button[aria-pressed=true]{background:linear-gradient(135deg,#ff8ab5,#ff4f8b)!important;color:#fff!important;font-weight:700!important;
+ box-shadow:0 3px 10px -2px rgba(255,79,139,.45)}
+/* 皮肤面板 */
+.wheel-skin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 14px}
+.wheel-skin-card{display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 6px;border-radius:16px;
+ background:#fff;border:1px solid rgba(255,150,190,.3);color:#8c2f5f;font-size:12px;font-weight:600;cursor:pointer}
+.wheel-skin-card[aria-pressed=true]{border-color:#ff4f8b;box-shadow:0 0 0 2px rgba(255,79,139,.25)}
+.wheel-skin-swatch{position:relative;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+ box-shadow:inset 0 0 0 3px var(--sk-ring,#333);border:2px solid var(--sk-ring,#333)}
+.wheel-skin-swatch i{width:24px;height:24px;border-radius:50%;background:var(--sk-ring,#333);border:2px solid var(--sk-line,#999)}
+.wheel-style-row{display:flex;align-items:center;gap:10px}
+.wheel-style-row>span{font-size:13px;font-weight:650;color:#8c2f5f}
+.wheel-style-row .rail{flex:1}
+.wheel-style-row .rail button{flex:1;min-height:36px!important;font-size:13px!important;border-radius:12px!important}
+/* 参数面板 */
+.param-legend{font-size:11px;color:rgba(90,44,66,.6);margin:0 0 8px}
+.param-table{display:grid;gap:1px;background:rgba(255,150,190,.2);border:1px solid rgba(255,150,190,.3);border-radius:12px;overflow:hidden}
+.param-row{display:grid;grid-template-columns:1.1fr 1.4fr .5fr;align-items:center;gap:4px;padding:9px 12px;background:#fffdfd;font-size:13px}
+.param-row .param-planet{font-weight:600;color:#4a3145;white-space:nowrap}
+.param-row .param-planet b{font-weight:700}
+.param-row .param-sign{color:#6b5460;white-space:nowrap}
+.param-row .param-sign b{font-weight:700}
+.param-row .param-house{text-align:right;color:#a03a68;font-weight:600;white-space:nowrap}
+.param-aspects{margin-top:12px}
+.param-aspects>summary{font-size:13px;font-weight:650;color:#8c2f5f;cursor:pointer;padding:6px 0}
+
 
 /* ===== 择日 · 择时（v0.58.0）=====
    旧页面是一串 details，看不到分数从哪来。现在按「结论在上、证据在下」：

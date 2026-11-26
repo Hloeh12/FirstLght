@@ -5,17 +5,23 @@ import {readFileSync} from 'node:fs';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('西洋深浅双盘：wheel 支持 theme 参数，深色节点默认隐藏',()=>{
+test('西洋盘：wheel 支持皮肤参数，旧深浅切换已取消',()=>{
  const src=read('assets/console/western.js');
- assert.match(src,/export function wheel\(r,theme='light'\)/,'wheel 接受 theme 参数');
- assert.match(src,/const dark=theme==='dark'/,'深色分支');
- assert.match(src,/class="wheel\$\{dark\?' wheel-dark':''\}"/,'深色时给 svg 标记 wheel-dark');
- assert.match(src,/data-wheel-theme="light"/,'浅色切换按钮');
- assert.match(src,/data-wheel-theme="dark"/,'深色切换按钮');
- assert.match(src,/save\(key,\{\.\.\.cfg\(\),theme:b\.dataset\.wheelTheme\}\)/,'主题写入配置持久化');
+ assert.match(src,/export function wheel\(r,skin='cece',style='text'\)/,'wheel 接受 skin/style 参数');
+ assert.match(src,/SKINS=/, '6 种皮肤定义存在');
+ assert.match(src,/wheel-skin-\$\{skin\}/,'svg 标记皮肤类');
+ assert.match(src,/wheel-skin-\$\{skin\}/,'皮肤类注入盘面');
+ assert.doesNotMatch(src,/data-wheel-theme="light"/,'浅色切换按钮已移除');
+ assert.doesNotMatch(src,/data-wheel-theme="dark"/,'深色切换按钮已移除');
+ assert.doesNotMatch(src,/const dark=theme==='dark'/,'深色分支已移除');
  const css=read('assets/console/liquid.css');
- assert.match(css,/\.wheel \.wheel-star-short,\.wheel \.wheel-axis-short\{display:none\}/,'单字默认隐藏，浅色盘不受影响');
- assert.match(css,/\.wheel-dark \.wheel-star-short,\.wheel-dark \.wheel-axis-short\{display:block/,'仅深色盘显示单字');
+ assert.match(css,/\.wheel-skin-degree\{/,'6 皮肤变量类齐全（度数）');
+ assert.match(css,/\.wheel-skin-classic\{/,'6 皮肤变量类齐全（经典）');
+ assert.match(css,/\.wheel-skin-cece\{/,'6 皮肤变量类齐全（测测）');
+ assert.match(css,/\.wheel-skin-fresh\{/,'6 皮肤变量类齐全（清爽）');
+ assert.match(css,/\.wheel-skin-cute\{/,'6 皮肤变量类齐全（可爱）');
+ assert.match(css,/\.wheel-skin-night\{/,'6 皮肤变量类齐全（夜空）');
+ assert.doesNotMatch(css,/\.wheel-dark\{/,'深色盘样式块已移除');
 });
 
 test('底部时间联动：常驻条 + 按天翻页自动进入行运',()=>{

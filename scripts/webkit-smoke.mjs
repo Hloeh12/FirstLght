@@ -55,21 +55,23 @@ try{
  await page.getByRole('button',{name:'生成命盘',exact:true}).click();
  await page.locator('.zi-board').waitFor();
 
- // 断网后切换四体系：排盘全在本地离线引擎完成，若任何一步偷偷联网，api 会记下来
- await context.setOffline(true);
- const anchors={ziwei:'.zi-board',bazi:'.trend-block',vedic:'.vedic-chart',west:'#westernChart'};
- const seen={};
- for(const [id,sel] of Object.entries(anchors)){
-  await page.locator('[data-system-switch="'+id+'"]').click();
-  const node=page.locator(sel).first();
-  await node.waitFor({state:'visible',timeout:20000});
-  seen[id]=await node.evaluate(n=>({
-   box:Math.round(n.getBoundingClientRect().width),
-   text:(n.textContent||'').trim().length,
-   svg:n.querySelector('svg')?1:0
-  }));
-  assert(seen[id].box>0,id+' 排盘容器应有实际宽度');
- }
+  // v0.78.0：底部「八字/紫微/西洋/印度」四按钮已移除，排盘体系统一走「模块」面板，
+  // 这里改从 #moduleButton → [data-module="id"] 切体系，断网后仍走本地离线引擎。
+  await context.setOffline(true);
+  const anchors={ziwei:'.zi-board',bazi:'.trend-block',vedic:'.vedic-chart',west:'#westernChart'};
+  const seen={};
+  for(const [id,sel] of Object.entries(anchors)){
+   await page.locator('#moduleButton').click();
+   await page.locator('[data-module="'+id+'"]').click();
+   const node=page.locator(sel).first();
+   await node.waitFor({state:'visible',timeout:20000});
+   seen[id]=await node.evaluate(n=>({
+    box:Math.round(n.getBoundingClientRect().width),
+    text:(n.textContent||'').trim().length,
+    svg:n.querySelector('svg')?1:0
+   }));
+   assert(seen[id].box>0,id+' 排盘容器应有实际宽度');
+  }
  await page.locator('#screen').screenshot({path:'build/mobile-webkit-engine-390.png',animations:'disabled'});
  assert.deepEqual(errors,[],'页面不应有未捕获异常：'+errors.join(' | '));
  assert.deepEqual(api,[],'离线态不应发出 /api/ 请求：'+api.join(' | '));

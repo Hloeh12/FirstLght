@@ -346,6 +346,49 @@ input,textarea{user-select:text;-webkit-user-select:text}
 .pair-section-head h3{margin:0;font-size:15px;color:#8c2f5f}
 .pair-section-head small{font-size:11px;color:#a06d88}
 .pair-tool-desc{display:block;margin-top:3px;font-size:11px;font-weight:400;color:#a06d88}
+/* ===== v0.81.0 双人合盘专业化：主 tab + 生辰合盘对比 + 详细相位卡 ===== */
+.pair-main-tabs{display:flex;gap:6px;margin:10px 0;padding:4px;border-radius:14px;background:rgba(244,224,235,.55);border:1px solid rgba(255,182,206,.4)}
+.pair-main-tabs button{flex:1 1 0;min-width:0;padding:9px 10px;border-radius:11px;font-size:13px;font-weight:700;white-space:nowrap;background:transparent;color:#a06d88;border:0}
+.pair-main-tabs button[aria-selected=true]{background:linear-gradient(135deg,#ff77aa,#ff4f8b);color:#fff;box-shadow:0 3px 10px -4px rgba(255,79,139,.6)}
+.pair-view-coming{opacity:.55}
+.bazi-compare{display:grid;gap:10px}
+.bz-sub{font-size:13px;color:#8c2f5f;margin:6px 0 2px;font-weight:800}
+/* 综合对比表（日主/日支/格局/阴阳/纳音/生肖/命卦） */
+.bzc-grid{display:grid;grid-template-columns:1.2fr 1fr .7fr 1fr;gap:4px 8px;align-items:center;font-size:12.5px}
+.bzc-corner,.bzc-head{font-weight:800;color:#8c2f5f;font-size:12px}
+.bzc-head.a{color:#2f6fed}.bzc-head.b{color:#e0568c}
+.bzc-row{display:contents}.bzc-row .bzc-param{color:#7a6a72;font-weight:600}
+.bzc-val{font-weight:700}
+.bzc-badge{font-style:normal;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:linear-gradient(135deg,#ffb37a,#ff7a8a);color:#fff;display:inline-block}
+.bzc-badge[class=he]{background:linear-gradient(135deg,#57cc99,#4dabf7)}
+/* 四柱对比 */
+.bpc-grid{display:grid;grid-template-columns:.8fr 1.3fr 1.3fr 1fr;gap:4px 8px;font-size:12.5px;align-items:center}
+.bpc-corner{font-weight:800;color:#8c2f5f;font-size:12px}
+.bpc-row{display:contents}
+.bpc-pillar{font-weight:700;color:#7a6a72}
+.bpc-stem{font-weight:800;margin-right:6px}
+.bpc-stem.b{color:#e0568c}
+.bpc-rel{font-style:normal;font-size:11px;font-weight:800;padding:1px 6px;border-radius:999px;background:rgba(255,179,122,.4);color:#c2477a;margin-left:4px}
+.bpc-rel.he{background:rgba(87,204,153,.3);color:#2a7a54}
+.bpc-rel.chong{background:rgba(255,107,107,.3);color:#c0392b}
+.bpc-god{color:#7a6a72;font-size:11.5px}
+/* 五行对比 */
+.bzf{display:grid;gap:6px}
+.bzf-row{display:grid;grid-template-columns:2.2rem 2rem 2.2rem;gap:6px;align-items:center;font-size:12px}
+.bzf-pct{font-weight:800}.bzf-pct.a{color:#2f6fed;text-align:right}.bzf-pct.b{color:#e0568c}
+.bzf-name{text-align:center;font-weight:800}
+.bzf-scale{display:flex;justify-content:space-between;font-size:10.5px;color:#a06d88}
+.bzf-read{font-size:13px;line-height:1.7;color:#5a4a52}
+/* 十神对比 */
+.bzt{display:grid;gap:5px}
+.bzt-head,.bzt-row{display:grid;grid-template-columns:2.6rem 1fr 2.6rem;gap:6px;align-items:center;font-size:12px}
+.bzt-head{font-weight:800;color:#8c2f5f}
+.bzt-head span:first-child,.bzt-pct.a{text-align:right;color:#2f6fed}
+.bzt-pct.b{color:#e0568c}
+.bzt-pct{font-weight:800}
+.bzt-name{text-align:center;font-weight:700;color:#7a6a72}
+body.dark .bzi-compare,.body.dark .bzc-param,.body.dark .bpc-god,.body.dark .bzt-name{color:#e6c9d8}
+body.dark .bzc-param,body.dark .bpc-pillar,body.dark .bpc-god,body.dark .bzt-name,body.dark .bzf-read{color:#d8b8c8}
 @media(max-width:340px){.profile-capsule [data-profile-rule]{flex-basis:33px;min-width:22px;font-size:9px}.profile-capsule .capsule-edit-btn{font-size:9px;padding-inline:2px}.profile-capsule .capsule-left{padding-inline:3px}.planet-row .planet-position{grid-template-columns:1fr}.planet-row .planet-meta{grid-column:1}}
 @media(prefers-reduced-motion:reduce){#bottomNav button,.tab-liquid-pill,.aspect-expansion{transition:none!important}#caseDrawer{animation:none}}
 

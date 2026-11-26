@@ -81,7 +81,24 @@ function pairReading({a,b,mode,config}){
   {key:'west',label:'情感三角',text:keyStars.core?.length?keyStars.top.text:keyStars.text}
  ];
  const report=pairReport({...base,summary},a.name||'当前案例',b.name||'第二人');
- return {...base,summary,report};
+ // v0.81.0 生辰合盘：双方八字详细对比数据（四柱十神/纳音/藏干/五行占比/命卦/日主），供前端「生辰合盘」分区渲染。
+ const elementOf=p=>p?.stemElement||p?.element||'';
+ const pillarRow=p=>({name:p.name,stem:p.stem,branch:p.branch,tenGod:p.tenGod,nayin:p.nayin,changsheng:p.changsheng,
+  stemElement:p.stemElement,branchElement:p.branchElement,hidden:(p.hidden||[]).map(h=>({stem:h.stem,element:h.element,rank:h.rank,god:h.god}))});
+ const baziSide=(pro)=>({
+  name:pro?.info?.gender||'',
+  dayMaster:pro?.dayMaster||null,
+  pillars:(pro?.pillars||[]).map(pillarRow),
+  percentages:pro?.strength?.percentages||null,
+  tenGods:(pro?.pillars||[]).filter(p=>p.name!=='日柱').map(p=>({pillar:p.name,tenGod:p.tenGod,stem:p.stem,branch:p.branch,hidden:p.hidden})),
+  traditional:pro?.traditional||null,
+  lunarYear:pro?.info?.lunarYear||'',
+  lunar:pro?.info?.lunar||'',
+  nayin:(pro?.pillars||[]).map(p=>p.nayin),
+  strength:pro?.strength?.kind||''
+ });
+ const bazi={a:baziSide(ba),b:baziSide(bb)};
+ return {...base,summary,report,bazi};
 }
 export const consoleRoutes={
  '/api/console/vedic':vedicPro,'/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,

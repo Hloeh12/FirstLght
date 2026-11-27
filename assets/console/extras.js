@@ -833,7 +833,7 @@ function synastry(ctx){
  <div class="pair-main-tabs" role="tablist" aria-label="合盘分区">${btn('星盘合盘',`data-pair-view="star" role="tab" aria-selected="${s.view!=='bazi'}"`)}${btn('生辰合盘',`data-pair-view="bazi" role="tab" aria-selected="${s.view==='bazi'}"`)}</div>
  ${s.view==='bazi'?baziViewHTML:starViewHTML}
  ${s.view!=='bazi'?`<div class="pair-mode-rail pair-mode-rail-lg" aria-label="双人合盘视角">${viewTabs}</div>`:''}</section>`;
- for(const b of ctx.root.querySelectorAll('[data-pair-mode]'))b.onclick=()=>{if(s.mode===b.dataset.pairMode)return;s.mode=b.dataset.pairMode;s.result=null;s.aspects={filter:'main',expanded:false};if(other)calculatePair(ctx,s,other);synastry(ctx);};
+ for(const b of ctx.root.querySelectorAll('[data-pair-mode]'))b.onclick=()=>{if(s.mode===b.dataset.pairMode)return;s.mode=b.dataset.pairMode;s.result=null;s.aspects={filter:'main',expanded:false};s.focus=null;s.rotation=0;if(other)calculatePair(ctx,s,other);synastry(ctx);};
  // v0.81.0：主 tab 星盘/生辰合盘切换；规划中视角给出说明而非静默。
  for(const b of ctx.root.querySelectorAll('[data-pair-view]'))b.onclick=()=>{if(s.view===b.dataset.pairView)return;s.view=b.dataset.pairView;synastry(ctx);};
  for(const b of ctx.root.querySelectorAll('[data-pair-coming]'))b.onclick=()=>{ctx.sheet('termSheet',b.textContent.replace(' · 规划中',''),'<p class="thin">该视角需要独立的交盘/马盘算法，本版本先完成比较盘、组合盘、时空盘的完整相位；交盘与马盘将作为后续版本追加，敬请期待。</p>');};

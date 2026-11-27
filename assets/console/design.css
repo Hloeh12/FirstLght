@@ -427,6 +427,14 @@ body.dark .bzc-param,body.dark .bpc-pillar,body.dark .bpc-god,body.dark .bzt-nam
 .analysis-basis{padding:9px 12px;border:1px solid #ffc1d8;border-radius:14px;background:#fff0f7;color:#842752;font-weight:700}
 .civil-picker{grid-column:1/-1}
 .civil-wheel-panel{padding:8px}
+/* v0.84.0：滚轮面板顶部「直接输入」行——年/月/日/时/分五个框，免去滚动上百行找年份 */
+.civil-quick{display:grid;grid-template-columns:1.3fr .8fr .8fr .8fr .8fr;gap:6px;margin:2px 0 8px}
+.civil-quick .cq{display:flex;flex-direction:column;gap:3px;font-size:.68rem;color:#8a6578;font-weight:600;text-align:center}
+.civil-quick .cq input{width:100%;min-height:38px;padding:6px 4px;border:1px solid rgba(255,120,170,.34);border-radius:10px;background:rgba(255,255,255,.82);color:#3a2b33;font-size:14px;font-weight:650;font-variant-numeric:tabular-nums;text-align:center;outline:none}
+.civil-quick .cq input:focus{border-color:rgba(255,79,139,.6);box-shadow:0 0 0 3px rgba(255,79,139,.14)}
+/* 液态滑动玻璃：blur + saturate + 斜向渐变 + 顶部高光 + 柔粉投影 */
+.civil-wheel-panel{border:1px solid rgba(255,255,255,.82)!important;background:linear-gradient(135deg,rgba(255,255,255,.82),rgba(255,226,242,.66))!important;box-shadow:0 14px 32px rgba(255,79,139,.12),inset 0 1px 1px rgba(255,255,255,.95)!important}
+.civil-wheel{scrollbar-width:none}
 .civil-wheels{display:flex;gap:3px}
 .civil-wheel-column{flex:1 1 0;min-width:0;text-align:center}
 .civil-wheel-column>b{font-size:.74rem}
@@ -2213,6 +2221,10 @@ body.dark .rpt-menu button:active{background:rgba(255,255,255,.08)}
  .energy-track{border-color:rgba(255,198,220,.35);background:rgba(46,38,54,.6)}
  .south-house[data-current=true],.south-house[data-dasha-lit=true]{background:rgba(120,60,90,.5)!important;color:#fff}
  .civil-wheel-panel{background:linear-gradient(135deg,rgba(46,38,54,.9),rgba(38,30,46,.8))!important;border-color:rgba(255,255,255,.14)!important;color:var(--ink)}
+ .civil-quick .cq{color:#c8a8bc!important}
+ .civil-quick .cq input{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.2)!important;color:#f2e6ee!important}
+ .civil-quick .cq input::placeholder{color:#9c8c99!important}
+ .civil-quick .cq input:focus{border-color:rgba(255,159,201,.55)!important;box-shadow:0 0 0 3px rgba(255,159,201,.14)!important}
  .bg-cell,.bg-row{background:transparent}
  .time-basis-note{background:rgba(40,32,48,.6);border-color:rgba(255,164,206,.16);color:#d8c8d4}
  .time-basis-note b{color:#ff9fc9}
@@ -2368,6 +2380,11 @@ body.dark .astro-grid [data-aspect=hard]{background:#4a2431;color:#ffb3c1}
 body.dark .astro-grid [data-aspect=soft]{background:#42321f;color:#f2cf9a}
 body.dark .astro-grid [data-aspect=neutral]{background:#3d2739;color:#e6b3d3}
 body.dark .asc-reset{background:#33253b;color:#ffb0d0}
+body.dark .civil-wheel-panel{background:linear-gradient(135deg,rgba(46,38,54,.9),rgba(38,30,46,.8))!important;border-color:rgba(255,255,255,.14)!important;color:var(--ink)}
+body.dark .civil-quick .cq{color:#c8a8bc!important}
+body.dark .civil-quick .cq input{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.2)!important;color:#f2e6ee!important}
+body.dark .civil-quick .cq input::placeholder{color:#9c8c99!important}
+body.dark .civil-quick .cq input:focus{border-color:rgba(255,159,201,.55)!important;box-shadow:0 0 0 3px rgba(255,159,201,.14)!important}
 body.dark .drawer-accordion details{background:rgba(46,38,54,.7)}
 body.dark .galaxy svg{background:radial-gradient(#2b2136,#201a28)}
 body.dark .galaxy svg text{fill:#f0d4e4}

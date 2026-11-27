@@ -298,6 +298,10 @@ input,select,textarea{font-size:16px!important}
 .snap-zi-center{grid-row:2/4;grid-column:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fff;border:1px solid #e7c8d9;border-radius:6px;text-align:center}
 .snap-zi-center b{font-size:15px;color:#a8326a}.snap-zi-center span{font-size:11px;color:#8a6076}.snap-zi-center small{font-size:9px;color:#b99aab}
 .snap-bazi{width:100%;max-width:560px;font-size:12px}
+/* v0.84.0：合盘时点专项——双方行运双圈盘并排（窄屏上下排，宽屏左右排） */
+.snap-pair-grid{display:grid;grid-template-columns:1fr;gap:10px;width:100%;max-width:560px}
+.snap-pair-grid .snap-west{width:100%;max-width:100%}
+@media(min-width:640px){.snap-pair-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.period-controls label{min-width:100%}}
 @media (prefers-color-scheme:dark){
  .period-workbench{background:rgba(46,38,54,.8)!important}

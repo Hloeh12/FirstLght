@@ -13,11 +13,12 @@ import {focusSections} from './period-focus.mjs';
 export {focusSections};
 import {$,btn,esc,table,selectedRails,renderReportPara} from './ui.js';
 
-const NAMES={bazi:'八字',ziwei:'紫微斗数',vedic:'印度占星',west:'西洋占星'};
+const NAMES={bazi:'八字',ziwei:'紫微斗数',vedic:'印度占星',west:'西洋占星',synastry:'双人合盘'};
 const SCOPES={bazi:[['luck','大运'],['year','流年'],['month','流月'],['day','流日']],
  ziwei:[['decadal','大限'],['yearly','流年'],['monthly','流月'],['daily','流日']],
  vedic:[['maha','大运'],['antar','小运'],['year','流年']],
- west:[['transit','行运'],['secondary','次限'],['solar','日返'],['profection','小限']]};
+ west:[['transit','行运'],['secondary','次限'],['solar','日返'],['profection','小限']],
+ synastry:[['transit','行运'],['secondary','次限'],['solar','日返']]};
 
 /* ---------- 盘面快照：报告里直观显示的命盘（静态、可导出） ---------- */
 
@@ -200,6 +201,14 @@ function westSnapshot(w,mode,at){
  }catch{return '<p class="snap-empty-note">当前数据不足以绘制星盘（推运盘需先在排盘页生成一次）。</p>';}
 }
 
+// v0.84.0：合盘时点专项盘面快照——双方各一张「本命 + 行运」双圈盘并排，跨盘相位单独成节。
+function pairPeriodSnapshot(p,nameA,nameB){
+ const mk=(side,name)=>side?.transit
+  ?`<div class="snap-west is-transit" data-snap-label="${esc(name)} · 行运">${wheel({chart:side.natal,outer:side.transit,mode:'transit',cross:side.crossOwn||[]})}</div>`
+  :`<p class="snap-empty-note">${esc(name)} 行运数据不足。</p>`;
+ return `<div class="snap-pair-grid">${mk(p?.a,nameA)}${mk(p?.b,nameB)}</div>`;
+}
+
 export {ziweiSnapshot,baziSnapshot,vedicSnapshot,westSnapshot};
 
 const escS=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -286,6 +295,49 @@ export async function buildPeriodReport(ctx,system,scope,selection,label,reportM
     ?`${String(at).slice(0,10)} · 该时刻天象在出生地所起 Lahiri 恒星黄道整宫制行运盘，随所选时点变化；本命 D1 上升 ${escS(v.lagna||'—')} 终身不变，见全报告总览。大运主星 ${escS(v.active?.lord||'—')}。`
     :`${String(at).slice(0,10)} · 本命分盘 D${varga}（由本命 D1 推演，不随流年变）。当前大运与岁运见正文。`,
    lead:`本命上升 ${escS(v.lagna||'待定')}，九曜 ${(v.planets||[]).length} 颗；${isTransitD1?'时点行运上升 '+escS(v.atChart?.lagna||'—'):'本命盘'}。`});
+ }
+
+ // v0.84.0：双人合盘时点专项——给定时刻，双方各出「本命+行运」双圈盘，
+ // 算两对跨盘相位：A行运×B本命（A的当下星触发B的生活领域）、B行运×A本命。
+ // 正文逐条按该时刻推导，不重复本命全文；口径同合盘（只列可核星历证据，不虚构吉凶）。
+ if(system==='synastry'){
+  const s=ctx.state.chartState?.synastry||{};
+  const self=ctx.state.profile;
+  const cases=ctx.state.cases||[];
+  const other=cases.find(c=>c.id===s.other)||(s.otherInline?.birth?{...s.otherInline,id:'inline'}:null);
+  if(!self||!other)throw Error('双人合盘时点专项需先在合盘页选定第二人并完成排盘。');
+  const nameA=self.name||'当前案例',nameB=other.name||'第二人';
+  // 第二人两种来源：案例库（fields）或一次性输入（birth）。统一归一化成带 city 的生辰对象。
+  const birthB=other.birth||ctx.normalized(other);
+  const at=selection.at||new Date().toISOString();
+  const pp=await request('/api/console/pair-period',{a:ctx.birth,b:birthB,at,mode:scope});
+  const fmtAspects=(list,cap)=>{
+   if(!list?.length)return '该时刻未检出显著相位。';
+   const top=[...list].sort((x,y)=>x.orb-y.orb).slice(0,cap||10);
+   return top.map(x=>`${escS(x.a)}（行运）与${escS(x.b)}（本命）成${x.type}，容许 ${x.orb.toFixed(2)}°`).join('；');
+  };
+  const transitOf=(side,name,keys=['sun','moon','venus','mars'])=>
+   (side?.transit?.planets||[]).filter(p=>keys.includes(p.key)).map(p=>`${escS(p.name)} 行运入${escS(p.sign)} ${escS(p.degree||'')}`).join('、')||'行运主星数据不足';
+  const spotLabel=label;
+  const sections=[
+   {title:`时点总览｜${spotLabel}`,lines:[
+     `${escS(nameA)} × ${escS(nameB)} 在 ${escS(String(at).slice(0,16).replace('T',' '))} 的双人合盘时点专项：分别看「A 的行运星触发 B 本命领域」与「B 的行运星触发 A 本命领域」两条跨盘互动线。`,
+     `此报告只在该时刻重算双方行运与跨盘相位，本命终身结构不变；是「此刻这对关系在发生什么」的快照，不等同于终身合婚结论。`
+   ]},
+   {title:`${nameA}行运 × ${nameB}本命`,lines:[fmtAspects(pp.aOnB),`该时刻 ${escS(nameA)} 行运主星：${transitOf(pp.a,nameA)}。`]},
+   {title:`${nameB}行运 × ${nameA}本命`,lines:[fmtAspects(pp.bOnA),`该时刻 ${escS(nameB)} 行运主星：${transitOf(pp.b,nameB)}。`]},
+   {title:'双方各自行运（本命对照）',lines:[
+     `${escS(nameA)}：${fmtAspects(pp.a?.crossOwn,6)}`,
+     `${escS(nameB)}：${fmtAspects(pp.b?.crossOwn,6)}`
+   ]},
+   {title:'口径说明',lines:[
+     '跨盘相位取行运星与对方本命星的黄经差，按合/六分/四分/三分/对分容许度筛出；只列可核的星历证据，不折成吉凶分数。',
+     '行运盘随时点变化，本命盘终身不变；本时点专项与终身合婚报告（洞见页）互补，不重复。']},
+  ];
+  return compose(sections,{spot:spotLabel,title:`双人合盘 · 时点专项｜${spotLabel}`,kind:'synastry',
+   chartHtml:pairPeriodSnapshot(pp,nameA,nameB),chartTitle:`双人合盘 · ${spotLabel}`,
+   chartCaption:`${String(at).slice(0,16).replace('T',' ')} · 双方行运盘。上图 ${escS(nameA)}、下图 ${escS(nameB)}，各自本命＋行运双圈；跨盘相位见正文，随所选时点变化。`,
+   lead:`该时刻双人合盘时点专项，逐条给可核的跨盘相位证据。`});
  }
 
  // west

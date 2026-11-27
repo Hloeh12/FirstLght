@@ -36,8 +36,7 @@ function pairReading({a,b,mode,config}){
  if(mode!==undefined&&!['synastry','composite','midpoint','davison','cross-a','cross-b','mars-a','mars-b'].includes(mode))throw Error('无效合盘类型');
  const ba=baziPro({birth:a}),bb=baziPro({birth:b});
  const solarA=solarInput(a,ba),solarB=solarInput(b,bb);
- const result=synastry({...solarA,skipZiwei:true},{...solarB,skipZiwei:true},mode||'synastry');
- // 多体系合婚：八字干支/十神/喜用 + 紫微命宫夫妻宫互参（不虚构契合度，分数仍取八科）
+ const result=synastry({...solarA,skipZiwei:true},{...solarB,skipZiwei:true},mode||'synastry'); // 多体系合婚：八字干支/十神/喜用 + 紫微命宫夫妻宫互参（不虚构契合度，分数仍取八科）
  const bm=baziMatch(ba,bb),zm=ziweiMatch(solarA,solarB);
  const md=mangalDosh(result.vedic?.a?.d1,result.vedic?.b?.d1);
  const {total:forward,max}=result.vedic.koota;
@@ -100,6 +99,34 @@ function pairReading({a,b,mode,config}){
  const bazi={a:baziSide(ba),b:baziSide(bb)};
  return {...base,summary,report,bazi};
 }
+/* v0.84.0：合盘时点专项——在给定时刻，双方各自出「本命 + 行运」双圈盘，
+ * 并计算两对跨盘相位：A行运×B本命（A的当下星触发B的领域）与 B行运×A本命。
+ * 这是「双人合盘时点专项报告」的数据源：正文按该时刻逐条推导，不重复本命全文。
+ * 复用 westernPro(mode='transit') 拿各自行运，再用 chart.mjs 的 crossAspects 思想算跨盘。
+ * 不虚构吉凶，只列可核的星历相位证据。 */
+function pairPeriod({a,b,at,mode='transit'}){
+ if(!['transit','secondary','tertiary','solar','lunar'].includes(mode))throw Error('合盘时点专项不支持此盘类');
+ const cfg={};
+ const side=(birth)=>{
+  const natal=westernPro({birth,config:cfg,mode:'natal'}).chart;
+  const prog=westernPro({birth,config:cfg,mode,at});
+  // transit/secondary/tertiary 返回 {chart:natal,outer:progressed,cross}；
+  // solar/lunar 返照返回 {chart:progressed,natalCross,returnEvent}，逐类取「推进盘」与「自有跨盘相位」。
+  const transit=prog.outer||prog.chart;
+  const crossOwn=prog.cross||prog.natalCross||[];
+  return {natal,transit,crossOwn};
+ };
+ const A=side(a),B=side(b);
+ const cross=(aP,bP)=>{const out=[];for(const x of aP)for(const y of bP){let sep=Math.abs(x.lon-y.lon)%360;if(sep>180)sep=360-sep;for(const [angle,name,orb] of [[0,'合相',8],[60,'六分相',5],[90,'四分相',6],[120,'三分相',6],[180,'对分相',8]])if(Math.abs(sep-angle)<=orb){out.push({a:x.name,b:y.name,type:name,angle,orb:Math.abs(sep-angle)});break;}}return out.sort((x,y)=>x.orb-y.orb);};
+ return {
+  mode,at,
+  a:A,b:B,
+  // 跨盘：A行运×B本命（A的当下星触发B的生活领域）+ B行运×A本命
+  aOnB:cross(A.transit.planets,B.natal.planets),
+  bOnA:cross(B.transit.planets,A.natal.planets)
+ };
+}
+
 export const consoleRoutes={
  '/api/console/vedic':vedicPro,'/api/console/resonance':resonance,'/api/console/reading':consoleReading,'/api/console/western':westernPro,'/api/console/bazi':baziPro,
  '/api/console/reverse-bazi':reverseBazi,'/api/console/convert':convertBirth,
@@ -108,7 +135,8 @@ export const consoleRoutes={
  '/api/console/liuyao':({date})=>qiGuaByTime({date}),
  '/api/console/naming':data=>suggestNames(data),
  '/api/console/today-sky':todaySky,'/api/console/daily-guidance':dailyGuidance,
- '/api/console/relationship':data=>pairReading(data).fit
+ '/api/console/relationship':data=>pairReading(data).fit,
+ '/api/console/pair-period':pairPeriod
 };
 
 export function localRequest(path, data) {

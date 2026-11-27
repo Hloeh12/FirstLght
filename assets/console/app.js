@@ -1249,7 +1249,12 @@ for(const b of d.querySelectorAll('[data-brief-act]')){
    catch{tell('复制失败，可直接用系统分享。');}
    return;
   }
-  if(kind==='period'){close(d);switchTab('period');return;}
+  if(kind==='period'){
+   close(d);
+   // v0.84.0：合盘报告的「看时点专项」应落在双人合盘体系，而不是默认八字。
+   state.periodSystem='synastry';
+   switchTab('period');return;
+  }
   if(kind==='cal'){
    close(d);
    // 择日页的状态是按页存的，这里种一份带事项的初始状态，跳过去就是本命口径的择日。
@@ -1434,7 +1439,7 @@ function periodOptions(system,scope){
   if(scope==='monthly'){const nowM=new Date().getMonth()+1;return Array.from({length:12},(_,i)=>opt(i+1,`第 ${i+1} 月${i+1===nowM?'（本月）':''}`,i+1===nowM)).join('');}
   return Array.from({length:30},(_,i)=>opt(i+1,`第 ${i+1} 日`)).join('');
  }
- // vedic / west：以年+月为时点，转成 ISO。
+ // vedic / west / synastry：以年+月为时点，转成 ISO。
  // 覆盖今年往前 2 年、往后 20 年（原 length:8 只到 +5，用户反馈「西洋占只能选到 2031」）。
  const y=new Date().getFullYear();
  return Array.from({length:23},(_,i)=>opt(y-2+i,`${y-2+i} 年${y-2+i===y?'（今年）':''}`,y-2+i===y)).join('');
@@ -1443,12 +1448,15 @@ function periodOptions(system,scope){
    与洞见页解耦，作为主导航第五个 Tab 存在。 */
 const PERIOD_SYS_META={
  bazi:{name:'八字',desc:'四柱 · 十神 · 刑冲合会',ico:'干'},ziwei:{name:'紫微斗数',desc:'流命宫 · 四化飞星',ico:'微'},
- vedic:{name:'印度占星',desc:'Dasha · 分盘 · 星宿',ico:'印'},west:{name:'西洋占星',desc:'行运 · 次限 · 返照',ico:'星'}
+ vedic:{name:'印度占星',desc:'Dasha · 分盘 · 星宿',ico:'印'},west:{name:'西洋占星',desc:'行运 · 次限 · 返照',ico:'星'},
+ synastry:{name:'双人合盘',desc:'跨盘相位 · 行运互动',ico:'合'}
 };
 function periodDashboard(){
  if(!state.profile||!state.reading){root.innerHTML=`<section class="period-page"><header class="page-head"><div class="page-head-main"><p class="kicker">FIRST LIGHT · 时点专项</p><h1>时点</h1></div></header><p class="empty">请先激活一个案例并完成排盘，再生成时点专项报告。</p></section>`;return;}
- const sysKeys=['bazi','ziwei','vedic','west'];
- let system=PERIOD_SYS_META[state.system]?state.system:'bazi';
+ const sysKeys=['bazi','ziwei','vedic','west','synastry'];
+ // v0.84.0：合盘报告的「看时点专项」预设体系（state.periodSystem），其余仍按当前体系。
+ let system=state.periodSystem&&PERIOD_SYS_META[state.periodSystem]?state.periodSystem:(PERIOD_SYS_META[state.system]?state.system:'bazi');
+ state.periodSystem=undefined;
  // v0.50.0 功能去重：原先这里还能选「本命全报告 + 时点章」，与本命深度报告（洞见页）几乎同文。
  // 现在时点页只出「该时点专属详批」，本命全局一律走洞见页，两处互不重复。
  const mode='focus';
@@ -1462,7 +1470,7 @@ function periodDashboard(){
    <div class="period-step"><span class="period-step-no">2</span><span class="period-step-label">选择时点类型 · ${esc(meta.name)}</span></div>
    <div class="period-scope-rail card liquid-glass" role="group" aria-label="时点类型">${rail}</div>
    <div class="period-controls card liquid-glass"><label>具体时点<select data-period-value>${periodOptions(system,scopes[0]?.[0])}</select></label>
-    ${['vedic','west'].includes(system)?'<label>月份<select data-period-month>'+Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?'selected':''}>${i+1} 月</option>`).join('')+'</select></label>':''}
+    ${['vedic','west','synastry'].includes(system)?'<label>月份<select data-period-month>'+Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?'selected':''}>${i+1} 月</option>`).join('')+'</select></label>':''}
    </div>
    <div class="period-action">${btn('生成这个时点 →','class="primary period-generate" data-period-generate')}<p class="thin" data-period-status role="status"></p></div>
    <p class="period-footnote">只出这个时点的盘与详批，正文逐条按该时刻的干支重算；<b>本命终身结构</b>请看「洞见」页的深度报告，两处不重复。</p>
@@ -1505,8 +1513,8 @@ function periodDashboard(){
     }else{
      const yr=Number(raw),mo=monthSel?Number(monthSel.value):1;
      const at=new Date(Date.UTC(yr,mo-1,15,12,0,0)).toISOString();
-     selection=system==='vedic'?{at,varga:1}:{at,mode:scope};
-     label=`${yr} 年 ${mo} 月 · ${scopeLabel()}`;
+     selection=system==='vedic'?{at,varga:1}:system==='synastry'?{at}:{at,mode:scope};
+     label=system==='synastry'?`${yr} 年 ${mo} 月 · ${scopeLabel()}（双人合盘）`:`${yr} 年 ${mo} 月 · ${scopeLabel()}`;
     }
     const report=await buildPeriodReport(ctx,system,scope,selection,label,mode);
     openFullReport(report);
@@ -1675,7 +1683,8 @@ function configPanel(){
    if(id==='tools'){
     close(d);
     // v0.78.0：双人合盘是专业功能，点「双人合盘功能」应回到专业合盘页，而不是分享长图。
-    if(state.system==='synastry'){switchTab('chart','synastry');return;}
+    // v0.84.0：原来 synastry 下 switchTab('chart','synastry') 是空切（已在合盘页，等于无反应），
+    // 用户点「打开 >」看不到任何具体功能。现统一弹功能面板：synastry 由 pairTools 列出 7 种盘可切换。
     toolPanel();return;
    }
    if(id==='share'){close(d);toolPanel();return;}

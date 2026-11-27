@@ -14,7 +14,9 @@ export function installCivilPickers(sheet) {
   const anchor=(date||clock).closest('label');
   const picker=document.createElement('details');
   picker.className='civil-picker';
-  picker.innerHTML='<summary>日期与时刻</summary><div class="liquid-glass civil-wheel-panel"><div class="spread"><button type="button" data-wheel-now>↺ 恢复当下</button><button type="button" data-wheel-apply class="primary">确定应用</button></div><div class="civil-wheels"></div></div>';
+  // v0.84.0：滚轮选年月日太慢（年份列要滚上百行），面板顶部加「快速输入行」——
+// 年/月/日/时/分 五个框可直接键入，回车即生效，滚轮降为次选方式。
+picker.innerHTML='<summary>日期与时刻</summary><div class="liquid-glass civil-wheel-panel"><div class="spread"><button type="button" data-wheel-now>↺ 恢复当下</button><button type="button" data-wheel-apply class="primary">确定应用</button></div><div class="civil-quick" role="group" aria-label="直接输入日期与时刻"><label class="cq">年<input data-cq="Y" inputmode="numeric" maxlength="4" placeholder="1995"></label><label class="cq">月<input data-cq="M" inputmode="numeric" maxlength="2" placeholder="11"></label><label class="cq">日<input data-cq="D" inputmode="numeric" maxlength="2" placeholder="02"></label><label class="cq">时<input data-cq="h" inputmode="numeric" maxlength="2" placeholder="23"></label><label class="cq">分<input data-cq="mi" inputmode="numeric" maxlength="2" placeholder="40"></label></div><div class="civil-wheels"></div></div>';
   anchor.after(picker);
   const summary=picker.querySelector('summary'),host=picker.querySelector('.civil-wheels');
   const outputs=new Map();
@@ -99,11 +101,30 @@ export function installCivilPickers(sheet) {
     if(index>=0)place(list,index);
    }
   };
-  const set=(value)=>{
-   selected={...value,minute:value.h*60+value.mi};
-   if(isLunar())selected.Y=Math.min(2100,Math.max(1900,selected.Y));
-   draw();
-  };
+// 快速输入行：只收数字，回车或失焦即写回滚轮状态并重绘，避免滚动上百行找年份。
+const quickHost=picker.querySelector('.civil-quick');
+function paintQuick(){for(const f of quickHost.querySelectorAll('input'))f.value=String(selected?.[f.dataset.cq]??'');}
+const applyQuick=()=>{
+ const n=(f,max)=>{const v=Number(String(f.value).trim());return Number.isFinite(v)&&v>=0&&v<=max?Math.round(v):null;};
+ const y=n(quickHost.querySelector('[data-cq=Y]'),9999),m=n(quickHost.querySelector('[data-cq=M]'),12),d=n(quickHost.querySelector('[data-cq=D]'),31),
+  h=n(quickHost.querySelector('[data-cq=h]'),23),mi=n(quickHost.querySelector('[data-cq=mi]'),59);
+ if(y==null||m==null||d==null||h==null||mi==null)return;
+ selected={...selected,Y:y,M:m,D:d,h,mi};
+ selected.minute=h*60+mi;
+ if(isLunar())selected.Y=Math.min(2100,Math.max(1900,selected.Y));
+ draw();
+};
+for(const f of quickHost.querySelectorAll('input')){
+ f.addEventListener('input',()=>{f.value=f.value.replace(/[^\d]/g,'');});
+ f.addEventListener('change',applyQuick);
+ f.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();applyQuick();f.blur();}});
+}
+const set=(value)=>{
+ selected={...value,minute:value.h*60+value.mi};
+ if(isLunar())selected.Y=Math.min(2100,Math.max(1900,selected.Y));
+ draw();
+ paintQuick();
+};
   picker.addEventListener('toggle',()=>{if(picker.open)set(read());});
   picker.querySelector('[data-wheel-now]').onclick=()=>{
    const now=localNowParams();

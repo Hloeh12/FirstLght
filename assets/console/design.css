@@ -2428,6 +2428,36 @@ body.dark .pair-toc{background:rgba(255,138,184,.07);border-color:rgba(255,138,1
 body.dark .pair-toc-item{background:rgba(255,138,184,.1);color:#ffc3dc;border-color:rgba(255,138,184,.28)}
 body.dark .pair-toc-item[aria-pressed=true]{background:#ff8ab8;color:#2a1220;border-color:#ff8ab8}
 .pair-toc-num{font-size:10px;font-weight:800;opacity:.7}
+/* v0.83.0：合婚报告目录改顶部横向胶囊条——常驻可见、吸顶、scrollspy 高亮当前节、点击即跳转。
+   替代原右下角悬浮 FAB + 抽屉（移除），解决"要滚动到报告才看得到目录、不能跟着页面实时点击"。
+   吸顶用 JS 驱动（WebKit 下 sticky 相对 static 父级不可靠），.pair-toc-stuck 时 fixed 于可视顶部。 */
+.pair-toc-top{position:relative;z-index:40;margin:6px 0 12px;padding:8px;border:1px solid #f3d3e2;border-radius:14px;background:rgba(255,251,253,.95);backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%);box-shadow:0 2px 10px rgba(120,40,80,.06);transition:box-shadow .2s}
+.pair-toc-top.pair-toc-stuck{position:fixed;top:calc(56px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:min(calc(100vw - 24px),780px);max-width:calc(100% - 0px);box-shadow:0 6px 18px rgba(120,40,80,.14);z-index:240}
+.pair-toc-top .pair-toc-list{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;scrollbar-width:none;padding-bottom:2px}
+.pair-toc-top .pair-toc-list::-webkit-scrollbar{display:none}
+.pair-toc-top .pair-toc-item{flex:none;white-space:nowrap}
+.pair-toc-top .pair-toc-item.on{background:#ff7ba6;color:#fff;border-color:#ff7ba6;font-weight:700}
+body.dark .pair-toc-top{background:rgba(44,34,48,.95);border-color:rgba(255,138,184,.26)}
+body.dark .pair-toc-top .pair-toc-item.on{background:#ff8ab8;color:#2a1220;border-color:#ff8ab8}
+/* v0.83.0：合盘类型选择器（点击展开）——收纳原平铺的 4 种盘 + 底部切换栏为单一选择器。 */
+.pair-mode-picker{padding:10px;border-radius:16px;background:linear-gradient(135deg,rgba(255,252,253,.9),rgba(255,235,244,.7));border:1px solid rgba(255,182,206,.5)}
+.pair-picker-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:46px;padding:8px 12px;border-radius:12px;border:1px solid rgba(255,182,206,.5);background:#fff;font-size:14px;font-weight:700;color:#8c2f5f;cursor:pointer}
+.pair-picker-toggle .pm-cur{display:flex;align-items:center;gap:8px;min-width:0}
+.pair-picker-toggle .pm-picker-hint{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#b06a8c;white-space:nowrap}
+.pair-picker-toggle .pm-caret{font-size:12px}
+.pair-picker-list{display:grid;gap:6px;margin-top:8px}
+.pair-picker-item{display:flex;align-items:center;gap:8px;width:100%;padding:9px 11px;border-radius:12px;border:1px solid #eed7e3;background:#fffafb;color:#7a3a58;text-align:left;cursor:pointer;min-width:0}
+.pair-picker-item b{font-size:13px;white-space:nowrap}
+.pair-picker-item .pair-tool-desc{font-size:11px;color:#a06a86;line-height:1.4;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pair-picker-item[aria-selected=true],.pair-picker-item[aria-pressed=true]{background:linear-gradient(135deg,#ff7ba6,#ff5f9a);border-color:#ff8fb6;color:#fff}
+.pair-picker-item[aria-selected=true] .pair-tool-desc,.pair-picker-item[aria-pressed=true] .pair-tool-desc{color:#ffe0ec}
+.pm-ico{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:#fde6f0;color:#b5487a;font-size:13px;font-weight:800}
+.pair-picker-item[aria-selected=true] .pm-ico,.pair-picker-item[aria-pressed=true] .pm-ico{background:rgba(255,255,255,.24);color:#fff}
+body.dark .pair-mode-picker{background:linear-gradient(135deg,rgba(44,34,48,.9),rgba(60,42,58,.72));border-color:rgba(255,138,184,.28)}
+body.dark .pair-picker-toggle{background:rgba(60,46,66,.8);color:#ffc3dc;border-color:rgba(255,138,184,.3)}
+body.dark .pair-picker-item{background:rgba(52,42,60,.72);color:#ffc3dc;border-color:rgba(255,138,184,.24)}
+body.dark .pair-picker-item .pair-tool-desc{color:#d99ab8}
+body.dark .pm-ico{background:rgba(255,138,184,.16);color:#ff9cc4}
 .pair-report .pair-rpt-sec{margin-bottom:6px}
 .pair-report .pair-rpt-sec h3{margin-top:10px}
 /* v0.78.0 dock：底部只剩「模块」入口 + 当前体系提示 */

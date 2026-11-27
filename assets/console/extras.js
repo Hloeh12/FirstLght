@@ -625,18 +625,16 @@ function pairReportCard(r,sel){
  // v0.78.0：成文报告默认收起（整段平铺太占页），用「目录栏 + 按节展开」呈现，
  // 点目录项跳到对应节；「导出长图」仍导出全文，不受收起影响。
  // v0.80.0：目录改为右下角悬浮按钮（需求3），滑到哪都能一键唤出，不用滚回顶部。
+ // v0.83.0：目录改为报告卡顶部横向胶囊条（用户诉求——目录常驻页面顶部、跟着页面移动
+ // 实时高亮当前节、点击即跳转），右下角悬浮 FAB 与抽屉移除，避免"要滚动到报告才看得到目录"。
  const collapsed=sel!==true;
  const toc=keys.map((k,i)=>`<button type="button" class="pair-toc-item" data-pair-toc="${esc(k)}" aria-pressed="${i===0&&!collapsed?'true':'false'}"><span class="pair-toc-num">${i+1}</span>${esc(PAIR_SEC_TITLE[k]||k)}</button>`).join('');
  const body=collapsed?keys.slice(0,1).map(k=>`<section class="pair-rpt-sec" data-pair-sec="${esc(k)}"><h3>${esc(PAIR_SEC_TITLE[k]||k)}</h3>${sec[k].map(t=>`<p>${esc(t)}</p>`).join('')}</section>`).join('')
   :keys.map(k=>`<section class="pair-rpt-sec" data-pair-sec="${esc(k)}"><h3>${esc(PAIR_SEC_TITLE[k]||k)}</h3>${sec[k].map(t=>`<p>${esc(t)}</p>`).join('')}</section>`).join('');
- return `<article class="card pair-doc"><div class="spread"><h2>合婚报告 · 成文</h2><div class="pair-doc-actions">${btn(collapsed?'展开全文':'收起','data-pair-report-toggle')}${btn('导出长图','data-pair-export')}</div></div>
+ return `<nav class="pair-toc pair-toc-top" data-pair-toc-sticky aria-label="报告目录"><div class="pair-toc-list">${toc}</div></nav>
+ <article class="card pair-doc"><div class="spread"><h2>合婚报告 · 成文</h2><div class="pair-doc-actions">${btn(collapsed?'展开全文':'收起','data-pair-report-toggle')}${btn('导出长图','data-pair-export')}</div></div>
  <p class="thin" data-pair-export-status role="status">${esc(r.report.notice||'')}</p>
- <nav class="pair-toc" aria-label="报告目录"><div class="pair-toc-list">${toc}</div></nav>
- <div class="pair-report" data-pair-doc>${body}</div>
- <div class="pair-nav-fab" data-pair-nav-fab><button type="button" class="rpt-nav-fab" data-pair-nav aria-expanded="false" aria-controls="pairNavDrawer" aria-label="打开合婚报告目录"><span class="rpt-nav-fab-ico" aria-hidden="true">☰</span><span data-rpt-fab-label>目录</span><span class="rpt-nav-pct" data-rpt-progress>0%</span></button>
-  <div class="pair-nav-scrim" data-pair-nav-scrim></div>
-  <aside class="pair-nav-drawer" id="pairNavDrawer" data-pair-nav-drawer aria-hidden="true"><div class="rpt-nav-head"><div><b>合婚报告目录</b><small>${keys.length} 节 · 点击跳转</small></div>${btn('×','class="icon" data-pair-nav-close aria-label="关闭目录"')}</div><div class="pair-nav-list" data-pair-nav-list>${toc}</div></aside>
- </div></article>`;
+ <div class="pair-report" data-pair-doc>${body}</div></article>`;
 }
 // v0.75.0：第二人允许两种来源——案例库里的案例，或一次性输入的生辰（s.otherInline）。
 // 后者自带 birth 对象，直接送进接口，不用再走 normalized()。
@@ -761,60 +759,67 @@ function calculatePair(ctx,s,other){
  s.other=other.id;s.result=null;s.error='';
  load(ctx,'synastry',s,'/api/synastry/chart',{a:ctx.birth,b:pairBirth(ctx,other),mode:s.mode||'synastry'});
 }
+// v0.83.0：合盘类型统一元数据——选择器与盘面块共用，避免平铺四种盘导致页面过长。
+// 时空盘（davison）此前不在顶部标签列，现并入选择器，与「双人合盘功能」面板的 7 种一致。
+const PAIR_MODES={
+ 'cross-a':{label:'交盘A',icon:'◈',desc:'当前案例本命星叠入第二人宫位，看其星体触发第二人的生活领域'},
+ 'cross-b':{label:'交盘B',icon:'◈',desc:'第二人本命星叠入当前案例宫位，看其星体触发当前案例的生活领域'},
+ 'synastry':{label:'比较盘',icon:'♒',desc:'两人本命星位同框，跨盘相位看彼此互动'},
+ 'composite':{label:'组合盘',icon:'⊕',desc:'两人星位取中点，看关系本身的共同主题'},
+ 'mars-a':{label:'马盘A',icon:'↗',desc:'以当前案例上升锚定对方心理盘，看对方心理层面如何呈现'},
+ 'mars-b':{label:'马盘B',icon:'↗',desc:'以第二人上升锚定对方心理盘，看对方心理层面如何呈现'},
+ 'davison':{label:'时空盘',icon:'⌖',desc:'出生时刻/地点取中点，看关系的时间与地点'}
+};
+const PAIR_MODE_ORDER=['cross-a','cross-b','synastry','composite','mars-a','mars-b','davison'];
 function synastry(ctx){
- const id='synastry',s=stateFor(ctx,id,{mode:'synastry',view:'star',aspects:{filter:'main',expanded:false},kootaDir:'forward',kootaOpen:false,reportOpen:true}),r=s.result;
- s.mode??='synastry';s.view??='star';s.aspects??={filter:'main',expanded:false};s.kootaDir??='forward';s.kootaOpen??=false;s.reportOpen??=true;
+ const id='synastry',s=stateFor(ctx,id,{mode:'synastry',view:'star',pickerOpen:false,aspects:{filter:'main',expanded:false},kootaDir:'forward',kootaOpen:false,reportOpen:true}),r=s.result;
+ s.mode??='synastry';s.view??='star';s.pickerOpen??=false;s.aspects??={filter:'main',expanded:false};s.kootaDir??='forward';s.kootaOpen??=false;s.reportOpen??=true;
  const self=ctx.state.profile;
  if(!self){ctx.root.innerHTML='<section><h1>双人合盘</h1><p class="empty">请先排出第一个人的本命盘，再来做合盘。</p></section>';return;}
  const cases=ctx.state.cases.filter(c=>c.id!==self.id);
  const other=cases.find(c=>c.id===s.other)||(s.otherInline?.birth?{...s.otherInline,id:s.otherInline.id||'inline'}:null);
  const nameA=self?.name||'当前案例',nameB=other?.name||'第二人';
- // 视角标签：交盘A/交盘B/比较盘/组合盘/马盘A/马盘B（v0.82.0 交盘与马盘双向均已补齐）
- // 注：davison 时空盘不在顶部标签列（由配置页「双人合盘功能」进入），但仍是可用视角。
- const VIEWS=[['cross-a','交盘A'],['cross-b','交盘B'],['synastry','比较盘'],['composite','组合盘'],['mars-a','马盘A'],['mars-b','马盘B']];
- const doneViews=new Set(['synastry','composite','davison','cross-a','cross-b','mars-a','mars-b']);
- // davison 时空盘不在顶部标签显示（用户选择时通过 URL 或状态切换），但在主 tab 切换时保留
- const viewTabs=VIEWS.map(([id,label])=>doneViews.has(id)
-  ? btn(label,`data-pair-mode="${id}" aria-pressed="${s.mode===id}"`)
-  : btn(label+' · 规划中',`data-pair-coming="${id}" class="pair-view-coming"`)).join('');
+ // v0.83.0：合盘类型统一用 PAIR_MODES 元数据（7 种，含时空盘），
+ // 顶部改为「点击展开合盘选择器」，底部 pair-mode-rail 一并收纳进选择器。
+ // 每种盘都渲染独立盘面 + 相位明细 + 口径说明，不再平铺四种盘。
  // 生辰合盘（八字详细对比）分区：综合对比表 + 四柱 + 五行 + 十神 + 解读。
  const baziViewHTML=r?`${pairBaziCompare(r,nameA,nameB)}
  ${r.baziMatch?.items?`<article class="card"><h2>八字合婚证据（非分数）</h2>${r.baziMatch.items.map(x=>`<p><b>${esc(x.name)}</b> · ${x.level==='support'?'助力':x.level==='challenge'?'需磨合':'中性'} · ${esc(x.text)}</p>`).join('')}<small>${esc(r.baziMatch.method)}</small></article>`:''}
  <article class="card"><h2>八字跨盘干支</h2>${table(['关系','干支','双方柱位'],r.crossRelations.map(x=>[x.type,x.pattern,x.pillars.join('／')]))}</article>`:'';
- const starViewHTML=r?`<div class="pair-section-grid">
-  <div class="pair-section-block" data-pair-block="synastry">
-   <header class="pair-section-head"><span class="pair-sec-badge">比较盘</span><h3>Synastry · 双人星盘对照</h3><small>两人本命星位同框，跨盘相位显示彼此互动</small></header>
-   ${s.mode==='synastry'&&r.western?.chart?`<article class="card liquid-glass"><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel({chart:r.western.chart,mode:'natal'})}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div>
-    <p class="thin">当前案例 ${esc(nameA)} · 本命盘（对照 ${esc(nameB)} 的星位）· 点行星看详细相位</p></article>`:''}
-   ${s.mode==='synastry'&&r.western?.interAspects?.length?`<article class="card"><h2>跨盘相位明细</h2>${aspectBrowser({outer:{planets:r.western.chart.planets},cross:r.western.interAspects,chart:{planets:r.western.chart.planets},mode:'synastry'},s.crossAspects||(s.crossAspects={filter:'main',expanded:false}))}</article>`:''}
-  </div>
-  <div class="pair-section-block" data-pair-block="composite">
-   <header class="pair-section-head"><span class="pair-sec-badge">组合盘</span><h3>Composite · 组合中点盘</h3><small>两人星位取中点，看关系本身的共同主题</small></header>
-   ${r.composite?`<article class="card liquid-glass"><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(r.composite)}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div><p class="thin">${esc(r.composite.method)}</p>${r.composite.ambiguity.map(x=>`<p>${esc(x)}</p>`).join('')}</article>
-   <article class="card pair-reading"><h2>关系本质 · 共同主题</h2>${r.composite.readings.map(x=>`<h3>${esc(x.title)}</h3><p>${esc(x.text)}</p>`).join('')}</article>
-   <article class="card"><h2>组合星体与位置</h2>${planetList(r.composite.chart.planets)}</article>
-   <article class="card"><h2>组合核心相位明细</h2>${aspectBrowser(r.composite,s.aspects)}</article>`:''}
-  </div>
-  <div class="pair-section-block" data-pair-block="davison">
-   <header class="pair-section-head"><span class="pair-sec-badge">时空盘</span><h3>Davison · 戴维森中点盘</h3><small>两人出生时刻/地点取中点，看关系的时间与地点</small></header>
-   ${s.mode==='davison'&&r.western?.chart?`<article class="card liquid-glass"><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel({chart:r.western.chart,mode:'natal'})}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div><p class="thin">取两人出生时刻的 UTC 中点，经纬度取平均，得到一段「关系本身的时间与地点」，以此排出中点盘。${esc(r.limitations||'')}</p></article>
-   <article class="card"><h2>中点星体与位置</h2>${planetList(r.western.chart.planets)}</article>
-   <article class="card"><h2>中点盘相位明细</h2>${aspectBrowser({chart:r.western.chart,mode:'davison'},s.davisonAspects||(s.davisonAspects={filter:'main',expanded:false}))}</article>`:''}
-  </div>
-  <div class="pair-section-block" data-pair-block="cross-mars">
-   ${(()=>{const CM={ 'cross-a':{badge:'交盘A',h3:'Cross A · 交盘（当前案例 → 第二人宫位）',small:'当前案例本命星叠入第二人宫位系统，看其星体触发第二人的生活领域'},
-     'cross-b':{badge:'交盘B',h3:'Cross B · 交盘（第二人 → 当前案例宫位）',small:'第二人本命星叠入当前案例宫位系统，看其星体触发当前案例的生活领域'},
-     'mars-a':{badge:'马盘A',h3:'Mars A · 马盘（以当前案例上升锚定）',small:'把第二人盘行星整体平移，使第二人上升点与当前案例上升点重合，看对方心理层面如何呈现'},
-     'mars-b':{badge:'马盘B',h3:'Mars B · 马盘（以第二人上升锚定）',small:'把当前案例盘行星整体平移，使当前案例上升点与第二人上升点重合，看对方心理层面如何呈现'}}[s.mode];
-    if(!CM)return '';
-    const chart=r.western?.chart;if(!chart)return '';
-    const crossAsp=s.mode.startsWith('cross')?s.crossViewAspects||(s.crossViewAspects={filter:'main',expanded:false}):s.marsAspects||(s.marsAspects={filter:'main',expanded:false});
-    return `<header class="pair-section-head"><span class="pair-sec-badge">${esc(CM.badge)}</span><h3>${esc(CM.h3)}</h3><small>${esc(CM.small)}</small></header>
-     <article class="card liquid-glass"><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel({chart,mode:'natal'})}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div><p class="thin">${esc(r.limitations||'')}· 点行星看详细相位</p></article>
-     <article class="card"><h2>${esc(CM.badge)}星体与位置</h2>${planetList(chart.planets)}</article>
-     <article class="card"><h2>${esc(CM.badge)}相位明细</h2>${aspectBrowser({chart,mode:s.mode},crossAsp)}</article>`;})()}
-  </div>
- </div>
+ // v0.83.0：星盘合盘不再平铺四种盘（比较盘/组合盘/时空盘/交盘马盘各占一大块，页面极长），
+ // 改为「点击展开合盘选择器 + 单一当前盘面」：选择器列出全部 7 种盘（含时空盘），
+ // 底部原 pair-mode-rail 切换栏一并收纳进选择器，只渲染当前选中盘的盘面/相位/口径。
+ const currentMode=PAIR_MODES[s.mode]?s.mode:'synastry';
+ const mMeta=PAIR_MODES[currentMode];
+ const currentChart=r?.western?.chart;
+ // 相位浏览器数据：比较盘用跨盘 interAspects；组合盘用 composite；其余用 chart.aspects。
+ const aspectState=currentMode==='synastry'?s.crossAspects||(s.crossAspects={filter:'main',expanded:false})
+  :currentMode==='composite'?s.aspects
+  :currentMode==='davison'?s.davisonAspects||(s.davisonAspects={filter:'main',expanded:false})
+  :currentMode.startsWith('cross')?s.crossViewAspects||(s.crossViewAspects={filter:'main',expanded:false})
+  :s.marsAspects||(s.marsAspects={filter:'main',expanded:false});
+ const aspectHTML=currentMode==='synastry'&&r?.western?.interAspects?.length
+  ?aspectBrowser({outer:{planets:currentChart.planets},cross:r.western.interAspects,chart:{planets:currentChart.planets},mode:'synastry'},aspectState)
+  :currentMode==='composite'&&r?.composite?aspectBrowser(r.composite,aspectState)
+  :currentChart?aspectBrowser({chart:currentChart,mode:currentMode},aspectState):'';
+ const pickerHTML=`<article class="card pair-mode-picker" data-pair-picker>
+  <button type="button" class="pair-picker-toggle" data-pair-picker-toggle aria-expanded="${s.pickerOpen?'true':'false'}" aria-controls="pairModeList">
+   <span class="pm-cur"><span class="pm-ico">${mMeta.icon}</span>${esc(mMeta.label)}</span>
+   <span class="pm-picker-hint">切换合盘类型<span class="pm-caret" aria-hidden="true">${s.pickerOpen?'▴':'▾'}</span></span></button>
+  <div class="pair-picker-list" id="pairModeList" role="listbox" aria-label="合盘类型" ${s.pickerOpen?'':'hidden'}>${PAIR_MODE_ORDER.map(id=>{const m=PAIR_MODES[id];
+   return `<button type="button" class="pair-picker-item" data-pair-mode="${id}" role="option" aria-selected="${s.mode===id}" aria-pressed="${s.mode===id}">
+    <span class="pm-ico">${m.icon}</span><b>${esc(m.label)}</b><small class="pair-tool-desc">${esc(m.desc)}</small></button>`;}).join('')}</div>
+  <p class="thin">当前：${esc(mMeta.desc)}</p></article>`;
+ const chartBlockHTML=`<div class="pair-section-block" data-pair-block="chart">
+   ${r?`<header class="pair-section-head"><span class="pair-sec-badge">${esc(mMeta.label)}</span><h3>${esc(mMeta.desc)}</h3></header>`:''}
+   ${currentChart?`<article class="card liquid-glass"><div class="wheel-stage">${btn('ASC 复位','class="asc-reset" data-asc-reset')}${wheel(currentMode==='composite'&&r?.composite?r.composite:{chart:currentChart,mode:'natal'})}<div class="wheel-focus-card" data-wheel-card role="status" hidden></div></div><p class="thin">${esc(r?.composite?.method||r?.limitations||'')}· 点行星看详细相位</p></article>`:''}
+   ${currentMode==='composite'&&r?.composite?`<article class="card pair-reading"><h2>关系本质 · 共同主题</h2>${r.composite.readings.map(x=>`<h3>${esc(x.title)}</h3><p>${esc(x.text)}</p>`).join('')}</article>
+    ${r.composite.ambiguity?.map(x=>`<p>${esc(x)}</p>`).join('')||''}<article class="card"><h2>组合星体与位置</h2>${planetList(r.composite.chart.planets)}</article>`:''}
+   ${currentMode!=='composite'&&currentChart?`<article class="card"><h2>${esc(mMeta.label)}星体与位置</h2>${planetList(currentChart.planets)}</article>`:''}
+   ${aspectHTML?`<article class="card"><h2>${esc(mMeta.label)}相位明细</h2>${aspectHTML}</article>`:''}
+  </div>`;
+ // v0.83.0：选择器始终渲染（未选第二人时也可见），盘面/卡片只在有结果后出现。
+ const starViewHTML=`${pickerHTML}${r?`${chartBlockHTML}
  <article class="card"><h2>契合度 ${r.fit.percent}%</h2>${r.fit.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')}<small>印度八项合盘双向平均；此分数不代表组合盘评分 · 传统参考</small></article>
  ${r.mangal?.ok?`<article class="card"><h2>火星煞 · Mangal Dosh</h2>${r.mangal.level==='calm'?'<p class="calm">双方火星均未落 1/4/7/8/12 宫，无火星煞之象。</p>':'<p>'+esc(r.mangal.a.text)+'</p><p>'+esc(r.mangal.b.text)+'</p>'}<p>${esc(r.mangal.text)}</p><small>${esc(r.mangal.method)}</small></article>`:''}
  ${r.ziweiMatch?.ok?`<article class="card"><h2>紫微合盘 · 命宫与夫妻宫互参</h2>${ziweiTwinWheel(r.ziweiMatch,nameB)}${r.ziweiMatch.items.map(x=>`<p><b>${esc(x.name)}</b> · ${esc(x.text)}</p>`).join('')}<small>${esc(r.ziweiMatch.method)}</small></article>`:''}
@@ -826,17 +831,17 @@ function synastry(ctx){
  ${s.kootaOpen?table(['项目','得分','依据'],rows.map(x=>[({varna:'Varna',vashya:'Vashya',tara:'Tara',yoni:'Yoni',maitri:'Graha Maitri',gana:'Gana',bhakoot:'Bhakoot',nadi:'Nadi'}[x.key])+' '+x.zh,x.score+'/'+x.max,x.note])):(rows.length?`<div class="stack">${rows.map(x=>`<p><b>${({varna:'Varna',vashya:'Vashya',tara:'Tara',yoni:'Yoni',maitri:'Graha Maitri',gana:'Gana',bhakoot:'Bhakoot',nadi:'Nadi'}[x.key])} ${esc(x.zh)}</b> · ${x.score}/${x.max} · ${esc(x.note)}</p>`).join('')}</div>`:'<p>八科相对均衡，无明显偏低项。</p>')}
  ${low>0&&!s.kootaOpen?btn('展开全部 '+kt.items.length+' 科（含 '+low+' 科偏低）▾','data-koota-toggle'):''}${s.kootaOpen?btn('收起 ▴','data-koota-toggle'):''}
  <p>${esc(kt.guidance||'各项分数相对均衡，仍需重视双方的实际需求。')}</p><small>${esc(r.vedic.koota.note)}</small></article>`;})():''}
- ${pairReportCard(r,s.reportOpen)}`:(r?`<article class="card"><h2>契合度 ${r.fit.percent}%</h2>${r.fit.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')}<small>印度八项合盘双向平均；此分数不代表组合盘评分 · 传统参考</small></article>
- <article class="card"><h2>八字跨盘干支</h2>${table(['关系','干支','双方柱位'],r.crossRelations.map(x=>[x.type,x.pattern,x.pillars.join('／')]))}</article>`:'');
+ ${pairReportCard(r,s.reportOpen)}`:''}`;
  ctx.root.innerHTML=`<section><div class="spread"><h1>双人合盘</h1>${btn(other?'更换第二人':'选择第二人','data-select-other')}</div>
  <p>${esc(nameA)} × ${esc(nameB)}</p><p data-extra-status role="status">${esc(s.error)}</p>
  <div class="pair-main-tabs" role="tablist" aria-label="合盘分区">${btn('星盘合盘',`data-pair-view="star" role="tab" aria-selected="${s.view!=='bazi'}"`)}${btn('生辰合盘',`data-pair-view="bazi" role="tab" aria-selected="${s.view==='bazi'}"`)}</div>
- ${s.view==='bazi'?baziViewHTML:starViewHTML}
- ${s.view!=='bazi'?`<div class="pair-mode-rail pair-mode-rail-lg" aria-label="双人合盘视角">${viewTabs}</div>`:''}</section>`;
- for(const b of ctx.root.querySelectorAll('[data-pair-mode]'))b.onclick=()=>{if(s.mode===b.dataset.pairMode)return;s.mode=b.dataset.pairMode;s.result=null;s.aspects={filter:'main',expanded:false};s.focus=null;s.rotation=0;if(other)calculatePair(ctx,s,other);synastry(ctx);};
+ ${s.view==='bazi'?baziViewHTML:starViewHTML}</section>`;
+ // v0.83.0：合盘选择器展开/收起；点选项切换盘面（并收起列表，避免遮挡下方盘面）。
+ const pickerToggle=$('[data-pair-picker-toggle]',ctx.root);
+ if(pickerToggle)pickerToggle.onclick=()=>{s.pickerOpen=!s.pickerOpen;synastry(ctx);};
+ for(const b of ctx.root.querySelectorAll('[data-pair-mode]'))b.onclick=()=>{if(s.mode===b.dataset.pairMode)return;s.mode=b.dataset.pairMode;s.pickerOpen=false;s.result=null;s.aspects={filter:'main',expanded:false};s.focus=null;s.rotation=0;if(other)calculatePair(ctx,s,other);synastry(ctx);};
  // v0.81.0：主 tab 星盘/生辰合盘切换；规划中视角给出说明而非静默。
  for(const b of ctx.root.querySelectorAll('[data-pair-view]'))b.onclick=()=>{if(s.view===b.dataset.pairView)return;s.view=b.dataset.pairView;synastry(ctx);};
- for(const b of ctx.root.querySelectorAll('[data-pair-coming]'))b.onclick=()=>{ctx.sheet('termSheet',b.textContent.replace(' · 规划中',''),'<p class="thin">该视角需要独立的交盘/马盘算法，本版本先完成比较盘、组合盘、时空盘的完整相位；交盘与马盘将作为后续版本追加，敬请期待。</p>');};
  const expand=$('[data-pair-expand]',ctx.root);if(expand)expand.onclick=()=>{s.showPairAspects=!s.showPairAspects;synastry(ctx);};
  const kootaToggle=$('[data-koota-toggle]',ctx.root);if(kootaToggle)kootaToggle.onclick=()=>{s.kootaOpen=!s.kootaOpen;synastry(ctx);};
  for(const b of ctx.root.querySelectorAll('[data-koota-dir]'))b.onclick=()=>{if(s.kootaDir===b.dataset.kootaDir)return;s.kootaDir=b.dataset.kootaDir;synastry(ctx);};
@@ -879,65 +884,51 @@ function synastry(ctx){
  }
  // v0.81.0：目录 scrollspy——滚动时实时高亮当前节（测测「跟随页面浏览」）。
  // 优先 IntersectionObserver；无该 API 的环境（如 jsdom 测试）降级为滚动事件按偏移量取当前节。
+ // v0.83.0：真实滚动容器是 #mainScrollView（不是 ctx.root/#screen），scrollspy 与吸顶都基于它，
+ // 否则目录高亮不随滚动更新、吸顶不生效（实测 tocTop 会滚出视口）。
+ const scrollHost=document.getElementById('mainScrollView')||ctx.root;
  const rptSections=[...ctx.root.querySelectorAll('.pair-rpt-sec')];
  if(rptSections.length){
   const markActive=k=>{for(const it of ctx.root.querySelectorAll('[data-pair-toc]'))it.classList.toggle('on',it.dataset.pairToc===k);};
-  const top=()=>ctx.root.scrollTop;
+  const top=()=>scrollHost.scrollTop;
   const byScroll=()=>{
-   const cur=top();let active=rptSections[0].dataset.pairSec;
-   for(const sec of rptSections){if(sec.offsetTop-ctx.root.offsetTop-90<=cur)active=sec.dataset.pairSec;}
+   const hostTop=scrollHost.getBoundingClientRect().top;let active=rptSections[0].dataset.pairSec;
+   for(const sec of rptSections){if(sec.getBoundingClientRect().top-hostTop<=90)active=sec.dataset.pairSec;}
    markActive(active);
   };
   if(typeof IntersectionObserver==='function'){
-   const seen=new Set();
    const io=new IntersectionObserver(entries=>{
     for(const e of entries){
      if(!e.isIntersecting)continue;
-     const k=e.target.dataset.pairSec;if(!k||seen.has(k))continue;seen.add(k);markActive(k);
+     const k=e.target.dataset.pairSec;if(!k)continue;markActive(k);
     }
-   },{root:ctx.root,rootMargin:'-10% 0px -70% 0px',threshold:0});
+   },{root:scrollHost,rootMargin:'-10% 0px -70% 0px',threshold:0});
    for(const sec of rptSections)io.observe(sec);
   }
-  ctx.root.addEventListener('scroll',()=>{
+  scrollHost.addEventListener('scroll',()=>{
    const last=rptSections[rptSections.length-1];
    if(typeof IntersectionObserver!=='function')byScroll();
-   else if(last&&top()+ctx.root.clientHeight>=ctx.root.scrollHeight-8)markActive(last.dataset.pairSec);
+   else if(last&&top()+scrollHost.clientHeight>=scrollHost.scrollHeight-8)markActive(last.dataset.pairSec);
   },{passive:true});
   if(s.reportOpen){if(typeof IntersectionObserver!=='function')byScroll();else markActive(rptSections[0].dataset.pairSec);}
  }
- // v0.80.0：合婚报告右下角悬浮目录（需求3）——滚动任意位置可唤出，点击跳转对应节。
- const navFab=ctx.root.querySelector('[data-pair-nav-fab]');
- const setPairNav=on=>{
-  navFab?.classList.toggle('rpt-nav-open',on);
-  const fabBtn=ctx.root.querySelector('[data-pair-nav]');
-  if(fabBtn)fabBtn.setAttribute('aria-expanded',String(on));
-  const drawer=ctx.root.querySelector('[data-pair-nav-drawer]');
-  if(drawer)drawer.setAttribute('aria-hidden',String(!on));
- };
- ctx.root.querySelector('[data-pair-nav]')?.addEventListener('click',()=>setPairNav(!navFab?.classList.contains('rpt-nav-open')));
- ctx.root.querySelector('[data-pair-nav-close]')?.addEventListener('click',()=>setPairNav(false));
- ctx.root.querySelector('[data-pair-nav-scrim]')?.addEventListener('click',()=>setPairNav(false));
- // 目录抽屉内的条目：点击跳转并关闭抽屉（条目带 data-pair-toc，与顶部目录共用跳转逻辑）
- for(const item of ctx.root.querySelectorAll('[data-pair-nav-drawer] [data-pair-toc]')){
-  item.onclick=()=>{
-   const k=item.dataset.pairToc;
-   setPairNav(false);
-   if(!s.reportOpen){s.reportOpen=true;synastry(ctx);}
-   const sec=ctx.root.querySelector('[data-pair-sec="'+k+'"]');
-   if(sec)setTimeout(()=>sec.scrollIntoView({behavior:'smooth',block:'start'}),40);
+ // v0.83.0：合婚报告目录改页面顶部横向胶囊条——常驻可见、随滚动 scrollspy 高亮当前节、点击即跳转。
+ // 右下角悬浮 FAB / 抽屉 / 滚动百分比按钮已移除（对应 DOM 不再渲染），绑定一并删除。
+ // 顶部胶囊条内条目点击跳转对应节：复用上方 [data-pair-toc] 统一跳转绑定（line 880-887），此处不再重复绑定。
+ // 顶部目录条吸顶：滚动到报告区时固定在可视顶部，不随页面滚走，保证"跟着页面移动实时点击"。
+ // 用 JS 在 #mainScrollView 滚动时判断（WebKit 下 position:sticky 相对 static 父级不可靠）。
+ const tocSticky=ctx.root.querySelector('[data-pair-toc-sticky]');
+ if(tocSticky){
+  const doc=ctx.root.querySelector('.pair-doc');
+  const setStuck=stuck=>tocSticky.classList.toggle('pair-toc-stuck',stuck);
+  const check=()=>{
+   if(!doc){setStuck(false);return;}
+   const dr=doc.getBoundingClientRect();
+   // 报告卡顶进入视口下方即吸顶；滚过报告卡底部即取消
+   setStuck(dr.top<=76&&dr.bottom>120);
   };
- }
- // 滚动进度：右下角悬浮按钮显示已读百分比
- const pairDoc=ctx.root.querySelector('[data-pair-doc]');
- const pairProg=ctx.root.querySelector('[data-rpt-progress]');
- if(pairDoc&&pairProg){
-  const onScroll=()=>{
-   const total=pairDoc.scrollHeight-ctx.root.clientHeight;
-   const p=total>0?Math.min(100,Math.round((ctx.root.scrollTop/total)*100)):0;
-   pairProg.textContent=p+'%';
-  };
-  ctx.root.addEventListener('scroll',onScroll,{passive:true});
-  onScroll();
+  scrollHost.addEventListener('scroll',check,{passive:true});
+  check();
  }
  // 合婚报告长图：复用排盘页同一套画布导出，把成文报告整段带上（默认 24 条会截断，这里放宽到 120 条）
  const expBtn=$('[data-pair-export]',ctx.root);
@@ -1024,7 +1015,7 @@ export function pairTools(ctx,host){
  for(const b of host.querySelectorAll('[data-pair-tool]'))b.onclick=()=>{
   if(s.mode===b.dataset.pairTool)return;
   // 对齐页面内 [data-pair-mode] 的切盘逻辑：清 result 后由 synastry() 触发重算（离线走本地引擎）
-  s.mode=b.dataset.pairTool;s.result=null;s.aspects={filter:'main',expanded:false};
+  s.mode=b.dataset.pairTool;s.result=null;s.aspects={filter:'main',expanded:false};s.focus=null;s.rotation=0;s.pickerOpen=false;
   ctx.close($('#toolSheet'));
   if(ctx.state.system!=='synastry'){ctx.switchTab('chart','synastry');return;}
   if(ctx.state.chartState.synastry)synastry(ctx);

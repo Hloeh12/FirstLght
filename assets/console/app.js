@@ -541,9 +541,9 @@ function caseDrawer(){
   ['天机排盘工坊',[['东方盘',['ziwei','bazi','qizheng']],['西洋盘',['west']],['印度盘',['vedic']]]],
   ['推运时空',[['西洋推运',['transit','secondary','tertiary','solar','lunar','firdaria']],['每日时空',['calendar']]]],
   ['易经古籍',[['卦象与经典',['yijing']]]],
-  // v0.75.0：关系星系不再套「双向案例」中间层——展开即见「关系图谱 / 双人合盘」，
-  // 从展开到进入只用一次点击（原来是 展开 → 双向案例 → 按钮，三层）。
-  ['关系星系',['galaxy','synastry']],
+  // v0.83.0：关系星系分区只保留「双人合盘」入口——「关系图谱」无实质意义已移除，
+  // 其功能仍可从案例详情「查看关系星系」进入（见 v0.78.0 注释）。
+  ['关系星系',['synastry']],
  ].map(([title,sections])=>{
   const labelOf=id=>labels[id]||{transit:'行运',secondary:'次限',tertiary:'三限',solar:'日返',lunar:'月返',firdaria:'法达',galaxy:'关系图谱',synastry:'双人合盘'}[id]||id;
   const grid=items=>`<div class="tool-grid">${items.map(id=>btn(labelOf(id),`data-destination="${id}"`)).join('')}</div>`;

@@ -41,8 +41,10 @@ test('印度占星分盘改两行网格，不再横滚截断',()=>{
 
 test('紫微盘面收敛，给下方时点控件留空间',()=>{
  const css=read('assets/console/liquid.css');
- assert.match(css,/\.zi-board\{height:clamp\(400px,49svh,500px\)!important/,
-  '盘面高度收敛且不用字级压缩（避免辅星叠字）');
+ // v0.83.0：盘面改内容自适应 + 最小高度，消除高视口下固定高度拉伸出的内部死白；
+ // 同时放大宫名字号提升清晰度（宫格文字实测无溢出，可安全放大）。
+ assert.match(css,/\.zi-board\{height:auto!important;min-height:clamp\(400px,49svh,500px\)!important/,
+  '盘面内容自适应 + 最小高度收敛，避免辅星叠字与固定高度拉伸');
 });
 
 test('顶部重排：功能按钮缩为 chip，时间说明收紧',()=>{

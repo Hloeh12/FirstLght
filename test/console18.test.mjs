@@ -52,8 +52,9 @@ test('offline global cases, compact aspects, Vedic, composite and instant sky fo
  click('#caseDrawerButton');click('[data-destination=west]');await until(()=>$('#westernChart'),'western');assert(all('.aspect-detail').length<=12);
  click('[data-aspect-filter=all]');assert(all('.aspect-detail').length>12);click('[data-aspect-toggle]');assert(all('.aspect-detail').length<=12);
  click('[data-aspect-filter=applying]');assert(all('.aspect-detail').every(x=>x.dataset.applying==='true'));
- click('#caseDrawerButton');click('[data-destination=synastry]');click('[data-select-other]');click('[data-other=family]');await until(()=>$('.pair-mode-rail')&&$('#screen').textContent.includes('契合度'),'pair');
- click('[data-pair-mode=composite]');await until(()=>$('.pair-reading'),'composite');assert($('#westernChart'));assert($('#westernChart').textContent.includes('上升 ASC'));assert($('#westernChart').textContent.includes('天顶 MC'));assert(all('.aspect-detail').length<=12);
+ click('#caseDrawerButton');click('[data-destination=synastry]');click('[data-select-other]');click('[data-other=family]');await until(()=>$('.pair-mode-picker')&&$('#screen').textContent.includes('契合度'),'pair');
+ // v0.83.0：合盘类型收进「点击展开选择器」（.pair-mode-picker），切换前先展开列表
+ click('[data-pair-picker-toggle]');click('[data-pair-mode=composite]');await until(()=>$('.pair-reading'),'composite');assert($('#westernChart'));assert($('#westernChart').textContent.includes('上升 ASC'));assert($('#westernChart').textContent.includes('天顶 MC'));assert(all('.aspect-detail').length<=12);
  const before=w.localStorage.getItem('xy_active_profile');
  for(const [system,selector] of [['bazi','.bazi-board'],['ziwei','.zi-board'],['vedic','#vedic'],['west','#westernChart']]){
   click('#caseDrawerButton');click('[data-destination='+system+']');await until(()=>$(selector),'before instant '+system);

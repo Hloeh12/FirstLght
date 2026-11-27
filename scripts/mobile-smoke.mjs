@@ -367,7 +367,8 @@ try{
   await page.locator('[data-tab=chart]').click();await page.getByRole('button',{name:'快捷案例',exact:true}).click();await page.locator('summary').filter({hasText:'关系星系'}).click();await page.locator('[data-destination=synastry]').click();
   await page.locator('[data-select-other]').click();await page.locator('[data-other]').first().click();
   await page.getByText(/契合度 \d+%/).first().waitFor();
-  await page.locator('[data-pair-mode=composite]').click();await page.locator('.pair-reading').waitFor();assert.equal(await page.locator('#westernChart').count(),1);
+  await page.locator('[data-pair-picker-toggle]').click();await page.locator('.pair-picker-item[data-pair-mode=composite]').waitFor({state:'visible',timeout:10000});
+  await page.locator('.pair-picker-item[data-pair-mode=composite]').click();await page.locator('.pair-reading').waitFor();assert.equal(await page.locator('#westernChart').count(),1);
   await page.screenshot({path:'build/mobile-'+engine+'-composite-'+width+'.png'});await shareSnapshot('composite');
   await useSystem('west','西洋盘');const active=await page.evaluate(()=>localStorage.getItem('xy_active_profile'));await page.locator('#instantTop').click();
   await page.locator('[data-mode=sky][aria-pressed=true]').waitFor();await page.locator('#westernChart').waitFor();

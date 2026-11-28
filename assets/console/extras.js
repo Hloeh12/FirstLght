@@ -978,13 +978,34 @@ function synastry(ctx){
   else if(r?.western?.chart)bindChart(r.western.chart,r.western.chart.aspects);
  }
  $('[data-select-other]',ctx.root).onclick=()=>{
-  const d=ctx.sheet('toolSheet','选择第二人',`<div class="stack">${cases.map(c=>btn(c.name,`data-other="${esc(c.id)}"`)).join('')||'<p class="muted">案例库里还没有第二个人，直接用下面的「输入生辰」即可。</p>'}</div>
+  // v0.85.0：把「选择第二人」升级为完整案例库选择器——搜索 + 分组筛选 + 案例卡片（摘要 chips）。
+  // 关键约束：每个候选必须带 data-other="<id>"（mobile-smoke 用 [data-other]、console18 用 [data-other=family]），
+  // 因此把整张卡片作为可点目标并保留 data-other，而不是改回扁平按钮。
+  const stdGroups=['我的','亲人','朋友','特别关注'];
+  const groupOf=c=>c.category==='客户'?'特别关注':c.category||'我的';
+  const norm=s=>String(s??'').normalize('NFKC').toLowerCase().replace(/(\d)[年月日时分]/g,'$1').replace(/[\s/.:\-]/g,'');
+  const d=ctx.sheet('toolSheet','选择第二人',`
+  <div class="case-search"><label><input class="liquid-glass" type="search" data-pair-q placeholder="搜索姓名、生辰、城市或标签" aria-label="搜索案例"></label></div>
+  <div class="rail pair-picker-groups" aria-label="案例分组">${['全部',...stdGroups,...(ctx.state.groups||[])].map(g=>`<button type="button" data-pair-group="${esc(g)}" aria-pressed="${g==='全部'?'true':'false'}">${esc(g)}</button>`).join('')}</div>
+  <div class="stack" data-pair-list></div>
   <div class="tool-grid">${btn('＋ 直接输入生辰','class="primary" data-other-inline')}</div>
-  <p class="thin">输入的生辰只用于这次合盘，不会写进案例库；之后想复用可以再存成案例。</p>`);
-  for(const b of d.querySelectorAll('[data-other]'))b.onclick=()=>{
-   const p=cases.find(c=>c.id===b.dataset.other);
-   ctx.close(d);calculatePair(ctx,s,p);
+  <p class="thin">从案例库选一个作为第二人，或直接输入生辰；输入的生辰只用于这次合盘，不会写进案例库，之后想复用可以再存成案例。</p>`);
+  const list=$('[data-pair-list]',d),qInput=$('[data-pair-q]',d);
+  let q='',group='全部';
+  const chipRow=c=>{const f=c.fields||{},s=c.summary||{};return [['八字',s.pillars||c.pillarSummary],['日元',s.day],['紫微',s.ziwei],['星座',s.signs]].filter(([,v])=>v).map(([k,v])=>`<span class="chip">${k} · ${esc(v)}</span>`).join('');};
+  const paint=()=>{
+   const qk=norm(q);
+   const shown=cases.filter(c=>{
+    const g=groupOf(c);
+    return (group==='全部'||g===group)&&(!qk||[...(c.tags||[]),...Object.values(c.summary||{}),c.name,c.fields?.dateStr,c.fields?.timeStr,c.fields?.city?.label,[c.fields?.Y,c.fields?.M,c.fields?.D].filter(Boolean).join('-')].some(v=>norm(v).includes(qk)));
+   });
+   list.innerHTML=shown.map(c=>{const f=c.fields||{},s=c.summary||{};const dates=[s.solar?'公历 '+s.solar:f.dateStr,s.lunar?'农历 '+s.lunar:null].filter(Boolean).join(' · ');
+    return `<article class="case-card card liquid-glass" data-other="${esc(c.id)}" tabindex="0" aria-label="选择 ${esc(c.name)} 为第二人"><div><h3><span class="case-group-badge">${esc(groupOf(c))}</span> ${esc(c.name)} <small>${f.gender==='男'?'♂':'♀'}</small></h3><p>${esc(dates)} ${esc(f.timeUnknown?'时辰未知':f.timeStr||'')} · ${esc(f.city?.label||'手动坐标')}</p></div><div class="case-foot"><div class="chips">${chipRow(c)}</div><span class="chip">选为第二人</span></div></article>`;}).join('')||'<p class="muted">没有匹配的第二人。</p>';
+   for(const card of list.querySelectorAll('[data-other]'))card.onclick=()=>{const p=cases.find(c=>c.id===card.dataset.other);ctx.close(d);calculatePair(ctx,s,p);};
   };
+  qInput.oninput=()=>{q=qInput.value;paint();};
+  for(const g of d.querySelectorAll('[data-pair-group]'))g.onclick=()=>{group=g.dataset.pairGroup;for(const x of d.querySelectorAll('[data-pair-group]'))x.setAttribute('aria-pressed',String(x===g));paint();};
+  paint();
   // 合盘不该强迫用户先回案例页建人：这里直接开一张生辰表单，算完就回传。
   $('[data-other-inline]',d).onclick=()=>{
    ctx.close(d);

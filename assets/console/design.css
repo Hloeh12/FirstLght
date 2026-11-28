@@ -2427,6 +2427,15 @@ body.dark .pc-lbl.pc-on{fill:#ff8ab8}
 .pair-rail-chips .chip{flex:none;font-size:11px;padding:3px 9px;border-radius:999px;background:#fdeef5;color:#8d2f5c;border:1px solid #f3d3e2}
 body.dark .pair-rail-chips .chip{background:rgba(255,138,184,.12);color:#ffc3dc;border-color:rgba(255,138,184,.28)}
 .pair-table-scroll{overflow-x:auto}
+/* v0.85.0 合盘「选择第二人」升级为案例库选择器：分组栏 + 案例卡片 */
+.pair-picker-groups{margin:8px 0;max-width:100%}
+.pair-picker-groups button[aria-pressed=true]{background:#ff4f8b;color:#fff;border-color:#ff4f8b}
+.toolSheet .case-search{margin-bottom:8px}
+.toolSheet [data-pair-list]{max-height:46vh;overflow-y:auto}
+.toolSheet [data-pair-list] .case-card{margin-bottom:10px}
+.toolSheet [data-pair-list] .case-card h3{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.toolSheet [data-pair-list] .case-card .chips{gap:5px;flex-wrap:wrap;margin-top:2px}
+body.dark .pair-picker-groups button[aria-pressed=true]{background:#ff4f8b;color:#fff}
 .pair-doc .pair-report h3{margin:14px 0 4px;font-size:13.5px;color:#8d2f5c}
 .pair-doc .pair-report p{margin:4px 0;font-size:12.5px;line-height:1.72}
 body.dark .pair-doc .pair-report h3{color:#ffa8cb}

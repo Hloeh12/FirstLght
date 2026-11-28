@@ -19,6 +19,33 @@ export function northIndianChart(data){
 const SIGN_LORD=['火星','金星','水星','月亮','太阳','水星','金星','火星','木星','土星','土星','木星'];
 const SIGN_LIST=['白羊座','金牛座','双子座','巨蟹座','狮子座','处女座','天秤座','天蝎座','射手座','摩羯座','水瓶座','双鱼座'];
 const HOUSE_THEME={1:'自我与身体',2:'资源与表达',3:'行动与技能',4:'家宅与根基',5:'创造与子女',6:'竞争与服务',7:'关系与合作',8:'变动与共有资源',9:'信念与远行',10:'事业与公开身份',11:'收益与社群',12:'隐私与消耗'};
+// v0.92.0 Gochara 行运联动：用所选时刻的行运盘（atChart）九曜落宫，对照本命 D1 看「行运X触发本命第N宫」。
+// 守口径：只描述结构位置（行运星此刻落本命哪一宫、该宫主题），与大运主星本命宫联动一句，不给吉凶断言与分数。
+function gocharaCard(base,selected,lord,aspects){
+ const transit=base?.atChart;
+ if(!transit||!transit.planets?.length)return '';
+ const natal=base.planets||[];
+ const transitByKey=Object.fromEntries(transit.planets.map(p=>[p.key,p]));
+ const rows=natal.map(n=>{
+  const t=transitByKey[n.key];
+  if(!t)return null;
+  // 行运行星落本命宫：行运盘的 house 以行运上升为基准，但对照本命时用行运星座找本命宫（本命宫由星座决定，与上升无关的宫位制需换算）。
+  // 整宫制：本命第 H 宫 = 本命上升起第 H 宫，星座固定。行运星落本命第 H 宫 ⇔ 行运星座 = 本命第 H 宫星座。
+  const natalHouse=natal.find(x=>x.key===n.key)?.house??null;
+  const signHouse=transit.signIndex!=null?(transit.signIndex-base.lagnaIndex+12)%12+1:null;
+  return {name:n.name,key:n.key,natalHouse,transitSign:t.sign,tHouse:transit.house,signHouse,retro:t.retro};
+ }).filter(Boolean);
+ const dashaHouse=lord?.house??null;
+ const lines=rows.map(r=>{
+  const link=(r.natalHouse&&dashaHouse&&r.natalHouse===dashaHouse)?' · 正触大运主星本命宫':'';
+  const retro=r.retro?'（逆行）':'';
+  return `<li><b>${esc(r.name)}</b>${retro}：行运落本命第${r.signHouse??'—'}宫（${HOUSE_THEME[r.signHouse]||'宫位待定'}）${link}</li>`;
+ }).join('');
+ return `<article class="card liquid-glass" data-vedic-gochara><h2>Gochara 行运联动 · ${esc(localDisplayTime(transit.utc||base.at))}</h2>
+ <p class="thin">以下为所选时刻行运盘九曜落宫（对照本命整宫制），与大运主星<strong>${esc(selected?.lord||'—')}</strong>本命宫联动看触发主题；只描述结构位置，不给吉凶断言。</p>
+ <ul class="vr-lines">${lines||'<li class="muted">行运盘数据不可用。</li>'}</ul>
+ <p class="thin muted">行运上升 ${esc(transit.lagna||'—')} · ${esc(transit.method||'')}</p></article>`;
+}
 function vargaReading(base,n){
  const v=divisional(base,n),lordName=SIGN_LORD[SIGN_LIST.indexOf(v.lagna)]||'—';
  const lord=v.planets.find(p=>p.name===lordName)||null;
@@ -114,7 +141,7 @@ export function vedicView(ctx){
  ${levels.map((items,depth)=>`<p class="thin">${['Maha 主运','Antar 副运','Pratyantar 细运','Sookshma 微运'][depth]}</p><div class="vedic-dasha">${items.map(p=>btn(p.lord,`data-dasha="${p.index}" data-depth="${depth}" aria-pressed="${chosen[depth].index===p.index}" title="${esc(p.start+' → '+p.end)}"`)).join('')}</div>`).join('')}
  <p>四级执政：${chosen.map(p=>esc(p.lord)).join(' → ')} · 照拂宫位 ${aspects.join('、')}（传统照宫规则）</p>
  <div data-dasha-detail aria-live="polite"><h3>${esc(selected.lord)}大运${selected.active?' · 当前':''}</h3><p>${esc(localDisplayTime(selected.start))} 至 ${esc(localDisplayTime(selected.end))}（本地）</p><p>此阶段可结合${term(selected.lord+'所在第'+d.planets.find(p=>p.name===selected.lord)?.house+'宫',selected.lord+'是此段大运主星，传统上将其本命所在宫位作为阶段观察主题。大运不等于事件保证。')}与当下行运观察。</p></div>
- <small>顺序：${esc(d.sequence.join(' → '))}；从月亮出生星宿的宿主起排。</small></article><section class="period-result"><article class="card liquid-glass period-guidance" data-period-guidance data-vedic-period-report><h3>当前 Dasha 专属时空分析</h3><p><b>选择阶段：</b>${esc(chosen.map(x=>x.lord).join(' → '))} · ${esc(localDisplayTime(selected.start))} 至 ${esc(localDisplayTime(selected.end))}</p><p><b>主星落点：</b>${esc(selected.lord)}在 D${s.n} 第 ${lord?.house||'—'} 宫，${esc(lord?.sign||'星座待考')}，${esc(lord?.nakshatra||'星宿数据待考')}；本命可核对${lord?.house?`第 ${lord.house} 宫所主主题`:'宫位待定位'}。</p><p><b>阶段主轴：</b>以该宫主题为观察范围，再核对副运、细运、微运是否共同触及同一宫主或星宿主；没有重复指向时不叠加判断。</p><p><b>照宫：</b>${esc(aspects.join('、')||'无可用照宫数据')}宫；回到盘面核对其宫主和落星。</p><p><b>分盘参照：</b>D${s.n} ${esc(VARGAS[s.n]||'专项分盘')}，仅回答对应专项问题；D1 本命是前提。</p></article><div data-period-resonance></div></section>
+ <small>顺序：${esc(d.sequence.join(' → '))}；从月亮出生星宿的宿主起排。</small></article><section class="period-result"><article class="card liquid-glass period-guidance" data-period-guidance data-vedic-period-report><h3>当前 Dasha 专属时空分析</h3><p><b>选择阶段：</b>${esc(chosen.map(x=>x.lord).join(' → '))} · ${esc(localDisplayTime(selected.start))} 至 ${esc(localDisplayTime(selected.end))}</p><p><b>主星落点：</b>${esc(selected.lord)}在 D${s.n} 第 ${lord?.house||'—'} 宫，${esc(lord?.sign||'星座待考')}，${esc(lord?.nakshatra||'星宿数据待考')}；本命可核对${lord?.house?`第 ${lord.house} 宫所主主题`:'宫位待定位'}。</p><p><b>阶段主轴：</b>以该宫主题为观察范围，再核对副运、细运、微运是否共同触及同一宫主或星宿主；没有重复指向时不叠加判断。</p><p><b>照宫：</b>${esc(aspects.join('、')||'无可用照宫数据')}宫；回到盘面核对其宫主和落星。</p><p><b>分盘参照：</b>D${s.n} ${esc(VARGAS[s.n]||'专项分盘')}，仅回答对应专项问题；D1 本命是前提。</p></article><div data-period-resonance></div>${gocharaCard(base,selected,lord,aspects)}</section>
  <p class="thin">${esc(d.method)}</p></section>`;
  for(const b of ctx.root.querySelectorAll('[data-varga]'))b.onclick=()=>{s.n=+b.dataset.varga;vedicView(ctx);ctx.onSelectTimeNode('vedic');};
  $('[data-varga-select]',ctx.root).onchange=e=>{s.n=+e.target.value;vedicView(ctx);ctx.onSelectTimeNode('vedic');};
@@ -140,12 +167,12 @@ export function southIndianChart(d,natal=d){
 
 export function vedicTools(ctx,host){
  const s=ctx.state.chartState.vedic??={data:ctx.state.reading.vedic,n:1,layout:'north',path:[]};
- const actions=[['分盘切换 D1–D60','varga'],['大运时序 · 四级','dasha'],['Yogini 八女神运','yogini'],['星宿全览 · 27宿/Pada','nakshatra'],['行星状态 · 燃烧/交战','states'],['力量审计 · Shadbala','shadbala'],['宫位力量 · Bhava','bhava'],['八分点 · Ashtakavarga','ashtakavarga'],['岁运 · Varshaphala','varsha']];
+ const actions=[['分盘切换 D1–D60','varga'],['大运时序 · 四级','dasha'],['Gochara 行运联动','gochara'],['Yogini 八女神运','yogini'],['星宿全览 · 27宿/Pada','nakshatra'],['行星状态 · 燃烧/交战','states'],['力量审计 · Shadbala','shadbala'],['宫位力量 · Bhava','bhava'],['八分点 · Ashtakavarga','ashtakavarga'],['岁运 · Varshaphala','varsha']];
  host.innerHTML=`<div class="tool-grid vedic-tools">${actions.map(([name,id])=>btn(name,`data-vedic-action="${id}"`)).join('')}</div><p class="thin">当前 D${s.n||1} · ${s.layout==='south'?'南印方格':'北印菱形'}。只在印度占星页显示本菜单。</p>`;
  for(const b of host.querySelectorAll('[data-vedic-action]'))b.onclick=()=>{
   const id=b.dataset.vedicAction;
   ctx.close(document.querySelector('#toolSheet'));
-  const target={varga:'[data-varga-select]',dasha:'.vedic-period',yogini:'[data-vedic-yogini]',nakshatra:'[data-vedic-nakshatra]',states:'[data-vedic-states]',shadbala:'[data-vedic-shadbala]',bhava:'[data-vedic-bhava]',ashtakavarga:'[data-vedic-ashtakavarga]',varsha:'[data-vedic-varsha]'}[id];
+  const target={varga:'[data-varga-select]',dasha:'.vedic-period',gochara:'[data-vedic-gochara]',yogini:'[data-vedic-yogini]',nakshatra:'[data-vedic-nakshatra]',states:'[data-vedic-states]',shadbala:'[data-vedic-shadbala]',bhava:'[data-vedic-bhava]',ashtakavarga:'[data-vedic-ashtakavarga]',varsha:'[data-vedic-varsha]'}[id];
   // 这些区块是 #vedic 的兄弟节点（位于 section.vedic-rest 内），不能在 #vedic 内查找，否则永远匹配不到。
   (ctx.root.querySelector(target)||document.querySelector(target))?.scrollIntoView({behavior:'smooth',block:'start'});
  };

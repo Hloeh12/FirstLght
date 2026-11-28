@@ -553,6 +553,9 @@ body.dark .bzc-param,body.dark .bpc-pillar,body.dark .bpc-god,body.dark .bzt-nam
 .vr-cell{padding:9px 10px;border-radius:13px;background:linear-gradient(150deg,rgba(255,255,255,.86),rgba(255,243,248,.55));border:1px solid rgba(255,255,255,.8);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
 .vr-cell .k{display:block;font-size:10px;letter-spacing:.06em;color:rgba(90,44,66,.55);margin-bottom:3px}
 .vr-cell b{font-size:11.5px;font-weight:650;color:#4a2130;line-height:1.35;word-break:break-word}
+/* v0.92.0 Gochara 行运联动 */
+.vr-lines{list-style:none;margin:6px 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.vr-lines li{font-size:12px;line-height:1.6;padding:5px 8px;border-radius:9px;background:rgba(255,255,255,.55);border:1px solid rgba(255,182,206,.22)}
 .vr-line{margin:0 0 8px;font-size:11.5px;line-height:1.62;color:#5c2a3d}
 .vr-line b{color:#8a2c50;font-weight:700}
 .vr-title{margin:14px 0 7px!important}

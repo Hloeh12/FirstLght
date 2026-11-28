@@ -794,6 +794,14 @@ const PAIR_MODE_ORDER=['cross-a','cross-b','synastry','composite','mars-a','mars
 function compatCard(c){
  const dims=c.dims||{},labels={bazi:'八字',ziwei:'紫微',vedic:'印度八科',west:'西占'};
  const order=['bazi','ziwei','vedic','west'];
+ // v0.90.0：权重可调——默认取后端 weights，存 localStorage，拖动滑块实时重算总分。
+ // 总分 = Σ(维度得分 × 权重) / Σ权重；各维度分数与雷达图不变（那是体系自身证据），只有总分随口径加权。
+ const DEFAULT_W=c.weights||{bazi:.30,ziwei:.25,vedic:.30,west:.15};
+ const KEY='xy_compat_weights';
+ let w=DEFAULT_W;
+ try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&order.every(k=>Number.isFinite(saved[k])))w=order.reduce((o,k)=>(o[k]=Math.max(0,Number(saved[k])),o),{});}catch{}
+ const sum=order.reduce((t,k)=>t+w[k],0)||1;
+ const totalOf=ww=>Math.round(order.reduce((t,k)=>t+(dims[k]?.score??0)*(ww[k]??0),0)/(order.reduce((t,k)=>t+(ww[k]??0),0)||1));
  const cx=120,cy=105,R=78;
  const pt=(i,r)=>{const a=-Math.PI/2+i*2*Math.PI/order.length;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];};
  const poly=(r)=>order.map((_,i)=>pt(i,r).join(',')).join(' ');
@@ -802,9 +810,11 @@ function compatCard(c){
  const spokes=order.map((_,i)=>{const [x,y]=pt(i,R);return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(24,14,20,.12)"/>`;}).join('');
  const labelsHTML=order.map((k,i)=>{const [x,y]=pt(i,R+16);return `<text x="${x}" y="${y}" text-anchor="middle" font-size="10" fill="rgba(74,67,71,.8)">${labels[k]}</text>`;}).join('');
  const rows=order.map(k=>`<div class="compat-row"><span class="compat-lbl">${labels[k]}</span><span class="compat-val">${dims[k]?.score??'—'}</span><span class="compat-note">${esc(dims[k]?.label||'')}</span></div>`).join('');
- return `<article class="card compat-card"><h2>合婚量化 · 四维加权 <b class="compat-total">${c.total??'—'}</b><small>/100</small></h2>
+ const sliders=order.map(k=>`<label class="compat-w"><span>${labels[k]}</span><input type="range" min="0" max="100" step="5" value="${Math.round((w[k]??0)*100)}" data-compat-w="${k}" aria-label="${labels[k]}权重"><span class="compat-w-pct" data-compat-w-pct="${k}">${Math.round((w[k]??0)*100)}%</span></label>`).join('');
+ return `<article class="card compat-card"><h2>合婚量化 · 四维加权 <b class="compat-total">${totalOf(w)}</b><small>/100</small></h2>
  <div class="compat-flex"><svg class="compat-radar" viewBox="0 0 240 226" role="img" aria-label="四维合婚评分雷达图">${[78,52,26].map(r=>`<polygon points="${poly(r)}" fill="none" stroke="rgba(24,14,20,.10)"/>`).join('')}${spokes}<polygon points="${poly(78)}" fill="rgba(255,79,139,.04)" stroke="rgba(255,79,139,.25)"/><polygon points="${scorePoly}" fill="rgba(255,79,139,.18)" stroke="#ff4f8b" stroke-width="1.6"/>${dots}${labelsHTML}</svg>
  <div class="compat-rows">${rows}</div></div>
+ <details class="compat-w-details"><summary>权重可调 · 点击展开</summary><div class="compat-w-list" data-compat-ws>${sliders}</div><button type="button" class="compat-w-reset" data-compat-w-reset>恢复默认</button></details>
  <small>${esc(c.method||'')}</small></article>`;
 }
 function synastry(ctx){
@@ -882,6 +892,25 @@ function synastry(ctx){
  const expand=$('[data-pair-expand]',ctx.root);if(expand)expand.onclick=()=>{s.showPairAspects=!s.showPairAspects;synastry(ctx);};
  const kootaToggle=$('[data-koota-toggle]',ctx.root);if(kootaToggle)kootaToggle.onclick=()=>{s.kootaOpen=!s.kootaOpen;synastry(ctx);};
  for(const b of ctx.root.querySelectorAll('[data-koota-dir]'))b.onclick=()=>{if(s.kootaDir===b.dataset.kootaDir)return;s.kootaDir=b.dataset.kootaDir;synastry(ctx);};
+ // v0.90.0：合婚量化权重可调——拖动滑块实时重算总分并持久化；恢复默认清空存储。
+ const compatWs=ctx.root.querySelector('[data-compat-ws]');
+ if(compatWs){
+  const order=['bazi','ziwei','vedic','west'],WKEY='xy_compat_weights';
+  const totalEl=ctx.root.querySelector('.compat-total');
+  const apply=()=>{
+   let w={};
+   for(const k of order){const s=compatWs.querySelector(`[data-compat-w="${k}"]`);if(s)w[k]=Number(s.value)/100;}
+   const dims=r?.compat?.dims||{};
+   const denom=order.reduce((t,k)=>t+(w[k]||0),0)||1;
+   const total=Math.round(order.reduce((t,k)=>t+(dims[k]?.score??0)*(w[k]||0),0)/denom);
+   if(totalEl)totalEl.textContent=total;
+   for(const k of order){const p=compatWs.querySelector(`[data-compat-w-pct="${k}"]`);if(p)p.textContent=Math.round((w[k]||0)*100)+'%';}
+   try{localStorage.setItem(WKEY,JSON.stringify(w));}catch{}
+  };
+  for(const s of compatWs.querySelectorAll('[data-compat-w]'))s.oninput=apply;
+  const reset=ctx.root.querySelector('[data-compat-w-reset]');
+  if(reset)reset.onclick=()=>{for(const s of compatWs.querySelectorAll('[data-compat-w]')){s.value=Math.round((r?.compat?.weights?.[s.dataset.compatW]??0)*100);}try{localStorage.removeItem(WKEY);}catch{}apply();};
+ }
  // 关系周期：点任一月切换下方细则（默认落在最高分月）。
  // 每次切换都会整段重渲染，DOM 一换焦点就掉回 body，所以切换后要把焦点放回该月；
  // 另给 ←/→ 逐月移动，键鼠混用不必重新 Tab 一遍。

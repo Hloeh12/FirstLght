@@ -25,10 +25,16 @@ function vargaReading(base,n){
  const occupied=new Set(v.planets.map(p=>p.house));
  return {n,label:VARGAS[n]||('D'+n),lagna:v.lagna,lordName,lordHouse:lord?.house??null,lordSign:lord?.sign??null,empty:12-occupied.size,planets:v.planets.length};
 }
+// v0.90.0 A 项：各经典分盘的专项主题（BPHS 所列看盘重点）。只描述结构位置，不给吉凶断言。
+const VARGA_THEME={
+ 2:'看财富与积累',3:'看兄妹与勇气',4:'看不动产与家宅',7:'看子女与创造',9:'看婚姻与灵魂成熟度',
+ 10:'看事业与公开身份',12:'看父母与长辈缘分',16:'看享乐与生活品质',20:'看灵修与内在修为',24:'看学业与才能',
+ 27:'看总体潜能',30:'看灾厄与课题',60:'看因果与终身脉络'
+};
 function vargaSentence(r){
- if(!r.lordHouse)return `D${r.n} ${r.label}：上升${short(r.lagna)}，命主${r.lordName}不在本次计算的七曜范围内，只保留宫位映射，不给强弱结论。`;
- const same=r.n===1?'':'';
- return `D${r.n} ${r.label}：上升${short(r.lagna)}，命主${r.lordName}落第${r.lordHouse}宫（${HOUSE_THEME[r.lordHouse]}），十二宫中${r.empty}宫无星。${same}`;
+ if(!r.lordHouse)return `D${r.n} ${r.label}：上升${short(r.lagna)}，命主${r.lordName}不在本次计算的七曜范围内，只保留宫位映射，不给强弱结论。${VARGA_THEME[r.n]?r.label+'专项看'+VARGA_THEME[r.n]+'。':''}`;
+ const focus=VARGA_THEME[r.n];
+ return `D${r.n} ${r.label}：命主${r.lordName}落第${r.lordHouse}宫（${HOUSE_THEME[r.lordHouse]}）${focus?'——'+focus+'看此宫所主之事':''}；十二宫中${r.empty}宫无星。`;
 }
 function vedicOverview(base,d,chosen){
  const moon=base.planets.find(p=>p.name==='月亮');
@@ -37,7 +43,7 @@ function vedicOverview(base,d,chosen){
  const counts=Array.from({length:12},(_,i)=>d.planets.filter(p=>p.house===i+1));
  const empty=counts.map((c,i)=>c.length?null:i+1).filter(Boolean);
  const pile=counts.map((c,i)=>[c,i+1]).filter(([c])=>c.length>=2).map(([c,h])=>`第${h}宫 ${c.map(p=>p.name).join('、')}`);
- const vargas=[1,9,10,7,60].map(n=>vargaReading(base,n));
+ const vargas=[1,2,3,4,7,9,10,12,16,20,24,27,30,60].map(n=>vargaReading(base,n));
  const d9=vargas[1];
  return `<article class="card liquid-glass vedic-overview" data-vedic-overview>
  <div class="card-head"><h2>整体印占分析</h2><span class="chip">D1 本命 · ${esc(d.lagna)}</span></div>

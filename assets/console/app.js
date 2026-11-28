@@ -33,7 +33,7 @@ import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES,baziMoment,baziSelOf,bazi
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup,recomputeFit} from './case-space.js';
-import {planBook,mergePlanBook} from './plan-book.js';
+import {planBook,mergePlanBook,removeDecisionsFor} from './plan-book.js';
 import {getFavorites,getHistory,getHistoryEntry,deleteHistory,toggleFavorite,isFavorite,recordHistory,favoritesHtml,historyHtml,compareHtml} from './library.js';
 
 installDiagnostics();
@@ -256,6 +256,8 @@ function confirmDelete(c){
   delete data.notes[c.id];
   for(const reminder of data.reminders[c.id]||[])window.webkit?.messageHandlers?.caseReminder?.postMessage({id:reminder.id,cancel:true});
   delete data.reminders[c.id];save('xy_case_space',data);
+  // v0.87.0：方案存档（xy_plan_book）里指向该案例的记录一并清理，否则方案页会列出已删案例的死数据。
+  removeDecisionsFor(c.id);
   if(state.profile?.id===c.id){profileMachine.clear();generation++;flight?.abort();state.profile=null;state.reading=null;state.error='';state.pending=false;}
   persist();close(d);render();
  };

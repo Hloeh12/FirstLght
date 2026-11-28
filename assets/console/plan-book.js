@@ -54,6 +54,16 @@ export function removeDecision(id){
  save(KEY,{decisions:list});
  return list.length;
 }
+// v0.87.0：删除案例时清理其全部方案存档（定为方案 A/B/C 的记录）。
+// 此前 confirmDelete 只清了 links/notes/reminders，xy_plan_book 里残留指向已删案例的死数据，
+// 回看方案存档页会列出不存在案例的方案。返回清理条数。
+export function removeDecisionsFor(caseId){
+ if(!caseId)return 0;
+ const list=read();
+ const kept=list.filter(x=>x.caseId!==caseId);
+ if(kept.length!==list.length)save(KEY,{decisions:kept});
+ return list.length-kept.length;
+}
 
 // v0.86.0：方案存档随案例备份迁移。此前导出 JSON 只含案例/分组/关系/提醒，方案存档整块缺失，
 // 换机或换系统导入后所有「定为方案 A/B/C」的记录全丢，而它们正是「当时为什么选这天」的原始证据。

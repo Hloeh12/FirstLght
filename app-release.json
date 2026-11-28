@@ -1,8 +1,18 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.86.0",
-  "build": 204,
+  "version": "0.87.0",
+  "build": 205,
   "releases": [
+    {
+      "version": "0.87.0",
+      "build": 205,
+      "revision": "local",
+      "at": "2026-11-28T10:48:00Z",
+      "items": [
+        "删除案例时清理方案存档：confirmDelete 此前只清了关系/札记/提醒，xy_plan_book 里残留指向已删案例的方案记录，回看方案页会列出不存在案例的死数据；现新增 removeDecisionsFor(caseId) 一并清理，孤儿方案彻底归零。",
+        "补全案例库与择日/时点专项的数据联动闭环：案例删除即连带清理其全部「定为方案 A/B/C」记录，与 0.86.0 的备份迁移、0.75 的不写案例库语义形成完整链路。"
+      ]
+    },
     {
       "version": "0.86.0",
       "build": 204,

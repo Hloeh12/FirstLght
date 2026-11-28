@@ -1,11 +1,11 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.87.0",
-  "build": 205,
+  "version": "0.88.0",
+  "build": 206,
   "releases": [
     {
-      "version": "0.87.0",
-      "build": 205,
+      "version": "0.88.0",
+      "build": 206,
       "revision": "local",
       "at": "2026-11-28T10:48:00Z",
       "items": [

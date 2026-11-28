@@ -3,6 +3,7 @@ import {aspectBrowser,bindAspectBrowser} from './aspects.js';
 import {bindWheel} from './wheel-gesture.js';
 import {$,btn,esc,term,table,isoLocal} from './ui.js';
 import {shareChart} from './share.js';
+import {exportHtmlDocument} from './report-export.js';
 import {EVENTS as CAL_EVENT_META} from '../../src/almanac.mjs';
 import {qiGuaByTime} from '../../src/liuyao.mjs';
 import {naming} from './extras-naming.js';
@@ -618,6 +619,23 @@ function pairKeyStarsCard(k){
  ${rest.length?`<details><summary>含单端的其余 ${rest.length} 条相位</summary><div class="stack">${rest.map(line).join('')}</div></details>`:''}
  <small>${esc(k.method)}</small></article>`;
 }
+// v0.88.0：把 pair report DOM 片段包成自包含 HTML 文档（基础打印样式），
+// 供 exportHtmlDocument 通道导出。与长图互补：文字版可搜索/复制/跨设备打开。
+const PAIR_DOC_CSS=`
+body{font:15px/1.65 -apple-system,"PingFang SC","Segoe UI",sans-serif;max-width:680px;margin:0 auto;padding:24px 18px;color:#1c171a;background:#faf8fb}
+h3{font-size:.95rem;font-weight:700;margin:16px 0 4px;color:#4a3e45}
+p{line-height:1.72;font-size:.92rem;color:#4a3e45;margin:4px 0}
+small{color:#8c7d86;font-size:11px;display:block;margin-top:4px}
+.pair-rpt-sec{margin-bottom:10px;border-bottom:1px solid rgba(255,182,206,.2);padding-bottom:8px}
+b{font-weight:700}
+`;
+function pairDocToHtml(title,innerHtml){
+ const escT=title.replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ return '<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="utf-8">'
+  +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+  +'<title>'+escT+'</title><style>'+PAIR_DOC_CSS+'</style></head><body>'
+  +'<main><h3>'+escT+'</h3>'+innerHtml+'</main></body></html>';
+}
 function pairReportCard(r,sel){
  const sec=r?.report?.sections;if(!sec)return '';
  const keys=PAIR_SEC_ORDER.filter(k=>sec[k]?.length);
@@ -632,7 +650,7 @@ function pairReportCard(r,sel){
  const body=collapsed?keys.slice(0,1).map(k=>`<section class="pair-rpt-sec" data-pair-sec="${esc(k)}"><h3>${esc(PAIR_SEC_TITLE[k]||k)}</h3>${sec[k].map(t=>`<p>${esc(t)}</p>`).join('')}</section>`).join('')
   :keys.map(k=>`<section class="pair-rpt-sec" data-pair-sec="${esc(k)}"><h3>${esc(PAIR_SEC_TITLE[k]||k)}</h3>${sec[k].map(t=>`<p>${esc(t)}</p>`).join('')}</section>`).join('');
  return `<nav class="pair-toc pair-toc-top" data-pair-toc-sticky aria-label="报告目录"><div class="pair-toc-list">${toc}</div></nav>
- <article class="card pair-doc"><div class="spread"><h2>合婚报告 · 成文</h2><div class="pair-doc-actions">${btn(collapsed?'展开全文':'收起','data-pair-report-toggle')}${btn('导出长图','data-pair-export')}</div></div>
+ <article class="card pair-doc"><div class="spread"><h2>合婚报告 · 成文</h2><div class="pair-doc-actions">${btn(collapsed?'展开全文':'收起','data-pair-report-toggle')}${btn('导出文字版','data-pair-export-doc')}${btn('导出长图','data-pair-export')}</div></div>
  <p class="thin" data-pair-export-status role="status">${esc(r.report.notice||'')}</p>
  <div class="pair-report" data-pair-doc>${body}</div></article>`;
 }
@@ -963,6 +981,21 @@ function synastry(ctx){
    if(status)status.textContent='长图已生成。';
   }catch(error){if(status)status.textContent='导出失败：'+error.message;}
   finally{stage.remove();expBtn.disabled=false;}
+ };
+ // v0.88.0：合婚报告文字版导出（自包含 HTML，含基础样式）。与长图互补：
+ // 长图适合分享预览，文字版可搜索、可复制、可在其他设备打开。
+ const docBtn=$('[data-pair-export-doc]',ctx.root);
+ if(docBtn)docBtn.onclick=async()=>{
+  const doc=$('[data-pair-doc]',ctx.root),status=$('[data-pair-export-status]',ctx.root);
+  if(!doc)return;
+  docBtn.disabled=true;if(status)status.textContent='正在生成文字版…';
+  try{
+   const title=`合婚报告 · ${self?.name||'当前案例'} × ${other?.name||'第二人'}`;
+   const html=pairDocToHtml(title,doc.innerHTML);
+   const msg=await exportHtmlDocument(html,'FirstLight-pair.html');
+   if(status)status.textContent=msg||'文字版已生成。';
+  }catch(error){if(status)status.textContent='导出失败：'+error.message;}
+  finally{docBtn.disabled=false;}
  };
  // v0.80.0：三分区各自绑定相位明细浏览器（比较盘跨盘/组合盘/时空盘）
  if(r?.composite)bindAspectBrowser(ctx.root,r.composite,s.aspects);

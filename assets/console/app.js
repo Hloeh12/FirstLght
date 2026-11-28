@@ -34,6 +34,7 @@ import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup,recomputeFit} from './case-space.js';
 import {planBook,mergePlanBook,removeDecisionsFor} from './plan-book.js';
+import {encryptBackup,decryptBackup,isEncryptedBackup} from './backup-crypto.js';
 import {getFavorites,getHistory,getHistoryEntry,deleteHistory,toggleFavorite,isFavorite,recordHistory,favoritesHtml,historyHtml,compareHtml} from './library.js';
 
 installDiagnostics();
@@ -1594,12 +1595,45 @@ function preferences(){
  $('[data-diagnostics]',root).onclick=()=>diagnosticsPanel(ctx);
  $('[data-maintenance-cache]',root).onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{$('[data-maintenance-status]',root).textContent=await resetCaches();}catch(error){tell(error.message);}finally{b.disabled=false;}};
  $('[data-feedback]',root).onchange=e=>setFeedback(e.currentTarget.checked);
- $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:5,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace(),planBook:planBook()},null,2),'FirstLight-cases.json','application/json');
+ // v0.91.0：导出支持可选口令加密（Web Crypto AES-GCM，密钥不出设备）。
+ // 弹窗让用户选「加密备份（推荐）」或「不加密」，不加密走原明文逻辑。
+ $('[data-export]',root).onclick=()=>{
+  const d=sheet('toolSheet','导出案例备份',`<p>备份内含出生日期、姓名与关系。选加密后需口令才能导入，密钥由口令派生、仅在本机生成使用，不上传任何服务端。</p>
+  <div class="form-grid"><label>备份口令（加密用，可留空不加密）<input type="password" data-export-pass placeholder="留空 = 导出明文 JSON" autocomplete="new-password"></label></div>
+  <div class="confirm-actions">${btn('取消','data-cancel-export')}${btn('导出备份','class="primary" data-confirm-export')}</div>`);
+  $('[data-cancel-export]',d).onclick=()=>close(d);
+  $('[data-confirm-export]',d).onclick=async()=>{
+   const pass=$('[data-export-pass]',d).value;
+   const json=JSON.stringify({format:'firstlight-cases',version:5,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace(),planBook:planBook()},null,2);
+   close(d);
+   try{
+    if(pass){const enc=await encryptBackup(json,pass);download(enc,'FirstLight-cases.json','application/json');tell('已导出加密备份（需口令导入）。');}
+    else{download(json,'FirstLight-cases.json','application/json');tell('已导出明文备份（建议加密分享）。');}
+   }catch(error){tell('导出失败：'+error.message);}
+  };
+ };
  $('[data-import]',root).onclick=()=>$('#importBackup').click();
  $('#importBackup').onchange=async e=>{
+  const raw=e.target.files[0];
   try{
-   const file=e.target.files[0];if(!file||file.size>5000000)throw Error('备份文件过大或未选中');
-   const data=JSON.parse(await file.text());
+   if(!raw||raw.size>5000000)throw Error('备份文件过大或未选中');
+   const text=await raw.text();
+   // v0.91.0：识别加密备份，弹口令解密后再 merge。
+   let json=text;
+   if(isEncryptedBackup(text)){
+    json=await new Promise((resolve,reject)=>{
+     const d=sheet('toolSheet','导入加密备份',`<p>这份备份已用口令加密。输入同一口令解密后导入。</p>
+     <div class="form-grid"><label>备份口令<input type="password" data-import-pass autocomplete="current-password"></label></div>
+     <div class="confirm-actions">${btn('取消','data-cancel-import')}${btn('解密并导入','class="primary" data-confirm-import')}</div>`);
+     $('[data-cancel-import]',d).onclick=()=>{close(d);reject(Error('已取消导入'));};
+     $('[data-confirm-import]',d).onclick=async()=>{
+      const pass=$('[data-import-pass]',d).value;
+      try{const decrypted=await decryptBackup(text,pass);close(d);resolve(decrypted);}
+      catch(err){tell(err.message==='解密后数据格式无效'?err.message:'口令不正确或备份已损坏，无法解密。');}
+     };
+    });
+   }
+   const data=JSON.parse(json);
    const count=state.cases.length,previous=state.profile;
    const restored=mergeBackup(data,state,caseSpace());
    save(relationStorageKey,restored.space);

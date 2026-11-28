@@ -2465,6 +2465,16 @@ body.dark .pc-dot:focus-visible{stroke:#ffd7e8}
 
 /* v0.78.0 合婚报告：目录栏 + 按节展开，替代整段平铺 */
 .pair-doc-actions{display:flex;gap:6px;flex-wrap:wrap}
+/* v0.91.0 深报告顶部总评条：四维加权评分浓缩摘要 */
+.pair-compat-summary{border:1px solid rgba(255,182,206,.32);border-radius:14px;padding:10px 12px;margin:0 0 12px;background:rgba(255,223,237,.32)}
+.pair-compat-head{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap}
+.pair-compat-total{font-size:1.7em;font-weight:800;color:#ff4f8b;font-variant-numeric:tabular-nums;line-height:1}
+.pair-compat-unit{color:var(--muted);font-size:12px}
+.pair-compat-label{color:#a8285d;font-weight:700;margin-left:6px}
+.pair-compat-chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px}
+.pair-compat-chip{display:inline-flex;align-items:baseline;gap:4px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.7);border:1px solid rgba(255,182,206,.35);font-size:12px}
+.pair-compat-chip b{color:#a8285d;font-weight:700}
+.pair-compat-note{display:block;color:var(--muted);font-size:11px;line-height:1.5}
 .pair-toc{margin:4px 0 10px;padding:8px;border:1px solid #f3d3e2;border-radius:12px;background:#fffafb}
 body.dark .pair-toc{background:rgba(255,138,184,.07);border-color:rgba(255,138,184,.24)}
 .pair-toc-list{display:flex;flex-wrap:wrap;gap:6px}

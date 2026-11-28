@@ -652,7 +652,15 @@ function pairReportCard(r,sel){
  return `<nav class="pair-toc pair-toc-top" data-pair-toc-sticky aria-label="报告目录"><div class="pair-toc-list">${toc}</div></nav>
  <article class="card pair-doc"><div class="spread"><h2>合婚报告 · 成文</h2><div class="pair-doc-actions">${btn(collapsed?'展开全文':'收起','data-pair-report-toggle')}${btn('导出文字版','data-pair-export-doc')}${btn('导出长图','data-pair-export')}</div></div>
  <p class="thin" data-pair-export-status role="status">${esc(r.report.notice||'')}</p>
- <div class="pair-report" data-pair-doc>${body}</div></article>`;
+ <div class="pair-report" data-pair-doc>${r.compat?`<div class="pair-compat-summary" data-pair-compat>${compatSummary(r.compat)}</div>`:''}${body}</div></article>`;
+}
+// v0.91.0：深报告顶部总评条——把四维加权评分以摘要形式带进成文报告（含导出文字版/长图）。
+// 与星盘视图的 compatCard（雷达图+权重滑块）互补：这里给一行浓缩总评，导出时也带上。
+function compatSummary(c){
+ const dims=c.dims||{},labels={bazi:'八字',ziwei:'紫微',vedic:'印度八科',west:'西占'};
+ const order=['bazi','ziwei','vedic','west'];
+ const chips=order.map(k=>`<span class="pair-compat-chip"><b>${labels[k]}</b>${dims[k]?.score??'—'}</span>`).join('');
+ return `<div class="pair-compat-head"><b class="pair-compat-total">${c.total??'—'}</b><span class="pair-compat-unit">/100</span><span class="pair-compat-label">合婚量化 · 四维加权</span></div><div class="pair-compat-chips">${chips}</div><small class="pair-compat-note">${esc(c.method||'')}</small>`;
 }
 // v0.75.0：第二人允许两种来源——案例库里的案例，或一次性输入的生辰（s.otherInline）。
 // 后者自带 birth 对象，直接送进接口，不用再走 normalized()。

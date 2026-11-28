@@ -1,8 +1,17 @@
 {
   "name": "星谕 FirstLight",
-  "version": "0.92.0",
-  "build": 210,
+  "version": "0.93.0",
+  "build": 211,
   "releases": [
+    {
+      "version": "0.93.0",
+      "build": 211,
+      "revision": "local",
+      "at": "2026-11-28T15:03:00Z",
+      "items": [
+        "实测修复两处：①加密备份导入的口令弹窗若被 backdrop 点击或 ESC 关闭，解密 Promise 永不 settle，导致 file input 的 value 复位永不执行、下次选同一文件 onchange 不触发——加 close 事件兜底 reject（已 settle 后 reject 为 no-op，与既有关闭监听无冲突）；②印占工具菜单新增 Gochara 后 mobile-smoke 断言仍按 9 个动作计数，实测报 10≠9——更正为 10。"
+      ]
+    },
     {
       "version": "0.92.0",
       "build": 210,

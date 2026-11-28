@@ -1625,7 +1625,11 @@ function preferences(){
      const d=sheet('toolSheet','导入加密备份',`<p>这份备份已用口令加密。输入同一口令解密后导入。</p>
      <div class="form-grid"><label>备份口令<input type="password" data-import-pass autocomplete="current-password"></label></div>
      <div class="confirm-actions">${btn('取消','data-cancel-import')}${btn('解密并导入','class="primary" data-confirm-import')}</div>`);
-     $('[data-cancel-import]',d).onclick=()=>{close(d);reject(Error('已取消导入'));};
+     // v0.92.0：弹窗被 backdrop 点击或 ESC 关闭时也要 settle，否则 Promise 悬挂、
+     // finally 里的 input.value='' 永不执行，下次选同一文件 onchange 不再触发。
+     const abort=()=>{close(d);reject(Error('已取消导入'));};
+     d.addEventListener('close',()=>{try{reject(Error('已取消导入'));}catch{}});
+     $('[data-cancel-import]',d).onclick=abort;
      $('[data-confirm-import]',d).onclick=async()=>{
       const pass=$('[data-import-pass]',d).value;
       try{const decrypted=await decryptBackup(text,pass);close(d);resolve(decrypted);}

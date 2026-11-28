@@ -32,6 +32,10 @@ export function buildConsole(write = true) {
   outfile: 'js/console.js', bundle: true, platform: 'browser', format: 'iife',
   define:{__FIRSTLIGHT_COMMIT__:JSON.stringify(commit)},
   target: 'safari15', legalComments: 'inline', minify: true, plugins: [embeddedData], write,
+  // v0.89.0 体积优化：保留中文原始 UTF-8，不再转义成 \uXXXX。esbuild 默认 charset=ascii，
+  // 把每个汉字（UTF-8 3 字节）转成 \uXXXX（6 字节）——中国区划表等中文数据被多占一倍。
+  // 产物以 UTF-8 加载（index.html 已声明 charset=utf-8），safari15 起原生支持。
+  charset: 'utf8',
  });
 }
 

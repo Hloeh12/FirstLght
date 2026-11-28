@@ -771,6 +771,24 @@ const PAIR_MODES={
  'davison':{label:'时空盘',icon:'⌖',desc:'出生时刻/地点取中点，看关系的时间与地点'}
 };
 const PAIR_MODE_ORDER=['cross-a','cross-b','synastry','composite','mars-a','mars-b','davison'];
+// v0.86.0：合婚量化评分卡片。四维加权总分 + 分维度说明 + SVG 雷达图（四轴：八字/紫微/印度八科/西占）。
+// 雷达图用 0~100 归一化到多边形，中心 50 为中性参考线；维度明细分列各自得分与证据说明。
+function compatCard(c){
+ const dims=c.dims||{},labels={bazi:'八字',ziwei:'紫微',vedic:'印度八科',west:'西占'};
+ const order=['bazi','ziwei','vedic','west'];
+ const cx=120,cy=105,R=78;
+ const pt=(i,r)=>{const a=-Math.PI/2+i*2*Math.PI/order.length;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];};
+ const poly=(r)=>order.map((_,i)=>pt(i,r).join(',')).join(' ');
+ const scorePoly=order.map((k,i)=>pt(i,Math.max(6,Math.min(R,(dims[k]?.score??0)/100*R))).join(',')).join(' ');
+ const dots=order.map((k,i)=>{const [x,y]=pt(i,Math.max(6,Math.min(R,(dims[k]?.score??0)/100*R)));return `<circle cx="${x}" cy="${y}" r="3.2" fill="#ff4f8b"/>`;}).join('');
+ const spokes=order.map((_,i)=>{const [x,y]=pt(i,R);return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(24,14,20,.12)"/>`;}).join('');
+ const labelsHTML=order.map((k,i)=>{const [x,y]=pt(i,R+16);return `<text x="${x}" y="${y}" text-anchor="middle" font-size="10" fill="rgba(74,67,71,.8)">${labels[k]}</text>`;}).join('');
+ const rows=order.map(k=>`<div class="compat-row"><span class="compat-lbl">${labels[k]}</span><span class="compat-val">${dims[k]?.score??'—'}</span><span class="compat-note">${esc(dims[k]?.label||'')}</span></div>`).join('');
+ return `<article class="card compat-card"><h2>合婚量化 · 四维加权 <b class="compat-total">${c.total??'—'}</b><small>/100</small></h2>
+ <div class="compat-flex"><svg class="compat-radar" viewBox="0 0 240 226" role="img" aria-label="四维合婚评分雷达图">${[78,52,26].map(r=>`<polygon points="${poly(r)}" fill="none" stroke="rgba(24,14,20,.10)"/>`).join('')}${spokes}<polygon points="${poly(78)}" fill="rgba(255,79,139,.04)" stroke="rgba(255,79,139,.25)"/><polygon points="${scorePoly}" fill="rgba(255,79,139,.18)" stroke="#ff4f8b" stroke-width="1.6"/>${dots}${labelsHTML}</svg>
+ <div class="compat-rows">${rows}</div></div>
+ <small>${esc(c.method||'')}</small></article>`;
+}
 function synastry(ctx){
  const id='synastry',s=stateFor(ctx,id,{mode:'synastry',view:'star',pickerOpen:false,aspects:{filter:'main',expanded:false},kootaDir:'forward',kootaOpen:false,reportOpen:true}),r=s.result;
  s.mode??='synastry';s.view??='star';s.pickerOpen??=false;s.aspects??={filter:'main',expanded:false};s.kootaDir??='forward';s.kootaOpen??=false;s.reportOpen??=true;
@@ -821,6 +839,7 @@ function synastry(ctx){
  // v0.83.0：选择器始终渲染（未选第二人时也可见），盘面/卡片只在有结果后出现。
  const starViewHTML=`${pickerHTML}${r?`${chartBlockHTML}
  <article class="card"><h2>契合度 ${r.fit.percent}%</h2>${r.fit.insights.map(i=>`<p><b>${esc(i.name)}</b> · ${esc(i.text)}</p>`).join('')}<small>印度八项合盘双向平均；此分数不代表组合盘评分 · 传统参考</small></article>
+ ${r.compat?compatCard(r.compat):''}
  ${r.mangal?.ok?`<article class="card"><h2>火星煞 · Mangal Dosh</h2>${r.mangal.level==='calm'?'<p class="calm">双方火星均未落 1/4/7/8/12 宫，无火星煞之象。</p>':'<p>'+esc(r.mangal.a.text)+'</p><p>'+esc(r.mangal.b.text)+'</p>'}<p>${esc(r.mangal.text)}</p><small>${esc(r.mangal.method)}</small></article>`:''}
  ${r.ziweiMatch?.ok?`<article class="card"><h2>紫微合盘 · 命宫与夫妻宫互参</h2>${ziweiTwinWheel(r.ziweiMatch,nameB)}${r.ziweiMatch.items.map(x=>`<p><b>${esc(x.name)}</b> · ${esc(x.text)}</p>`).join('')}<small>${esc(r.ziweiMatch.method)}</small></article>`:''}
  ${pairSihuaCard(r.ziweiMatch,nameA,nameB)}

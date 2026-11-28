@@ -33,6 +33,7 @@ import {buildPeriodReport,SCOPES,NAMES as PERIOD_NAMES,baziMoment,baziSelOf,bazi
 import {DICTIONARY} from './dictionary-data.js';
 import {termCard} from './term-card.js';
 import {caseSpace,relationStorageKey,relationships,pairKey,linkedCases,galaxy,soulCard,mergeBackup,recomputeFit} from './case-space.js';
+import {planBook,mergePlanBook} from './plan-book.js';
 import {getFavorites,getHistory,getHistoryEntry,deleteHistory,toggleFavorite,isFavorite,recordHistory,favoritesHtml,historyHtml,compareHtml} from './library.js';
 
 installDiagnostics();
@@ -1591,7 +1592,7 @@ function preferences(){
  $('[data-diagnostics]',root).onclick=()=>diagnosticsPanel(ctx);
  $('[data-maintenance-cache]',root).onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{$('[data-maintenance-status]',root).textContent=await resetCaches();}catch(error){tell(error.message);}finally{b.disabled=false;}};
  $('[data-feedback]',root).onchange=e=>setFeedback(e.currentTarget.checked);
- $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:4,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace()},null,2),'FirstLight-cases.json','application/json');
+ $('[data-export]',root).onclick=()=>download(JSON.stringify({format:'firstlight-cases',version:5,cases:state.cases,activeId:state.profile?.id,groups:state.groups,recent:state.recent,space:caseSpace(),planBook:planBook()},null,2),'FirstLight-cases.json','application/json');
  $('[data-import]',root).onclick=()=>$('#importBackup').click();
  $('#importBackup').onchange=async e=>{
   try{
@@ -1602,13 +1603,15 @@ function preferences(){
    save(relationStorageKey,restored.space);
    save('xy:case-groups',restored.groups);
    Object.assign(state,{cases:restored.cases,profile:restored.profile,groups:restored.groups,recent:restored.recent});
+   // v0.86.0：方案存档随备份迁移——只保留指向已导入案例的记录，同键去重后落盘。
+   const book=mergePlanBook(data.planBook,restored.cases.map(c=>c.id));
    persist();
    for(const r of restored.newReminders){
     const seconds=(Date.parse(r.when)-Date.now())/1000;
     if(seconds>0&&!r.delivered)window.webkit?.messageHandlers?.caseReminder?.postMessage({id:r.id,seconds,message:r.message});
    }
    if(!previous&&restored.profile)activate(restored.profile,false);
-   tell('已导入 '+(state.cases.length-count)+' 个案例及可合并的资料');
+   tell('已导入 '+(state.cases.length-count)+' 个案例及可合并的资料'+(book.restored?'；恢复方案存档 '+book.restored+' 条':''));
   }catch(error){tell(error.message);}finally{e.target.value='';}
  };
 }

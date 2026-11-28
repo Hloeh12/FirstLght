@@ -2439,6 +2439,17 @@ body.dark .pair-picker-groups button[aria-pressed=true]{background:#ff4f8b;color
 .pair-doc .pair-report h3{margin:14px 0 4px;font-size:13.5px;color:#8d2f5c}
 .pair-doc .pair-report p{margin:4px 0;font-size:12.5px;line-height:1.72}
 body.dark .pair-doc .pair-report h3{color:#ffa8cb}
+/* v0.86.0 合婚量化评分卡片：四维加权总分 + 雷达图 + 维度明细 */
+.compat-total{font-size:1.6em;color:#ff4f8b;margin:0 2px 0 6px}
+.compat-total+small{color:var(--muted)}
+.compat-flex{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.compat-radar{flex:0 0 auto;width:min(220px,46%);max-width:240px}
+.compat-rows{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:6px}
+.compat-row{display:grid;grid-template-columns:52px 30px 1fr;gap:6px;align-items:baseline;font-size:12px}
+.compat-lbl{font-weight:600;color:rgba(74,67,71,.9)}
+.compat-val{font-weight:700;color:#c02a5f;font-variant-numeric:tabular-nums;text-align:right}
+.compat-note{color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+@media(max-width:430px){.compat-flex{flex-direction:column}.compat-radar{width:100%;max-width:none}}
 .export-stage{position:fixed;left:-9999px;top:0;width:720px;pointer-events:none;opacity:0}
 .pc-dot:focus{outline:none}
 .pc-dot:focus-visible{stroke-width:3;stroke:#8d2f5c}

@@ -54,3 +54,38 @@ export function removeDecision(id){
  save(KEY,{decisions:list});
  return list.length;
 }
+
+// v0.86.0：方案存档随案例备份迁移。此前导出 JSON 只含案例/分组/关系/提醒，方案存档整块缺失，
+// 换机或换系统导入后所有「定为方案 A/B/C」的记录全丢，而它们正是「当时为什么选这天」的原始证据。
+// 合并策略：同一 (caseId, event, date) 只留一条——新备份里 atUtc 更晚的覆盖旧记录（同一事项重定只换标签与快照）；
+// caseId 已不在案例库里的记录视为孤儿直接丢弃，否则导入后会留一堆指向不存在案例的死数据。
+const decisionKey=(caseId,event,date)=>caseId+'\u0000'+(event||'general')+'\u0000'+date;
+const isIso=value=>typeof value==='string'&&value;
+export function mergePlanBook(incoming,validIds){
+ const valid=new Set([...validIds].filter(id=>typeof id==='string'));
+ const byKey=new Map(read().map(x=>[decisionKey(x.caseId,x.event,x.date),x]));
+ let restored=0;
+ for(const x of Array.isArray(incoming)?incoming:[]){
+  if(!x||typeof x.id!=='string'||typeof x.caseId!=='string'||!valid.has(x.caseId)||!isDate(x.date))continue;
+  const item={
+   id:x.id,caseId:x.caseId,event:typeof x.event==='string'?x.event.slice(0,24):'general',
+   eventLabel:String(x.eventLabel||'择日').slice(0,24),plan:typeof x.plan==='string'?x.plan.slice(0,1):'A',date:x.date,
+   at:String(x.at||'').slice(0,32),atUtc:isIso(x.atUtc)?x.atUtc:'',
+   hourBranch:String(x.hourBranch||'').slice(0,2),clock:String(x.clock||'').slice(0,5),range:String(x.range||'').slice(0,10),
+   score:isNum(x.score)?x.score:null,tier:String(x.tier||'').slice(0,4),gz:String(x.gz||'').slice(0,4),raw:isNum(x.raw)?x.raw:null,
+   evidence:{
+    plus:(Array.isArray(x.evidence?.plus)?x.evidence.plus:[]).map(cleanItem).filter(Boolean),
+    minus:(Array.isArray(x.evidence?.minus)?x.evidence.minus:[]).map(cleanItem).filter(Boolean)
+   },
+   rivals:(Array.isArray(x.rivals)?x.rivals:[]).filter(r=>r&&isDate(r.date)).slice(0,3)
+    .map(r=>({date:r.date,score:isNum(r.score)?r.score:null,tier:String(r.tier||'').slice(0,4),gz:String(r.gz||'').slice(0,4)})),
+   method:String(x.method||'').slice(0,600),version:String(x.version||'')
+  };
+  const key=decisionKey(item.caseId,item.event,item.date),old=byKey.get(key);
+  // atUtc 为 ISO 串，字典序与时间序一致；两边都缺时保留已有记录。
+  if(!old||(old.atUtc&&item.atUtc&&item.atUtc>old.atUtc)){byKey.set(key,item);restored++;}
+ }
+ const merged=[...byKey.values()].slice(0,MAX);
+ save(KEY,{decisions:merged});
+ return {count:merged.length,restored};
+}

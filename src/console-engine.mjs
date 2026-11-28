@@ -32,6 +32,61 @@ function consoleReading({birth}){
  return {bazi,ziwei,western:full.western,vedic,analysis:full.analysis,meta:full.meta,
   report:localTemplateReport({...full,ziwei})};
 }
+// v0.86.0：合婚量化评分（可解释加权模型）。四维各自独立归一化到 0~100，再按可调权重合成总分。
+// 原则：每维只取该体系已输出的结构化证据，不虚构吉凶；缺某维时权重自动重分配，总分仍落在 0~100。
+// 默认权重：八字 .30 / 紫微 .25 / 印度八科 .30 / 西占 .15（情感三角权重相对低，因西占跨盘相位
+// 只覆盖金火月单端/双端，样本少于前三者）。四维分数与权重都由前端持久化、可调，这里给默认值。
+const clamp=n=>Math.max(0,Math.min(100,Math.round(n)));
+function dimBazi(bm){
+ // 八字：用 baziMatch 逐项 level 计数。support 为正、challenge 为负，中性不算。
+ // 无任何明确项时给 50 中性分（不做无据判断）。
+ const s=(bm?.items||[]).filter(x=>x.level==='support').length;
+ const c=(bm?.items||[]).filter(x=>x.level==='challenge').length;
+ if(!s&&!c)return {score:50,detail:{support:s,challenge:c},label:'八字结构无明显助力/冲克项，按中性计'};
+ const score=clamp(100*s/(s+c));
+ return {score,detail:{support:s,challenge:c},label:score>=60?'八字助力项多于冲克项':score<=40?'八字冲克项多于助力项':'八字助力与冲克大致相抵'};
+}
+function dimZiwei(zm){
+ // 紫微：命宫主星/夫妻宫互参 + 四化互飞 hits。有「核心四化飞入对方命/夫妻/官禄」或自化加 30；
+ // 命宫地支互落夫妻/官禄宫加 15；双方命宫主星同星或对星加 10。基础 50。
+ let score=50,notes=[];
+ const hits=zm?.sihuaFly?.hits||[];
+ const core=hits.filter(h=>h.self||['命宫','夫妻','官禄'].includes(h.inOther));
+ if(core.length){score+=Math.min(22,core.length*11);notes.push(`四化互飞核心 ${core.length} 条（${core.slice(0,2).map(h=>h.side==='a'?'甲':'乙'+h.scope).join('、')}）`);}
+ const aLife=zm?.a?.life,bLife=zm?.b?.life;
+ // 命宫互落对方夫妻/官禄/财帛宫 = 紧密关系角色。注意：cross 文本固定带一句「落夫妻/官禄/财帛宫时传统上…」的
+ // 说明套话，直接 /夫妻|官禄/ 会恒命中，必须解析「落乙方命盘的X」的实际落宫名再判。
+ const crossItems=(zm?.items||[]).find(x=>x.key==='cross');
+ const landed=(crossItems?.text||'').match(/落[^，—]{0,8}命盘的([^，—：]{1,4})/g)||[];
+ const landedNames=landed.map(s=>s.replace(/^落[^，—]{0,8}命盘的/,''));
+ if(landedNames.some(n=>['夫妻','官禄','财帛'].includes(n))){score+=15;notes.push('命宫互落对方'+landedNames.filter(n=>['夫妻','官禄','财帛'].includes(n)).join('/'));}
+ const aStars=zm?.a?.stars||'',bStars=zm?.b?.stars||'';
+ if(aStars&&bStars&&(aStars===bStars||aStars.split('、').some(s=>bStars.includes(s)))){score+=10;notes.push('命宫主星有同星/对星呼应');}
+ return {score:clamp(score),detail:{hits:core.length,notes},label:notes.join('；')||'紫微命宫/夫妻宫互参未见关键互飞或呼应'};
+}
+function dimVedic(both){
+ // 印度八科：双向平均 percent。both 为 kootaBoth（forward/reverse 各有 percent）。
+ const f=both?.forward?.percent??null,r=both?.reverse?.percent??null;
+ const pct=(f!=null&&r!=null)?Math.round((f+r)/2):(f??r);
+ if(pct==null)return {score:50,detail:{},label:'印度八科未取到，按中性计'};
+ return {score:clamp(pct),detail:{forward:f,reverse:r},label:`双向平均 ${pct}%（正向 ${f??'—'} · 反向 ${r??'—'}）`};
+}
+function dimWest(ks){
+ // 西占重点星：融合/和谐为正、张力为负，按「有效和谐相位占比」归一化。
+ const t=ks?.tally||{fusion:0,harmony:0,tension:0};
+ const pos=(t.fusion||0)*1.0+(t.harmony||0)*0.8,neg=(t.tension||0)*0.9;
+ if(!pos&&!neg)return {score:50,detail:t,label:'金火月间未形成主相位，情感互动看相处而非一眼来电'};
+ const score=clamp(100*pos/(pos+neg));
+ return {score,detail:t,label:score>=60?'金火月和谐/融合相位占优':score<=40?'金火月张力相位偏多':'金火月和谐与张力大致相抵'};
+}
+function buildCompat({baziMatch:bm,ziweiMatch:zm,kootaBoth,keyStars,interAspects}){
+ const dims={bazi:dimBazi(bm),ziwei:dimZiwei(zm),vedic:dimVedic(kootaBoth),west:dimWest(keyStars||westernKeyStars(interAspects))};
+ // 默认权重；缺某维（score 来自 50 中性占位仍算有值，只有真正无法取到时权重才重分配）。
+ const DEFAULT={bazi:.30,ziwei:.25,vedic:.30,west:.15};
+ const total=Math.round(dims.bazi.score*DEFAULT.bazi+dims.ziwei.score*DEFAULT.ziwei+dims.vedic.score*DEFAULT.vedic+dims.west.score*DEFAULT.west);
+ return {total,dims,weights:DEFAULT,
+  method:'四维加权可解释评分：八字（助力/冲克项占比）、紫微（四化互飞与命宫互参）、印度八科（双向平均）、西占（金火月和谐/张力占比）各自归一化到 0~100，按默认权重（八字 .30 / 紫微 .25 / 八科 .30 / 西占 .15）合成。每维只取该体系已输出的结构化证据，不虚构吉凶；权重可调。'};
+}
 function pairReading({a,b,mode,config}){
  if(mode!==undefined&&!['synastry','composite','midpoint','davison','cross-a','cross-b','mars-a','mars-b'].includes(mode))throw Error('无效合盘类型');
  const ba=baziPro({birth:a}),bb=baziPro({birth:b});
@@ -68,6 +123,10 @@ function pairReading({a,b,mode,config}){
  const cycle=pairCycle({ba,bb});
  const base={ok:true,...result,ziwei:zm,baziMatch:bm,ziweiMatch:zm,mangal:md,keyStars,cycle,
   western:combined?{...result.western,chart:combined.chart,composite:combined.chart}:result.western,fit,crossRelations:cross,composite:combined};
+ // v0.86.0：合婚量化评分（可解释加权模型）。四维各自归一化到 0~100，再按权重合成总分与分维度雷达数据。
+ // 设计原则：每维只取该体系自己已输出的结构化证据，不再虚构吉凶；权重可在前端调整并持久化，
+ // 这里给默认权重（八字/紫微/印度八科/西占），缺某维时自动重分配权重，保证总分仍为 0~100。
+ const compat=buildCompat({baziMatch:bm,ziweiMatch:zm,kootaBoth:bothKoota,keyStars,interAspects:result.western.interAspects});
  // 核心结论摘要：每条都指向一项可复核证据，不给笼统好话
  const firstSentence=t=>{const s=String(t||'');const i=s.indexOf('。');return (i>0?s.slice(0,i):s).replace(/。$/,'');};
  const bestBm=bm.items.find(x=>x.level==='support'),worstBm=bm.items.find(x=>x.level==='challenge');
@@ -97,7 +156,7 @@ function pairReading({a,b,mode,config}){
   strength:pro?.strength?.kind||''
  });
  const bazi={a:baziSide(ba),b:baziSide(bb)};
- return {...base,summary,report,bazi};
+ return {...base,summary,report,bazi,compat};
 }
 /* v0.84.0：合盘时点专项——在给定时刻，双方各自出「本命 + 行运」双圈盘，
  * 并计算两对跨盘相位：A行运×B本命（A的当下星触发B的领域）与 B行运×A本命。
